@@ -1,0 +1,12 @@
+{
+  "files": {
+    "main.css": "/static/css/main.00d21e31.css",
+    "main.js": "/static/js/main.f115d8a7.js",
+    "static/media/MYYeongnamnu.ttf": "/static/media/MYYeongnamnu.c21c29b7600e29cddc25.ttf",
+    "index.html": "/index.html"
+  },
+  "entrypoints": [
+    "static/css/main.00d21e31.css",
+    "static/js/main.f115d8a7.js"
+  ]
+}
