@@ -476,21 +476,22 @@ export default function Interlinear({
     fetch('/data/targum_peshitta.json').then(r => r.ok ? r.json() : {}).then(d => setTargumPeshittaDb(d || {})).catch(() => {});
   }, []);
   
-  // 🌟 성경 책이 바뀔 때마다 해당 책의 분할 해설 파일만 초고속 로드
+  // 🌟 성경 책과 장(Chapter)이 바뀔 때마다 깃허브에 올라간 장별 분할 파일과 정확히 매칭하여 로드
   useEffect(() => {
-    const bookName = currentBookMeta.ko; // 예: "사도행전"
+    const bookName = currentBookMeta.ko; // 예: "창세기", "사도행전"
+    const chapterNum = chapter;           // 현재 장 번호
     if (!bookName) return;
 
-    fetch(`/data/commentaries_by_book/${bookName}.json`)
+    fetch(`/data/commentaries_by_chapter/${bookName}_${chapterNum}.json`)
       .then(r => r.ok ? r.json() : {})
       .then(d => setCommentaryDb(d || {}))
       .catch(() => setCommentaryDb({}));
 
-    fetch(`/data/matthew_henry_by_book/${bookName}.json`)
+    fetch(`/data/matthew_henry_by_chapter/${bookName}_${chapterNum}.json`)
       .then(r => r.ok ? r.json() : {})
       .then(d => setMatthewHenryDb(d || {}))
       .catch(() => setMatthewHenryDb({}));
-  }, [currentBookMeta.ko]);
+  }, [currentBookMeta.ko, chapter]);
 
   useEffect(() => {
     try {
