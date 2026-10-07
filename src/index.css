@@ -1,0 +1,80 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 🌟 [핵심] 모바일 사파리/크롬 뷰포트 고무줄 바운스 및 가로 밀림 영구 박멸 */
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  position: fixed;
+  overscroll-behavior: none;
+  -webkit-overscroll-behavior: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: none;
+}
+
+/* 다빈치 리졸브 규격 스텔스 마이크로 스크롤바 */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: #121316;
+}
+::-webkit-scrollbar-thumb {
+  background: #2D3139;
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #4A505E;
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #2D3139 #121316;
+}
+/* 마루부리 */
+@font-face {
+  font-family: 'MaruBuri';
+  src: url('./MaruBuri-Regular.ttf') format('truetype');
+  font-weight: 400;
+}
+@font-face {
+  font-family: 'MaruBuri';
+  src: url('./MaruBuri-Bold.ttf') format('truetype');
+  font-weight: 700;
+}
+
+/* 교보손글씨 2025 */
+@font-face {
+  font-family: 'KyoboHandwriting';
+  src: url('./KyoboHandwriting2025lyb.ttf') format('truetype');
+}
+
+/* 나눔명조 */
+@font-face {
+  font-family: 'NanumMyeongjo';
+  src: url('./NanumMyeongjo.ttf') format('truetype');
+  font-weight: 400;
+}
+@font-face {
+  font-family: 'NanumMyeongjo';
+  src: url('./NanumMyeongjoBold.ttf') format('truetype');
+  font-weight: 700;
+}
+
+/* 나눔손글씨 펜 */
+@font-face {
+  font-family: 'NanumPen';
+  src: url('./NanumPen.ttf') format('truetype');
+}
+
+/* 밀양 아리랑 고딕 */
+@font-face {
+  font-family: 'MYArirangGothic';
+  src: url('./MYArirang_gothic.ttf') format('truetype');
+}

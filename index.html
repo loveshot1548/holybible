@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>나만의 큐티 다이어리</title>
+    <!-- 💡 카카오맵 SDK 정식 스크립트 (autoload=false 포함) -->
+    <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=95965940691d352d343b476e3dde9f08&libraries=services,clusterer,drawing&autoload=false"></script>
+  </head>
+  <body class="h-screen overflow-hidden">
+    <div id="root" class="h-full"></div>
+  </body>
+</html>
+
+
+3. 이 작업을 하신 후, 터미널에서 실행 중인 개발 서버를 **`Ctrl + C`로 완전히 끄고**, 다시 **`npm run dev`**(또는 `npm start`)로 재시작해 주세요.
+
+이렇게 루트 디렉토리에 `index.html`을 두고 서버를 켜면 `window.kakao` 로드가 성공하면서 회색 화면이 사라지고 지도가 즉시 나타날 것입니다! 고생 많으셨습니다. 이 설정 후 확인 부탁드립니다.

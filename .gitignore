@@ -1,0 +1,6 @@
+node_modules
+# 100MB 초과 원본 거대 JSON 파일 깃 제외 (분할된 파일만 업로드)
+public/data/matthew_henry.json
+public/data/commentaries.json
+data/matthew_henry.json
+data/commentaries.json
