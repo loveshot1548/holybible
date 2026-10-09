@@ -1,1 +1,18 @@
-{}
+{
+  "창세기-1-1": {
+    "title": "히브리어 문법 형태 '베레쉬트(בְּרֵאשִׁית)'의 상태론(State) 비평",
+    "note": "The traditional rendering 'In the beginning' treats בְּרֵאשִׁית (bere'shit) as absolute, pointing to the absolute beginning of time and creation ex nihilo. Some scholars suggest a construct state ('In the beginning of God's creating...'), but grammatical syntax and ancient versions (LXX ἐν ἀρχῇ, Vulgate in principio) strongly support the absolute traditional translation."
+  },
+  "마태복음-1-1": {
+    "title": "표제어 '비블로스 게네세오스(βίβλος γενέσεως)'의 70인역 용례",
+    "note": "The Greek phrase βίβλος γενέ세ως (biblos geneseōs) echoes the Septuagint of Genesis 2:4 and 5:1. Matthew intentionally uses this Septuagintal phrasing to present Jesus Christ as the Inaugurator of the 'New Creation' and the culmination of Genesis history."
+  },
+  "마태복음-1-18": {
+    "title": "사본 이문: '탄생(γέννησις)' vs '기원/발생(γένεσις)'",
+    "note": "The early papyri (P1) and primary uncials (Sinaiticus, Vaticanus) read γένεσις (genesis, 'origin/beginning'), while later Byzantine minuscules read γέννησις (gennēsis, 'birth'). γένεσις is preferred as the more difficult reading, harmonizing with verse 1:1."
+  },
+  "마태복음-1-23": {
+    "title": "이사야 7:14 70인역(LXX) 인용: '파르테노스(παρθένος)' 비평",
+    "note": "Matthew explicitly follows the Septuagint (LXX) rendering παρθένος (parthenos, virgin) rather than the ambiguous Hebrew עַלְמָה ('almah, young maiden), underscoring the miraculous supernatural virgin conception."
+  }
+}

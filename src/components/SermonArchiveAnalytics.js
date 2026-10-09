@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 
 // =====================================================================
-// 전역 성경 약어 사전 및 캐논 66권 매핑[cite: 33]
+// 전역 성경 약어 사전 및 캐논 66권 매핑
 // =====================================================================
 const BIBLE_ABBREV_MAP = {
   "창세기": "창세기", "창": "창세기", "출애굽기": "출애굽기", "출": "출애굽기", "레위기": "레위기", "레": "레위기", 
@@ -62,15 +62,23 @@ function extractTheologicalTags(text) {
   return Array.from(tags);
 }
 
+// 🌟 HTML 엔티티 복원 (정상 공백 유지)
 function decodeHtmlEntities(str) {
   if (!str) return '';
-  return str.replace(/&#(\d+);/g, (match, dec) => String.fromCharCode(dec))
-    .replace(/&#x([0-9a-f]+);/gi, (match, hex) => String.fromCharCode(parseInt(hex, 16)))
-    .replace(/"/g, '"').replace(/'/g, "'").replace(/</g, '<').replace(/>/g, '>')
-    .replace(/&/g, '&').replace(/ /gi, ' ');
+  return str
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&#x27;/gi, "'")
+    .replace(/&#39;/gi, "'")
+    .replace(/&apos;/gi, "'")
+    .replace(/&quot;/gi, '"')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(parseInt(dec, 10)));
 }
 
-// 모던 미니멀 벡터 아이콘[cite: 33]
+// 모던 미니멀 벡터 아이콘
 const StrokeW = "1.8";
 const IconArrowLeft = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>;
 const IconCheck = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>;
@@ -84,7 +92,7 @@ const IconUnlock = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={Strok
 const IconSearch = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor" className="w-4 h-4"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>;
 const IconShare = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={StrokeW} stroke="currentColor" className="w-3.5 h-3.5"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>;
 
-// 제자훈련 12주차 마스터 코스[cite: 33]
+// 제자훈련 12주차 마스터 코스
 const DISCIPLESHIP_12WEEKS_CURRICULUM = {
   1: {
     title: "구원론 (Soteriology): 칭의와 전가된 의",
@@ -227,9 +235,15 @@ const HighlightedText = ({ text, searchHighlight }) => {
   );
 };
 
-const SermonContentParser = ({ text, searchTerm, isDark, onVerseClick }) => {
+// 🌟 본문 및 성경 구절 정밀 파서 (원어 성경 1:1 직결 매핑 적용)
+const SermonContentParser = ({ text, searchTerm, isDark, onVerseClick, onJumpInterlinear, defaultBook = "갈라디아서" }) => {
   if (!text) return null;
   const lines = text.split('\n');
+
+  // 책과 장 추정
+  let currentChapter = 1;
+  const chapMatch = text.match(/(?:(\d+)장|\:)/);
+  if (chapMatch && chapMatch[1]) currentChapter = parseInt(chapMatch[1], 10);
 
   return lines.map((line, idx) => {
     let trimmed = line.trim();
@@ -237,10 +251,11 @@ const SermonContentParser = ({ text, searchTerm, isDark, onVerseClick }) => {
     trimmed = trimmed.replace(/#말씀묵상/g, '').trim();
     if (!trimmed) return null;
 
-    if (trimmed.match(/^(적용:|적용 질문|Q\.|질문:|적용 포인트)/) || (trimmed.endsWith('?') && trimmed.length < 100)) {
+    // 1. 적용 질문 단락
+    if (trimmed.match(/^(적용:|적용 질문|Q\.|질문:|적용 포인트)/) || (trimmed.endsWith('?') && trimmed.length < 90 && !trimmed.match(/^\d+/))) {
       return (
-        <div key={idx} className={`my-2.5 p-3 rounded-lg border-l-2 text-left ${isDark ? 'border-amber-500/60 bg-stone-900/60 text-stone-200' : 'border-stone-800 bg-stone-50 text-stone-800'}`}>
-          <span className="text-[10px] font-mono tracking-widest text-stone-400 block mb-1 uppercase">REFLECTION QUESTION</span>
+        <div key={idx} className={`my-2.5 p-3 rounded-xl border-l-3 text-left ${isDark ? 'border-amber-500/70 bg-[#161D2B] text-stone-200' : 'border-amber-600 bg-amber-50/50 text-stone-800'}`}>
+          <span className="text-[9.5px] font-mono tracking-widest text-amber-600 dark:text-amber-400 font-bold block mb-1 uppercase">REFLECTION QUESTION</span>
           <p className="text-[13px] sm:text-[14px] font-serif font-bold leading-relaxed break-keep">
             {trimmed.replace(/^(적용:|적용 질문|Q\.|질문:|적용 포인트)/g, '').trim()}
           </p>
@@ -248,10 +263,46 @@ const SermonContentParser = ({ text, searchTerm, isDark, onVerseClick }) => {
       );
     }
 
+    // 2. 🌟 본문 성경 구절 라인 파싱 (예: "2내가너희에게서..." 또는 "2. 내가 너희에게서...")
+    const versePrefixMatch = trimmed.match(/^(\d{1,3})(?:[\.\s]|(?=[가-힣]))(.*)/);
+    if (versePrefixMatch && !trimmed.includes('~') && !trimmed.includes(':') && versePrefixMatch[2].length > 10) {
+      const vNum = parseInt(versePrefixMatch[1], 10);
+      const vContent = versePrefixMatch[2].trim();
+
+      return (
+        <div key={idx} className={`my-1.5 p-2.5 rounded-xl border flex items-start justify-between gap-2 text-left transition-all ${
+          isDark ? 'bg-slate-900/40 border-slate-800/80 hover:border-slate-700' : 'bg-stone-50/80 border-stone-200/90 hover:border-stone-300'
+        }`}>
+          <div className="flex items-start gap-2 flex-1">
+            <span className="font-mono text-[11px] font-bold px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 shrink-0 mt-0.5">
+              {vNum}절
+            </span>
+            <p className={`text-[13.5px] sm:text-[14px] font-serif font-medium leading-[1.8] break-keep ${isDark ? 'text-stone-200' : 'text-stone-800'}`}>
+              <HighlightedText text={vContent} searchHighlight={searchTerm} />
+            </p>
+          </div>
+
+          {/* 🌟 구절별 원어 성경 1:1 직결 버튼 */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onJumpInterlinear) onJumpInterlinear(defaultBook, currentChapter, vNum);
+            }}
+            className="px-2 py-0.8 rounded-md text-[10.5px] font-semibold border bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 shrink-0 flex items-center gap-1 cursor-pointer shadow-2xs active:scale-95 transition-all"
+            title="원어 분해 및 10대 학술 사료로 즉시 이동"
+          >
+            <span>📖</span> 원어
+          </button>
+        </div>
+      );
+    }
+
+    // 3. 인용 성경 구절 버튼 라인 (예: "갈라디아서 3:1-14")
     const verseMatch = trimmed.match(BIBLE_VERSE_SINGLE_REGEX);
     if (verseMatch && trimmed.length < 80) {
       return (
-        <div key={idx} className="my-1.5 text-left">
+        <div key={idx} className="my-1.5 text-left flex items-center gap-1.5 flex-wrap">
           <button 
             onClick={() => onVerseClick && onVerseClick(verseMatch[0])}
             className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[12px] font-serif font-bold transition-all cursor-pointer border ${isDark ? 'bg-white/5 border-white/10 text-stone-200 hover:bg-white/10' : 'bg-stone-100 border-stone-200 text-stone-800 hover:bg-stone-200'}`}
@@ -262,10 +313,17 @@ const SermonContentParser = ({ text, searchTerm, isDark, onVerseClick }) => {
       );
     }
 
-    if (trimmed.match(/^(첫째|둘째|셋째|1\.|2\.|3\.)/) || trimmed.endsWith(':') || (trimmed.length < 30 && !trimmed.endsWith('다.'))) {
-      return <h4 key={idx} className={`mt-4 mb-1.5 text-[14.5px] sm:text-[15.5px] font-serif font-bold tracking-tight text-left ${isDark ? 'text-white' : 'text-stone-900'}`}><HighlightedText text={trimmed} searchHighlight={searchTerm} /></h4>;
+    // 4. 설교 대지 및 소제목 라인 (예: "1. 들어가며", "2. 지난주 복습")
+    if (trimmed.match(/^(\d+\.\s*|첫째|둘째|셋째|들어가며|결론)/) || (trimmed.endsWith(':') && trimmed.length < 40)) {
+      return (
+        <h4 key={idx} className={`mt-4 mb-1.5 text-[14.5px] sm:text-[15.5px] font-serif font-bold tracking-tight text-left flex items-center gap-1.5 ${isDark ? 'text-amber-400' : 'text-stone-900'}`}>
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"></span>
+          <HighlightedText text={trimmed} searchHighlight={searchTerm} />
+        </h4>
+      );
     }
 
+    // 5. 일반 설교 본문 텍스트
     return (
       <p key={idx} className={`text-[13.5px] sm:text-[14px] leading-[1.9] font-serif font-normal text-left break-keep mb-2 ${isDark ? 'text-stone-300' : 'text-stone-700'}`}>
          <HighlightedText text={trimmed} searchHighlight={searchTerm} />
@@ -274,14 +332,17 @@ const SermonContentParser = ({ text, searchTerm, isDark, onVerseClick }) => {
   });
 };
 
-const SermonCard = ({ record, searchTerm, onNavigateVerse, setSelectedTag, onVersePopup, isDark }) => {
+const SermonCard = ({ record, searchTerm, onNavigateVerse, setSelectedTag, onVersePopup, onJumpInterlinear, isDark }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const cleanRawText = decodeHtmlEntities(record.raw_text?.replace(/<[^>]*>?/gm, '')?.replace(/ /gi, ''))?.replace(/#말씀묵상/g, '');
+  // 🌟 공백 유지 정제 (replace(/ /gi, '') 버그 완전 제거)
+  const cleanRawText = decodeHtmlEntities(record.raw_text?.replace(/<[^>]*>?/gm, ''))?.replace(/#말씀묵상/g, '');
   const isLongText = cleanRawText.length > 220;
 
   return (
-    <div className={`p-4 sm:p-5 rounded-2xl border text-left transition-all ${isDark ? 'bg-[#121316] border-white/10 shadow-xs' : 'bg-white border-stone-200/80 shadow-2xs'}`}>
-      <div className="flex justify-between items-center pb-2.5 border-b border-dashed border-stone-200 dark:border-white/10">
+    <div className={`p-4 sm:p-5 rounded-2xl border text-left transition-all overflow-hidden break-words ${isDark ? 'bg-[#121316] border-white/10 shadow-xs' : 'bg-white border-stone-200/80 shadow-2xs'}`}>
+      
+      {/* 상단 메타 바 */}
+      <div className="flex justify-between items-center pb-2.5 border-b border-dashed border-stone-200 dark:border-white/10 gap-2">
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="px-2 py-0.5 rounded-md text-[10.5px] font-mono font-bold bg-stone-100 dark:bg-white/5 text-stone-500 dark:text-stone-400">
             {record.date}
@@ -293,18 +354,32 @@ const SermonCard = ({ record, searchTerm, onNavigateVerse, setSelectedTag, onVer
             {record.detectedBook}
           </button>
         </div>
-        <button 
-          onClick={() => { 
-            navigator.clipboard.writeText(`[${record.date} 예배노트]\n본문: ${record.detectedBook}\n제목: ${record.title}\n설교: ${record.preacher}\n\n${cleanRawText}`); 
-            alert('설교 전문이 클립보드에 복사되었습니다.'); 
-          }} 
-          className="p-1.5 rounded-lg text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 transition-colors cursor-pointer"
-          title="클립보드 복사"
-        >
-          <IconCopy />
-        </button>
+
+        <div className="flex items-center gap-1.5">
+          {/* 🌟 카드 상단 대표 원어 성경 연구실 직결 버튼 */}
+          <button 
+            type="button"
+            onClick={() => onJumpInterlinear && onJumpInterlinear(record.detectedBook, 1, 1)}
+            className="px-2 py-1 rounded-md text-[10.5px] font-bold border flex items-center gap-1 transition-all cursor-pointer bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 shadow-2xs"
+            title="해당 성경 원어 연구실로 이동"
+          >
+            <span>🔬</span> 원어 연구
+          </button>
+
+          <button 
+            onClick={() => { 
+              navigator.clipboard.writeText(`[${record.date} 예배노트]\n본문: ${record.detectedBook}\n제목: ${record.title}\n설교: ${record.preacher}\n\n${cleanRawText}`); 
+              alert('설교 전문이 클립보드에 복사되었습니다.'); 
+            }} 
+            className="p-1.5 rounded-lg text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 transition-colors cursor-pointer"
+            title="클립보드 복사"
+          >
+            <IconCopy />
+          </button>
+        </div>
       </div>
 
+      {/* 설교 제목 및 설교자 */}
       <div className="mt-2.5 space-y-1">
          <h2 className="text-[16px] sm:text-[17.5px] font-serif font-bold tracking-tight text-stone-900 dark:text-white leading-snug break-keep">
            <HighlightedText text={record.title} searchHighlight={searchTerm} />
@@ -314,9 +389,17 @@ const SermonCard = ({ record, searchTerm, onNavigateVerse, setSelectedTag, onVer
          </p>
       </div>
 
+      {/* 설교 본문 렌더링 영역 */}
       <div className="relative mt-2.5">
-        <div className={`transition-all duration-300 ${!isExpanded && isLongText ? 'max-h-[140px] overflow-hidden' : ''}`}>
-          <SermonContentParser text={cleanRawText} searchTerm={searchTerm} isDark={isDark} onVerseClick={onVersePopup} />
+        <div className={`transition-all duration-300 ${!isExpanded && isLongText ? 'max-h-[160px] overflow-hidden' : ''}`}>
+          <SermonContentParser 
+            text={cleanRawText} 
+            searchTerm={searchTerm} 
+            isDark={isDark} 
+            onVerseClick={onVersePopup} 
+            onJumpInterlinear={onJumpInterlinear}
+            defaultBook={record.detectedBook}
+          />
         </div>
         {!isExpanded && isLongText && (
           <div className={`absolute bottom-0 left-0 w-full h-12 bg-gradient-to-t ${isDark ? 'from-[#121316]' : 'from-white'} to-transparent pointer-events-none`}></div>
@@ -349,7 +432,7 @@ const SermonCard = ({ record, searchTerm, onNavigateVerse, setSelectedTag, onVer
   );
 };
 
-export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles, t, isDarkMode, dailyData = {}, updateDay }) {
+export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles, t, isDarkMode, dailyData = {}, updateDay, setActiveScreen }) {
   const [sermonData, setSermonData] = useState(null);
   const [loading, setLoading] = useState(true);
   
@@ -358,7 +441,7 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
   const [selectedTag, setSelectedTag] = useState("all");
   const [filterMonth, setFilterMonth] = useState(""); 
   
-  const [activeTab, setActiveTab] = useState('training'); // 'training' | 'dashboard' | 'list'
+  const [activeTab, setActiveTab] = useState('list'); // 기본 보기: 설교 검색
   const [selectedWeek, setSelectedWeek] = useState(1);
   const [isSecretMode, setIsSecretMode] = useState(false);
 
@@ -397,6 +480,29 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
   }, [dailyData, updateDay]);
 
   const isDark = isDarkMode;
+
+  // 🌟 원어 성경 연구실로 1:1 점프 연동
+  const handleJumpToInterlinear = useCallback((book, chapter, verse) => {
+    const cleanBook = BIBLE_ABBREV_MAP[book] || book || '갈라디아서';
+    const cNum = Number(chapter) || 1;
+    const vNum = Number(verse) || 1;
+
+    try {
+      localStorage.setItem('interlinear_jump', JSON.stringify({
+        book: cleanBook,
+        chapter: cNum,
+        verse: vNum
+      }));
+    } catch (_) {}
+
+    if (typeof setActiveScreen === 'function') {
+      setActiveScreen('interlinear');
+    } else if (typeof onNavigateVerse === 'function') {
+      onNavigateVerse(`${cleanBook} ${cNum}:${vNum}`);
+    } else {
+      alert(`[${cleanBook} ${cNum}:${vNum}] 원어 성경 연구실로 이동합니다.`);
+    }
+  }, [setActiveScreen, onNavigateVerse]);
 
   const getBibleTextLocal = useCallback((verseQuery) => {
     if (!bibles) return "성경 데이터를 찾을 수 없습니다.";
@@ -504,7 +610,7 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
     return parsedJsonRecords.sort((a, b) => b.timestamp - a.timestamp);
   }, [sermonData, dailyData]);
 
-  // 성경 66권 캐논 커버리지 및 연산 (🌟 [핵심 연동] 로컬 스토리지 및 Supabase 출결/QT/기도 데이터 완벽 연동)
+  // 성경 66권 캐논 커버리지 및 연산
   const { bookList, tagList, citedVerseStats, stats, recentQuestions, trainingStats, aggregateHub, theologicalStats, canonCoverage } = useMemo(() => {
     const books = new Set(), tags = new Set(), citedVerses = new Map();
     let otCount = 0, ntCount = 0;
@@ -515,7 +621,6 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
     let word = 0, prayer = 0, fellowship = 0, ministry = 0, worship = 0;
     let totalQ = 0, completedQ = 0;
     
-    // 🌟 [핵심 연동] 큐티, 감사, 기도 누적 횟수를 앱 내 모든 저장소(dailyData 및 localStorage 키들)에서 전수 스캔하여 연동
     let qtCount = 0, thanksCount = 0, prayerCount = 0;
 
     try {
@@ -744,7 +849,7 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
       </header>
 
       {/* 2. 메인 뷰포트 */}
-      <main className="flex-1 overflow-y-auto hide-scrollbar px-1.5 sm:px-4 py-2.5 pb-28 w-full max-w-6xl mx-auto space-y-3">
+      <main className="flex-1 overflow-y-auto hide-scrollbar px-2 sm:px-4 py-2.5 pb-28 w-full max-w-6xl mx-auto space-y-3">
         
         {/* ========================================================================= */}
         {/* TAB 1: 제자 양육 훈련소                                                  */}
@@ -787,7 +892,7 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
                 </div>
               </div>
 
-              {/* 🌟 영적 기록 총합 (연동 완료) */}
+              {/* 영적 아카이브 누적 */}
               <div className="space-y-1.5 pt-1">
                 <span className="text-[11px] font-serif font-bold text-stone-500 block">영적 아카이브 누적</span>
                 <div className="grid grid-cols-2 gap-1.5 text-center">
@@ -1155,7 +1260,7 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full">
               {filteredRecords.length === 0 ? (
                 <div className="col-span-full py-16 text-center text-[12.5px] font-serif text-stone-400 border border-dashed border-stone-200 dark:border-white/10 rounded-xl">
                   조건에 일치하는 설교 기록이 없습니다.
@@ -1169,6 +1274,7 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
                     onNavigateVerse={onNavigateVerse} 
                     setSelectedTag={setSelectedTag} 
                     onVersePopup={setPopupVerse} 
+                    onJumpInterlinear={handleJumpToInterlinear}
                     isDark={isDark} 
                   />
                 ))
@@ -1194,18 +1300,40 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
             </div>
             
             <div className="p-4 sm:p-6 overflow-y-auto hide-scrollbar space-y-4 text-left">
-              <div className="flex gap-1.5 flex-wrap">
-                <span className="px-2 py-0.5 rounded text-[11px] font-serif font-bold bg-stone-100 dark:bg-white/10 text-stone-800 dark:text-stone-200">
-                  📖 {sermonPopup.detectedBook}
-                </span>
-                {(sermonPopup.theoTags || []).map((tag, idx) => (
-                  <span key={idx} className="px-2 py-0.5 rounded text-[10.5px] font-mono font-medium border border-stone-200 dark:border-white/10 text-stone-500">
-                    #{tag}
+              <div className="flex gap-1.5 flex-wrap items-center justify-between">
+                <div className="flex gap-1.5 flex-wrap">
+                  <span className="px-2 py-0.5 rounded text-[11px] font-serif font-bold bg-stone-100 dark:bg-white/10 text-stone-800 dark:text-stone-200">
+                    📖 {sermonPopup.detectedBook}
                   </span>
-                ))}
+                  {(sermonPopup.theoTags || []).map((tag, idx) => (
+                    <span key={idx} className="px-2 py-0.5 rounded text-[10.5px] font-mono font-medium border border-stone-200 dark:border-white/10 text-stone-500">
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleJumpToInterlinear(sermonPopup.detectedBook, 1, 1);
+                    setSermonPopup(null);
+                  }}
+                  className="px-2.5 py-1 rounded-md text-[11px] font-bold border bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 flex items-center gap-1 cursor-pointer"
+                >
+                  <span>🔬</span> 원어성경연구실 ➔
+                </button>
               </div>
+
               <div className="text-[13.5px] font-serif leading-relaxed whitespace-pre-wrap">
-                <SermonContentParser text={(sermonPopup.raw_text || '').replace(/#말씀묵상/g, '')} isDark={~isDark ? 0 : 1} />
+                <SermonContentParser 
+                  text={(sermonPopup.raw_text || '').replace(/#말씀묵상/g, '')} 
+                  isDark={isDark} 
+                  onJumpInterlinear={(b, c, v) => {
+                    handleJumpToInterlinear(b, c, v);
+                    setSermonPopup(null);
+                  }}
+                  defaultBook={sermonPopup.detectedBook}
+                />
               </div>
             </div>
           </div>
@@ -1218,9 +1346,25 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
           <div className={`w-full max-w-md rounded-2xl border shadow-2xl flex flex-col max-h-[75vh] overflow-hidden ${isDark ? 'bg-[#121316] border-white/10 text-stone-100' : 'bg-white border-stone-200 text-stone-900'}`}>
             <div className="px-4 py-3 border-b border-stone-200 dark:border-white/10 flex justify-between items-center shrink-0">
               <h3 className="font-serif font-bold text-[14.5px] text-left">📖 {popupVerse}</h3>
-              <button onClick={() => setPopupVerse(null)} className="p-1 text-stone-400 hover:text-stone-800 dark:hover:text-white cursor-pointer">
-                <IconX />
-              </button>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const match = popupVerse.match(BIBLE_VERSE_SINGLE_REGEX);
+                    const b = match ? (BIBLE_ABBREV_MAP[match[1]] || match[1]) : "갈라디아서";
+                    const c = match && match[2] ? parseInt(match[2], 10) : 1;
+                    const v = match && match[3] ? parseInt(match[3], 10) : 1;
+                    handleJumpToInterlinear(b, c, v);
+                    setPopupVerse(null);
+                  }}
+                  className="px-2 py-0.5 rounded text-[10.5px] font-bold border bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 flex items-center gap-1 cursor-pointer"
+                >
+                  <span>🔬</span> 원어 연구실 ➔
+                </button>
+                <button onClick={() => setPopupVerse(null)} className="p-1 text-stone-400 hover:text-stone-800 dark:hover:text-white cursor-pointer">
+                  <IconX />
+                </button>
+              </div>
             </div>
             <div className="p-4 sm:p-5 overflow-y-auto hide-scrollbar text-left">
               <p className="text-[13.5px] font-serif leading-[2.1] whitespace-pre-wrap text-stone-800 dark:text-stone-200">

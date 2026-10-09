@@ -6,76 +6,77 @@ import { analyzeHebrewSyntaxFromWords } from '../lib/hebrewSyntaxEngine';
 import { tokenizeGrammarCode } from '../lib/biblicalGrammarWiki';
 import GrammarWikiModal from '../lib/GrammarWikiModal';
 
+// 성경 66권 메타데이터 및 구속사 연대기 정보
 const BIBLE_66_BOOKS = [
   // 구약 39권
-  { ko: "창세기", en: "Genesis", isOT: true, maxChap: 50, section: "모세오경" },
-  { ko: "출애굽기", en: "Exodus", isOT: true, maxChap: 40, section: "모세오경" },
-  { ko: "레위기", en: "Leviticus", isOT: true, maxChap: 27, section: "모세오경" },
-  { ko: "민수기", en: "Numbers", isOT: true, maxChap: 36, section: "모세오경" },
-  { ko: "신명기", en: "Deuteronomy", isOT: true, maxChap: 34, section: "모세오경" },
-  { ko: "여호수아", en: "Joshua", isOT: true, maxChap: 24, section: "역사서" },
-  { ko: "사사기", en: "Judges", isOT: true, maxChap: 21, section: "역사서" },
-  { ko: "룻기", en: "Ruth", isOT: true, maxChap: 4, section: "역사서" },
-  { ko: "사무엘상", en: "1 Samuel", isOT: true, maxChap: 31, section: "역사서" },
-  { ko: "사무엘하", en: "2 Samuel", isOT: true, maxChap: 24, section: "역사서" },
-  { ko: "열왕기상", en: "1 Kings", isOT: true, maxChap: 22, section: "역사서" },
-  { ko: "열왕기하", en: "2 Kings", isOT: true, maxChap: 25, section: "역사서" },
-  { ko: "역대상", en: "1 Chronicles", isOT: true, maxChap: 29, section: "역사서" },
-  { ko: "역대하", en: "2 Chronicles", isOT: true, maxChap: 36, section: "역사서" },
-  { ko: "에스라", en: "Ezra", isOT: true, maxChap: 10, section: "역사서" },
-  { ko: "느헤미야", en: "Nehemiah", isOT: true, maxChap: 13, section: "역사서" },
-  { ko: "에스더", en: "Esther", isOT: true, maxChap: 10, section: "역사서" },
-  { ko: "욥기", en: "Job", isOT: true, maxChap: 42, section: "시가서" },
-  { ko: "시편", en: "Psalms", isOT: true, maxChap: 150, section: "시가서" },
-  { ko: "잠언", en: "Proverbs", isOT: true, maxChap: 31, section: "시가서" },
-  { ko: "전도서", en: "Ecclesiastes", isOT: true, maxChap: 12, section: "시가서" },
-  { ko: "아가", en: "Song of Solomon", isOT: true, maxChap: 8, section: "시가서" },
-  { ko: "이사야", en: "Isaiah", isOT: true, maxChap: 66, section: "선지서" },
-  { ko: "예레미야", en: "Jeremiah", isOT: true, maxChap: 52, section: "선지서" },
-  { ko: "예레미야애가", en: "Lamentations", isOT: true, maxChap: 5, section: "선지서" },
-  { ko: "에스겔", en: "Ezekiel", isOT: true, maxChap: 48, section: "선지서" },
-  { ko: "다니엘", en: "Daniel", isOT: true, maxChap: 12, section: "선지서" },
-  { ko: "호세아", en: "Hosea", isOT: true, maxChap: 14, section: "선지서" },
-  { ko: "요엘", en: "Joel", isOT: true, maxChap: 3, section: "선지서" },
-  { ko: "아모스", en: "Amos", isOT: true, maxChap: 9, section: "선지서" },
-  { ko: "오바댜", en: "Obadiah", isOT: true, maxChap: 1, section: "선지서" },
-  { ko: "요나", en: "Jonah", isOT: true, maxChap: 4, section: "선지서" },
-  { ko: "미가", en: "Micah", isOT: true, maxChap: 7, section: "선지서" },
-  { ko: "나훔", en: "Nahum", isOT: true, maxChap: 3, section: "선지서" },
-  { ko: "하박국", en: "Habakkuk", isOT: true, maxChap: 3, section: "선지서" },
-  { ko: "스바냐", en: "Zephaniah", isOT: true, maxChap: 3, section: "선지서" },
-  { ko: "학개", en: "Haggai", isOT: true, maxChap: 2, section: "선지서" },
-  { ko: "스가랴", en: "Zechariah", isOT: true, maxChap: 14, section: "선지서" },
-  { ko: "말라기", en: "Malachi", isOT: true, maxChap: 4, section: "선지서" },
+  { ko: "창세기", en: "Genesis", isOT: true, maxChap: 50, section: "모세오경", era: "B.C. 1446년경 (창조~족장 시대)", empire: "원역사 / 애굽 중왕국" },
+  { ko: "출애굽기", en: "Exodus", isOT: true, maxChap: 40, section: "모세오경", era: "B.C. 1446년경 (출애굽과 광야 여정)", empire: "애굽 신왕국(18왕조)" },
+  { ko: "레위기", en: "Leviticus", isOT: true, maxChap: 27, section: "모세오경", era: "B.C. 1445년경 (시내산 율법 수여)", empire: "애굽 신왕국" },
+  { ko: "민수기", en: "Numbers", isOT: true, maxChap: 36, section: "모세오경", era: "B.C. 1445-1406 (40년 광야 방랑)", empire: "가나안 진입기" },
+  { ko: "신명기", en: "Deuteronomy", isOT: true, maxChap: 34, section: "모세오경", era: "B.C. 1406년경 (모압 평지 고별 설교)", empire: "고대 근동 정복기" },
+  { ko: "여호수아", en: "Joshua", isOT: true, maxChap: 24, section: "역사서", era: "B.C. 1406-1375 (가나안 정복과 분배)", empire: "가나안 도시국가기" },
+  { ko: "사사기", en: "Judges", isOT: true, maxChap: 21, section: "역사서", era: "B.C. 1375-1050 (사사 통치 암흑기)", empire: "블레셋 / 가나안 족속" },
+  { ko: "룻기", en: "Ruth", isOT: true, maxChap: 4, section: "역사서", era: "B.C. 1100년경 (사사 시대 말기)", empire: "사사 시대" },
+  { ko: "사무엘상", en: "1 Samuel", isOT: true, maxChap: 31, section: "역사서", era: "B.C. 1050-1010 (왕정 수립과 사울 통치)", empire: "통일왕국 태동기" },
+  { ko: "사무엘하", en: "2 Samuel", isOT: true, maxChap: 24, section: "역사서", era: "B.C. 1010-970 (다윗 왕조의 번영)", empire: "이스라엘 통일왕국" },
+  { ko: "열왕기상", en: "1 Kings", isOT: true, maxChap: 22, section: "역사서", era: "B.C. 970-853 (솔로몬과 분열왕국 초기)", empire: "남북 분열왕국기" },
+  { ko: "열왕기하", en: "2 Kings", isOT: true, maxChap: 25, section: "역사서", era: "B.C. 853-586 (북이스라엘/남유다 멸망)", empire: "앗수르 / 신바벨론" },
+  { ko: "역대상", en: "1 Chronicles", isOT: true, maxChap: 29, section: "역사서", era: "B.C. 450년경 기록 (다윗 언약 계승)", empire: "페르시아(바사) 제국" },
+  { ko: "역대하", en: "2 Chronicles", isOT: true, maxChap: 36, section: "역사서", era: "B.C. 450년경 기록 (솔로몬 성전~귀환령)", empire: "페르시아 제국" },
+  { ko: "에스라", en: "Ezra", isOT: true, maxChap: 10, section: "역사서", era: "B.C. 538-450 (1·2차 포로 귀환 및 성전)", empire: "페르시아 제국 (고레스/아닥사스다)" },
+  { ko: "느헤미야", en: "Nehemiah", isOT: true, maxChap: 13, section: "역사서", era: "B.C. 445-420 (3차 귀환과 성벽 재건)", empire: "페르시아 제국" },
+  { ko: "에스더", en: "Esther", isOT: true, maxChap: 10, section: "역사서", era: "B.C. 483-473 (페르시아 수산궁 구원)", empire: "페르시아 제국 (아하수에로 1세)" },
+  { ko: "욥기", en: "Job", isOT: true, maxChap: 42, section: "시가서", era: "B.C. 2000년경 배경 (족장 시대 고난)", empire: "우르 제3왕조 / 족장 시대" },
+  { ko: "시편", en: "Psalms", isOT: true, maxChap: 150, section: "시가서", era: "B.C. 1410-430 (모세부터 포로 귀환기까지)", empire: "통일왕국 / 포로후기" },
+  { ko: "잠언", en: "Proverbs", isOT: true, maxChap: 31, section: "시가서", era: "B.C. 970-700 (솔로몬과 히스기야 시대)", empire: "이스라엘 왕정기" },
+  { ko: "전도서", en: "Ecclesiastes", isOT: true, maxChap: 12, section: "시가서", era: "B.C. 935년경 (솔로몬 노년의 지혜)", empire: "이스라엘 왕정기" },
+  { ko: "아가", en: "Song of Solomon", isOT: true, maxChap: 8, section: "시가서", era: "B.C. 960년경 (솔로몬 청년기 언약적 사랑)", empire: "이스라엘 왕정기" },
+  { ko: "이사야", en: "Isaiah", isOT: true, maxChap: 66, section: "선지서", era: "B.C. 740-681 (남유다 4대 왕기 예언)", empire: "앗수르 제국 발흥기" },
+  { ko: "예레미야", en: "Jeremiah", isOT: true, maxChap: 52, section: "선지서", era: "B.C. 627-580 (예루살렘 함락 눈물의 선지자)", empire: "신바벨론 제국 (느부갓네살)" },
+  { ko: "예레미야애가", en: "Lamentations", isOT: true, maxChap: 5, section: "선지서", era: "B.C. 586년경 (예루살렘 파괴 비가)", empire: "신바벨론 제국" },
+  { ko: "에스겔", en: "Ezekiel", isOT: true, maxChap: 48, section: "선지서", era: "B.C. 593-571 (그발 강가 바벨론 포로지)", empire: "신바벨론 제국" },
+  { ko: "다니엘", en: "Daniel", isOT: true, maxChap: 12, section: "선지서", era: "B.C. 605-536 (바벨론/페르시아 궁정 예언)", empire: "바벨론 / 메대-페르시아" },
+  { ko: "호세아", en: "Hosea", isOT: true, maxChap: 14, section: "선지서", era: "B.C. 755-715 (북이스라엘 말기 언약적 사랑)", empire: "앗수르 침공기" },
+  { ko: "요엘", en: "Joel", isOT: true, maxChap: 3, section: "선지서", era: "B.C. 835년경 (메뚜기 재앙과 여호와의 날)", empire: "남유다 요아스 왕조" },
+  { ko: "아모스", en: "Amos", isOT: true, maxChap: 9, section: "선지서", era: "B.C. 760-750 (여로보암 2세 번영기 정의 선포)", empire: "남북 왕국 전성기" },
+  { ko: "오바댜", en: "Obadiah", isOT: true, maxChap: 1, section: "선지서", era: "B.C. 586년경 (에돔을 향한 심판 선고)", empire: "신바벨론 제국기" },
+  { ko: "요나", en: "Jonah", isOT: true, maxChap: 4, section: "선지서", era: "B.C. 780-760 (앗수르 수도 니느웨 회개)", empire: "앗수르 제국" },
+  { ko: "미가", en: "Micah", isOT: true, maxChap: 7, section: "선지서", era: "B.C. 735-700 (베들레헴 탄생 예언)", empire: "앗수르 위협기" },
+  { ko: "나훔", en: "Nahum", isOT: true, maxChap: 3, section: "선지서", era: "B.C. 663-612 (니느웨의 최후 몰락)", empire: "앗수르 제국 멸망기" },
+  { ko: "하박국", en: "Habakkuk", isOT: true, maxChap: 3, section: "선지서", era: "B.C. 607년경 (의인은 믿음으로 살리라)", empire: "갈대아(바벨론) 발흥기" },
+  { ko: "스바냐", en: "Zephaniah", isOT: true, maxChap: 3, section: "선지서", era: "B.C. 630년경 (요시야 종교개혁 배경)", empire: "신바벨론 제국 전야" },
+  { ko: "학개", en: "Haggai", isOT: true, maxChap: 2, section: "선지서", era: "B.C. 520년 (제2성전 재건 촉구)", empire: "페르시아 제국 (다리오 1세)" },
+  { ko: "스가랴", en: "Zechariah", isOT: true, maxChap: 14, section: "선지서", era: "B.C. 520-480 (메시아 왕국과 종말론적 승리)", empire: "페르시아 제국" },
+  { ko: "말라기", en: "Malachi", isOT: true, maxChap: 4, section: "선지서", era: "B.C. 430년경 (구약의 마지막 예언자)", empire: "페르시아 제국 (중간기 직전)" },
 
   // 신약 27권
-  { ko: "마태복음", en: "Matthew", isOT: false, maxChap: 28, section: "복음/역사" },
-  { ko: "마가복음", en: "Mark", isOT: false, maxChap: 16, section: "복음/역사" },
-  { ko: "누가복음", en: "Luke", isOT: false, maxChap: 24, section: "복음/역사" },
-  { ko: "요한복음", en: "John", isOT: false, maxChap: 21, section: "복음/역사" },
-  { ko: "사도행전", en: "Acts", isOT: false, maxChap: 28, section: "복음/역사" },
-  { ko: "로마서", en: "Romans", isOT: false, maxChap: 16, section: "서신서" },
-  { ko: "고린도전서", en: "1 Corinthians", isOT: false, maxChap: 16, section: "서신서" },
-  { ko: "고린도후서", en: "2 Corinthians", isOT: false, maxChap: 13, section: "서신서" },
-  { ko: "갈라디아서", en: "Galatians", isOT: false, maxChap: 6, section: "서신서" },
-  { ko: "에베소서", en: "Ephesians", isOT: false, maxChap: 6, section: "서신서" },
-  { ko: "빌립보서", en: "Philippians", isOT: false, maxChap: 4, section: "서신서" },
-  { ko: "골로새서", en: "Colossians", isOT: false, maxChap: 4, section: "서신서" },
-  { ko: "데살로니가전서", en: "1 Thessalonians", isOT: false, maxChap: 5, section: "서신서" },
-  { ko: "데살로니가후서", en: "2 Thessalonians", isOT: false, maxChap: 3, section: "서신서" },
-  { ko: "디모데전서", en: "1 Timothy", isOT: false, maxChap: 6, section: "서신서" },
-  { ko: "디모데후서", en: "2 Timothy", isOT: false, maxChap: 4, section: "서신서" },
-  { ko: "디도서", en: "Titus", isOT: false, maxChap: 3, section: "서신서" },
-  { ko: "빌레몬서", en: "Philemon", isOT: false, maxChap: 1, section: "서신서" },
-  { ko: "히브리서", en: "Hebrews", isOT: false, maxChap: 13, section: "서신서" },
-  { ko: "야고보서", en: "James", isOT: false, maxChap: 5, section: "서신서" },
-  { ko: "베드로전서", en: "1 Peter", isOT: false, maxChap: 5, section: "서신서" },
-  { ko: "베드로후서", en: "2 Peter", isOT: false, maxChap: 3, section: "서신서" },
-  { ko: "요한일서", en: "1 John", isOT: false, maxChap: 5, section: "서신서" },
-  { ko: "요한이서", en: "2 John", isOT: false, maxChap: 1, section: "서신서" },
-  { ko: "요한삼서", en: "3 John", isOT: false, maxChap: 1, section: "서신서" },
-  { ko: "유다서", en: "Jude", isOT: false, maxChap: 1, section: "서신서" },
-  { ko: "요한계시록", en: "Revelation", isOT: false, maxChap: 22, section: "서신서" }
+  { ko: "마태복음", en: "Matthew", isOT: false, maxChap: 28, section: "복음서", era: "A.D. 55-65년경 (유대인을 위한 메시아)", empire: "로마 제국 (네로/클라우디우스)" },
+  { ko: "마가복음", en: "Mark", isOT: false, maxChap: 16, section: "복음서", era: "A.D. 50-60년경 (고난받는 종 예수)", empire: "로마 제국" },
+  { ko: "누가복음", en: "Luke", isOT: false, maxChap: 24, section: "복음서", era: "A.D. 60-62년경 (인자로 오신 구주)", empire: "로마 제국" },
+  { ko: "요한복음", en: "John", isOT: false, maxChap: 21, section: "복음서", era: "A.D. 85-90년경 (말씀이 육신이 되심)", empire: "로마 제국 (도미티아누스)" },
+  { ko: "사도행전", en: "Acts", isOT: false, maxChap: 28, section: "역사서", era: "A.D. 62-64년경 (성령의 행전과 복음 확산)", empire: "로마 제국" },
+  { ko: "로마서", en: "Romans", isOT: false, maxChap: 16, section: "서신서", era: "A.D. 57년경 (고린도 집필, 이신칭의)", empire: "로마 제국" },
+  { ko: "고린도전서", en: "1 Corinthians", isOT: false, maxChap: 16, section: "서신서", era: "A.D. 55년경 (에베소 집필, 교회 회복)", empire: "로마 제국" },
+  { ko: "고린도후서", en: "2 Corinthians", isOT: false, maxChap: 13, section: "서신서", era: "A.D. 56년경 (마게도냐 집필, 사도권 변호)", empire: "로마 제국" },
+  { ko: "갈라디아서", en: "Galatians", isOT: false, maxChap: 6, section: "서신서", era: "A.D. 48-49년경 (안디옥 집필, 오직 은혜)", empire: "로마 제국" },
+  { ko: "에베소서", en: "Ephesians", isOT: false, maxChap: 6, section: "서신서", era: "A.D. 60-62년경 (로마 옥중, 교회론 완성)", empire: "로마 제국" },
+  { ko: "빌립보서", en: "Philippians", isOT: false, maxChap: 4, section: "서신서", era: "A.D. 61-62년경 (로마 옥중, 주 안의 기쁨)", empire: "로마 제국" },
+  { ko: "골로새서", en: "Colossians", isOT: false, maxChap: 4, section: "서신서", era: "A.D. 60-62년경 (로마 옥중, 만유의 으뜸 그리스도)", empire: "로마 제국" },
+  { ko: "데살로니가전서", en: "1 Thessalonians", isOT: false, maxChap: 5, section: "서신서", era: "A.D. 51년경 (고린도 집필, 재림의 소망)", empire: "로마 제국" },
+  { ko: "데살로니가후서", en: "2 Thessalonians", isOT: false, maxChap: 3, section: "서신서", era: "A.D. 51-52년경 (주의 날과 근면한 삶)", empire: "로마 제국" },
+  { ko: "디모데전서", en: "1 Timothy", isOT: false, maxChap: 6, section: "서신서", era: "A.D. 63-65년경 (마게도냐 집필, 목회 규범)", empire: "로마 제국" },
+  { ko: "디모데후서", en: "2 Timothy", isOT: false, maxChap: 4, section: "서신서", era: "A.D. 66-67년경 (로마 지하감옥, 바울의 유언)", empire: "로마 제국 (네로 박해기)" },
+  { ko: "디도서", en: "Titus", isOT: false, maxChap: 3, section: "서신서", era: "A.D. 63-65년경 (그레데 교회 목회 지침)", empire: "로마 제국" },
+  { ko: "빌레몬서", en: "Philemon", isOT: false, maxChap: 1, section: "서신서", era: "A.D. 60-62년경 (오네시모 용서와 형제애)", empire: "로마 제국" },
+  { ko: "히브리서", en: "Hebrews", isOT: false, maxChap: 13, section: "서신서", era: "A.D. 67-69년경 (대제사장 그리스도의 우월성)", empire: "로마 제국 (성전 멸망 직전)" },
+  { ko: "야고보서", en: "James", isOT: false, maxChap: 5, section: "서신서", era: "A.D. 45-48년경 (행함이 있는 참된 믿음)", empire: "로마 제국" },
+  { ko: "베드로전서", en: "1 Peter", isOT: false, maxChap: 5, section: "서신서", era: "A.D. 64년경 (로마 집필, 고난 속의 산 소망)", empire: "로마 제국 (네로 박해기)" },
+  { ko: "베드로후서", en: "2 Peter", isOT: false, maxChap: 3, section: "서신서", era: "A.D. 66-67년경 (거짓 교사 경계와 주의 재림)", empire: "로마 제국" },
+  { ko: "요한일서", en: "1 John", isOT: false, maxChap: 5, section: "서신서", era: "A.D. 85-95년경 (에베소 집필, 사랑과 진리)", empire: "로마 제국" },
+  { ko: "요한이서", en: "2 John", isOT: false, maxChap: 1, section: "서신서", era: "A.D. 85-95년경 (진리 안에서의 사랑과 경계)", empire: "로마 제국" },
+  { ko: "요한삼서", en: "3 John", isOT: false, maxChap: 1, section: "서신서", era: "A.D. 85-95년경 (진리를 영접하는 환대)", empire: "로마 제국" },
+  { ko: "유다서", en: "Jude", isOT: false, maxChap: 1, section: "서신서", era: "A.D. 65-80년경 (믿음의 도를 위한 힘써 싸움)", empire: "로마 제국" },
+  { ko: "요한계시록", en: "Revelation", isOT: false, maxChap: 22, section: "서신서", era: "A.D. 95년경 (밧모섬 유배, 어린양의 최종 승리)", empire: "로마 제국 (도미티아누스)" }
 ];
 
 const BOOK_SECTION_LOOKUP = {};
@@ -89,6 +90,27 @@ const FALLBACK_ENGLISH_TRANSLATION_MAP = {
   'disease': '병, 질병', 'angel': '사자, 천사', 'arise': '일어나다', 'go up': '올라가다',
   'meet': '만나다', 'king': '왕, 군왕', 'samaria': '사마리아', 'god': '하나님, 신'
 };
+
+// 무료 실시간 영문 번역 유틸리티 (Google Client Engine 기반 분할 번역)
+async function fetchKoreanTranslation(text) {
+  if (!text || typeof text !== 'string') return '';
+  const paragraphs = text.split('\n\n').filter(p => p.trim());
+  const chunks = paragraphs.length > 0 ? paragraphs : [text];
+  const translatedChunks = await Promise.all(
+    chunks.map(async (para) => {
+      try {
+        const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=ko&dt=t&q=${encodeURIComponent(para.slice(0, 1800))}`;
+        const res = await fetch(url);
+        if (!res.ok) return para;
+        const data = await res.json();
+        return data[0]?.map(chunk => chunk[0]).join('') || para;
+      } catch {
+        return para;
+      }
+    })
+  );
+  return translatedChunks.join('\n\n');
+}
 
 const IconMenu = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" /></svg>;
 const IconBack = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>;
@@ -363,7 +385,7 @@ export default function Interlinear({
     return 1;
   });
 
-  // 📖 성경 번역본 모드: 'krv'(개역개정) | 'easy'(쉬운성경) | 'parallel'(동시대조)
+  // 📖 성경 번역본 모드: 'krv'(개역개정) | 'easy'(쉬운성경) | 'web'(World English Bible) | 'parallel'(동시대조)
   const [bibleVersion, setBibleVersion] = useState(() => {
     try {
       return localStorage.getItem('interlinear_bible_version') || 'krv';
@@ -372,6 +394,7 @@ export default function Interlinear({
     }
   });
   const [easyBibleDb, setEasyBibleDb] = useState({});
+  const [webBibleDb, setWebBibleDb] = useState({});
 
   const handleVersionChange = (ver) => {
     setBibleVersion(ver);
@@ -391,10 +414,27 @@ export default function Interlinear({
   const [selectedGrammarWikiKey, setSelectedGrammarWikiKey] = useState(null);
   const [typographyMode, setTypographyMode] = useState('vowels');
 
+  // 전권 통계 & 용례 상태
   const [concordanceTotalCount, setConcordanceTotalCount] = useState(0);
   const [concordanceDistribution, setConcordanceDistribution] = useState({});
   const [concordanceList, setConcordanceList] = useState([]);
   const [isConcordanceLoading, setIsConcordanceLoading] = useState(false);
+
+  // 실시간 번역 상태 캐시 (key: translationText)
+  const [translatedMap, setTranslatedMap] = useState({});
+  const [translatingKeys, setTranslatingKeys] = useState({});
+
+  const handleToggleTranslation = async (key, rawText) => {
+    if (translatedMap[key]) {
+      // 이미 번역되어 있으면 토글 (원문 <-> 번역)
+      setTranslatedMap(prev => ({ ...prev, [key]: null }));
+      return;
+    }
+    setTranslatingKeys(prev => ({ ...prev, [key]: true }));
+    const result = await fetchKoreanTranslation(rawText);
+    setTranslatedMap(prev => ({ ...prev, [key]: result }));
+    setTranslatingKeys(prev => ({ ...prev, [key]: false }));
+  };
 
   const [customNotesMap, setCustomNotesMap] = useState({});
   const [customInputTrans, setCustomInputTrans] = useState('');
@@ -458,28 +498,34 @@ export default function Interlinear({
     return easyBibleDb[key] || '';
   }, [currentBookMeta.ko, chapter, verse, easyBibleDb]);
 
+  // World English Bible (WEB) 본문 조회
+  const webVerseText = useMemo(() => {
+    const keyKo = `${currentBookMeta.ko}-${chapter}-${verse}`;
+    const keyEn = `${currentBookMeta.en}-${chapter}-${verse}`;
+    return webBibleDb[keyKo] || webBibleDb[keyEn] || '';
+  }, [currentBookMeta, chapter, verse, webBibleDb]);
+
   const enVerseText = useMemo(() => {
     if (!words || words.length === 0) return '';
     return decodeHtmlEntities(words.map(w => w.eng).filter(e => e && e !== 'n/a' && e !== '-').join(' '));
   }, [words]);
 
-  // 10대 데이터셋 & 쉬운성경 사전 로드
+  // 기본 학술 데이터셋 & 번역본 사전 로드
   useEffect(() => {
     fetch('/data/easy_bible.json').then(r => r.ok ? r.json() : {}).then(d => setEasyBibleDb(d || {})).catch(() => {});
+    fetch('/data/web_bible.json').then(r => r.ok ? r.json() : {}).then(d => setWebBibleDb(d || {})).catch(() => {});
     fetch('/data/lxx_quotes.json').then(r => r.ok ? r.json() : {}).then(d => setLxxDatabase(d || {})).catch(() => {});
     fetch('/data/josephus.json').then(r => r.ok ? r.json() : {}).then(d => setJosephusDb(d || {})).catch(() => {});
     fetch('/data/bible_geodata.json').then(r => r.ok ? r.json() : {}).then(d => setGeoDb(d || {})).catch(() => {});
-    //fetch('/data/commentaries.json').then(r => r.ok ? r.json() : {}).then(d => setCommentaryDb(d || {})).catch(() => {});
-    //fetch('/data/matthew_henry.json').then(r => r.ok ? r.json() : {}).then(d => setMatthewHenryDb(d || {})).catch(() => {});
     fetch('/data/net_notes.json').then(r => r.ok ? r.json() : {}).then(d => setNetNotesDb(d || {})).catch(() => {});
     fetch('/data/easton_dict.json').then(r => r.ok ? r.json() : {}).then(d => setEastonDb(d || {})).catch(() => {});
     fetch('/data/targum_peshitta.json').then(r => r.ok ? r.json() : {}).then(d => setTargumPeshittaDb(d || {})).catch(() => {});
   }, []);
   
-  // 🌟 성경 책과 장(Chapter)이 바뀔 때마다 깃허브에 올라간 장별 분할 파일과 정확히 매칭하여 로드
+  // 🌟 성경 책과 장(Chapter)이 바뀔 때마다 해당 장의 분할 해설 파일만 초고속 로드 (Vercel 최적화)
   useEffect(() => {
     const bookName = currentBookMeta.ko; // 예: "창세기", "사도행전"
-    const chapterNum = chapter;           // 현재 장 번호
+    const chapterNum = chapter;           // 현재 선택된 장 번호
     if (!bookName) return;
 
     fetch(`/data/commentaries_by_chapter/${bookName}_${chapterNum}.json`)
@@ -750,6 +796,7 @@ export default function Interlinear({
     return () => { isMounted = false; };
   }, [currentBookMeta, chapter, verse, isOT, dictLoaded, customNotesMap]);
 
+  // 🌟 전권 용례 인출 및 정경 전체 분포도 완벽 집계 (버그 픽스)
   const handleSelectWord = useCallback(async (word) => {
     setActiveWordOrder(word.word_order);
     setSelectedWordDetail(word);
@@ -764,23 +811,34 @@ export default function Interlinear({
 
     if (supabase && word.strongs && !word.strongs.endsWith('0000')) {
       try {
-        const { data, count, error } = await supabase
+        // 1. 본문 표시용 상위 60개 구절 인출
+        const listPromise = supabase
           .from('interlinear_bible')
           .select('book, chapter, verse, original_word, korean_trans', { count: 'exact' })
           .eq('strongs_id', word.strongs)
           .order('id', { ascending: true })
           .limit(60);
 
-        if (!error && data) {
-          setConcordanceTotalCount(count || data.length);
-          setConcordanceList(data);
+        // 2. 성경 66권 전체 실제 분포도 통계 인출 (가벼운 book 컬럼만 전체 인출)
+        const distPromise = supabase
+          .from('interlinear_bible')
+          .select('book')
+          .eq('strongs_id', word.strongs);
 
-          const distMap = {};
-          data.forEach(item => {
+        const [listRes, distRes] = await Promise.all([listPromise, distPromise]);
+
+        if (!listRes.error && listRes.data) {
+          setConcordanceTotalCount(listRes.count || listRes.data.length);
+          setConcordanceList(listRes.data);
+        }
+
+        if (!distRes.error && distRes.data) {
+          const fullDist = {};
+          distRes.data.forEach(item => {
             const sec = BOOK_SECTION_LOOKUP[item.book] || (word.strongs.startsWith('H') ? '구약' : '신약');
-            distMap[sec] = (distMap[sec] || 0) + 1;
+            fullDist[sec] = (fullDist[sec] || 0) + 1;
           });
-          setConcordanceDistribution(distMap);
+          setConcordanceDistribution(fullDist);
         }
       } catch (e) {
         console.error("Concordance error:", e);
@@ -833,20 +891,24 @@ export default function Interlinear({
     alert("📋 학술 사전 원전 전문이 클립보드에 복사되었습니다.");
   }, []);
 
+  // 노션 및 옵시디언 서식 지원 고도화 리포트 복사
   const handleCopyComprehensiveReport = useCallback(() => {
-    let report = `## [원어 강해 종합 리포트] ${currentBookMeta.ko} ${chapter}장 ${verse}절\n\n`;
-    report += `**개역개정:** ${koVerseText}\n`;
-    if (easyVerseText) report += `**쉬운성경:** ${easyVerseText}\n`;
-    if (enVerseText) report += `**영어직역:** "${enVerseText}"\n\n`;
+    let report = `# 📖 [원어 강해 종합 학술 리포트] ${currentBookMeta.ko} ${chapter}장 ${verse}절\n`;
+    report += `> **연대 및 배경:** ${currentBookMeta.era} | ${currentBookMeta.empire}\n\n`;
+    report += `### 📜 정경 본문 대조\n`;
+    report += `- **개역개정:** ${koVerseText}\n`;
+    if (easyVerseText) report += `- **쉬운성경:** ${easyVerseText}\n`;
+    if (webVerseText) report += `- **WEB Bible:** ${webVerseText}\n`;
+    if (enVerseText) report += `- **영어직역:** "${enVerseText}"\n\n`;
     
-    report += `### 📖 단어별 원어 분해:\n`;
+    report += `### 🔍 단어별 1:1 원어 분해:\n`;
     words.forEach(w => {
       report += `- **${w.inflected}** (${w.lemma}) [${w.strongs}]: ${w.korContextual} | *${w.grammarDecoded}*\n`;
     });
     report += `\n`;
 
     if (currentHebrewSyntax) {
-      report += `### 📜 BHS 히브리어 구문론 끊어읽기:\n`;
+      report += `### 📜 BHS 히브리어 구문론:\n`;
       currentHebrewSyntax.clauseHierarchy.forEach(c => {
         report += `- **${c.unit}** ➔ ${c.role} (${c.pauseType})\n`;
       });
@@ -857,31 +919,18 @@ export default function Interlinear({
       report += `- GNT: ${currentLxxParallel.ntText}\n- LXX: ${currentLxxParallel.lxxText}\n- MT: ${currentLxxParallel.mtText}\n`;
       report += `- 주해: ${currentLxxParallel.differenceAnalysis}\n\n`;
     }
-    if (currentTargumPeshitta) {
-      report += `### 🏺 고대 아람어 타르굼 & 시리아 페시타 대조:\n`;
-      if (currentTargumPeshitta.targumKo) report += `- 아람어: ${currentTargumPeshitta.targumKo}\n`;
-      if (currentTargumPeshitta.peshittaKo) report += `- 시리아어: ${currentTargumPeshitta.peshittaKo}\n`;
-      report += `- 비평: ${currentTargumPeshitta.academicNote}\n\n`;
-    }
-    if (currentJosephus) {
-      report += `### 📜 요세푸스 1세기 사료 (${currentJosephus.work}):\n- ${currentJosephus.historicalEvent}: ${currentJosephus.summary}\n\n`;
-    }
-    if (currentGeoData) {
-      report += `### 🗺 고고학 지리: ${currentGeoData.placeKo} (${currentGeoData.placeEn}) [GPS: ${currentGeoData.lat}, ${currentGeoData.lng}]\n- ${currentGeoData.historicalSignificance}\n\n`;
-    }
     if (currentCommentary) {
-      report += `### 📖 반즈 & JFB 주석 (${currentCommentary.commentator}):\n- 문맥 주해: ${currentCommentary.exegesis}\n- 교리: ${currentCommentary.theologicalNote}\n\n`;
+      report += `### 📖 반즈 & JFB 학술 주석 (${currentCommentary.commentator}):\n`;
+      report += `- 문맥 주해: ${translatedMap[`comm_${chapter}_${verse}`] || currentCommentary.exegesis}\n\n`;
     }
     if (currentMatthewHenry) {
-      report += `### 🌿 매튜 헨리 묵상 주석 (${currentMatthewHenry.theme}):\n- 강해: ${currentMatthewHenry.devotionalExegesis}\n- 실천 적용: ${currentMatthewHenry.practicalApplication}\n\n`;
-    }
-    if (currentNetNote) {
-      report += `### 🔍 NET Bible 본문 비평 각주:\n- ${currentNetNote.title}: ${currentNetNote.note}\n\n`;
+      report += `### 🌿 매튜 헨리 묵상 강해 (${currentMatthewHenry.theme}):\n`;
+      report += `- 묵상: ${translatedMap[`mh_${chapter}_${verse}`] || currentMatthewHenry.devotionalExegesis}\n\n`;
     }
 
     navigator.clipboard.writeText(decodeHtmlEntities(report));
-    alert("📋 10대 학술 엔진 및 쉬운성경이 총망라된 원어 강해 종합 리포트가 복사되었습니다!");
-  }, [currentBookMeta.ko, chapter, verse, koVerseText, easyVerseText, enVerseText, words, currentHebrewSyntax, currentLxxParallel, currentTargumPeshitta, currentJosephus, currentGeoData, currentCommentary, currentMatthewHenry, currentNetNote]);
+    alert("📋 노션(Notion) 및 학술 서식이 포함된 종합 리포트가 클립보드에 복사되었습니다!");
+  }, [currentBookMeta, chapter, verse, koVerseText, easyVerseText, webVerseText, enVerseText, words, currentHebrewSyntax, currentLxxParallel, currentCommentary, currentMatthewHenry, translatedMap]);
 
   const handleInsertToQT = useCallback((word) => {
     const today = new Date().toISOString().split('T')[0];
@@ -932,9 +981,9 @@ export default function Interlinear({
   const bgSubCard = isDark ? 'bg-[#161D2B]' : 'bg-white';
 
   const getBadgeClass = (type, isVerb) => {
-    if (isVerb) return isDark ? 'bg-indigo-950/70 text-indigo-200 border-indigo-800 font-bold' : 'bg-indigo-50/80 text-indigo-900 border-indigo-200 font-bold';
+    if (isVerb) return isDark ? 'bg-indigo-950/70 text-indigo-300 border-indigo-800 font-bold' : 'bg-indigo-50/90 text-indigo-800 border-indigo-200 font-bold';
     if (type === 'verb') return isDark ? 'bg-slate-800 text-slate-200 border-slate-700' : 'bg-slate-100 text-slate-800 border-slate-200 font-medium';
-    if (type === 'noun') return isDark ? 'bg-slate-800/90 text-slate-200 border-slate-700' : 'bg-slate-50 text-slate-800 border-slate-200 font-medium';
+    if (type === 'noun') return isDark ? 'bg-amber-950/40 text-amber-300 border-amber-900/60' : 'bg-amber-50/70 text-amber-900 border-amber-200 font-medium';
     return isDark ? 'bg-slate-800/60 text-slate-300 border-slate-700' : 'bg-slate-100/70 text-slate-700 border-slate-200';
   };
 
@@ -979,7 +1028,7 @@ export default function Interlinear({
                 isDark ? 'bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700' : 'bg-slate-100 text-slate-800 border-slate-200 hover:bg-slate-200'
               }`}
             >
-              📋 리포트 복사
+              📋 학술 리포트 복사
             </button>
 
             {isOT && (
@@ -993,25 +1042,26 @@ export default function Interlinear({
             )}
 
             <span className={`text-[10px] sm:text-[11px] font-mono px-2 py-0.5 rounded-md border font-bold ${
-              isOT ? 'bg-slate-800/80 text-slate-300 border-slate-700' : 'bg-slate-100 text-slate-700 border-slate-200'
+              isOT ? 'bg-amber-950/40 text-amber-300 border-amber-900/60' : 'bg-blue-950/40 text-blue-300 border-blue-900/60'
             }`}>
               {isOT ? '구약 (RTL)' : '신약 (LTR)'}
             </span>
           </div>
         </div>
 
-        {isOT && (
-          <div className={`sm:hidden flex items-center justify-between p-1 rounded-lg border text-[11px] font-semibold ${
-            isDark ? 'bg-black/30 border-slate-800' : 'bg-slate-100 border-slate-200'
-          }`}>
-            <span className={`text-[10px] font-medium pl-1 ${textSub}`}>악센트 표기:</span>
-            <div className="flex gap-1">
-              <button type="button" onClick={() => setTypographyMode('vowels')} className={`px-2.5 py-0.5 rounded transition-all ${typographyMode === 'vowels' ? 'bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900 font-bold' : textSub}`}>표준 (모음)</button>
-              <button type="button" onClick={() => setTypographyMode('full')} className={`px-2.5 py-0.5 rounded transition-all ${typographyMode === 'full' ? 'bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900 font-bold' : textSub}`}>원전 (전체)</button>
-              <button type="button" onClick={() => setTypographyMode('consonants')} className={`px-2.5 py-0.5 rounded transition-all ${typographyMode === 'consonants' ? 'bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900 font-bold' : textSub}`}>자음만</button>
-            </div>
+        {/* 구속사 연대기(Chronology) 타임라인 바 */}
+        <div className={`flex items-center justify-between px-2 py-1 rounded-lg border text-[11px] ${
+          isDark ? 'bg-[#151D2C] border-slate-800 text-slate-300' : 'bg-slate-50 border-slate-200/90 text-slate-600'
+        }`}>
+          <div className="flex items-center gap-1.5 truncate">
+            <span className="font-bold text-amber-600 dark:text-amber-400">⏳ 시대:</span>
+            <span className="font-medium truncate">{currentBookMeta.era}</span>
           </div>
-        )}
+          <div className="hidden sm:flex items-center gap-1.5 shrink-0 pl-2">
+            <span className="font-bold text-sky-600 dark:text-sky-400">🏛 제국 배경:</span>
+            <span className="font-mono">{currentBookMeta.empire}</span>
+          </div>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto px-3 sm:px-6 md:px-8 pb-16 w-full hide-scrollbar space-y-3.5 relative z-10 max-w-6xl mx-auto pt-3">
@@ -1081,33 +1131,30 @@ export default function Interlinear({
                 {currentBookMeta.ko} {chapter}장 {verse}절
               </h2>
               <div className="flex flex-wrap gap-1">
-                {crossRefs.length > 0 && <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">TSK {crossRefs.length}</span>}
-                {currentHebrewSyntax && <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">BHS 구문론</span>}
-                {currentLxxParallel && <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">LXX 대조</span>}
-                {currentTargumPeshitta && <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">타르굼/페시타</span>}
-                {currentJosephus && <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">요세푸스</span>}
-                {currentGeoData && <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">GPS 지리</span>}
-                {currentCommentary && <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">반즈 주석</span>}
-                {currentMatthewHenry && <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">매튜 헨리</span>}
-                {currentNetNote && <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">NET 비평</span>}
-                {currentEaston && <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">이스톤 백과</span>}
+                {crossRefs.length > 0 && <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800">TSK {crossRefs.length}</span>}
+                {currentHebrewSyntax && <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800">BHS 구문론</span>}
+                {currentLxxParallel && <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 border border-stone-200 dark:border-stone-700">LXX 대조</span>}
+                {currentTargumPeshitta && <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-orange-50 dark:bg-orange-950/60 text-orange-800 dark:text-orange-300 border border-orange-200 dark:border-orange-800">타르굼/페시타</span>}
+                {currentCommentary && <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">반즈 주석</span>}
+                {currentMatthewHenry && <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">매튜 헨리</span>}
+                {currentNetNote && <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800">NET 비평</span>}
               </div>
             </div>
             <span className={`text-[11px] font-medium ${textSub}`}>단어 터치 시 동기화 (← → 로 구절 이동)</span>
           </div>
           
-          {/* 🌟 번역본 스왑 & 병렬 대조 세그먼트 스위치 */}
+          {/* 🌟 다중 역본 (개역개정 / 쉬운성경 / WEB 영어성경 / 동시대조) 세그먼트 스위치 */}
           <div className="text-left space-y-2">
             <div className="flex items-center justify-between">
               <span className={`text-[10px] font-bold uppercase tracking-wider ${textSub}`}>
-                {bibleVersion === 'easy' ? '쉬운성경 본문' : bibleVersion === 'parallel' ? '개역개정 & 쉬운성경 대조' : '개역개정 본문'}
+                {bibleVersion === 'easy' ? '쉬운성경 본문' : bibleVersion === 'web' ? 'World English Bible (WEB)' : bibleVersion === 'parallel' ? '다중 역본 동시대조' : '개역개정 본문'}
               </span>
               
               <div className={`flex p-0.5 rounded-lg border text-[10.5px] font-bold ${isDark ? 'bg-black/40 border-slate-800' : 'bg-slate-100 border-slate-200'}`}>
                 <button
                   type="button"
                   onClick={() => handleVersionChange('krv')}
-                  className={`px-2.5 py-0.5 rounded transition-all cursor-pointer ${
+                  className={`px-2 py-0.5 rounded transition-all cursor-pointer ${
                     bibleVersion === 'krv' 
                       ? (isDark ? 'bg-slate-800 text-white font-bold shadow-xs' : 'bg-white text-slate-900 shadow-2xs font-bold') 
                       : textSub
@@ -1118,7 +1165,7 @@ export default function Interlinear({
                 <button
                   type="button"
                   onClick={() => handleVersionChange('easy')}
-                  className={`px-2.5 py-0.5 rounded transition-all cursor-pointer ${
+                  className={`px-2 py-0.5 rounded transition-all cursor-pointer ${
                     bibleVersion === 'easy' 
                       ? (isDark ? 'bg-slate-800 text-white font-bold shadow-xs' : 'bg-white text-slate-900 shadow-2xs font-bold') 
                       : textSub
@@ -1128,8 +1175,19 @@ export default function Interlinear({
                 </button>
                 <button
                   type="button"
+                  onClick={() => handleVersionChange('web')}
+                  className={`px-2 py-0.5 rounded transition-all cursor-pointer ${
+                    bibleVersion === 'web' 
+                      ? (isDark ? 'bg-slate-800 text-white font-bold shadow-xs' : 'bg-white text-slate-900 shadow-2xs font-bold') 
+                      : textSub
+                  }`}
+                >
+                  WEB
+                </button>
+                <button
+                  type="button"
                   onClick={() => handleVersionChange('parallel')}
-                  className={`px-2.5 py-0.5 rounded transition-all cursor-pointer ${
+                  className={`px-2 py-0.5 rounded transition-all cursor-pointer ${
                     bibleVersion === 'parallel' 
                       ? (isDark ? 'bg-slate-800 text-white font-bold shadow-xs' : 'bg-white text-slate-900 shadow-2xs font-bold') 
                       : textSub
@@ -1140,7 +1198,7 @@ export default function Interlinear({
               </div>
             </div>
 
-            {/* 본문 렌더링 (스왑 / 동시대조) */}
+            {/* 본문 단일 / 병렬 렌더링 */}
             {bibleVersion === 'krv' && (
               <p className={`text-[15.5px] sm:text-[16.5px] font-semibold leading-[1.8] break-keep ${textMain}`}>
                 {koVerseText}
@@ -1153,31 +1211,43 @@ export default function Interlinear({
               </p>
             )}
 
+            {bibleVersion === 'web' && (
+              <p className={`text-[15px] sm:text-[16px] font-medium leading-[1.7] font-serif ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
+                {webVerseText || enVerseText || "WEB 본문 로딩 중..."}
+              </p>
+            )}
+
             {bibleVersion === 'parallel' && (
               <div className="space-y-2 pt-0.5">
-                <div>
+                <div className={`p-3 rounded-xl border text-left ${isDark ? 'bg-slate-900/60 border-slate-800' : 'bg-slate-50/80 border-slate-200'}`}>
                   <span className="text-[10px] font-bold text-slate-400 block mb-0.5">[개역개정]</span>
                   <p className={`text-[15px] sm:text-[16px] font-semibold leading-[1.8] break-keep ${textMain}`}>
                     {koVerseText}
                   </p>
                 </div>
                 {easyVerseText && (
-                  <div className={`p-3 rounded-xl border text-left ${isDark ? 'bg-slate-900/60 border-slate-800' : 'bg-slate-50/80 border-slate-200'}`}>
-                    <span className="text-[10px] font-bold text-slate-500 block mb-0.5">[쉬운성경]</span>
+                  <div className={`p-3 rounded-xl border text-left ${isDark ? 'bg-emerald-950/20 border-emerald-900/40' : 'bg-emerald-50/40 border-emerald-100'}`}>
+                    <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 block mb-0.5">[쉬운성경]</span>
                     <p className={`text-[14px] sm:text-[15px] font-medium leading-[1.7] break-keep ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
                       {easyVerseText}
                     </p>
                   </div>
                 )}
+                <div className={`p-3 rounded-xl border text-left ${isDark ? 'bg-blue-950/20 border-blue-900/40' : 'bg-blue-50/40 border-blue-100'}`}>
+                  <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 block mb-0.5">[World English Bible - WEB]</span>
+                  <p className={`text-[14px] sm:text-[14.5px] font-medium leading-[1.7] font-serif ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                    {webVerseText || enVerseText}
+                  </p>
+                </div>
               </div>
             )}
           </div>
 
           {/* 영어 직역 대조 */}
-          {enVerseText && (
+          {enVerseText && bibleVersion !== 'web' && bibleVersion !== 'parallel' && (
             <div className={`pt-2.5 border-t border-dashed text-left ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
               <span className={`text-[10px] font-bold uppercase tracking-wider block mb-0.5 ${textSub}`}>
-                영어 직역 대조
+                영어 직역 대조 (Literal Gloss)
               </span>
               <p className={`text-[13px] sm:text-[13.5px] font-medium leading-[1.7] italic ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                 "{enVerseText}"
@@ -1218,7 +1288,7 @@ export default function Interlinear({
                       style={originalFontStyle}
                       className={`text-[23px] sm:text-[27px] transition-all px-2 py-0.5 rounded-lg cursor-pointer ${
                         isHighlighted
-                          ? (isDark ? 'bg-slate-800 text-white ring-2 ring-slate-600 shadow-sm' : 'bg-slate-900 text-white ring-2 ring-slate-900 shadow-sm')
+                          ? (isDark ? 'bg-amber-900/60 text-white ring-2 ring-amber-500 shadow-sm' : 'bg-amber-100 text-amber-950 ring-2 ring-amber-500 shadow-sm')
                           : `${textMain} hover:bg-slate-100 dark:hover:bg-slate-800/60`
                       }`}
                     >
@@ -1230,14 +1300,14 @@ export default function Interlinear({
             )}
           </div>
 
-          {/* 1. TSK 상호참조 패널 */}
+          {/* 1. TSK 상호참조 패널 (스카이 블루 테마) */}
           <div className={`pt-3 border-t ${isDark ? 'border-[#20293A]' : 'border-slate-200'}`}>
             <div onClick={() => togglePanel('tsk')} className="flex justify-between items-center mb-2 cursor-pointer select-none">
-              <span className={`text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5 ${textMain}`}>
+              <span className={`text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5 text-sky-600 dark:text-sky-400`}>
                 🔗 1. 정경 상호교차참조 (TSK Cross-References)
                 <span className="text-[10px] opacity-50">{openPanels.tsk ? '▼ 접기' : '▶ 펼치기'}</span>
               </span>
-              <span className="text-[11px] font-mono font-semibold text-slate-500">
+              <span className="text-[11px] font-mono font-semibold text-sky-700 dark:text-sky-300">
                 연결 성구 {crossRefs.length}개
               </span>
             </div>
@@ -1264,8 +1334,8 @@ export default function Interlinear({
                       }}
                       className={`px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-all cursor-pointer flex items-center gap-1 shadow-2xs ${
                         isDark 
-                          ? 'bg-[#161D2B] hover:bg-slate-800 border-slate-700 text-slate-200' 
-                          : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'
+                          ? 'bg-sky-950/20 hover:bg-sky-900/40 border-sky-900/60 text-sky-200' 
+                          : 'bg-sky-50/70 hover:bg-sky-100 border-sky-200 text-sky-800'
                       }`}
                     >
                       <span>📖</span> {ref.label}
@@ -1276,36 +1346,36 @@ export default function Interlinear({
             )}
           </div>
 
-          {/* 2. BHS 히브리어 구문론 패널 */}
+          {/* 2. BHS 히브리어 구문론 패널 (소프트 앰버 테마) */}
           {currentHebrewSyntax && (
             <div className={`pt-3 border-t ${isDark ? 'border-[#20293A]' : 'border-slate-200'} space-y-2 animate-fade-in`}>
               <div onClick={() => togglePanel('hebrewSyntax')} className="flex justify-between items-center cursor-pointer select-none">
                 <div className="flex items-center gap-1.5">
                   <span className="text-[13px]">📜</span>
-                  <span className={`text-[11.5px] font-bold uppercase tracking-tight ${textMain}`}>
+                  <span className={`text-[11.5px] font-bold uppercase tracking-tight text-amber-700 dark:text-amber-400`}>
                     2. BHS 히브리어 문장 구조 구문론 끊어읽기
                   </span>
                   <span className="text-[10px] opacity-50">{openPanels.hebrewSyntax ? '▼' : '▶'}</span>
                 </div>
-                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${isDark ? 'bg-slate-800 text-slate-300 border-slate-700' : 'bg-slate-100 text-slate-700 border-slate-200'}`}>
+                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${isDark ? 'bg-amber-950/40 text-amber-300 border-amber-900/60' : 'bg-amber-50 text-amber-800 border-amber-200'}`}>
                   Atnach 대휴지
                 </span>
               </div>
 
               {openPanels.hebrewSyntax && (
-                <div className={`p-3.5 rounded-xl border space-y-2 ${isDark ? 'bg-slate-900/60 border-slate-800' : 'bg-slate-50/70 border-slate-200 shadow-2xs'}`}>
+                <div className={`p-3.5 rounded-xl border border-l-4 border-l-amber-500 space-y-2 ${isDark ? 'bg-amber-950/15 border-slate-800' : 'bg-amber-50/30 border-amber-100 shadow-2xs'}`}>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                     {currentHebrewSyntax.clauseHierarchy.map((c, idx) => (
-                      <div key={idx} className={`p-2.5 rounded-lg border text-right ${isDark ? 'bg-[#121824] border-slate-700/60' : 'bg-white border-slate-200'}`} dir="rtl">
+                      <div key={idx} className={`p-2.5 rounded-lg border text-right ${isDark ? 'bg-[#121824] border-slate-700/60' : 'bg-white border-amber-100'}`} dir="rtl">
                         <div className="flex justify-between items-center mb-1">
-                          <span style={originalFontStyle} className="font-bold text-[17px] text-slate-900 dark:text-slate-100">{c.unit}</span>
-                          <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold" dir="ltr">{c.pauseType}</span>
+                          <span style={originalFontStyle} className="font-bold text-[17px] text-amber-900 dark:text-amber-200">{c.unit}</span>
+                          <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 font-semibold" dir="ltr">{c.pauseType}</span>
                         </div>
                         <p className={`text-[11.5px] font-medium text-left ${textSub}`} dir="ltr">{c.role}</p>
                       </div>
                     ))}
                   </div>
-                  <p className={`text-[11.5px] leading-relaxed font-medium pt-1 border-t border-dashed text-left ${isDark ? 'border-slate-800 text-slate-300' : 'border-slate-200 text-slate-700'}`}>
+                  <p className={`text-[11.5px] leading-relaxed font-medium pt-1 border-t border-dashed text-left ${isDark ? 'border-amber-900/40 text-slate-300' : 'border-amber-200 text-slate-700'}`}>
                     💡 {decodeHtmlEntities(currentHebrewSyntax.cantillationExegesis)}
                   </p>
                 </div>
@@ -1313,18 +1383,18 @@ export default function Interlinear({
             </div>
           )}
 
-          {/* 3. 70인역(LXX) 대조 패널 */}
+          {/* 3. 70인역(LXX) 대조 패널 (소프트 스톤 테마) */}
           {currentLxxParallel && (
             <div className={`pt-3 border-t ${isDark ? 'border-[#20293A]' : 'border-slate-200'} space-y-2.5 animate-fade-in`}>
               <div onClick={() => togglePanel('lxx')} className="flex justify-between items-center cursor-pointer select-none">
                 <div className="flex items-center gap-1.5">
                   <span className="text-[13px]">🏛️</span>
-                  <span className={`text-[11.5px] font-bold uppercase tracking-tight ${textMain}`}>
+                  <span className={`text-[11.5px] font-bold uppercase tracking-tight text-stone-700 dark:text-stone-300`}>
                     3. 70인역(LXX) 신·구약 인용 대조 ({currentLxxParallel.otRef})
                   </span>
                   <span className="text-[10px] opacity-50">{openPanels.lxx ? '▼' : '▶'}</span>
                 </div>
-                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${isDark ? 'bg-slate-800 text-slate-300 border-slate-700' : 'bg-slate-100 text-slate-700 border-slate-200'}`}>
+                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${isDark ? 'bg-stone-800 text-stone-300 border-stone-700' : 'bg-stone-100 text-stone-700 border-stone-200'}`}>
                   {currentLxxParallel.theme}
                 </span>
               </div>
@@ -1354,7 +1424,7 @@ export default function Interlinear({
                     </div>
                   </div>
 
-                  <div className={`p-3.5 rounded-xl border space-y-1 text-left ${isDark ? 'bg-slate-900/60 border-slate-800' : 'bg-slate-50/70 border-slate-200 shadow-2xs'}`}>
+                  <div className={`p-3.5 rounded-xl border border-l-4 border-l-stone-500 space-y-1 text-left ${isDark ? 'bg-stone-900/20 border-slate-800' : 'bg-stone-50/50 border-stone-200 shadow-2xs'}`}>
                     <span className={`text-[10.5px] font-bold block uppercase tracking-wider ${textSub}`}>
                       📜 원전 이문 분석 및 구속사적 의미
                     </span>
@@ -1367,29 +1437,29 @@ export default function Interlinear({
             </div>
           )}
 
-          {/* 4. 고대 아람어 타르굼 & 시리아 페시타 패널 */}
+          {/* 4. 고대 아람어 타르굼 & 시리아 페시타 패널 (소프트 브론즈 테마) */}
           {currentTargumPeshitta && (
             <div className={`pt-3 border-t ${isDark ? 'border-[#20293A]' : 'border-slate-200'} space-y-2 animate-fade-in`}>
               <div onClick={() => togglePanel('targumPeshitta')} className="flex justify-between items-center cursor-pointer select-none">
                 <div className="flex items-center gap-1.5">
                   <span className="text-[13px]">🏺</span>
-                  <span className={`text-[11.5px] font-bold uppercase tracking-tight ${textMain}`}>
+                  <span className={`text-[11.5px] font-bold uppercase tracking-tight text-orange-700 dark:text-orange-400`}>
                     4. 고대 아람어 타르굼(Targum) & 시리아 페시타(Peshitta) 대조군
                   </span>
                   <span className="text-[10px] opacity-50">{openPanels.targumPeshitta ? '▼' : '▶'}</span>
                 </div>
-                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${isDark ? 'bg-slate-800 text-slate-300 border-slate-700' : 'bg-slate-100 text-slate-700 border-slate-200'}`}>
+                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${isDark ? 'bg-orange-950/40 text-orange-300 border-orange-900/60' : 'bg-orange-50 text-orange-800 border-orange-200'}`}>
                   Semitic Text
                 </span>
               </div>
 
               {openPanels.targumPeshitta && (
-                <div className={`p-3.5 rounded-xl border space-y-3 ${isDark ? 'bg-slate-900/60 border-slate-800' : 'bg-slate-50/70 border-slate-200 shadow-2xs'}`}>
+                <div className={`p-3.5 rounded-xl border border-l-4 border-l-orange-500 space-y-3 ${isDark ? 'bg-orange-950/15 border-slate-800' : 'bg-orange-50/30 border-orange-100 shadow-2xs'}`}>
                   <div className={`grid gap-3 text-xs ${currentTargumPeshitta.targumAramaic ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
                     {currentTargumPeshitta.targumAramaic && (
-                      <div className={`p-3 rounded-xl border text-right ${isDark ? 'bg-[#121824] border-slate-700/60' : 'bg-white border-slate-200'}`} dir="rtl">
+                      <div className={`p-3 rounded-xl border text-right ${isDark ? 'bg-[#121824] border-slate-700/60' : 'bg-white border-orange-100'}`} dir="rtl">
                         <div className="flex justify-between items-center mb-1.5" dir="ltr">
-                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">아람어 타르굼 역본 (Targum)</span>
+                          <span className="text-[10px] font-bold text-orange-700 dark:text-orange-400 uppercase tracking-wider">아람어 타르굼 역본</span>
                           <span className="text-[10px] font-mono text-slate-400">RTL</span>
                         </div>
                         <p style={{ fontFamily: "'SBL Hebrew', serif" }} className="text-[18px] font-serif font-bold text-slate-900 dark:text-slate-100 leading-relaxed">
@@ -1404,9 +1474,9 @@ export default function Interlinear({
                     )}
 
                     {currentTargumPeshitta.peshittaSyriac ? (
-                      <div className={`p-3 rounded-xl border text-right ${isDark ? 'bg-[#121824] border-slate-700/60' : 'bg-white border-slate-200'}`} dir="rtl">
+                      <div className={`p-3 rounded-xl border text-right ${isDark ? 'bg-[#121824] border-slate-700/60' : 'bg-white border-orange-100'}`} dir="rtl">
                         <div className="flex justify-between items-center mb-1.5" dir="ltr">
-                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">고대 시리아 페시타 역본 (Peshitta)</span>
+                          <span className="text-[10px] font-bold text-orange-700 dark:text-orange-400 uppercase tracking-wider">고대 시리아 페시타 역본</span>
                           <span className="text-[10px] font-mono text-slate-400">RTL</span>
                         </div>
                         <p style={{ fontFamily: "'Estrangelo Edessa', 'East Syriac Adiabene', serif" }} className="text-[20px] font-serif font-bold text-slate-900 dark:text-slate-100 leading-loose py-0.5">
@@ -1448,18 +1518,13 @@ export default function Interlinear({
               </div>
 
               {openPanels.josephus && (
-                <div className={`p-3.5 rounded-xl border space-y-2 ${isDark ? 'bg-slate-900/60 border-slate-800' : 'bg-slate-50/70 border-slate-200 shadow-2xs'}`}>
+                <div className={`p-3.5 rounded-xl border border-l-4 border-l-slate-400 space-y-2 ${isDark ? 'bg-slate-900/60 border-slate-800' : 'bg-slate-50/70 border-slate-200 shadow-2xs'}`}>
                   <span className={`text-[12.5px] font-bold block ${textMain}`}>
                     ⚔️ {decodeHtmlEntities(currentJosephus.historicalEvent)}
                   </span>
                   <p className={`text-[12.5px] sm:text-[13px] leading-relaxed break-keep font-medium ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
                     {decodeHtmlEntities(currentJosephus.summary)}
                   </p>
-                  {currentJosephus.primarySourceText && (
-                    <div className={`mt-2 p-2.5 rounded-lg border text-xs italic ${isDark ? 'bg-[#121824] border-slate-700/60 text-slate-300' : 'bg-white border-slate-200 text-slate-600'}`}>
-                      "{decodeHtmlEntities(currentJosephus.primarySourceText)}"
-                    </div>
-                  )}
                 </div>
               )}
             </div>
@@ -1471,7 +1536,7 @@ export default function Interlinear({
               <div onClick={() => togglePanel('geo')} className="flex justify-between items-center cursor-pointer select-none">
                 <div className="flex items-center gap-1.5">
                   <span className="text-[13px]">🗺️</span>
-                  <span className={`text-[11.5px] font-bold uppercase tracking-tight ${textMain}`}>
+                  <span className={`text-[11.5px] font-bold uppercase tracking-tight text-teal-700 dark:text-teal-400`}>
                     6. 성경 역사 지리학 및 고고학 유적 좌표 (OpenBible)
                   </span>
                   <span className="text-[10px] opacity-50">{openPanels.geo ? '▼' : '▶'}</span>
@@ -1482,7 +1547,7 @@ export default function Interlinear({
                   rel="noreferrer"
                   onClick={(e) => e.stopPropagation()}
                   className={`text-[10px] font-semibold px-2.5 py-1 rounded border flex items-center gap-1 transition-colors ${
-                    isDark ? 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700' : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
+                    isDark ? 'bg-teal-950/40 text-teal-300 border-teal-900 hover:bg-teal-900/60' : 'bg-teal-50 text-teal-800 border-teal-200 hover:bg-teal-100'
                   }`}
                 >
                   📍 구글 지도 위성 보기 ↗
@@ -1490,7 +1555,7 @@ export default function Interlinear({
               </div>
 
               {openPanels.geo && (
-                <div className={`p-3.5 rounded-xl border space-y-1.5 ${isDark ? 'bg-slate-900/60 border-slate-800' : 'bg-slate-50/70 border-slate-200 shadow-2xs'}`}>
+                <div className={`p-3.5 rounded-xl border border-l-4 border-l-teal-500 space-y-1.5 ${isDark ? 'bg-teal-950/15 border-slate-800' : 'bg-teal-50/30 border-teal-100 shadow-2xs'}`}>
                   <div className="flex flex-wrap items-center justify-between gap-1.5">
                     <div className="flex items-center gap-2">
                       <span className={`text-[13.5px] font-bold ${textMain}`}>
@@ -1510,131 +1575,183 @@ export default function Interlinear({
             </div>
           )}
 
-          {/* 7. 반즈 & JFB 학술 주석 패널 */}
+          {/* 7. 반즈 & JFB 학술 주석 패널 (인디고 테마 + 실시간 한국어 번역 토글) */}
           {currentCommentary && (
             <div className={`pt-3 border-t ${isDark ? 'border-[#20293A]' : 'border-slate-200'} space-y-2 animate-fade-in text-left`}>
               <div onClick={() => togglePanel('commentary')} className="flex justify-between items-center cursor-pointer select-none">
                 <div className="flex items-center gap-1.5">
                   <span className="text-[13px]">📖</span>
-                  <span className={`text-[11.5px] font-bold uppercase tracking-tight ${textMain}`}>
+                  <span className={`text-[11.5px] font-bold uppercase tracking-tight text-indigo-700 dark:text-indigo-400`}>
                     7. 역사문법적 학술 강해 주석 ({currentCommentary.commentator})
                   </span>
                   <span className="text-[10px] opacity-50">{openPanels.commentary ? '▼' : '▶'}</span>
                 </div>
-                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${isDark ? 'bg-slate-800 text-slate-300 border-slate-700' : 'bg-slate-100 text-slate-700 border-slate-200'}`}>
-                  {decodeHtmlEntities(currentCommentary.title)}
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleToggleTranslation(`comm_${chapter}_${verse}`, currentCommentary.exegesis);
+                    }}
+                    className={`px-2 py-0.5 rounded-md text-[10.5px] font-semibold border flex items-center gap-1 transition-all cursor-pointer ${
+                      translatedMap[`comm_${chapter}_${verse}`]
+                        ? 'bg-indigo-600 text-white border-indigo-600'
+                        : 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100'
+                    }`}
+                  >
+                    {translatingKeys[`comm_${chapter}_${verse}`] ? '번역 중...' : translatedMap[`comm_${chapter}_${verse}`] ? '원문 보기' : '🌐 한국어 번역'}
+                  </button>
+                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${isDark ? 'bg-indigo-950/40 text-indigo-300 border-indigo-900/60' : 'bg-indigo-50 text-indigo-800 border-indigo-200'}`}>
+                    {decodeHtmlEntities(currentCommentary.title)}
+                  </span>
+                </div>
               </div>
 
               {openPanels.commentary && (
-                <div className={`p-3.5 sm:p-4 rounded-xl border space-y-3 text-xs ${isDark ? 'bg-slate-900/60 border-slate-800' : 'bg-slate-50/70 border-slate-200 shadow-2xs'}`}>
+                <div className={`p-4 rounded-xl border border-l-4 border-l-indigo-500 space-y-3 text-xs ${isDark ? 'bg-indigo-950/15 border-slate-800' : 'bg-indigo-50/20 border-indigo-100 shadow-2xs'}`}>
                   <div className="space-y-1">
-                    <span className={`text-[10.5px] font-bold uppercase tracking-wider block ${textSub}`}>
-                      [원어 문법 및 문맥 주해 / Exegesis]
+                    <span className={`text-[10.5px] font-bold uppercase tracking-wider block text-indigo-600 dark:text-indigo-400`}>
+                      [원어 문법 및 문맥 주해 / EXEGESIS]
                     </span>
-                    <p className={`text-[12.5px] sm:text-[13px] leading-relaxed break-keep font-medium ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
-                      {decodeHtmlEntities(currentCommentary.exegesis)}
+                    <p className={`text-[13px] leading-[1.8] break-keep font-medium ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
+                      {translatedMap[`comm_${chapter}_${verse}`] || decodeHtmlEntities(currentCommentary.exegesis)}
                     </p>
                   </div>
-                  <div className={`space-y-1 pt-2 border-t ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
-                    <span className={`text-[10.5px] font-bold uppercase tracking-wider block ${textSub}`}>
-                      [교리 및 구속사적 의미 / Theological Note]
-                    </span>
-                    <p className={`text-[12.5px] sm:text-[13px] leading-relaxed break-keep font-medium ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
-                      {decodeHtmlEntities(currentCommentary.theologicalNote)}
-                    </p>
-                  </div>
+                  {currentCommentary.theologicalNote && (
+                    <div className={`space-y-1 pt-2 border-t ${isDark ? 'border-slate-800' : 'border-indigo-100'}`}>
+                      <span className={`text-[10.5px] font-bold uppercase tracking-wider block text-indigo-600 dark:text-indigo-400`}>
+                        [교리 및 구속사적 의미 / THEOLOGICAL NOTE]
+                      </span>
+                      <p className={`text-[12.5px] leading-relaxed break-keep font-medium ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                        {decodeHtmlEntities(currentCommentary.theologicalNote)}
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           )}
 
-          {/* 8. 매튜 헨리 묵상 강해 패널 */}
+          {/* 8. 매튜 헨리 묵상 강해 패널 (세이지 그린 테마 + 실시간 한국어 번역 토글) */}
           {currentMatthewHenry && (
             <div className={`pt-3 border-t ${isDark ? 'border-[#20293A]' : 'border-slate-200'} space-y-2 animate-fade-in text-left`}>
               <div onClick={() => togglePanel('matthewHenry')} className="flex justify-between items-center cursor-pointer select-none">
                 <div className="flex items-center gap-1.5">
                   <span className="text-[13px]">🌿</span>
-                  <span className={`text-[11.5px] font-bold uppercase tracking-tight ${textMain}`}>
+                  <span className={`text-[11.5px] font-bold uppercase tracking-tight text-emerald-700 dark:text-emerald-400`}>
                     8. 매튜 헨리(Matthew Henry) 구속사적 묵상 강해
                   </span>
                   <span className="text-[10px] opacity-50">{openPanels.matthewHenry ? '▼' : '▶'}</span>
                 </div>
-                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${isDark ? 'bg-slate-800 text-slate-300 border-slate-700' : 'bg-slate-100 text-slate-700 border-slate-200'}`}>
-                  {decodeHtmlEntities(currentMatthewHenry.theme)}
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleToggleTranslation(`mh_${chapter}_${verse}`, currentMatthewHenry.devotionalExegesis);
+                    }}
+                    className={`px-2 py-0.5 rounded-md text-[10.5px] font-semibold border flex items-center gap-1 transition-all cursor-pointer ${
+                      translatedMap[`mh_${chapter}_${verse}`]
+                        ? 'bg-emerald-600 text-white border-emerald-600'
+                        : 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100'
+                    }`}
+                  >
+                    {translatingKeys[`mh_${chapter}_${verse}`] ? '번역 중...' : translatedMap[`mh_${chapter}_${verse}`] ? '원문 보기' : '🌐 한국어 번역'}
+                  </button>
+                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${isDark ? 'bg-emerald-950/40 text-emerald-300 border-emerald-900/60' : 'bg-emerald-50 text-emerald-800 border-emerald-200'}`}>
+                    {decodeHtmlEntities(currentMatthewHenry.theme)}
+                  </span>
+                </div>
               </div>
 
               {openPanels.matthewHenry && (
-                <div className={`p-3.5 sm:p-4 rounded-xl border space-y-3 text-xs ${isDark ? 'bg-slate-900/60 border-slate-800' : 'bg-slate-50/70 border-slate-200 shadow-2xs'}`}>
+                <div className={`p-4 rounded-xl border border-l-4 border-l-emerald-500 space-y-3 text-xs ${isDark ? 'bg-emerald-950/15 border-slate-800' : 'bg-emerald-50/20 border-emerald-100 shadow-2xs'}`}>
                   <div className="space-y-1">
-                    <span className={`text-[10.5px] font-bold uppercase tracking-wider block ${textSub}`}>
-                      [영혼의 묵상 강해 / Devotional Exegesis]
+                    <span className={`text-[10.5px] font-bold uppercase tracking-wider block text-emerald-600 dark:text-emerald-400`}>
+                      [영혼의 묵상 강해 / DEVOTIONAL EXEGESIS]
                     </span>
-                    <p className={`text-[12.5px] sm:text-[13px] leading-relaxed break-keep font-medium ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
-                      {decodeHtmlEntities(currentMatthewHenry.devotionalExegesis)}
+                    <p className={`text-[13px] leading-[1.8] break-keep font-medium ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
+                      {translatedMap[`mh_${chapter}_${verse}`] || decodeHtmlEntities(currentMatthewHenry.devotionalExegesis)}
                     </p>
                   </div>
-                  <div className={`space-y-1 pt-2 border-t ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
-                    <span className={`text-[10.5px] font-bold uppercase tracking-wider block ${textSub}`}>
-                      [삶의 실천과 순종 권면 / Practical Application]
-                    </span>
-                    <p className={`text-[12.5px] sm:text-[13px] leading-relaxed break-keep font-medium ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
-                      {decodeHtmlEntities(currentMatthewHenry.practicalApplication)}
-                    </p>
-                  </div>
+                  {currentMatthewHenry.practicalApplication && (
+                    <div className={`space-y-1 pt-2 border-t ${isDark ? 'border-slate-800' : 'border-emerald-100'}`}>
+                      <span className={`text-[10.5px] font-bold uppercase tracking-wider block text-emerald-600 dark:text-emerald-400`}>
+                        [삶의 실천과 순종 권면 / PRACTICAL APPLICATION]
+                      </span>
+                      <p className={`text-[12.5px] leading-relaxed break-keep font-medium ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                        {decodeHtmlEntities(currentMatthewHenry.practicalApplication)}
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           )}
 
-          {/* 9. NET Bible 본문 비평 각주 패널 */}
+          {/* 9. NET Bible 본문 비평 각주 패널 (소프트 로즈 테마) */}
           {currentNetNote && (
             <div className={`pt-3 border-t ${isDark ? 'border-[#20293A]' : 'border-slate-200'} space-y-2 animate-fade-in text-left`}>
               <div onClick={() => togglePanel('netNotes')} className="flex justify-between items-center cursor-pointer select-none">
                 <div className="flex items-center gap-1.5">
                   <span className="text-[13px]">🔍</span>
-                  <span className={`text-[11.5px] font-bold uppercase tracking-tight ${textMain}`}>
+                  <span className={`text-[11.5px] font-bold uppercase tracking-tight text-rose-700 dark:text-rose-400`}>
                     9. NET Bible 사본/원문 비평 각주
                   </span>
                   <span className="text-[10px] opacity-50">{openPanels.netNotes ? '▼' : '▶'}</span>
                 </div>
-                <span className={`text-[10px] font-mono font-semibold px-2 py-0.5 rounded border ${isDark ? 'bg-slate-800 text-slate-300 border-slate-700' : 'bg-slate-100 text-slate-700 border-slate-200'}`}>
-                  Textual Criticism
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleToggleTranslation(`net_${chapter}_${verse}`, currentNetNote.note);
+                    }}
+                    className={`px-2 py-0.5 rounded-md text-[10.5px] font-semibold border flex items-center gap-1 transition-all cursor-pointer ${
+                      translatedMap[`net_${chapter}_${verse}`]
+                        ? 'bg-rose-600 text-white border-rose-600'
+                        : 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800 hover:bg-rose-100'
+                    }`}
+                  >
+                    {translatingKeys[`net_${chapter}_${verse}`] ? '번역 중...' : translatedMap[`net_${chapter}_${verse}`] ? '원문 보기' : '🌐 한국어 번역'}
+                  </button>
+                  <span className={`text-[10px] font-mono font-semibold px-2 py-0.5 rounded border ${isDark ? 'bg-rose-950/40 text-rose-300 border-rose-900/60' : 'bg-rose-50 text-rose-800 border-rose-200'}`}>
+                    Textual Criticism
+                  </span>
+                </div>
               </div>
 
               {openPanels.netNotes && (
-                <div className={`p-3.5 rounded-xl border space-y-1.5 ${isDark ? 'bg-slate-900/60 border-slate-800' : 'bg-slate-50/70 border-slate-200 shadow-2xs'}`}>
+                <div className={`p-3.5 rounded-xl border border-l-4 border-l-rose-500 space-y-1.5 ${isDark ? 'bg-rose-950/15 border-slate-800' : 'bg-rose-50/20 border-rose-100 shadow-2xs'}`}>
                   <span className={`text-[11.5px] font-bold block ${textMain}`}>
                     📌 {decodeHtmlEntities(currentNetNote.title)}
                   </span>
-                  <p className={`text-[12px] sm:text-[12.5px] leading-relaxed break-keep font-medium ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
-                    {decodeHtmlEntities(currentNetNote.note)}
+                  <p className={`text-[12.5px] sm:text-[13px] leading-relaxed break-keep font-medium ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
+                    {translatedMap[`net_${chapter}_${verse}`] || decodeHtmlEntities(currentNetNote.note)}
                   </p>
                 </div>
               )}
             </div>
           )}
 
-          {/* 10. 이스톤 성경 백과사전 패널 */}
+          {/* 10. 이스톤 성경 백과사전 패널 (소프트 바이올렛 테마) */}
           {currentEaston && (
             <div className={`pt-3 border-t ${isDark ? 'border-[#20293A]' : 'border-slate-200'} space-y-2 animate-fade-in text-left`}>
               <div onClick={() => togglePanel('easton')} className="flex justify-between items-center cursor-pointer select-none">
                 <div className="flex items-center gap-1.5">
                   <span className="text-[13px]">📚</span>
-                  <span className={`text-[11.5px] font-bold uppercase tracking-tight ${textMain}`}>
+                  <span className={`text-[11.5px] font-bold uppercase tracking-tight text-violet-700 dark:text-violet-400`}>
                     10. 이스톤(Easton's) 성경 백과사전 [{currentEaston.word}]
                   </span>
                   <span className="text-[10px] opacity-50">{openPanels.easton ? '▼' : '▶'}</span>
                 </div>
-                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${isDark ? 'bg-slate-800 text-slate-300 border-slate-700' : 'bg-slate-100 text-slate-700 border-slate-200'}`}>
+                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${isDark ? 'bg-violet-950/40 text-violet-300 border-violet-900/60' : 'bg-violet-50 text-violet-800 border-violet-200'}`}>
                   Biblical Encyclopedia
                 </span>
               </div>
 
               {openPanels.easton && (
-                <div className={`p-3.5 rounded-xl border space-y-1 ${isDark ? 'bg-slate-900/60 border-slate-800' : 'bg-slate-50/70 border-slate-200 shadow-2xs'}`}>
+                <div className={`p-3.5 rounded-xl border border-l-4 border-l-violet-500 space-y-1 ${isDark ? 'bg-violet-950/15 border-slate-800' : 'bg-violet-50/20 border-violet-100 shadow-2xs'}`}>
                   <p className={`text-[12px] sm:text-[12.5px] leading-relaxed break-keep font-medium ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
                     {decodeHtmlEntities(currentEaston.definition)}
                   </p>
@@ -1668,7 +1785,7 @@ export default function Interlinear({
                     onClick={() => handleSelectWord(word)}
                     className={`${bgSubCard} rounded-xl p-3 border transition-all cursor-pointer flex flex-col justify-between shadow-2xs ${
                       isSelected 
-                        ? (isDark ? 'border-slate-400 ring-2 ring-slate-500/80 bg-[#1A2234]' : 'border-slate-900 ring-2 ring-slate-900 bg-slate-50')
+                        ? (isDark ? 'border-amber-500 ring-2 ring-amber-500/80 bg-[#1A2234]' : 'border-amber-600 ring-2 ring-amber-500 bg-amber-50/50')
                         : isDark ? 'border-[#20293A] hover:border-slate-600' : 'border-slate-200 hover:border-slate-400 hover:shadow-xs'
                     }`}
                   >
@@ -1729,7 +1846,7 @@ export default function Interlinear({
                           {word.isInflectedDifferent ? `(${word.korLemma})` : word.eng}
                         </span>
                         {hasCustom && (
-                          <span className="text-[8.5px] font-bold px-1 py-0.2 rounded bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-200 shrink-0">
+                          <span className="text-[8.5px] font-bold px-1 py-0.2 rounded bg-amber-200 text-amber-900 dark:bg-amber-900 dark:text-amber-200 shrink-0">
                             ✍️연구자
                           </span>
                         )}
@@ -1757,7 +1874,7 @@ export default function Interlinear({
 
                       {word.theologyInsight && (
                         <span className={`text-[9px] font-mono font-semibold truncate text-center rounded px-1 py-0.5 border ${
-                          isDark ? 'bg-slate-800/80 text-slate-300 border-slate-700' : 'bg-slate-100 text-slate-700 border-slate-200'
+                          isDark ? 'bg-amber-950/30 text-amber-300 border-amber-900/50' : 'bg-amber-50 text-amber-800 border-amber-200'
                         }`}>
                           ✨ {word.theologyInsight.stemTitle.split('—')[0]}
                         </span>
@@ -1854,7 +1971,7 @@ export default function Interlinear({
                     <span className="text-xs font-mono text-slate-300">{selectedWordDetail.pron}</span>
                   </div>
                   <p className="text-xs font-bold text-white">
-                    본문 번역: <span className="text-slate-300 underline underline-offset-2">{selectedWordDetail.korContextual}</span>
+                    본문 번역: <span className="text-amber-300 underline underline-offset-2">{selectedWordDetail.korContextual}</span>
                   </p>
                 </div>
 
@@ -1864,12 +1981,12 @@ export default function Interlinear({
                     <span style={originalFontStyle} className="text-2xl font-bold text-slate-100">
                       {cleanTypography(selectedWordDetail.lemma, isOT, typographyMode)}
                     </span>
-                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-black/40 text-slate-200">
+                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-black/40 text-amber-300">
                       {selectedWordDetail.strongs}
                     </span>
                   </div>
                   <p className="text-xs font-bold text-white">
-                    원형 기본뜻: <b className="text-slate-300">{selectedWordDetail.korLemma}</b>
+                    원형 기본뜻: <b className="text-slate-200">{selectedWordDetail.korLemma}</b>
                   </p>
                 </div>
               </div>
@@ -1883,7 +2000,7 @@ export default function Interlinear({
                 onClick={() => setModalTab('concordance')}
                 className={`px-3 py-1.5 rounded-lg text-[11px] font-bold whitespace-nowrap transition-all cursor-pointer ${
                   modalTab === 'concordance' 
-                    ? 'bg-slate-800 text-white shadow-xs dark:bg-slate-200 dark:text-slate-900' 
+                    ? 'bg-amber-600 text-white shadow-xs dark:bg-amber-500 dark:text-slate-900' 
                     : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
@@ -1894,7 +2011,7 @@ export default function Interlinear({
                 onClick={() => setModalTab('full_lexicon')}
                 className={`px-3 py-1.5 rounded-lg text-[11px] font-bold whitespace-nowrap transition-all cursor-pointer ${
                   modalTab === 'full_lexicon' 
-                    ? 'bg-slate-800 text-white shadow-xs dark:bg-slate-200 dark:text-slate-900' 
+                    ? 'bg-amber-600 text-white shadow-xs dark:bg-amber-500 dark:text-slate-900' 
                     : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
@@ -1905,7 +2022,7 @@ export default function Interlinear({
                 onClick={() => setModalTab('korean')}
                 className={`px-3 py-1.5 rounded-lg text-[11px] font-bold whitespace-nowrap transition-all cursor-pointer ${
                   modalTab === 'korean' 
-                    ? 'bg-slate-800 text-white shadow-xs dark:bg-slate-200 dark:text-slate-900' 
+                    ? 'bg-amber-600 text-white shadow-xs dark:bg-amber-500 dark:text-slate-900' 
                     : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
@@ -1916,7 +2033,7 @@ export default function Interlinear({
                 onClick={() => setModalTab('custom_study')}
                 className={`px-3 py-1.5 rounded-lg text-[11px] font-bold whitespace-nowrap transition-all cursor-pointer ${
                   modalTab === 'custom_study' 
-                    ? 'bg-slate-800 text-white shadow-xs dark:bg-slate-200 dark:text-slate-900' 
+                    ? 'bg-amber-600 text-white shadow-xs dark:bg-amber-500 dark:text-slate-900' 
                     : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
@@ -1930,9 +2047,10 @@ export default function Interlinear({
                   <div className={`p-3.5 rounded-xl border space-y-2.5 ${isDark ? 'bg-[#161D2B] border-slate-700' : 'bg-slate-50 border-slate-200 text-slate-900'}`}>
                     <div className="flex justify-between items-center">
                       <span className={`font-bold text-[13px] ${isDark ? 'text-white' : 'text-slate-900'}`}>📈 성경 66권 전체 출현 통계</span>
-                      <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900 shadow-xs">총 {concordanceTotalCount}회 등장</span>
+                      <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-amber-600 text-white dark:bg-amber-500 dark:text-slate-900 shadow-xs">총 {concordanceTotalCount}회 등장</span>
                     </div>
 
+                    {/* 정경 분류별 전체 출현 분포도 */}
                     <div className="space-y-1.5 pt-1">
                       <span className={`text-[10px] font-bold block ${textSub}`}>정경 분류별 출현 분포도</span>
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
@@ -1942,10 +2060,10 @@ export default function Interlinear({
                             <div key={secName} className={`p-2 rounded-lg border space-y-1 ${isDark ? 'bg-black/40 border-slate-800' : 'bg-white border-slate-200 shadow-2xs'}`}>
                               <div className="flex justify-between items-center text-[10px]">
                                 <span className={`font-medium ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>{secName}</span>
-                                <span className="font-mono font-bold text-slate-900 dark:text-slate-100">{count}회</span>
+                                <span className="font-mono font-bold text-amber-600 dark:text-amber-400">{count}회</span>
                               </div>
                               <div className={`w-full rounded-full h-1.5 overflow-hidden ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`}>
-                                <div className="bg-slate-700 dark:bg-slate-300 h-full rounded-full" style={{ width: `${percent}%` }} />
+                                <div className="bg-amber-500 h-full rounded-full" style={{ width: `${percent}%` }} />
                               </div>
                             </div>
                           );
@@ -2046,14 +2164,14 @@ export default function Interlinear({
 
                   {selectedWordDetail.theologyInsight && (
                     <div className={`p-3.5 rounded-xl border space-y-1.5 ${
-                      isDark ? 'bg-slate-900/80 border-slate-700 text-slate-200' : 'bg-slate-50 border-slate-200 text-slate-900 shadow-2xs'
+                      isDark ? 'bg-amber-950/20 border-amber-900/40 text-slate-200' : 'bg-amber-50/60 border-amber-200 text-slate-900 shadow-2xs'
                     }`}>
-                      <div className={`flex items-center gap-1.5 border-b pb-1.5 ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
-                        <span className="font-bold text-[12.5px] text-slate-900 dark:text-slate-100">📜 {selectedWordDetail.theologyInsight.stemTitle}</span>
+                      <div className={`flex items-center gap-1.5 border-b pb-1.5 ${isDark ? 'border-amber-900/40' : 'border-amber-200'}`}>
+                        <span className="font-bold text-[12.5px] text-amber-800 dark:text-amber-300">📜 {selectedWordDetail.theologyInsight.stemTitle}</span>
                       </div>
                       <p className={`text-[12px] leading-relaxed font-medium ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{selectedWordDetail.theologyInsight.stemDesc}</p>
                       {selectedWordDetail.theologyInsight.aspectDesc && (
-                        <p className={`text-[11.5px] pt-1 border-t border-dashed font-semibold ${isDark ? 'border-slate-800 text-slate-300' : 'border-slate-200 text-slate-700'}`}>
+                        <p className={`text-[11.5px] pt-1 border-t border-dashed font-semibold ${isDark ? 'border-amber-900/40 text-amber-300' : 'border-amber-200 text-amber-800'}`}>
                           ↳ {selectedWordDetail.theologyInsight.aspectDesc}
                         </p>
                       )}
@@ -2122,7 +2240,7 @@ export default function Interlinear({
                   <button
                     type="button"
                     onClick={handleSaveCustomLexiconNote}
-                    className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-[12px] shadow-sm transition-all cursor-pointer"
+                    className="w-full py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-[12px] shadow-sm transition-all cursor-pointer"
                   >
                     💾 연구자 번역/주석 영구 저장
                   </button>

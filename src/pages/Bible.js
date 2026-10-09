@@ -429,7 +429,7 @@ export default function Bible({
   const [viewMode, setViewMode] = useState('single'); 
   const [noteContent, setNoteContent] = useState(currDay?.bibleFreeNote || '');
 
-  // 📖 성경 번역본 모드: 'krv'(개역개정) | 'easy'(쉬운성경) | 'parallel'(동시대조)
+  // 📖 성경 번역본 모드: 'krv'(개역개정) | 'easy'(쉬운성경) | 'web'(World English Bible) | 'parallel'(동시대조)
   const [bibleVersion, setBibleVersion] = useState(() => {
     try {
       return localStorage.getItem('bible_version_mode') || 'krv';
@@ -438,6 +438,7 @@ export default function Bible({
     }
   });
   const [easyBibleDb, setEasyBibleDb] = useState({});
+  const [webBibleDb, setWebBibleDb] = useState({}); // 🌟 World English Bible (WEB) 데이터베이스
 
   const handleVersionChange = (ver) => {
     setBibleVersion(ver);
@@ -476,11 +477,12 @@ export default function Bible({
   const longPressTimerRef = useRef(null);
   const isLongPressActiveRef = useRef(false);
 
-  // 마스터 사전, 쉬운성경 및 10대 학술 사료 선제 적재
+  // 마스터 사전, 쉬운성경, WEB 성경 및 10대 학술 사료 선제 적재
   useEffect(() => {
     ensureMasterStrongs();
 
     fetch('/data/easy_bible.json').then(r => r.ok ? r.json() : {}).then(d => setEasyBibleDb(d || {})).catch(() => {});
+    fetch('/data/web_bible.json').then(r => r.ok ? r.json() : {}).then(d => setWebBibleDb(d || {})).catch(() => {}); // 🌟 WEB 데이터 수급
     fetch('/data/lxx_quotes.json').then(r => r.ok ? r.json() : {}).then(d => setLxxDb(d || {})).catch(() => {});
     fetch('/data/josephus.json').then(r => r.ok ? r.json() : {}).then(d => setJosephusDb(d || {})).catch(() => {});
     fetch('/data/bible_geodata.json').then(r => r.ok ? r.json() : {}).then(d => setGeoDb(d || {})).catch(() => {});
@@ -645,6 +647,8 @@ export default function Bible({
 
     const easyKey = `${koBook}-${chNum}-${vNum}`;
     const easyText = easyBibleDb[easyKey] || '';
+    const webKey = `${koBook}-${chNum}-${vNum}`;
+    const webText = webBibleDb[webKey] || webBibleDb[`${rawBookName}-${chNum}-${vNum}`] || '';
 
     setInspectorTarget({
       book: koBook,
@@ -652,6 +656,7 @@ export default function Bible({
       verse: vNum,
       text: decodeHtmlEntities(verseText),
       easyText: easyText,
+      webText: webText,
       isOT
     });
     setInspectorWords([]);
@@ -756,7 +761,7 @@ export default function Bible({
     } finally {
       setIsInspectorLoading(false);
     }
-  }, [sBk, getKoName, customNotesMap, easyBibleDb]);
+  }, [sBk, getKoName, customNotesMap, easyBibleDb, webBibleDb]);
 
   // 단어 선택 시 전권 실시간 빈도수 집계
   const handleSelectInspectorWord = useCallback(async (word) => {
@@ -797,7 +802,7 @@ export default function Bible({
     }
   }, [customNotesMap]);
 
-  // 원어 연구실 점프
+  // 🔬 원어성경연구실 전체 화면으로 1:1 점프 연동
   const handleJumpToInterlinearStudio = () => {
     if (!inspectorTarget) return;
     try {
@@ -931,31 +936,39 @@ export default function Bible({
           <div className="flex-1 flex flex-col h-full pointer-events-auto relative z-10">
              <div className="ignore-draw pt-2"><SubPageHeader title="성경 본문" onBack={()=>{setBibleViewMode('index'); setSelVerses([]);}} t={t} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} /></div>
              
+             {/* 🌟 상단 컨트롤 바 (개역개정 / 쉬운성경 / WEB / 동시대조 4대 역본 컨트롤러) */}
              <div className={`${ui.glassCard} px-3 sm:px-6 pt-2 pb-2.5 shadow-xs z-[60] border-b flex flex-col gap-2 ignore-draw relative pointer-events-auto rounded-none border-t-0 border-l-0 border-r-0`}>
                <div className="flex justify-between items-center flex-wrap gap-2">
                  <span className={`font-bold text-[15px] sm:text-[16px] ${ui.textMain}`}>{getKoName(sBk)} {sCh}장</span>
                  
-                 <div className="flex items-center gap-2">
-                   {/* 🌟 쉬운성경 스왑 / 동시대조 세그먼트 컨트롤 */}
+                 <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                   {/* 🌟 4대 역본 세그먼트 스위치 */}
                    <div className={`flex p-0.5 rounded-xl border text-[11px] font-bold ${isDark ? 'bg-black/30 border-white/10' : 'bg-slate-100 border-slate-200'}`}>
                       <button 
                         onClick={() => handleVersionChange('krv')}
-                        className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${bibleVersion === 'krv' ? (isDark ? 'bg-slate-800 text-white font-bold shadow-xs' : 'bg-white text-slate-900 font-bold shadow-xs') : ui.textSub}`}
+                        className={`px-2 py-1 rounded-lg transition-all cursor-pointer ${bibleVersion === 'krv' ? (isDark ? 'bg-slate-800 text-white font-bold shadow-xs' : 'bg-white text-slate-900 font-bold shadow-xs') : ui.textSub}`}
                         title="개역개정 단독 보기"
                       >
                         개역개정
                       </button>
                       <button 
                         onClick={() => handleVersionChange('easy')}
-                        className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${bibleVersion === 'easy' ? (isDark ? 'bg-slate-800 text-white font-bold shadow-xs' : 'bg-white text-slate-900 font-bold shadow-xs') : ui.textSub}`}
+                        className={`px-2 py-1 rounded-lg transition-all cursor-pointer ${bibleVersion === 'easy' ? (isDark ? 'bg-slate-800 text-white font-bold shadow-xs' : 'bg-white text-slate-900 font-bold shadow-xs') : ui.textSub}`}
                         title="현대어 쉬운성경으로 즉시 스왑"
                       >
                         쉬운성경
                       </button>
                       <button 
+                        onClick={() => handleVersionChange('web')}
+                        className={`px-2 py-1 rounded-lg transition-all cursor-pointer ${bibleVersion === 'web' ? (isDark ? 'bg-slate-800 text-white font-bold shadow-xs' : 'bg-white text-slate-900 font-bold shadow-xs') : ui.textSub}`}
+                        title="World English Bible 영문 대조"
+                      >
+                        WEB
+                      </button>
+                      <button 
                         onClick={() => handleVersionChange('parallel')}
-                        className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${bibleVersion === 'parallel' ? (isDark ? 'bg-slate-800 text-white font-bold shadow-xs' : 'bg-white text-slate-900 font-bold shadow-xs') : ui.textSub}`}
-                        title="개역개정과 쉬운성경 나란히 대조"
+                        className={`px-2 py-1 rounded-lg transition-all cursor-pointer ${bibleVersion === 'parallel' ? (isDark ? 'bg-slate-800 text-white font-bold shadow-xs' : 'bg-white text-slate-900 font-bold shadow-xs') : ui.textSub}`}
+                        title="다중 역본 동시대조"
                       >
                         동시대조
                       </button>
@@ -965,13 +978,13 @@ export default function Bible({
                    <div className={`flex gap-1 ${isDark ? 'bg-black/30 border-white/10' : 'bg-slate-100 border-slate-200'} p-1 rounded-xl border`}>
                       <button 
                         onClick={() => setViewMode('single')}
-                        className={`px-3 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer ${viewMode === 'single' ? (isDark ? 'bg-slate-800 text-white shadow-xs' : 'bg-white text-slate-900 shadow-xs') : ui.textSub}`}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer ${viewMode === 'single' ? (isDark ? 'bg-slate-800 text-white shadow-xs' : 'bg-white text-slate-900 shadow-xs') : ui.textSub}`}
                       >
                         본문 집중
                       </button>
                       <button 
                         onClick={() => setViewMode('split')}
-                        className={`px-3 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer ${viewMode === 'split' ? (isDark ? 'bg-slate-800 text-white shadow-xs' : 'bg-white text-slate-900 shadow-xs') : ui.textSub}`}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer ${viewMode === 'split' ? (isDark ? 'bg-slate-800 text-white shadow-xs' : 'bg-white text-slate-900 shadow-xs') : ui.textSub}`}
                       >
                         2단 필사
                       </button>
@@ -990,10 +1003,11 @@ export default function Bible({
                tool={tool} setTool={setTool} color={color} setColor={setColor} size={size} setSize={setSize} t={t} 
                renderStickers={() => <StickerLayer memos={currDay?.memos} stickers={currDay?.stickers} onUpdateMemos={(m)=>updateDay({memos:m})} onUpdateStickers={(s)=>updateDay({stickers:s})} onPtrDown={onPtrDown} />}
              >
-                 <div className={`p-3 sm:p-5 md:p-6 pb-24 grid gap-3 sm:gap-5 h-full relative z-10 hide-scrollbar ${viewMode === 'split' ? 'grid-cols-1 md:grid-cols-2 max-w-[1400px]' : 'grid-cols-1 max-w-4xl mx-auto w-full'}`}>
+                 {/* 🌟 모바일 여백 극대화 (px-2.5 sm:px-5) 및 하단 탭바 겹침 방지 (pb-36) */}
+                 <div className={`px-2.5 sm:px-5 md:px-6 pt-2 pb-36 grid gap-3 sm:gap-5 h-full relative z-10 hide-scrollbar ${viewMode === 'split' ? 'grid-cols-1 md:grid-cols-2 max-w-[1400px]' : 'grid-cols-1 max-w-4xl mx-auto w-full'}`}>
                      
                      <div className={`flex flex-col relative z-[45] pointer-events-auto h-full overflow-y-auto hide-scrollbar`}>
-                         <div className={`${ui.glassCard} rounded-[24px] p-4 sm:p-6 min-h-[400px]`}>
+                         <div className={`${ui.glassCard} rounded-[20px] sm:rounded-[24px] p-2.5 sm:p-5 md:p-6 min-h-[400px]`}>
                          {cVs.length > 0 ? (getArr ? getArr(cVs) : cVs).map((verse, idx) => { 
                             const vId=`${sBk}-${sCh}-${idx}`; 
                             const isR=(readVerses||{})[vId]; 
@@ -1004,9 +1018,11 @@ export default function Bible({
                             const matchedKey = checkHasSermon(koName, sBk, sCh, idx + 1);
                             const displayVerseText = safeGetVerseText(verse);
 
-                            // 쉬운성경 실시간 구절 조회
+                            // 쉬운성경 & WEB 성경 구절 실시간 매핑
                             const easyKey = `${koName}-${sCh}-${idx + 1}`;
                             const easyText = easyBibleDb[easyKey] || '';
+                            const webKey = `${koName}-${sCh}-${idx + 1}`;
+                            const webText = webBibleDb[webKey] || webBibleDb[`${sBk}-${sCh}-${idx + 1}`] || '';
 
                             return (
                               <div 
@@ -1026,10 +1042,58 @@ export default function Bible({
                                 }}
                                 onTouchMove={() => { if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current); }}
                                 onTouchEnd={() => { if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current); }}
-                                className={`group flex items-start justify-between p-3 rounded-[14px] mb-1.5 transition-all cursor-pointer ${isSel ? `bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 ${ui.textMain}` : isR && (!hColor || hColor === 'transparent') ? `opacity-40 grayscale ${ui.textSub}` : `hover:${isDark ? 'bg-white/5' : 'bg-slate-50'} ${ui.textMain}`}`}
+                                className={`group flex flex-col p-3 sm:p-3.5 rounded-[16px] mb-2 transition-all cursor-pointer ${
+                                  isSel 
+                                    ? `bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 ${ui.textMain}` 
+                                    : isR && (!hColor || hColor === 'transparent') 
+                                    ? `opacity-40 grayscale ${ui.textSub}` 
+                                    : `hover:${isDark ? 'bg-white/5' : 'bg-slate-50'} ${ui.textMain} border border-transparent`
+                                }`}
                                 style={hColor && hColor !== 'transparent' ? { backgroundColor: `${hColor}33`, borderLeft: `4px solid ${hColor}` } : {}}
-                                title="길게 누르거나 우클릭 시 심층 원어 분해가 열립니다"
+                                title="터치하여 읽기 체크 / 길게 누르면 심층 원어 분해가 열립니다"
                               >
+                                 {/* 🌟 1. 상단 슬림 메타 바: 절 번호 + 우측 버튼(원어, 설교) 독립 배치 */}
+                                 <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-dashed border-slate-200/80 dark:border-slate-800/80">
+                                   <div className="flex items-center gap-1.5">
+                                     <span className="font-bold text-[11.5px] sm:text-[12px] font-mono px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
+                                       {idx + 1}절
+                                     </span>
+                                     <span className={`text-[10.5px] font-mono hidden sm:inline ${ui.textSub}`}>
+                                       {koName} {sCh}:{idx + 1}
+                                     </span>
+                                   </div>
+
+                                   <div className="flex items-center gap-1.5">
+                                     <button
+                                       type="button"
+                                       onClick={(e) => {
+                                         e.stopPropagation();
+                                         openVerseInspector(sCh, idx + 1, displayVerseText);
+                                       }}
+                                       className="px-2.5 py-0.8 rounded-md text-[10.5px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer shadow-2xs flex items-center gap-1 active:scale-95"
+                                       title="원어 분해 및 10대 학술 사료 인스펙터"
+                                     >
+                                       <span>📖</span> 원어
+                                     </button>
+
+                                     {matchedKey && (
+                                       <button 
+                                         type="button"
+                                         onClick={(e) => {
+                                           e.stopPropagation();
+                                           setSelectedSermonVerse(matchedKey);
+                                           setBibleViewMode('sermonDetail');
+                                         }}
+                                         className={`px-2.5 py-0.8 ${isDark ? 'bg-slate-800 text-slate-300 border-slate-700' : 'bg-slate-100 text-slate-700 border-slate-200'} border rounded-md text-[10.5px] font-semibold transition-colors whitespace-nowrap shadow-2xs cursor-pointer flex items-center gap-1 active:scale-95`}
+                                         title="해당 구절 설교 아카이브"
+                                       >
+                                         <span>✍️</span> 설교
+                                       </button>
+                                     )}
+                                   </div>
+                                 </div>
+
+                                 {/* 🌟 2. 가로폭 100% 온전히 누리는 유려한 본문 텍스트 (찌그러짐 원천 해결) */}
                                  <div 
                                    onClick={(e) => { 
                                      if (isLongPressActiveRef.current) return;
@@ -1050,63 +1114,56 @@ export default function Bible({
                                        setSelVerses(p => p.includes(vId) ? p.filter(id=>id!==vId) : [...p, vId]);
                                      } 
                                    }}
-                                   className="flex gap-3 flex-1 leading-[1.8]"
+                                   className="w-full text-left leading-[1.85] pt-0.5"
                                  >
-                                    <span className={`font-bold min-w-[20px] text-right mt-0.5 text-slate-500`}>{idx + 1}</span>
-                                    
-                                    {/* 번역본 모드별 텍스트 렌더링 */}
+                                    {/* 1) 개역개정 단독 */}
                                     {bibleVersion === 'krv' && (
-                                      <span className={`text-[13.5px] sm:text-[14.5px] font-medium ${hColor && hColor !== 'transparent' ? "font-bold" : ""}`}>
+                                      <p className={`text-[14px] sm:text-[15px] font-serif font-medium tracking-normal break-keep ${hColor && hColor !== 'transparent' ? "font-bold" : ""}`}>
                                          {displayVerseText}
-                                      </span>
+                                      </p>
                                     )}
 
+                                    {/* 2) 쉬운성경 단독 */}
                                     {bibleVersion === 'easy' && (
-                                      <span className={`text-[13.5px] sm:text-[14.5px] font-medium ${hColor && hColor !== 'transparent' ? "font-bold" : ""}`}>
+                                      <p className={`text-[14px] sm:text-[15px] font-sans font-medium tracking-tight break-keep ${hColor && hColor !== 'transparent' ? "font-bold" : ""}`}>
                                          {easyText || displayVerseText}
-                                      </span>
+                                      </p>
                                     )}
 
+                                    {/* 3) World English Bible 단독 */}
+                                    {bibleVersion === 'web' && (
+                                      <p className={`text-[13.5px] sm:text-[14.5px] font-serif leading-[1.75] font-normal tracking-wide ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
+                                         {webText || "Loading World English Bible..."}
+                                      </p>
+                                    )}
+
+                                    {/* 4) 동시대조 3단 렌더링 */}
                                     {bibleVersion === 'parallel' && (
-                                      <div className="flex-1 space-y-1">
-                                        <span className={`text-[13.5px] sm:text-[14.5px] font-medium block ${hColor && hColor !== 'transparent' ? "font-bold" : ""}`}>
-                                           {displayVerseText}
-                                        </span>
+                                      <div className="space-y-2 pt-0.5">
+                                        <div className={`p-2.5 rounded-xl border ${isDark ? 'bg-slate-900/40 border-slate-800' : 'bg-slate-50 border-slate-200/80'}`}>
+                                          <span className="text-[10px] font-bold text-slate-400 block mb-0.5">[개역개정]</span>
+                                          <p className={`text-[13.5px] sm:text-[14.5px] font-serif font-medium leading-[1.8] break-keep ${ui.textMain}`}>
+                                            {displayVerseText}
+                                          </p>
+                                        </div>
                                         {easyText && (
-                                          <span className={`text-[12.5px] sm:text-[13.5px] leading-[1.7] block ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                                            <span className="text-[10px] font-bold text-slate-400 mr-1.5">[쉬운]</span>
-                                            {easyText}
-                                          </span>
+                                          <div className={`p-2.5 rounded-xl border ${isDark ? 'bg-emerald-950/20 border-emerald-900/30' : 'bg-emerald-50/40 border-emerald-100'}`}>
+                                            <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 block mb-0.5">[쉬운성경]</span>
+                                            <p className={`text-[13.5px] sm:text-[14.5px] leading-[1.75] break-keep ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
+                                              {easyText}
+                                            </p>
+                                          </div>
+                                        )}
+                                        {webText && (
+                                          <div className={`p-2.5 rounded-xl border ${isDark ? 'bg-blue-950/20 border-blue-900/30' : 'bg-blue-50/40 border-blue-100'}`}>
+                                            <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 block mb-0.5">[WEB - World English Bible]</span>
+                                            <p className={`text-[13px] sm:text-[14px] font-serif leading-[1.7] ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                                              {webText}
+                                            </p>
+                                          </div>
                                         )}
                                       </div>
                                     )}
-                                 </div>
-
-                                 <div className="flex items-center gap-1.5 ml-2 mt-0.5 shrink-0">
-                                   <button
-                                     type="button"
-                                     onClick={(e) => {
-                                       e.stopPropagation();
-                                       openVerseInspector(sCh, idx + 1, displayVerseText);
-                                     }}
-                                     className="px-2.5 py-1 rounded-lg text-[10.5px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 shrink-0 mt-0.5 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer shadow-2xs"
-                                     title="원어 분해 및 10대 학술 사료"
-                                   >
-                                     원어
-                                   </button>
-
-                                   {matchedKey && (
-                                     <button 
-                                       onClick={(e) => {
-                                         e.stopPropagation();
-                                         setSelectedSermonVerse(matchedKey);
-                                         setBibleViewMode('sermonDetail');
-                                       }}
-                                       className={`px-2.5 py-1 ${isDark ? 'bg-slate-800 text-slate-300 border-slate-700' : 'bg-slate-100 text-slate-700 border-slate-200'} border rounded-lg text-[10px] font-bold transition-colors whitespace-nowrap shadow-xs cursor-pointer`}
-                                     >
-                                       설교
-                                     </button>
-                                   )}
                                  </div>
                               </div>
                             );
@@ -1234,7 +1291,7 @@ export default function Bible({
                   <button
                     type="button"
                     onClick={handleJumpToInterlinearStudio}
-                    className="px-2.5 py-1 rounded-lg text-[10.5px] font-bold bg-slate-800 hover:bg-slate-700 text-white shadow-xs cursor-pointer flex items-center gap-1"
+                    className="px-2.5 py-1 rounded-lg text-[10.5px] font-bold bg-slate-800 hover:bg-slate-700 text-white shadow-xs cursor-pointer flex items-center gap-1 transition-all active:scale-95"
                     title="10대 학술 엔진 전체 화면으로 이동"
                   >
                     <span>🔬</span> 원어성경연구실 ➔
@@ -1281,7 +1338,7 @@ export default function Bible({
                 </div>
               )}
 
-              {/* 🌟 인스펙터 상단 본문 비교 (개역개정 vs 쉬운성경) */}
+              {/* 🌟 인스펙터 상단 본문 비교 (개역개정 vs 쉬운성경 vs WEB) */}
               <div className="space-y-1 pt-1 text-left">
                 <p className={`text-[13px] font-medium leading-relaxed ${ui.textMain}`}>
                   <span className="text-[10px] font-bold text-slate-400 mr-1">[개역]</span>
@@ -1291,6 +1348,12 @@ export default function Bible({
                   <p className={`text-[12.5px] font-medium leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                     <span className="text-[10px] font-bold text-slate-400 mr-1">[쉬운]</span>
                     {inspectorTarget.easyText}
+                  </p>
+                )}
+                {inspectorTarget.webText && (
+                  <p className={`text-[12px] font-serif leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                    <span className="text-[10px] font-bold text-blue-500 mr-1">[WEB]</span>
+                    {inspectorTarget.webText}
                   </p>
                 )}
               </div>
