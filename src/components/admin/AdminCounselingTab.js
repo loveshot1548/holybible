@@ -1,5 +1,39 @@
 // src/components/admin/AdminCounselingTab.js
 import React, { useState, useMemo } from 'react';
+import CryptoJS from 'crypto-js';
+
+// =====================================================================
+// 🔐 [보안 표준화] 군사급 AES-256 종단간 복호화 엔진 (v1, v2 전수 호환)
+// =====================================================================
+const CHAT_SECRET_KEY = process.env.REACT_APP_CHAT_SECRET || 'tree-secret-key-2026';
+const ENC_PREFIX_V2 = "ENC_GTC_v2::";
+const ENC_PREFIX_V1 = "ENC_GTC_v1::";
+
+const decryptField = (cipherText) => {
+  if (!cipherText || typeof cipherText !== 'string') return cipherText || '';
+  
+  if (cipherText.startsWith(ENC_PREFIX_V2)) {
+    try {
+      const rawCipher = cipherText.replace(ENC_PREFIX_V2, '');
+      const bytes = CryptoJS.AES.decrypt(rawCipher, CHAT_SECRET_KEY);
+      const original = bytes.toString(CryptoJS.enc.Utf8);
+      return original || cipherText;
+    } catch (e) {
+      return cipherText;
+    }
+  }
+
+  if (cipherText.startsWith(ENC_PREFIX_V1)) {
+    try {
+      const payload = cipherText.replace(ENC_PREFIX_V1, '');
+      return decodeURIComponent(atob(payload));
+    } catch (e) {
+      return cipherText;
+    }
+  }
+
+  return cipherText;
+};
 
 // 엔터프라이즈 모노크롬 SVG 아이콘 세트
 const SvgMail = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" /></svg>;
@@ -8,9 +42,7 @@ const SvgSend = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} strok
 const SvgCheck = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>;
 const SvgClock = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3 h-3"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
 const SvgUser = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632zM19.5 12l2.25 2.25 4.5-4.5" /></svg>;
-const SvgBook = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" /></svg>;
 const SvgLock = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3 h-3"><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" /></svg>;
-const SvgPhone = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z" /></svg>;
 const SvgTag = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3 h-3"><path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" /><path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6z" /></svg>;
 
 // 목회 실무 성경 말씀 및 위로 스니펫 프리셋
@@ -44,16 +76,26 @@ export default function AdminCounselingTab({
   const [selectedId, setSelectedId] = useState(() => counselingList[0]?.id || null);
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
 
-  // 🌟 [신규] 에디터 모드: 성도 공식 회신(Public Reply) vs 사역자 내부 비공개 메모(Internal Staff Note)
+  // 에디터 모드: 공식 회신 vs 사역자 내부 비공개 메모
   const [editorMode, setEditorMode] = useState('REPLY'); // 'REPLY' | 'INTERNAL_NOTE'
   const [internalMemos, setInternalMemos] = useState(() => {
     try { return JSON.parse(localStorage.getItem('church_counseling_internal_memos')) || {}; } catch { return {}; }
   });
   const [currentMemoInput, setCurrentMemoInput] = useState('');
 
-  // 🌟 티켓 필터링
+  // 🌟 [핵심] 암호화된 모든 상담 티켓의 본문, 제목, 회신을 실시간 자동 복호화
+  const decryptedList = useMemo(() => {
+    return (counselingList || []).map(c => ({
+      ...c,
+      title: decryptField(c.title),
+      content: decryptField(c.content),
+      reply: decryptField(c.reply)
+    }));
+  }, [counselingList]);
+
+  // 🌟 복호화된 데이터를 기반으로 필터링 및 검색 수행
   const filteredList = useMemo(() => {
-    return counselingList.filter(c => {
+    return decryptedList.filter(c => {
       const isAnswered = c.status === 'answered';
       const isInProgress = c.status === 'in_progress';
 
@@ -70,20 +112,20 @@ export default function AdminCounselingTab({
         (c.cell_name || '').toLowerCase().includes(q)
       );
     });
-  }, [counselingList, filterMode, query]);
+  }, [decryptedList, filterMode, query]);
 
-  // 활성 선택 티켓
+  // 활성 선택 티켓 (복호화된 데이터 연동)
   const activeTicket = useMemo(() => {
     if (!selectedId && filteredList.length > 0) return filteredList[0];
-    const found = counselingList.find(c => c.id === selectedId);
+    const found = decryptedList.find(c => c.id === selectedId);
     return found || filteredList[0] || null;
-  }, [counselingList, filteredList, selectedId]);
+  }, [decryptedList, filteredList, selectedId]);
 
   // 해당 성도의 과거 상담 누적 건수
   const userPastTickets = useMemo(() => {
     if (!activeTicket) return [];
-    return counselingList.filter(c => c.user_name === activeTicket.user_name);
-  }, [counselingList, activeTicket]);
+    return decryptedList.filter(c => c.user_name === activeTicket.user_name);
+  }, [decryptedList, activeTicket]);
 
   const currentReplyText = activeTicket ? (counselingReplies[activeTicket.id] || '') : '';
   const currentTicketMemos = activeTicket ? (internalMemos[activeTicket.id] || []) : [];
@@ -125,8 +167,8 @@ export default function AdminCounselingTab({
     setCurrentMemoInput('');
   };
 
-  const pendingCount = counselingList.filter(c => c.status !== 'answered' && c.status !== 'in_progress').length;
-  const inProgressCount = counselingList.filter(c => c.status === 'in_progress').length;
+  const pendingCount = decryptedList.filter(c => c.status !== 'answered' && c.status !== 'in_progress').length;
+  const inProgressCount = decryptedList.filter(c => c.status === 'in_progress').length;
 
   return (
     <div className="h-full flex flex-col md:flex-row bg-white rounded-xl border border-zinc-200 shadow-2xs overflow-hidden box-border font-sans select-none text-zinc-900">
@@ -149,7 +191,7 @@ export default function AdminCounselingTab({
                 </span>
               )}
             </div>
-            <span className="text-[10.5px] font-mono text-zinc-400">총 {counselingList.length}건</span>
+            <span className="text-[10.5px] font-mono text-zinc-400">총 {decryptedList.length}건</span>
           </div>
 
           {/* 3단계 파이프라인 필터 탭 */}
@@ -220,7 +262,6 @@ export default function AdminCounselingTab({
                       #TICKET-{String(c.id).slice(-4)}
                     </span>
 
-                    {/* 상태 라벨 */}
                     <span className={`px-1.5 py-0.2 rounded font-black border text-[9.5px] flex items-center gap-1 ${
                       isAnswered
                         ? (isSelected ? 'bg-emerald-950 text-emerald-300 border-emerald-800' : 'bg-emerald-50 text-emerald-700 border-emerald-200')
@@ -287,7 +328,7 @@ export default function AdminCounselingTab({
             {/* 스레드 본문 영역 (성도 고민 + 사역자 답변 + 내부 인계 메모) */}
             <div className="flex-1 overflow-y-auto p-6 space-y-5 hide-scrollbar bg-zinc-50/30">
               
-              {/* 성도 원문 카드 */}
+              {/* 성도 원문 카드 (완전 복호화된 본문 표시) */}
               <div className="flex flex-col gap-1.5 max-w-3xl">
                 <div className="flex items-center gap-1 text-[10.5px] font-black text-zinc-400 uppercase tracking-wider pl-1">
                   <SvgUser /> <span>{activeTicket.user_name} 성도의 나눔/고민</span>
@@ -299,7 +340,7 @@ export default function AdminCounselingTab({
                 </div>
               </div>
 
-              {/* 사역자 공식 답변 카드 */}
+              {/* 사역자 공식 답변 카드 (완전 복호화된 회신 표시) */}
               {activeTicket.status === 'answered' && (
                 <div className="flex flex-col gap-1.5 max-w-3xl pl-4 border-l-2 border-zinc-900 ml-2 mt-3">
                   <div className="flex items-center gap-1.5 text-[10.5px] font-black text-zinc-900 uppercase tracking-wider">
@@ -317,7 +358,7 @@ export default function AdminCounselingTab({
                 </div>
               )}
 
-              {/* 🌟 교역자 내부 비공개 심방 메모 타임라인 */}
+              {/* 교역자 내부 비공개 심방 메모 타임라인 */}
               {currentTicketMemos.length > 0 && (
                 <div className="flex flex-col gap-2 max-w-3xl pt-2">
                   <span className="text-[10.5px] font-black text-amber-800 uppercase tracking-wider pl-1 flex items-center gap-1">
@@ -335,12 +376,9 @@ export default function AdminCounselingTab({
               )}
             </div>
 
-            {/* =========================================================================
-                하단 듀얼 작성 에디터 (공식 회신 vs 교역자 내부 메모 탭)
-                ========================================================================= */}
+            {/* 하단 듀얼 작성 에디터 */}
             <div className="p-4 bg-white border-t border-zinc-200 shrink-0 flex flex-col gap-2.5">
               
-              {/* 모드 전환 탭 */}
               <div className="flex items-center justify-between">
                 <div className="flex bg-zinc-100 p-0.5 rounded-md border border-zinc-200 text-[10.5px] font-bold">
                   <button 
@@ -376,7 +414,6 @@ export default function AdminCounselingTab({
                 )}
               </div>
 
-              {/* 텍스트 입력창 */}
               {editorMode === 'REPLY' ? (
                 <div className="space-y-2">
                   <textarea
@@ -434,7 +471,7 @@ export default function AdminCounselingTab({
       </div>
 
       {/* =========================================================================
-          PANEL 3: 성도 360° 인텔리전스 사이드바 (과거 상담 이력 & 직통 연결)
+          PANEL 3: 성도 360° 인텔리전스 사이드바
           ========================================================================= */}
       {activeTicket && (
         <div className="hidden xl:flex w-[260px] bg-zinc-50/80 border-l border-zinc-200 p-4.5 flex-col gap-4.5 shrink-0 overflow-y-auto hide-scrollbar">
