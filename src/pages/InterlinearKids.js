@@ -7,7 +7,7 @@ let activeUtterance = null;
 let cachedMasterStrongs = null;
 
 // =====================================================================
-// 🎵 Web Audio API 순수 자체 효과음 합성기 (무설치/무다운로드)
+// 🎵 1. Web Audio API 사운드 신시사이저 (자체 합성)
 // =====================================================================
 const playSfx = (type) => {
   try {
@@ -84,7 +84,7 @@ const playSfx = (type) => {
 };
 
 // =====================================================================
-// 🐂 고대 히브리어 22개 자음 상형문자 마스터 사전
+// 🐂 2. 고대 히브리어 22개 자음 상형문자 마스터 사전
 // =====================================================================
 const MASTER_PICTOGRAPHS = {
   'א': { emoji: '🐂', name: '알레프', title: '힘센 황소 머리', meaning: '가장 힘센 분, 온 우주의 대장 하나님' },
@@ -126,9 +126,7 @@ const GRAMMAR_OVERRIDES = {
   "H9008": { kor: "바로 그", sound: "하", emoji: "👈", story: "두 손을 번쩍 들고 '바로 그거예요!' 가리키는 글자예요." }
 };
 
-// =====================================================================
-// 🎲 수천 가지 조합이 쏟아지는 동적 탐험 퀘스트(미션) 엔진
-// =====================================================================
+// 동적 미션 배열
 const DYNAMIC_MISSION_ACTIONS = [
   "부모님 어깨를 10번 주물러 드리며 '사랑해요' 고백하기",
   "오늘 먹은 밥그릇과 수저를 싱크대에 스스로 씩씩하게 가져다 놓기",
@@ -189,25 +187,31 @@ export default function InterlinearKids({ isDarkMode, setActiveScreen }) {
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
 
-  // 🚂 한글 단어 기차 퍼즐
+  // 🚂 한글 말씀 기차 퍼즐
   const [koreanPuzzlePool, setKoreanPuzzlePool] = useState([]);
   const [koreanPuzzleTrain, setKoreanPuzzleTrain] = useState([]);
   const [isTrainComplete, setIsTrainComplete] = useState(false);
   const [draggedToken, setDraggedToken] = useState(null);
 
-  // ✍️ 도화지 스케치북 칠판 & 크레파스 컬러 팔레트
+  // ✍️ 칠판 및 크레파스
   const canvasRef = useRef(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [isStamped, setIsStamped] = useState(false);
-  const [crayonColor, setCrayonColor] = useState('#F59E0B'); // 기본 황금 크레파스
+  const [crayonColor, setCrayonColor] = useState('#854D0E');
+
+  // 🎨 내가 그리는 말씀 그림판
+  const bibleCanvasRef = useRef(null);
+  const [isBibleDrawing, setIsBibleDrawing] = useState(false);
+  const [bibleDrawColor, setBibleDrawColor] = useState('#15803D');
+  const [savedBibleArtwork, setSavedBibleArtwork] = useState(null);
 
   // 🗺️ 여권 & 별
   const [stars, setStars] = useState(() => {
-    try { return Number(localStorage.getItem('kids_explorer_stars') || 15); } catch (_) { return 15; }
+    try { return Number(localStorage.getItem('kids_explorer_stars') || 25); } catch (_) { return 25; }
   });
   const [showPassportModal, setShowPassportModal] = useState(false);
   const [stickers] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('kids_stickers') || '["빛의 탐험가", "노아의 방주 비둘기", "다윗의 물맷돌", "요셉의 채색옷"]'); } catch (_) { return ["빛의 탐험가"]; }
+    try { return JSON.parse(localStorage.getItem('kids_stickers') || '["빛의 탐험가", "에덴동산 정원사", "노아의 비둘기"]'); } catch (_) { return ["빛의 탐험가"]; }
   });
 
   // 🎬 극장 모달
@@ -215,7 +219,7 @@ export default function InterlinearKids({ isDarkMode, setActiveScreen }) {
   const [customVideoInput, setCustomVideoInput] = useState('');
   const [isEditingVideo, setIsEditingVideo] = useState(false);
 
-  // 퀴즈 & 🎲 동적 퀘스트 룰렛
+  // 퀴즈 & 동적 퀘스트
   const [selectedQuizAnswer, setSelectedQuizAnswer] = useState(null);
   const [isQuizCorrect, setIsQuizCorrect] = useState(false);
   const [missionDone, setMissionDone] = useState(false);
@@ -224,7 +228,7 @@ export default function InterlinearKids({ isDarkMode, setActiveScreen }) {
   const currentBookMeta = BIBLE_66_BOOKS[selectedBookIndex] || BIBLE_66_BOOKS[0];
   const isOT = currentBookMeta.isOT;
 
-  // 1. 기초 DB 로드
+  // 데이터 로드
   useEffect(() => {
     fetch('/data/easy_bible.json').then(r => r.ok ? r.json() : {}).then(d => setEasyBibleDb(d || {})).catch(() => {});
 
@@ -253,7 +257,14 @@ export default function InterlinearKids({ isDarkMode, setActiveScreen }) {
       .catch(() => setKidsChapterData(null));
   }, [currentBookMeta.ko, chapter]);
 
-  // 2. 단어 로드
+  useEffect(() => {
+    try {
+      const key = `kids_art_${currentBookMeta.ko}_${chapter}_${verse}`;
+      const saved = localStorage.getItem(key);
+      setSavedBibleArtwork(saved || null);
+    } catch (_) {}
+  }, [currentBookMeta.ko, chapter, verse]);
+
   useEffect(() => {
     let isMounted = true;
     const fetchWords = async () => {
@@ -280,7 +291,6 @@ export default function InterlinearKids({ isDarkMode, setActiveScreen }) {
     return easyBibleDb[key] || `${currentBookMeta.ko} ${chapter}장 ${verse}절`;
   }, [currentBookMeta.ko, chapter, verse, easyBibleDb]);
 
-  // 한글 쉬운성경 어절 기차 칸 분리
   const koreanTokens = useMemo(() => {
     if (!easyVerseText) return [];
     const cleanText = easyVerseText.replace(/[.,!?()[\]]/g, '').trim();
@@ -300,7 +310,6 @@ export default function InterlinearKids({ isDarkMode, setActiveScreen }) {
     }
   }, [koreanTokens]);
 
-  // 🎲 수천 가지 조합의 동적 미션 연산
   const currentDynamicMission = useMemo(() => {
     const combinedSeed = (chapter * 31 + verse * 7 + missionDiceSeed) % DYNAMIC_MISSION_ACTIONS.length;
     const prayerSeed = (chapter * 13 + verse * 5 + missionDiceSeed) % DYNAMIC_MISSION_PRAYERS.length;
@@ -396,7 +405,7 @@ export default function InterlinearKids({ isDarkMode, setActiveScreen }) {
     }
   };
 
-  // 🚂 한글 기차 검증
+  // 기차 검증
   const verifyTrainCompletion = (trainList, poolList) => {
     if (poolList.length === 0) {
       const isCorrect = trainList.every((t, i) => t.targetOrder === i);
@@ -465,7 +474,7 @@ export default function InterlinearKids({ isDarkMode, setActiveScreen }) {
     }
   };
 
-  // ✍️ 화사한 도화지 스케치북 칠판 좌표 연산
+  // ✍️ 칠판 드로잉
   const getCanvasCoords = (e) => {
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
@@ -495,8 +504,8 @@ export default function InterlinearKids({ isDarkMode, setActiveScreen }) {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     ctx.lineTo(coords.x, coords.y);
-    ctx.strokeStyle = crayonColor; // 선택된 크레파스 색상 적용
-    ctx.lineWidth = 11;
+    ctx.strokeStyle = crayonColor;
+    ctx.lineWidth = 12;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.stroke();
@@ -516,6 +525,65 @@ export default function InterlinearKids({ isDarkMode, setActiveScreen }) {
     const nextStars = stars + 5;
     setStars(nextStars);
     try { localStorage.setItem('kids_explorer_stars', String(nextStars)); } catch (_) {}
+  };
+
+  // 🎨 성경 그림판 드로잉
+  const getBibleCanvasCoords = (e) => {
+    const canvas = bibleCanvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    return {
+      x: (clientX - rect.left) * (canvas.width / rect.width),
+      y: (clientY - rect.top) * (canvas.height / rect.height)
+    };
+  };
+
+  const startBibleDrawing = (e) => {
+    const coords = getBibleCanvasCoords(e);
+    const canvas = bibleCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.beginPath();
+    ctx.moveTo(coords.x, coords.y);
+    setIsBibleDrawing(true);
+  };
+
+  const drawBible = (e) => {
+    if (!isBibleDrawing) return;
+    const coords = getBibleCanvasCoords(e);
+    const canvas = bibleCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.lineTo(coords.x, coords.y);
+    ctx.strokeStyle = bibleDrawColor;
+    ctx.lineWidth = 8;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+  };
+
+  const stopBibleDrawing = () => setIsBibleDrawing(false);
+  const clearBibleCanvas = () => {
+    const canvas = bibleCanvasRef.current;
+    if (!canvas) return;
+    canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+  };
+
+  const handleSaveBibleArtwork = () => {
+    const canvas = bibleCanvasRef.current;
+    if (!canvas) return;
+    const dataUrl = canvas.toDataURL('image/png');
+    const key = `kids_art_${currentBookMeta.ko}_${chapter}_${verse}`;
+    try {
+      localStorage.setItem(key, dataUrl);
+      setSavedBibleArtwork(dataUrl);
+      playSfx('stamp');
+      alert(`🎉 [${currentBookMeta.ko} ${chapter}:${verse}] 말씀 그림이 내 성경에 보관되었습니다!`);
+    } catch (_) {
+      alert("그림 저장 용량이 초과되었습니다.");
+    }
   };
 
   // 🎬 유튜브 영상 관리
@@ -565,33 +633,43 @@ export default function InterlinearKids({ isDarkMode, setActiveScreen }) {
   const explorerLevel = Math.floor(stars / 10) + 1;
   const isDark = isDarkMode;
 
+  // 🌿 코지 가든 테마 스타일 토큰
+  const theme = {
+    pageBg: isDark ? 'bg-[#0E131F]' : 'bg-[#FDFBF7]',
+    textMain: isDark ? 'text-[#F8FAFC]' : 'text-[#1E293B]',
+    textWood: isDark ? 'text-amber-300' : 'text-[#78350F]',
+    textMuted: isDark ? 'text-slate-400' : 'text-[#64748B]',
+    boardBg: isDark ? 'bg-[#182032] border-[#334155]' : 'bg-[#FFFDF9] border-[#B45309]/50 shadow-[0_4px_16px_rgba(120,53,15,0.08)]',
+    cardWood: isDark ? 'bg-[#1C253B] border-[#334155]' : 'bg-[#FFFDF7] border-[#D97706]/40 shadow-xs',
+    greenBtn: 'bg-[#15803D] hover:bg-[#166534] text-white shadow-sm',
+    woodPill: isDark ? 'bg-amber-950/60 border-amber-800 text-amber-200' : 'bg-[#FEF3C7] border-[#F59E0B]/50 text-[#78350F]'
+  };
+
   return (
-    <div className={`flex-1 flex flex-col h-full overflow-x-hidden select-none font-sans ${
-      isDark ? 'bg-[#090D16] text-slate-100' : 'bg-[#FFFBEB] text-stone-900'
-    }`}>
+    <div className={`flex-1 flex flex-col h-full overflow-x-hidden select-none font-sans ${theme.pageBg} ${theme.textMain}`}>
       
-      {/* ── 1. 헤더 (모바일 전폭 컴팩트 바) ── */}
+      {/* ── 1. 헤더: 마을 입구 나무 팻말 바 ── */}
       <header className={`px-2.5 sm:px-4 py-2 border-b flex items-center justify-between z-20 shrink-0 ${
-        isDark ? 'bg-[#121826] border-slate-800' : 'bg-gradient-to-r from-amber-300 via-orange-200 to-amber-300 border-amber-300 shadow-xs'
+        isDark ? 'bg-[#131B2B] border-slate-800' : 'bg-gradient-to-r from-[#FDE68A] via-[#FBBF24] to-[#FDE68A] border-[#D97706]/50 shadow-xs'
       }`}>
         <div className="flex items-center gap-1.5 min-w-0">
           <button onClick={() => { playSfx('pop'); setActiveScreen('home'); }} className="text-2xl p-1 cursor-pointer hover:scale-110 shrink-0">
-            🏠
+            🏡
           </button>
           <div className="min-w-0">
             <div className="flex items-center gap-1">
               <button
                 onClick={() => { playSfx('pop'); setShowPassportModal(true); }}
-                className="text-[11px] font-black px-2 py-0.5 rounded-full bg-amber-500 text-white shadow-2xs hover:bg-amber-600 shrink-0 cursor-pointer"
+                className="text-[11px] font-black px-2.5 py-0.5 rounded-full bg-[#15803D] text-white shadow-2xs hover:bg-[#166534] shrink-0 cursor-pointer"
               >
                 🗺️ 여권 Lv.{explorerLevel}
               </button>
-              <span className="text-[11px] font-black text-amber-900 dark:text-amber-300 font-mono shrink-0">
-                ⭐{stars}
+              <span className={`text-[11px] font-black ${theme.textWood} font-mono shrink-0`}>
+                ⭐ {stars}
               </span>
             </div>
-            <h1 className="text-sm sm:text-base font-black tracking-tight text-amber-950 dark:text-amber-100 truncate">
-              🎒 어린이 성경 탐험관
+            <h1 className="text-sm sm:text-base font-black tracking-tight text-[#78350F] dark:text-amber-200 truncate flex items-center gap-1">
+              <span>🌻</span> 어린이 성경 탐험관
             </h1>
           </div>
         </div>
@@ -603,7 +681,7 @@ export default function InterlinearKids({ isDarkMode, setActiveScreen }) {
               setCustomVideoInput(savedVideoUrl || currentEmbedId);
               setShowCinemaModal(true);
             }}
-            className="px-2.5 py-1.5 rounded-full text-[11px] sm:text-xs font-black bg-rose-500 hover:bg-rose-600 text-white shadow-xs active:scale-95 flex items-center gap-1 cursor-pointer"
+            className="px-2.5 py-1.5 rounded-full text-[11px] sm:text-xs font-black bg-[#FB7185] hover:bg-[#F43F5E] text-white shadow-xs active:scale-95 flex items-center gap-1 cursor-pointer"
           >
             <span>🎬</span> 극장
           </button>
@@ -611,25 +689,23 @@ export default function InterlinearKids({ isDarkMode, setActiveScreen }) {
           <button
             type="button"
             onClick={handleReturnToAcademic}
-            className="px-2.5 py-1.5 rounded-full text-[11px] sm:text-xs font-black bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs active:scale-95 flex items-center gap-0.5 cursor-pointer"
+            className="px-2.5 py-1.5 rounded-full text-[11px] sm:text-xs font-black bg-[#15803D] hover:bg-[#166534] text-white shadow-xs active:scale-95 flex items-center gap-0.5 cursor-pointer"
           >
             <span>🎓</span> 어른용
           </button>
         </div>
       </header>
 
-      {/* ── 2. 메인 스크롤 뷰포트 (모바일 좌우 여백 제로 px-1.5) ── */}
+      {/* ── 2. 메인 스크롤 뷰포트 (모바일 전폭 px-1.5) ── */}
       <main className="flex-1 overflow-y-auto px-1.5 sm:px-3 py-2 pb-36 space-y-2.5 w-full hide-scrollbar text-left">
         
-        {/* 네비게이터 카드 */}
-        <div className={`p-2 sm:p-2.5 rounded-2xl border flex items-center justify-between gap-1 w-full ${
-          isDark ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-amber-200 shadow-2xs'
-        }`}>
+        {/* 네비게이터 카드 (나무 팻말 다이얼) */}
+        <div className={`p-2 sm:p-2.5 rounded-[22px] border flex items-center justify-between gap-1 w-full ${theme.boardBg}`}>
           <div className="flex items-center gap-1.5 flex-1 min-w-0">
             <select
               value={selectedBookIndex}
               onChange={(e) => { setSelectedBookIndex(Number(e.target.value)); setChapter(1); setVerse(1); }}
-              className="font-black text-sm sm:text-base bg-transparent outline-none cursor-pointer text-amber-950 dark:text-amber-300 shrink-0"
+              className={`font-black text-sm sm:text-base bg-transparent outline-none cursor-pointer ${theme.textWood} shrink-0`}
             >
               {BIBLE_66_BOOKS.map((b, idx) => (
                 <option key={b.ko} value={idx} className="text-black">{b.ko}</option>
@@ -638,14 +714,14 @@ export default function InterlinearKids({ isDarkMode, setActiveScreen }) {
             <select
               value={chapter}
               onChange={(e) => { setChapter(Number(e.target.value)); setVerse(1); }}
-              className="font-black text-sm sm:text-base bg-transparent outline-none cursor-pointer text-amber-950 dark:text-amber-300 shrink-0"
+              className={`font-black text-sm sm:text-base bg-transparent outline-none cursor-pointer ${theme.textWood} shrink-0`}
             >
               {Array.from({ length: currentBookMeta.maxChap }, (_, i) => <option key={i+1} value={i+1} className="text-black">{i+1}장</option>)}
             </select>
             <select
               value={verse}
               onChange={(e) => setVerse(Number(e.target.value))}
-              className="font-black text-sm sm:text-base bg-transparent outline-none cursor-pointer text-amber-950 dark:text-amber-300 shrink-0"
+              className={`font-black text-sm sm:text-base bg-transparent outline-none cursor-pointer ${theme.textWood} shrink-0`}
             >
               {Array.from({ length: 35 }, (_, i) => <option key={i+1} value={i+1} className="text-black">{i+1}절</option>)}
             </select>
@@ -654,26 +730,24 @@ export default function InterlinearKids({ isDarkMode, setActiveScreen }) {
           <div className="flex gap-1 shrink-0">
             <button
               onClick={() => { playSfx('pop'); setVerse(v => Math.max(1, v - 1)); }}
-              className="px-2.5 py-1.5 rounded-xl font-black text-xs border border-stone-200 dark:border-slate-700 bg-stone-50 dark:bg-slate-800 hover:bg-stone-100 cursor-pointer"
+              className={`px-2.5 py-1.5 rounded-xl font-black text-xs border ${theme.woodPill} cursor-pointer`}
             >
               ◀ 이전
             </button>
             <button
               onClick={() => { playSfx('pop'); setVerse(v => v + 1); }}
-              className="px-2.5 py-1.5 rounded-xl font-black text-xs border border-stone-200 dark:border-slate-700 bg-stone-50 dark:bg-slate-800 hover:bg-stone-100 cursor-pointer"
+              className={`px-2.5 py-1.5 rounded-xl font-black text-xs border ${theme.woodPill} cursor-pointer`}
             >
               다음 ▶
             </button>
           </div>
         </div>
 
-        {/* 쉬운성경 본문 + 빅 버튼 오디오 스테이션 */}
-        <div className={`p-3.5 sm:p-4 rounded-3xl border relative w-full ${
-          isDark ? 'bg-[#121826] border-slate-800' : 'bg-gradient-to-br from-amber-50 via-orange-50 to-amber-100/60 border-amber-200 shadow-xs'
-        }`}>
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-xs font-black text-amber-900 dark:text-amber-300 font-mono">
-              📖 {currentBookMeta.ko} {chapter}장 {verse}절 (쉬운성경)
+        {/* 쉬운성경 본문존: 숲속 오두막 편지 보드 */}
+        <div className={`p-3.5 sm:p-4 rounded-[26px] border-2 relative w-full ${theme.boardBg}`}>
+          <div className="flex justify-between items-center mb-1.5">
+            <span className={`text-xs font-black ${theme.textWood} font-mono flex items-center gap-1`}>
+              <span>📜</span> {currentBookMeta.ko} {chapter}장 {verse}절 (쉬운성경)
             </span>
           </div>
           
@@ -681,13 +755,14 @@ export default function InterlinearKids({ isDarkMode, setActiveScreen }) {
             {easyVerseText}
           </p>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 pt-2 border-t border-dashed border-amber-200/80 dark:border-slate-700">
+          {/* 숲속 린넨 컨트롤 버튼 */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 pt-2 border-t border-dashed border-amber-300/60 dark:border-slate-700">
             <button
               onClick={handlePlayFullVerse}
               className={`py-2 px-3 rounded-2xl text-xs font-black flex items-center justify-center gap-1 shadow-xs cursor-pointer ${
                 isPlayingAudio 
                   ? 'bg-rose-500 text-white animate-pulse' 
-                  : 'bg-amber-500 hover:bg-amber-600 text-white'
+                  : 'bg-[#B45309] hover:bg-[#78350F] text-white'
               }`}
             >
               <span>{isPlayingAudio ? '⏹' : '🔊'}</span>
@@ -699,7 +774,7 @@ export default function InterlinearKids({ isDarkMode, setActiveScreen }) {
               className={`py-2 px-3 rounded-2xl text-xs font-black flex items-center justify-center gap-1 shadow-xs cursor-pointer ${
                 isRecording 
                   ? 'bg-rose-600 text-white animate-pulse' 
-                  : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                  : theme.greenBtn
               }`}
             >
               <span>{isRecording ? '⏹' : '🎙️'}</span>
@@ -713,7 +788,7 @@ export default function InterlinearKids({ isDarkMode, setActiveScreen }) {
                   audio.play();
                   playSfx('pop');
                 }}
-                className="col-span-2 sm:col-span-1 py-2 px-3 rounded-2xl text-xs font-black bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs cursor-pointer flex items-center justify-center gap-1"
+                className="col-span-2 sm:col-span-1 py-2 px-3 rounded-2xl text-xs font-black bg-[#D97706] hover:bg-[#B45309] text-white shadow-xs cursor-pointer flex items-center justify-center gap-1"
               >
                 <span>▶️</span> 내 낭독 듣기
               </button>
@@ -721,11 +796,95 @@ export default function InterlinearKids({ isDarkMode, setActiveScreen }) {
           </div>
         </div>
 
-        {/* 🌟 1. 큼직한 원어 그림 카드 (영단어 0%) */}
+        {/* 🌟 [신규] 내가 그리는 말씀 그림판: 화원 스케치북 */}
+        <div className={`p-3.5 sm:p-4 rounded-[26px] border-2 space-y-2.5 w-full ${theme.boardBg}`}>
+          <div className="flex justify-between items-center">
+            <span className={`text-xs sm:text-sm font-black ${theme.textWood} flex items-center gap-1`}>
+              <span>🎨</span> 내가 그리는 말씀 화원 ({currentBookMeta.ko} {chapter}:{verse})
+            </span>
+            <div className="flex gap-1.5">
+              <button
+                type="button"
+                onClick={handleSaveBibleArtwork}
+                className={`px-2.5 py-1 rounded-xl text-xs font-black ${theme.greenBtn} cursor-pointer`}
+              >
+                💾 그림 저장!
+              </button>
+              <button
+                type="button"
+                onClick={clearBibleCanvas}
+                className="px-2 py-1 rounded-xl text-xs font-bold text-stone-500 hover:bg-stone-200 cursor-pointer"
+              >
+                지우기 ↺
+              </button>
+            </div>
+          </div>
+
+          <p className="text-[11.5px] font-bold text-stone-600 dark:text-stone-300">
+            💡 오늘 말씀을 듣고 하나님이 만드신 아름다운 세상을 도화지에 자유롭게 그려보세요!
+          </p>
+
+          {/* 꽃잎 물감 팔레트 */}
+          <div className="flex items-center gap-1.5 py-1 overflow-x-auto hide-scrollbar">
+            <span className="text-[10.5px] font-black text-stone-500 shrink-0">물감:</span>
+            {[
+              { color: '#15803D', label: '풀잎' },
+              { color: '#854D0E', label: '나무' },
+              { color: '#D97706', label: '해바라기' },
+              { color: '#FB7185', label: '벚꽃' },
+              { color: '#0284C7', label: '하늘' },
+              { color: '#7C3AED', label: '라벤더' },
+              { color: '#1E293B', label: '흙돌' }
+            ].map(c => (
+              <button
+                key={c.color}
+                type="button"
+                onClick={() => setBibleDrawColor(c.color)}
+                style={{ backgroundColor: c.color }}
+                className={`w-6 h-6 rounded-full shrink-0 transition-transform cursor-pointer ${
+                  bibleDrawColor === c.color ? 'scale-125 ring-2 ring-white shadow-md' : 'opacity-80'
+                }`}
+                title={c.label}
+              />
+            ))}
+          </div>
+
+          {/* 도화지 캔버스 */}
+          <div className="relative w-full h-44 rounded-2xl border-2 border-dashed border-[#D97706]/40 bg-[#FFFDF7] dark:bg-slate-900 overflow-hidden shadow-inner">
+            <canvas
+              ref={bibleCanvasRef}
+              width={400}
+              height={176}
+              onMouseDown={startBibleDrawing}
+              onMouseMove={drawBible}
+              onMouseUp={stopBibleDrawing}
+              onMouseLeave={stopBibleDrawing}
+              onTouchStart={startBibleDrawing}
+              onTouchMove={drawBible}
+              onTouchEnd={stopBibleDrawing}
+              className="w-full h-full cursor-crosshair relative z-10 touch-none"
+            />
+          </div>
+
+          {savedBibleArtwork && (
+            <div className="p-2.5 rounded-2xl bg-[#FEF3C7]/60 dark:bg-black/40 border border-amber-300 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🖼️</span>
+                <div>
+                  <span className={`text-xs font-black ${theme.textWood} block`}>내가 완성한 말씀 액자!</span>
+                  <span className="text-[10px] text-stone-500">이 구절에 내 그림이 영구 보관되었어요.</span>
+                </div>
+              </div>
+              <img src={savedBibleArtwork} alt="내 성경 그림" className="w-16 h-12 object-cover rounded-lg border border-amber-400 shadow-xs" />
+            </div>
+          )}
+        </div>
+
+        {/* 🌟 1. 조약돌 나무 블록 원어 카드 (차분하고 큼직한 가든 블록) */}
         <div className="space-y-1.5 w-full">
           <div className="flex items-center justify-between px-1">
-            <h3 className="text-xs sm:text-sm font-black text-amber-950 dark:text-amber-300 flex items-center gap-1">
-              <span>🔍</span> 원어 그림 돋보기 (카드를 누르면 소리와 그림 비밀이 열려요!)
+            <h3 className={`text-xs sm:text-sm font-black ${theme.textWood} flex items-center gap-1`}>
+              <span>🌱</span> 원어 그림 돋보기 (카드를 누르면 소리와 그림 비밀이 열려요!)
             </h3>
             <span className="text-[10px] font-bold text-stone-400">TOUCH CARDS</span>
           </div>
@@ -781,29 +940,27 @@ export default function InterlinearKids({ isDarkMode, setActiveScreen }) {
                     });
                   }}
                   className={`p-3 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between active:scale-95 min-h-[92px] ${
-                    isDark 
-                      ? 'bg-slate-900 border-slate-800 hover:border-amber-500' 
-                      : isPrefix 
-                        ? 'bg-indigo-50/90 border-indigo-200 shadow-2xs' 
-                        : 'bg-white border-amber-200 shadow-xs'
+                    isPrefix 
+                      ? (isDark ? 'bg-[#1F293D] border-emerald-800' : 'bg-[#F0FDF4] border-[#86EFAC] shadow-2xs') 
+                      : theme.cardWood
                   }`}
                 >
                   <div className="text-center">
-                    <span className="text-2xl sm:text-3xl font-black text-amber-600 dark:text-amber-400 block leading-tight">
+                    <span className="text-2xl sm:text-3xl font-black text-[#D97706] dark:text-amber-400 block leading-tight">
                       {cleanTypography(w.original_word, isOT, 'vowels')}
                     </span>
-                    <span className="text-xs font-black text-stone-600 dark:text-stone-300 block mt-0.5" dir="ltr">
+                    <span className="text-xs font-black text-[#15803D] dark:text-emerald-400 block mt-0.5" dir="ltr">
                       🗣️ [{displaySound}]
                     </span>
                   </div>
 
-                  <div className="pt-1.5 border-t border-dashed border-stone-200 dark:border-slate-800 text-center" dir="ltr">
+                  <div className="pt-1.5 border-t border-dashed border-amber-200 dark:border-slate-800 text-center" dir="ltr">
                     <span className="text-xs sm:text-sm font-black text-stone-900 dark:text-white flex items-center justify-center gap-1">
                       <span>{displayEmoji}</span>
                       <span className="truncate">{displayKor}</span>
                     </span>
-                    <span className="text-[9px] font-black text-amber-700 dark:text-amber-400 block mt-0.5">
-                      ✨ 그림비밀 보기
+                    <span className="text-[9px] font-black text-[#B45309] dark:text-amber-400 block mt-0.5">
+                      ✨ 상형문자 비밀보기
                     </span>
                   </div>
                 </div>
@@ -812,27 +969,25 @@ export default function InterlinearKids({ isDarkMode, setActiveScreen }) {
           </div>
         </div>
 
-        {/* 🌟 2. 🚂 한글 말씀 기차 완성 챌린지 (100% 드래그 앤 드롭) */}
+        {/* 🌟 2. 🚂 한글 말씀 기차 완성 챌린지 */}
         <div 
           onDragOver={(e) => e.preventDefault()}
           onDrop={handleDropOnTrainTrack}
-          className={`p-3.5 sm:p-4 rounded-3xl border space-y-2.5 w-full ${
-            isDark ? 'bg-slate-900/60 border-slate-800' : 'bg-gradient-to-br from-indigo-50 via-sky-50 to-blue-50 border-indigo-200 shadow-2xs'
-          }`}
+          className={`p-3.5 sm:p-4 rounded-[26px] border-2 space-y-2.5 w-full ${theme.boardBg}`}
         >
           <div className="flex justify-between items-center">
-            <span className="text-xs sm:text-sm font-black text-indigo-950 dark:text-indigo-300 flex items-center gap-1.5">
-              <span>🚂</span> 한글 말씀 기차 완성 챌린지!
+            <span className={`text-xs sm:text-sm font-black ${theme.textWood} flex items-center gap-1.5`}>
+              <span>🚂</span> 한글 말씀 기차 챌린지!
             </span>
-            <span className="text-[10px] sm:text-xs font-black text-indigo-800 bg-indigo-200/80 px-2.5 py-0.5 rounded-full">
+            <span className="text-[10px] sm:text-xs font-black text-white bg-[#15803D] px-2.5 py-0.5 rounded-full">
               {isTrainComplete ? '🎉 칙칙폭폭 기차 출발! (+15⭐)' : '단어를 끌어다 기차에 태워요!'}
             </span>
           </div>
 
-          <div className="p-3 rounded-2xl bg-white/95 dark:bg-black/50 border-2 border-dashed border-indigo-300 min-h-[58px] flex flex-wrap gap-2 items-center">
+          <div className="p-3 rounded-2xl bg-[#FEF3C7]/50 dark:bg-black/50 border-2 border-dashed border-amber-400/80 min-h-[58px] flex flex-wrap gap-2 items-center">
             <span className="text-2xl shrink-0 animate-bounce">🚂💨</span>
             {koreanPuzzleTrain.length === 0 ? (
-              <span className="text-xs sm:text-sm text-stone-400 font-bold">
+              <span className="text-xs sm:text-sm text-stone-500 font-bold">
                 아래 흩어진 한글 단어들을 손가락으로 끌어오거나 눌러서 기차에 연결하세요! 🚃
               </span>
             ) : (
@@ -840,8 +995,8 @@ export default function InterlinearKids({ isDarkMode, setActiveScreen }) {
                 <button
                   key={token.id}
                   onClick={() => handleDetachTrainCar(token)}
-                  className="px-3 py-1.5 rounded-2xl bg-indigo-600 hover:bg-rose-500 text-white text-xs sm:text-sm font-black shadow-sm active:scale-95 transition-all flex items-center gap-1 cursor-pointer"
-                  title="터치하면 다시 역으로 내려가요"
+                  className="px-3 py-1.5 rounded-2xl bg-[#15803D] hover:bg-rose-500 text-white text-xs sm:text-sm font-black shadow-sm active:scale-95 transition-all flex items-center gap-1 cursor-pointer"
+                  title="터치하면 다시 내려가요"
                 >
                   <span>🚃</span>
                   <span>{token.text}</span>
@@ -864,7 +1019,7 @@ export default function InterlinearKids({ isDarkMode, setActiveScreen }) {
                     draggable
                     onDragStart={(e) => handleDragStart(e, token)}
                     onClick={() => handleAttachTrainCar(token)}
-                    className="px-3.5 py-2 rounded-2xl bg-white dark:bg-slate-800 border-2 border-indigo-400 text-indigo-950 dark:text-indigo-200 text-xs sm:text-sm font-black shadow-sm hover:scale-105 active:scale-95 transition-all cursor-grab active:cursor-grabbing select-none"
+                    className="px-3.5 py-2 rounded-2xl bg-[#FFFDF7] dark:bg-slate-800 border-2 border-[#D97706]/70 text-[#78350F] dark:text-amber-200 text-xs sm:text-sm font-black shadow-xs hover:scale-105 active:scale-95 transition-all cursor-grab active:cursor-grabbing select-none"
                   >
                     🚃 {token.text}
                   </div>
@@ -874,26 +1029,26 @@ export default function InterlinearKids({ isDarkMode, setActiveScreen }) {
           )}
         </div>
 
-        {/* 🌟 3. 🦁 탐험대장 레오의 3줄 꿀잼 요약 */}
+        {/* 🌟 3. 🦁 탐험대장 레오의 3줄 브리핑 */}
         {kidsChapterData?.threeLineSummary && (
-          <div className={`p-3.5 sm:p-4 rounded-3xl border space-y-2 w-full ${
-            isDark ? 'bg-slate-900/60 border-slate-800' : 'bg-emerald-50/95 border-emerald-200 shadow-2xs'
+          <div className={`p-3.5 sm:p-4 rounded-[26px] border-2 space-y-1.5 w-full ${
+            isDark ? 'bg-[#16221D] border-emerald-800' : 'bg-[#F0FDF4] border-[#86EFAC]'
           }`}>
             <div className="flex items-center gap-2">
-              <span className="text-2xl p-1 bg-emerald-200/60 rounded-full">🦁</span>
+              <span className="text-2xl p-1 bg-emerald-200 rounded-full">🦁</span>
               <div>
-                <span className="text-xs sm:text-sm font-black text-emerald-950 dark:text-emerald-300 block">
+                <span className="text-xs sm:text-sm font-black text-[#14532D] dark:text-emerald-300 block">
                   탐험대장 레오의 3줄 브리핑!
                 </span>
-                <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400">
+                <span className="text-[10px] font-bold text-emerald-800 dark:text-emerald-400">
                   {currentBookMeta.ko} {chapter}장 핵심 스토리
                 </span>
               </div>
             </div>
-            <div className="space-y-1.5 text-xs sm:text-sm font-black leading-relaxed text-emerald-950 dark:text-emerald-100 pl-1">
+            <div className="space-y-1 text-xs sm:text-sm font-black leading-relaxed text-[#14532D] dark:text-emerald-100 pl-1">
               {kidsChapterData.threeLineSummary.map((line, i) => (
                 <p key={i} className="flex items-start gap-1.5">
-                  <span className="text-emerald-600 dark:text-emerald-400 shrink-0">👉</span>
+                  <span className="text-emerald-600 shrink-0">👉</span>
                   <span>{line}</span>
                 </p>
               ))}
@@ -901,18 +1056,18 @@ export default function InterlinearKids({ isDarkMode, setActiveScreen }) {
           </div>
         )}
 
-        {/* 🌟 4. 🦉 지혜의 부엉이 박사님의 비밀 돋보기 팩트 */}
+        {/* 🌟 4. 🦉 지혜의 부엉이 박사님의 비밀 돋보기 */}
         {kidsChapterData?.realFact && (
-          <div className={`p-3.5 sm:p-4 rounded-3xl border space-y-1.5 w-full ${
-            isDark ? 'bg-slate-900/60 border-slate-800' : 'bg-sky-50/95 border-sky-200 shadow-2xs'
+          <div className={`p-3.5 sm:p-4 rounded-[26px] border-2 space-y-1 w-full ${
+            isDark ? 'bg-[#152332] border-sky-800' : 'bg-[#F0F9FF] border-[#7DD3FC]'
           }`}>
             <div className="flex items-center gap-2">
-              <span className="text-2xl p-1 bg-sky-200/60 rounded-full">🦉</span>
-              <span className="text-xs sm:text-sm font-black text-sky-950 dark:text-sky-300">
+              <span className="text-2xl p-1 bg-sky-200 rounded-full">🦉</span>
+              <span className="text-xs sm:text-sm font-black text-[#0C4A6E] dark:text-sky-300">
                 {kidsChapterData.realFact.title}
               </span>
             </div>
-            <p className="text-xs sm:text-sm leading-relaxed text-sky-950 dark:text-sky-100 font-bold pl-1">
+            <p className="text-xs sm:text-sm leading-relaxed text-[#0C4A6E] dark:text-sky-100 font-bold pl-1">
               {kidsChapterData.realFact.description}
             </p>
           </div>
@@ -920,17 +1075,17 @@ export default function InterlinearKids({ isDarkMode, setActiveScreen }) {
 
         {/* 🌟 5. 🐑 아기양 루루의 생각 쑥쑥 신앙 문답 */}
         {kidsChapterData?.catechismQnA && (
-          <div className={`p-3.5 sm:p-4 rounded-3xl border space-y-2 w-full ${
-            isDark ? 'bg-slate-900/60 border-slate-800' : 'bg-purple-50/95 border-purple-200 shadow-2xs'
+          <div className={`p-3.5 sm:p-4 rounded-[26px] border-2 space-y-1.5 w-full ${
+            isDark ? 'bg-[#211832] border-purple-800' : 'bg-[#FAF5FF] border-[#D8B4FE]'
           }`}>
             <div className="flex items-center gap-2">
-              <span className="text-2xl p-1 bg-purple-200/60 rounded-full">🐑</span>
-              <span className="text-xs sm:text-sm font-black text-purple-950 dark:text-purple-300">
+              <span className="text-2xl p-1 bg-purple-200 rounded-full">🐑</span>
+              <span className="text-xs sm:text-sm font-black text-[#581C87] dark:text-purple-300">
                 아기양 루루의 호기심 문답 타임
               </span>
             </div>
-            <div className="p-3 rounded-2xl bg-white/95 dark:bg-black/40 border border-purple-200 space-y-1.5">
-              <p className="text-xs sm:text-sm font-black text-purple-950 dark:text-purple-200">
+            <div className="p-2.5 rounded-2xl bg-white/90 dark:bg-black/30 border border-purple-200 space-y-1">
+              <p className="text-xs sm:text-sm font-black text-[#581C87] dark:text-purple-200">
                 Q. {kidsChapterData.catechismQnA.question}
               </p>
               <p className="text-xs sm:text-sm leading-relaxed text-stone-800 dark:text-slate-300 font-bold">
@@ -942,19 +1097,19 @@ export default function InterlinearKids({ isDarkMode, setActiveScreen }) {
 
         {/* 🌟 6. 3초 팡팡 말씀 퀴즈 */}
         {kidsChapterData?.quiz && (
-          <div className={`p-3.5 sm:p-4 rounded-3xl border space-y-2.5 w-full ${
-            isDark ? 'bg-slate-900/60 border-slate-800' : 'bg-amber-50/95 border-amber-300 shadow-2xs'
+          <div className={`p-3.5 sm:p-4 rounded-[26px] border-2 space-y-2.5 w-full ${
+            isDark ? 'bg-[#291E13] border-amber-800' : 'bg-[#FFFBEB] border-[#FCD34D]'
           }`}>
             <div className="flex justify-between items-center">
-              <span className="text-xs sm:text-sm font-black text-amber-950 dark:text-amber-300 flex items-center gap-1.5">
+              <span className="text-xs sm:text-sm font-black text-[#78350F] dark:text-amber-300 flex items-center gap-1">
                 <span>🎮</span> 오늘의 3초 팡팡 퀴즈!
               </span>
-              <span className="text-[10px] font-black text-amber-800 bg-amber-200/80 px-2 py-0.5 rounded-full">
+              <span className="text-[10px] font-black text-white bg-[#D97706] px-2 py-0.5 rounded-full">
                 {isQuizCorrect ? '🎉 정답 완성! (+5⭐)' : '정답을 맞춰보세요!'}
               </span>
             </div>
 
-            <p className="text-xs sm:text-sm font-black text-stone-900 dark:text-white">
+            <p className="text-xs sm:text-sm font-black text-[#78350F] dark:text-white">
               {kidsChapterData.quiz.question}
             </p>
 
@@ -968,12 +1123,12 @@ export default function InterlinearKids({ isDarkMode, setActiveScreen }) {
                     key={oIdx}
                     type="button"
                     onClick={() => handleQuizChoice(oIdx)}
-                    className={`py-2.5 px-3 rounded-2xl text-xs sm:text-sm font-black border transition-all cursor-pointer ${
+                    className={`py-2.5 px-3 rounded-2xl text-xs sm:text-sm font-black border-2 transition-all cursor-pointer ${
                       isSelected
                         ? isThisCorrect
-                          ? 'bg-emerald-500 text-white border-emerald-600 scale-102 shadow-md'
-                          : 'bg-rose-500 text-white border-rose-600'
-                        : 'bg-white dark:bg-slate-800 border-amber-200 text-stone-900 dark:text-white hover:bg-amber-100 shadow-2xs'
+                          ? 'bg-[#15803D] text-white border-[#166534] scale-102 shadow-md'
+                          : 'bg-[#FB7185] text-white border-rose-600'
+                        : 'bg-white dark:bg-slate-800 border-[#F59E0B]/50 text-[#78350F] dark:text-white hover:bg-amber-100 shadow-2xs'
                     }`}
                   >
                     {opt}
@@ -983,93 +1138,90 @@ export default function InterlinearKids({ isDarkMode, setActiveScreen }) {
             </div>
 
             {isQuizCorrect && (
-              <div className="p-2.5 rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-300 text-emerald-950 dark:text-emerald-200 text-xs font-black animate-fade-in">
+              <div className="p-2.5 rounded-2xl bg-emerald-100 text-[#14532D] text-xs font-black animate-fade-in border border-emerald-300">
                 🌟 {kidsChapterData.quiz.praise}
               </div>
             )}
           </div>
         )}
 
-        {/* 🌟 7. [수천 가지 조합] 🎲 무한 탐험 퀘스트 룰렛 챌린지 */}
-        <div className={`p-3.5 sm:p-4 rounded-3xl border space-y-2.5 w-full ${
-          isDark ? 'bg-slate-900/60 border-slate-800' : 'bg-rose-50/95 border-rose-200 shadow-2xs'
-        }`}>
-          <div className="flex justify-between items-center">
-            <span className="text-xs sm:text-sm font-black text-rose-950 dark:text-rose-300 flex items-center gap-1">
-              <span>🎯</span> 오늘의 실천 탐험 퀘스트
-            </span>
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => {
-                  playSfx('dice');
-                  setMissionDiceSeed(s => s + 1);
-                }}
-                className="px-2.5 py-1 rounded-full text-[10.5px] font-black bg-amber-400 hover:bg-amber-500 text-stone-900 shadow-2xs transition-all active:scale-95 flex items-center gap-1 cursor-pointer"
-                title="다른 실천 미션을 뽑아보세요!"
-              >
-                <span>🎲</span> 미션 다시 뽑기
-              </button>
-
-              <button
-                onClick={() => {
-                  setMissionDone(!missionDone);
-                  if (!missionDone) {
-                    playSfx('correct');
-                    const nextStars = stars + 10;
-                    setStars(nextStars);
-                    try { localStorage.setItem('kids_explorer_stars', String(nextStars)); } catch (_) {}
-                  }
-                }}
-                className={`px-3 py-1 rounded-full text-xs font-black transition-all cursor-pointer ${
-                  missionDone ? 'bg-emerald-600 text-white' : 'bg-rose-200 text-rose-900 hover:bg-rose-300'
-                }`}
-              >
-                {missionDone ? '🎉 미션 완료! (+10⭐)' : '미션 도전하기'}
-              </button>
+        {/* 🌟 7. 실천 퀘스트 챌린지 */}
+        {kidsChapterData?.actionQuest && (
+          <div className={`p-3.5 sm:p-4 rounded-[26px] border-2 space-y-2 w-full ${
+            isDark ? 'bg-[#2B171F] border-rose-800' : 'bg-[#FFF1F2] border-[#FDA4AF]'
+          }`}>
+            <div className="flex justify-between items-center">
+              <span className="text-xs sm:text-sm font-black text-[#9F1239] dark:text-rose-300 flex items-center gap-1">
+                <span>🎯</span> 오늘의 실천 탐험 퀘스트
+              </span>
+              <div className="flex gap-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    playSfx('dice');
+                    setMissionDiceSeed(s => s + 1);
+                  }}
+                  className="px-2.5 py-1 rounded-full text-[10.5px] font-black bg-[#F59E0B] text-white shadow-2xs cursor-pointer active:scale-95"
+                >
+                  🎲 다시 뽑기
+                </button>
+                <button
+                  onClick={() => {
+                    setMissionDone(!missionDone);
+                    if (!missionDone) {
+                      playSfx('correct');
+                      const nextStars = stars + 10;
+                      setStars(nextStars);
+                      try { localStorage.setItem('kids_explorer_stars', String(nextStars)); } catch (_) {}
+                    }
+                  }}
+                  className={`px-3 py-1 rounded-full text-xs font-black transition-all cursor-pointer ${
+                    missionDone ? 'bg-[#15803D] text-white' : 'bg-[#FB7185] text-white hover:bg-rose-500'
+                  }`}
+                >
+                  {missionDone ? '🎉 완료! (+10⭐)' : '미션 도전!'}
+                </button>
+              </div>
+            </div>
+            <p className="text-xs sm:text-sm font-black text-[#9F1239] dark:text-rose-100">
+              👉 {currentDynamicMission.mission}
+            </p>
+            <div className="p-2 rounded-xl bg-white/80 dark:bg-black/30 border border-rose-200">
+              <span className="text-[10px] font-black text-rose-800 block mb-0.5">함께 드리는 어린이 기도문</span>
+              <p className="text-xs font-bold text-stone-700 dark:text-slate-300 italic">
+                "{currentDynamicMission.prayer}"
+              </p>
             </div>
           </div>
-
-          <div className="p-3 rounded-2xl bg-white/95 dark:bg-black/40 border border-rose-200 space-y-1">
-            <p className="text-xs sm:text-sm font-black text-rose-950 dark:text-rose-100 flex items-start gap-1">
-              <span className="text-base shrink-0">👉</span>
-              <span>{currentDynamicMission.mission}</span>
-            </p>
-          </div>
-
-          <div className="p-2.5 rounded-xl bg-white/80 dark:bg-black/30 border border-rose-200">
-            <span className="text-[10px] font-black text-rose-800 dark:text-rose-400 block mb-0.5">함께 드리는 어린이 기도문</span>
-            <p className="text-xs font-bold text-stone-700 dark:text-slate-300 italic">
-              "{currentDynamicMission.prayer}"
-            </p>
-          </div>
-        </div>
+        )}
 
       </main>
 
-      {/* ── 3. [화사한 도화지 칠판] 상형문자 분해 팝업 + 5색 크레파스 스케치북 ── */}
+      {/* ── 3. [화사한 햇살 도화지] 상형문자 분해 팝업 + 한글 점선 칠판 모달 ── */}
       {selectedWordCard && (
-        <div className="fixed inset-0 z-[1000] bg-black/80 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 animate-fade-in select-none">
-          <div className={`w-full max-w-md rounded-3xl border p-4 sm:p-5 shadow-2xl flex flex-col space-y-3 text-left max-h-[94vh] overflow-y-auto hide-scrollbar ${
-            isDark ? 'bg-[#121826] border-slate-700 text-white' : 'bg-white border-amber-300 text-stone-900'
+        <div className="fixed inset-0 z-[1000] bg-black/75 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 animate-fade-in select-none">
+          <div className={`w-full max-w-md rounded-[32px] border-4 p-4 sm:p-5 shadow-2xl flex flex-col space-y-3 text-left max-h-[94vh] overflow-y-auto hide-scrollbar ${
+            isDark ? 'bg-[#151D2D] border-slate-700 text-white' : 'bg-[#FFFDF9] border-[#B45309] text-stone-900'
           }`}>
-            <div className="flex justify-between items-center pb-2 border-b border-stone-200 dark:border-slate-800">
-              <span className="text-xs font-black text-amber-600 font-mono">
-                {selectedWordCard.word.strongs_id} • 상형문자 비밀노트
+            <div className="flex justify-between items-center pb-2 border-b border-amber-200 dark:border-slate-800">
+              <span className={`text-xs font-black ${theme.textWood} font-mono`}>
+                {selectedWordCard.word.strongs_id} • 숲속 상형문자 비밀노트
               </span>
               <button onClick={() => setSelectedWordCard(null)} className="text-base font-black p-1 cursor-pointer">✕</button>
             </div>
 
             {/* 단어 메인 카드 */}
-            <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-slate-900 border border-amber-200 text-center relative">
+            <div className={`p-3.5 rounded-2xl border text-center relative ${
+              isDark ? 'bg-slate-900 border-slate-800' : 'bg-[#FEF3C7]/60 border-amber-300'
+            }`}>
               <button
                 type="button"
                 onClick={() => playWordVoice(selectedWordCard.displaySound, selectedWordCard.displayKor)}
-                className="absolute top-2.5 right-2.5 px-3 py-1 rounded-full bg-amber-200 dark:bg-amber-900 text-xs font-black cursor-pointer shadow-2xs"
+                className={`absolute top-2.5 right-2.5 px-3 py-1 rounded-full text-xs font-black cursor-pointer shadow-2xs ${theme.greenBtn}`}
               >
                 🔊 소리듣기
               </button>
-              <span className="text-4xl font-black text-amber-600 dark:text-amber-400 block leading-tight">
+              <span className="text-4xl font-black text-[#D97706] dark:text-amber-400 block leading-tight">
                 {cleanTypography(selectedWordCard.word.original_word, isOT, 'vowels')}
               </span>
               <span className="text-base sm:text-lg font-black text-stone-900 dark:text-white mt-1 block">
@@ -1083,15 +1235,15 @@ export default function InterlinearKids({ isDarkMode, setActiveScreen }) {
             {/* 상형문자 자음 블록 */}
             {selectedWordCard.pictoLetters && selectedWordCard.pictoLetters.length > 0 && (
               <div className="space-y-1">
-                <span className="text-xs font-black text-amber-900 dark:text-amber-300 block">
+                <span className={`text-xs font-black ${theme.textWood} block`}>
                   🧩 글자를 이루는 고대 그림 조각들:
                 </span>
                 <div className="space-y-1.5 max-h-36 overflow-y-auto hide-scrollbar">
                   {selectedWordCard.pictoLetters.map((p, pIdx) => (
-                    <div key={pIdx} className="p-2 rounded-2xl bg-amber-50/80 dark:bg-slate-800 border border-amber-200 flex items-center gap-2">
+                    <div key={pIdx} className="p-2 rounded-2xl bg-white dark:bg-slate-800 border border-amber-200 flex items-center gap-2">
                       <span className="text-2xl shrink-0">{p.emoji}</span>
                       <div className="flex-1 min-w-0">
-                        <span className="text-xs font-black text-amber-950 dark:text-amber-200 block leading-tight">
+                        <span className={`text-xs font-black ${theme.textWood} block leading-tight`}>
                           {p.name} ({p.title})
                         </span>
                         <span className="text-[11px] font-bold text-stone-700 dark:text-slate-300 block truncate">
@@ -1105,8 +1257,8 @@ export default function InterlinearKids({ isDarkMode, setActiveScreen }) {
             )}
 
             {/* 그림 스토리 해설 */}
-            <div className="p-2.5 rounded-2xl bg-orange-50/90 dark:bg-slate-900 border border-orange-200 space-y-0.5">
-              <span className="font-black text-orange-900 dark:text-orange-300 block text-xs">
+            <div className="p-2.5 rounded-2xl bg-[#FEF3C7]/40 dark:bg-slate-900 border border-amber-200 space-y-0.5">
+              <span className={`font-black ${theme.textWood} block text-xs`}>
                 🎨 그림으로 풀어보는 뜻
               </span>
               <p className="text-xs font-bold leading-relaxed text-stone-800 dark:text-slate-200">
@@ -1114,40 +1266,17 @@ export default function InterlinearKids({ isDarkMode, setActiveScreen }) {
               </p>
             </div>
 
-            {/* ✍️ [화사한 도화지 칠판] 밝고 산뜻한 스케치북 & 5색 크레파스 팔레트 */}
-            <div className="space-y-1.5">
-              <div className="flex flex-wrap justify-between items-center gap-1 px-1">
-                <span className="text-xs font-black text-stone-700 dark:text-stone-300">
-                  ✍️ 점선 따라 손가락으로 예쁘게 쓰기:
+            {/* ✍️ 화사한 도화지 스케치북 칠판 & 한글 점선 쓰기 */}
+            <div className="space-y-1">
+              <div className="flex justify-between items-center px-1">
+                <span className="text-xs font-black text-stone-600 dark:text-stone-400">
+                  ✍️ 한글 단어 점선 따라쓰기:
                 </span>
-                
-                {/* 5색 크레파스 선택기 */}
-                <div className="flex items-center gap-1 bg-amber-100/70 dark:bg-slate-800 p-1 rounded-xl">
-                  {[
-                    { color: '#F59E0B', label: '황금' },
-                    { color: '#EC4899', label: '핑크' },
-                    { color: '#3B82F6', label: '하늘' },
-                    { color: '#10B981', label: '초록' },
-                    { color: '#EF4444', label: '빨강' }
-                  ].map((c) => (
-                    <button
-                      key={c.color}
-                      type="button"
-                      onClick={() => setCrayonColor(c.color)}
-                      style={{ backgroundColor: c.color }}
-                      className={`w-5 h-5 rounded-full transition-transform cursor-pointer ${
-                        crayonColor === c.color ? 'scale-125 ring-2 ring-white shadow-xs' : 'opacity-80'
-                      }`}
-                      title={c.label}
-                    />
-                  ))}
-                </div>
-
                 <div className="flex gap-1">
                   <button
                     type="button"
                     onClick={handleApplyStamp}
-                    className="text-xs font-black text-rose-600 bg-rose-100 px-2 py-0.5 rounded-lg hover:bg-rose-200 cursor-pointer shadow-2xs"
+                    className="text-xs font-black text-rose-600 bg-rose-100 px-2.5 py-1 rounded-lg hover:bg-rose-200 cursor-pointer shadow-2xs"
                   >
                     도장 쾅! 💮
                   </button>
@@ -1161,14 +1290,14 @@ export default function InterlinearKids({ isDarkMode, setActiveScreen }) {
                 </div>
               </div>
 
-              {/* 🌟 화사하고 밝은 아이보리 도화지 스케치북 칠판 */}
-              <div className="relative w-full h-44 rounded-3xl border-4 border-amber-300 dark:border-amber-600 bg-[#FFFDF7] dark:bg-slate-900 flex items-center justify-center overflow-hidden shadow-inner">
-                {/* 배경 점선 가이드 글자 */}
-                <span className="absolute text-7xl font-black text-amber-200/70 dark:text-slate-800 pointer-events-none select-none tracking-widest">
-                  {cleanTypography(selectedWordCard.word.original_word, isOT, 'consonants')}
+              {/* 🌟 화사하고 밝은 아이보리 햇살 도화지 */}
+              <div className="relative w-full h-44 rounded-3xl border-4 border-[#D97706]/60 bg-[#FFFDF7] dark:bg-slate-900 flex items-center justify-center overflow-hidden shadow-inner">
+                {/* 한글 단어 점선 가이드라인 글자 */}
+                <span className="absolute text-5xl sm:text-6xl font-black text-amber-200/80 dark:text-slate-800 pointer-events-none select-none tracking-widest">
+                  {selectedWordCard.displayKor}
                 </span>
 
-                {/* 100점 참잘했어요 도장 */}
+                {/* 100점 도장 */}
                 {isStamped && (
                   <div className="absolute z-20 w-24 h-24 rounded-full border-4 border-rose-600 text-rose-600 flex flex-col items-center justify-center rotate-[-15deg] font-black text-xs bg-white/95 shadow-xl animate-bounce">
                     <span className="text-sm">참잘했어요</span>
@@ -1194,7 +1323,7 @@ export default function InterlinearKids({ isDarkMode, setActiveScreen }) {
 
             <button
               onClick={() => setSelectedWordCard(null)}
-              className="w-full py-3 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-black text-sm cursor-pointer shadow-md active:scale-95 transition-all"
+              className="w-full py-3 rounded-2xl bg-[#D97706] hover:bg-[#B45309] text-white font-black text-sm cursor-pointer shadow-md active:scale-95 transition-all"
             >
               알겠어요! 닫기
             </button>
@@ -1205,7 +1334,7 @@ export default function InterlinearKids({ isDarkMode, setActiveScreen }) {
       {/* ── 4. 🗺️ 여권 모달 ── */}
       {showPassportModal && (
         <div className="fixed inset-0 z-[1100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 select-none animate-fade-in">
-          <div className="w-full max-w-sm rounded-3xl bg-[#1E293B] border border-amber-400 p-5 shadow-2xl text-left text-white space-y-3.5">
+          <div className="w-full max-w-sm rounded-[32px] bg-[#1E293B] border-2 border-amber-400 p-5 shadow-2xl text-left text-white space-y-3.5">
             <div className="flex justify-between items-center border-b border-slate-700 pb-2.5">
               <div className="flex items-center gap-1.5">
                 <span className="text-2xl">🗺️</span>
@@ -1220,7 +1349,7 @@ export default function InterlinearKids({ isDarkMode, setActiveScreen }) {
             <div className="p-3 rounded-2xl bg-slate-900 border border-slate-700 flex justify-between items-center">
               <div>
                 <span className="text-[10px] text-slate-400 block font-mono">탐험가 등급</span>
-                <span className="text-base font-black text-amber-400">Lv.{explorerLevel} 믿음의 용사</span>
+                <span className="text-base font-black text-amber-400">Lv.{explorerLevel} 에덴의 정원사</span>
               </div>
               <div className="text-right">
                 <span className="text-[10px] text-slate-400 block font-mono">모은 별</span>
@@ -1232,7 +1361,7 @@ export default function InterlinearKids({ isDarkMode, setActiveScreen }) {
               <span className="text-xs font-black text-slate-200 block">내가 모은 성경 탐험 뱃지:</span>
               <div className="grid grid-cols-2 gap-2">
                 {stickers.map((stk, sIdx) => (
-                  <div key={sIdx} className="p-2.5 rounded-xl bg-slate-800/80 border border-amber-500/40 flex items-center gap-1.5">
+                  <div key={sIdx} className="p-2.5 rounded-xl bg-slate-800 border border-amber-500/40 flex items-center gap-1.5">
                     <span className="text-xl">🎖️</span>
                     <span className="text-xs font-bold text-amber-200">{stk}</span>
                   </div>
@@ -1278,7 +1407,7 @@ export default function InterlinearKids({ isDarkMode, setActiveScreen }) {
             {isEditingVideo && (
               <div className="p-3 rounded-2xl bg-slate-900 border border-slate-700 space-y-2 animate-fade-in">
                 <span className="text-xs font-bold text-slate-300 block">
-                  원하는 유튜브 주소(URL) 또는 11자리 영상 ID를 넣어주세요:
+                  원하는 유튜브 영상 주소(URL) 또는 11자리 영상 ID를 넣어주세요:
                 </span>
                 <div className="flex gap-2">
                   <input
