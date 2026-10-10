@@ -1,11 +1,11 @@
 {
   "창세기-1-1": {
-    "title": "히브리어 문법 형태 '베레쉬트(בְּרֵאשִׁית)'의 상태론(State) 비평",
-    "note": "The traditional rendering 'In the beginning' treats בְּרֵאשִׁית (bere'shit) as absolute, pointing to the absolute beginning of time and creation ex nihilo. Some scholars suggest a construct state ('In the beginning of God's creating...'), but grammatical syntax and ancient versions (LXX ἐν ἀρχῇ, Vulgate in principio) strongly support the absolute traditional translation."
+    "title": "히브리어 문법 형태 '베레쉬트(בְּרֵאשִׁית)'의 절대형(Absolute) vs 연계형(Construct) 비평",
+    "note": "The traditional rendering 'In the beginning' treats בְּרֵאשִׁית (bere'shit) as absolute, pointing to the absolute beginning of time and creation ex nihilo. Ancient versions (LXX ἐν ἀρχῇ, Vulgate in principio) strongly support the traditional absolute translation over modern construct theories."
   },
   "마태복음-1-1": {
-    "title": "표제어 '비블로스 게네세오스(βίβλος γενέσεως)'의 70인역 용례",
-    "note": "The Greek phrase βίβλος γενέ세ως (biblos geneseōs) echoes the Septuagint of Genesis 2:4 and 5:1. Matthew intentionally uses this Septuagintal phrasing to present Jesus Christ as the Inaugurator of the 'New Creation' and the culmination of Genesis history."
+    "title": "표제어 '비블로스 게네세오스(βίβλος γενέσεως)'의 창세기 2:4 70인역 계승",
+    "note": "Matthew intentionally adopts the exact Septuagint formula from Genesis 2:4 and 5:1 to announce Jesus Christ as the Inaugurator of the New Creation and the Covenant Fulfillment of Abraham and David."
   },
   "마태복음-1-18": {
     "title": "사본 이문: '탄생(γέννησις)' vs '기원/발생(γένεσις)'",
@@ -14,5 +14,41 @@
   "마태복음-1-23": {
     "title": "이사야 7:14 70인역(LXX) 인용: '파르테노스(παρθένος)' 비평",
     "note": "Matthew explicitly follows the Septuagint (LXX) rendering παρθένος (parthenos, virgin) rather than the ambiguous Hebrew עַלְמָה ('almah, young maiden), underscoring the miraculous supernatural virgin conception."
+  },
+  "창세기-3-15": {
+    "title": "원복음 '그의 발꿈치 / 그의 머리' 인칭대명사 사본학 비평",
+    "note": "The Hebrew masculine pronoun הוּא (hu', 'he') refers to the singular offspring (the Messiah). The Latin Vulgate mistakenly rendered it ipsa ('she'), which Catholic tradition applied to Mary, but Masoretic text and Septuagint unequivocally preserve the masculine singular referring to Christ."
+  },
+  "시편-22-16": {
+    "title": "마소라 본문 '사자처럼(כָּܐֲרִי)' vs 70인역/사해사본 '내 수족을 찔렀다(כָּרוּ)'",
+    "note": "The medieval MT reads כָּܐֲܪִי (ka'ari, 'like a lion my hands and feet'), which is obscure. However, the Dead Sea Scrolls (5/6HevPs) and LXX (ὤρυξαν, 'they pierced') verify the reading כָּרוּ/כܵܐܪוּ ('they pierced my hands and my feet'), confirming a direct messianic prophecy of crucifixion."
+  },
+  "이사야-7-14": {
+    "title": "알마(עַלְמָה) vs 파르테노스(παρθένος, 동정녀) 번역사 비평",
+    "note": "While Hebrew עַלְמָה ('almah) denotes a young marriageable maiden without explicit technical emphasis on virginity, the pre-Christian Jewish translators of the Septuagint deliberately chose παρθένος (parthenos, virgin), providing the inspired foundation for Matthew 1:23."
+  },
+  "마태복음-6-13": {
+    "title": "주기도문 송영(Doxology)의 초기 사본 유무 비평",
+    "note": "The concluding doxology ('For yours is the kingdom and the power and the glory forever, Amen') is absent from the earliest uncials (Sinaiticus, Vaticanus) and early church fathers. It was likely an ancient liturgical response from 1 Chronicles 29:11 integrated into the Byzantine text-type."
+  },
+  "마가복음-16-9": {
+    "title": "마가복음의 긴 결말(16:9-20)에 대한 본문비평적 평가",
+    "note": "Verses 9-20 are absent from Codex Sinaiticus (א) and Vaticanus (B), and Eusebius notes they were missing in almost all Greek copies of his day. Most modern scholars consider 16:8 the original ending, with 9-20 appended early in the 2nd century to harmonize with Luke and John."
+  },
+  "요한복음-1-18": {
+    "title": "독생하신 하나님(μονογενὴς θεός) vs 독생자(μονογενὴς υἱός)",
+    "note": "The oldest and most reliable papyri (P66, P75) and Alexandrian codices read μονογενὴς θεός ('the only begotten God' / 'the unique God'). Later Western and Byzantine manuscripts softened this to 'the only begotten Son' (υἱός). The difficult reading θεός powerfully affirms the deity of Christ."
+  },
+  "요한복음-7-53": {
+    "title": "간음한 여인 단락(Pericope Adulterae, 7:53-8:11)의 사본학적 위치",
+    "note": "This famous narrative is missing from P66, P75, Sinaiticus, Vaticanus, and early church fathers. Some manuscripts place it after Luke 21:38 or John 21:25. While historically authentic apostolic tradition, it was not part of the original Johannine autograph."
+  },
+  "로마서-8-1": {
+    "title": "후반부 '육신을 따르지 않고 영을 따라 행하는 자' 첨가 구절 비평",
+    "note": "The Byzantine clause 'who walk not according to the flesh but according to the Spirit' is absent in P46, א, B, C, D*. It was copied into verse 1 from verse 4 by scribes seeking a behavioral qualification to the free justification declared in Christ."
+  },
+  "요한일서-5-7": {
+    "title": "콤마 요하네움(Comma Johanneum) 삼위일체 삽입 구절 비평",
+    "note": "The phrase 'in heaven: the Father, the Word, and the Holy Spirit, and these three are one' is absent from every Greek manuscript prior to the 16th century. It originated as a Latin marginal gloss and was retro-translated into Erasmus's 3rd edition under Catholic pressure."
   }
 }
