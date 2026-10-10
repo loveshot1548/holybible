@@ -1948,7 +1948,7 @@ export default function CompleteQtApp() {
             <div className="flex-1 overflow-hidden relative z-10 w-full h-full pointer-events-auto">{renderScreen()}</div>
 
             {/* 하단 모바일 도크 바 */}
-            {!['login', 'adminConsole', 'cell', 'cellAttendance', 'secretChat', 'meditationPilgrimage', 'reelsStudio'].includes(activeScreen) && (
+            {!['login', 'adminConsole', 'cell', 'cellAttendance', 'secretChat', 'meditationPilgrimage', 'bible', 'reelsStudio', 'interlinear', 'mcheyne'].includes(activeScreen) && (
               <div className={`md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-[390px] h-[64px] z-[90] pointer-events-auto rounded-full backdrop-blur-2xl shadow-[0_12px_36px_rgba(0,0,0,0.25)] border transition-all ${
                 isDarkMode 
                   ? 'bg-[#1C1C1E]/90 border-white/10' 
