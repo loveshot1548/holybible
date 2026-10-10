@@ -78,3 +78,55 @@ html, body, #root {
   font-family: 'MYArirangGothic';
   src: url('./MYArirang_gothic.ttf') format('truetype');
 }
+/* =====================================================================
+   🎒 어린이 성경 탐험관 전용 슈퍼 키즈 CSS (초등 1학년 맞춤)
+   ===================================================================== */
+
+/* 1. 쫀득쫀득 젤리 바운스 터치 애니메이션 */
+@keyframes kid-jelly {
+  0% { transform: scale(1, 1); }
+  30% { transform: scale(1.15, 0.85); }
+  40% { transform: scale(0.9, 1.1); }
+  57% { transform: scale(1.05, 0.95); }
+  100% { transform: scale(1, 1); }
+}
+
+.kid-bounce:active {
+  animation: kid-jelly 0.4s ease;
+}
+
+/* 2. 에코 리딩 골드 네온 발광 효과 */
+@keyframes gold-pulse {
+  0%, 100% { box-shadow: 0 0 10px rgba(245, 158, 11, 0.6), inset 0 0 5px rgba(251, 191, 36, 0.8); }
+  50% { box-shadow: 0 0 22px rgba(245, 158, 11, 0.9), inset 0 0 12px rgba(251, 191, 36, 1); }
+}
+
+.echo-highlight {
+  background: #FBBF24 !important;
+  color: #1E293B !important;
+  animation: gold-pulse 1.2s infinite;
+  transform: scale(1.08);
+  font-weight: 900 !important;
+}
+
+/* 3. 라이트 모드 글자 증발 방지 강제 대비 룰 */
+.kids-card-text {
+  color: #0F172A !important; /* 짙은 네이비 먹색 */
+}
+.dark .kids-card-text {
+  color: #F8FAFC !important; /* 다크 모드 맑은 크림 화이트 */
+}
+
+/* 4. 햇살 도화지 칠판 캔버스 */
+.kids-sketchbook {
+  background-color: #FFFDF5 !important;
+  background-image: 
+    radial-gradient(#FDE68A 0.75px, transparent 0.75px),
+    radial-gradient(#FDE68A 0.75px, #FFFDF5 0.75px);
+  background-size: 20px 20px;
+  background-position: 0 0, 10px 10px;
+}
+.dark .kids-sketchbook {
+  background-color: #0F172A !important;
+  background-image: none;
+}

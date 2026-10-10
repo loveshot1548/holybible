@@ -685,7 +685,16 @@ export default function InterlinearKids({ isDarkMode, setActiveScreen }) {
           >
             <span>🎬</span> 극장
           </button>
-
+          
+          {/* 🏛️ 예루살렘 타이쿤 입장 버튼 */}
+<button
+  type="button"
+  onClick={() => { playSfx('train'); setActiveScreen('jerusalem_tycoon'); }}
+  className="px-2.5 py-1.5 rounded-full text-[11px] sm:text-xs font-black bg-[#B45309] hover:bg-[#78350F] text-white shadow-xs active:scale-95 flex items-center gap-1 cursor-pointer"
+>
+  <span>🏛️</span> 도시 건설
+</button>
+ 
           <button
             type="button"
             onClick={handleReturnToAcademic}

@@ -43,6 +43,7 @@ import { useAppStore } from './store/useAppStore';
 import AdminConsole from './components/AdminConsole';
 import ReelsStudio from './components/layout/ReelsStudio';
 import InterlinearKids from './pages/InterlinearKids';
+import JerusalemTycoon from './pages/JerusalemTycoon';
 
 // 🛡️ 앱 크래시 방어선 (Error Boundary)
 class AppErrorBoundary extends React.Component {
@@ -1598,7 +1599,11 @@ export default function CompleteQtApp() {
             date={date}
           />
         );
-  
+      
+        case 'jerusalem_tycoon':
+        case 'jerusalemTycoon':
+          return <JerusalemTycoon setActiveScreen={setActiveScreen} />;
+
       case 'sermonAnalytics':
       case 'sermonAnalysis':
         return (

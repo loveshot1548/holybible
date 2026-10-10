@@ -1,93 +1,128 @@
-// src/components/inspector/ColorWheels.js
 import React, { useRef, useCallback, useState, useMemo } from 'react';
 import { useNLEStore } from '../../store/useNLEStore';
 
-// ==========================================
-// 🎨 정밀 엔터프라이즈 모노크롬 SVG 아이콘 세트
-// ==========================================
-const SvgReset = () => (
-  <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3 h-3">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+// =====================================================================
+// 🎬 다빈치 리졸브 표준 SVG 모노크롬 아이콘 세트
+// =====================================================================
+const IconWheelMode = () => (
+  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
   </svg>
 );
-
-const SvgColorWheel = () => (
-  <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
+const IconBarsMode = () => (
+  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+  </svg>
+);
+const IconHslMode = () => (
+  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M4.098 19.902a3.75 3.75 0 005.304 0l6.401-6.402M6.75 21A3.75 3.75 0 013 17.25V4.125C3 3.504 3.504 3 4.125 3h5.25c.621 0 1.125.504 1.125 1.125v4.072M6.75 21a3.75 3.75 0 003.75-3.75V8.197M6.75 21h13.125c.621 0 1.125-.504 1.125-1.125v-5.25a1.125 1.125 0 00-1.125-1.125h-4.072M10.5 8.197l9.804-9.804a2.828 2.828 0 114 4l-9.804 9.804" />
   </svg>
 );
-
-const SvgEye = () => (
-  <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
+const IconScope = () => (
+  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
     <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
   </svg>
 );
-
-const SvgHistogram = () => (
-  <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+const IconReset = () => (
+  <svg className="w-3 h-3 text-zinc-500 hover:text-zinc-200 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
   </svg>
 );
+
+// =====================================================================
+// 🎞️ 필름 프린트 에뮬레이션 LUT 마스터 (3D PFE LUTs)
+// =====================================================================
+const PRINT_LUTS = [
+  { id: 'none', name: 'Rec.709 Direct', desc: '표준 모니터 색역' },
+  { id: 'kodak_2383', name: 'Kodak 2383 D65 Film Print', desc: '영화관 상영용 표준 필름 룩 (깊은 블랙 & 따뜻한 하이라이트)' },
+  { id: 'fuji_3513', name: 'Fujifilm 3513 Eterna Print', desc: '은은한 섀도우 청록과 부드러운 하이라이트 롤오프' },
+  { id: 'arri_709', name: 'ARRI Alexa Wide Gamut', desc: '자연스럽고 정밀한 인물 톤과 상업 광고 표준' },
+  { id: 'teal_orange', name: 'Hollywood Teal & Orange DI', desc: '블록버스터 보색 대비 분할 그레이딩' },
+  { id: 'vintage_monochrome', name: 'Classic Silver Halide B&W', desc: '은염 입자 질감의 고대비 흑백' }
+];
 
 export default function ColorWheels({ clip }) {
   const { updateClip } = useNLEStore();
 
-  // 원본 전후 비교 (Bypass) 상태
+  // 워크플로우 서브 모드: 'wheels' | 'bars' | 'hsl' | 'lut'
+  const [activeMode, setActiveMode] = useState('wheels');
+  // 원본 전후 비교 (A/B Bypass)
   const [isBypassed, setIsBypassed] = useState(false);
-  
-  // HSL 컬러 셀렉터 선택된 색상군 ('skin' | 'red' | 'green' | 'blue' | 'yellow')
-  const [selectedHslColor, setSelectedHslColor] = useState('skin');
+  // HSL 선택 채널
+  const [selectedHslChannel, setSelectedHslChannel] = useState('skin');
+  // 스코프 모드 토글
+  const [showScopes, setShowScopes] = useState(true);
 
-  if (!clip) return null;
+  if (!clip) {
+    return (
+      <div className="p-8 text-center text-zinc-500 text-xs font-mono select-none">
+        클립을 선택하면 컬러 그레이딩 콘솔이 활성화됩니다.
+      </div>
+    );
+  }
 
-  // 1. 색보정 파라미터 무결성 보장
+  // 🌟 다빈치 리졸브 4-Way 컬러 파라미터 무결성 보장
   const color = {
+    // 4-Way Wheels (Lift, Gamma, Gain, Offset)
     lift: 0, liftTint: { x: 0, y: 0 },
     gamma: 100, gammaTint: { x: 0, y: 0 },
     gain: 100, gainTint: { x: 0, y: 0 },
-    saturation: 100,
-    contrast: 0,
-    exposure: 0,
-    highlights: 0,
-    shadows: 0,
-    temperature: 6500, // 2500K ~ 9500K (6500K 주광)
-    tint: 0,           // -50 ~ +50 (그린 ~ 마젠타)
+    offset: 100, offsetTint: { x: 0, y: 0 },
+    
+    // Primary Tuning
+    temperature: 6500,  // 2500K ~ 10000K (6500K 기준 주광)
+    tint: 0,            // -100 ~ +100
+    exposure: 0,        // -3.00 ~ +3.00 EV
+    contrast: 1.0,      // 0.5 ~ 2.0
+    pivot: 0.435,       // 0.0 ~ 1.0
+    saturation: 100,    // 0 ~ 200%
+    colorBoost: 0,      // -100 ~ +100 (Vibrance)
+    shadows: 0,         // -100 ~ +100
+    highlights: 0,      // -100 ~ +100
+    midtoneDetail: 0,   // -100 ~ +100 (피부결 부드러움 / 텍스처 강화)
+    
+    // 8-Vector HSL Qualifier
     hsl: {
       skin: { hue: 0, sat: 0, lum: 0 },
       red: { hue: 0, sat: 0, lum: 0 },
+      yellow: { hue: 0, sat: 0, lum: 0 },
       green: { hue: 0, sat: 0, lum: 0 },
+      cyan: { hue: 0, sat: 0, lum: 0 },
       blue: { hue: 0, sat: 0, lum: 0 },
-      yellow: { hue: 0, sat: 0, lum: 0 }
+      magenta: { hue: 0, sat: 0, lum: 0 }
     },
+    
+    // Film Print LUT
+    lut: 'none',
+    lutMix: 100,
     ...(clip.color || {})
   };
 
-  // 2. 파라미터 업데이트 핸들러
-  const handleSlider = useCallback((key, value) => {
+  const handleUpdate = useCallback((key, value) => {
     updateClip(clip.id, {
-      color: { ...color, [key]: Number(value) }
+      color: { ...color, [key]: typeof value === 'number' ? value : value }
     });
   }, [clip.id, color, updateClip]);
 
-  // HSL 개별 색상 조절기
-  const handleHslSlider = (subProp, value) => {
+  const handleHslUpdate = (prop, val) => {
     updateClip(clip.id, {
       color: {
         ...color,
         hsl: {
           ...color.hsl,
-          [selectedHslColor]: {
-            ...color.hsl[selectedHslColor],
-            [subProp]: Number(value)
+          [selectedHslChannel]: {
+            ...color.hsl[selectedHslChannel],
+            [prop]: Number(val)
           }
         }
       }
     });
   };
 
-  // 3. 색상환 패드 터치/마우스 좌표 계산기 (반지름 1로 클램핑)
-  const handleWheelPadCoord = useCallback((key, clientX, clientY, targetRect) => {
+  // 휠 터치/마우스 좌표 연산기
+  const calculateWheelCoord = useCallback((key, clientX, clientY, targetRect) => {
     const centerX = targetRect.left + targetRect.width / 2;
     const centerY = targetRect.top + targetRect.height / 2;
     const radius = targetRect.width / 2;
@@ -113,70 +148,75 @@ export default function ColorWheels({ clip }) {
     });
   }, [clip.id, color, updateClip]);
 
-  // 4. 개별 휠 틴트 초기화
-  const resetSingleWheel = (propKey) => {
-    const defaultMaster = propKey === 'lift' ? 0 : 100;
+  // 개별 휠 리셋
+  const resetWheel = (wheelKey) => {
+    const defaultVal = wheelKey === 'lift' ? 0 : 100;
     updateClip(clip.id, {
       color: {
         ...color,
-        [propKey]: defaultMaster,
-        [`${propKey}Tint`]: { x: 0, y: 0 }
+        [wheelKey]: defaultVal,
+        [`${wheelKey}Tint`]: { x: 0, y: 0 }
       }
     });
   };
 
-  // 5. 전역 마스터 초기화
-  const resetAll = () => {
+  // 전역 초기화
+  const resetAllColor = () => {
     updateClip(clip.id, {
       color: {
         lift: 0, liftTint: { x: 0, y: 0 },
         gamma: 100, gammaTint: { x: 0, y: 0 },
         gain: 100, gainTint: { x: 0, y: 0 },
-        saturation: 100,
-        contrast: 0,
-        exposure: 0,
-        highlights: 0,
-        shadows: 0,
+        offset: 100, offsetTint: { x: 0, y: 0 },
         temperature: 6500,
         tint: 0,
+        exposure: 0,
+        contrast: 1.0,
+        pivot: 0.435,
+        saturation: 100,
+        colorBoost: 0,
+        shadows: 0,
+        highlights: 0,
+        midtoneDetail: 0,
         hsl: {
           skin: { hue: 0, sat: 0, lum: 0 },
           red: { hue: 0, sat: 0, lum: 0 },
+          yellow: { hue: 0, sat: 0, lum: 0 },
           green: { hue: 0, sat: 0, lum: 0 },
+          cyan: { hue: 0, sat: 0, lum: 0 },
           blue: { hue: 0, sat: 0, lum: 0 },
-          yellow: { hue: 0, sat: 0, lum: 0 }
-        }
-      },
-      filterPreset: 'Standard'
+          magenta: { hue: 0, sat: 0, lum: 0 }
+        },
+        lut: 'none',
+        lutMix: 100
+      }
     });
   };
 
-  // 🌟 [RGB 파라레이드 시뮬레이터 실시간 계측치]
-  const scopeHeights = useMemo(() => {
-    const rBase = Math.min(100, Math.max(10, (color.gain / 150) * 80 + (color.temperature > 6500 ? (color.temperature - 6500) / 150 : 0)));
-    const gBase = Math.min(100, Math.max(10, (color.gamma / 150) * 85 - (color.tint > 0 ? color.tint * 0.4 : 0)));
-    const bBase = Math.min(100, Math.max(10, (color.lift + 100) * 0.4 + (color.temperature < 6500 ? (6500 - color.temperature) / 150 : 0)));
-    return { r: rBase, g: gBase, b: bBase };
+  // 10비트 RGB 파라레이드 시뮬레이터 실시간 계측치
+  const scopeValues = useMemo(() => {
+    const rLvl = Math.min(100, Math.max(5, (color.gain / 150) * 82 + ((color.temperature - 6500) / 120)));
+    const gLvl = Math.min(100, Math.max(5, (color.gamma / 150) * 86 - (color.tint * 0.4)));
+    const bLvl = Math.min(100, Math.max(5, (color.lift + 100) * 0.4 + ((6500 - color.temperature) / 120)));
+    return { r: rLvl, g: gLvl, b: bLvl };
   }, [color.gain, color.gamma, color.lift, color.temperature, color.tint]);
 
   // =========================================================================
-  // 색상환 개별 유닛 (다빈치 리졸브 3-Way 휠)
+  // 🎨 다빈치 리졸브 4-Way 컬러 휠 단일 유닛
   // =========================================================================
-  const ColorWheelUnit = ({ label, propKey, sliderMin, sliderMax, sliderVal, tintVal }) => {
+  const ColorWheelModule = ({ label, wheelKey, minVal, maxVal, currentVal, tintVal }) => {
     const padRef = useRef(null);
+    const radius = 34; // 휠 반지름 px
+    const posX = ((tintVal?.x || 0) * radius) + radius;
+    const posY = ((tintVal?.y || 0) * radius) + radius;
 
-    // 원형 반지름 38px 기준 중앙 오프셋 계산
-    const posX = ((tintVal?.x || 0) * 38) + 38;
-    const posY = ((tintVal?.y || 0) * 38) + 38;
-
-    // 마우스 드래그 핸들러
     const handleMouseDown = (e) => {
       e.preventDefault();
       if (!padRef.current) return;
       const rect = padRef.current.getBoundingClientRect();
-      handleWheelPadCoord(propKey, e.clientX, e.clientY, rect);
+      calculateWheelCoord(wheelKey, e.clientX, e.clientY, rect);
 
-      const onMouseMove = (ev) => handleWheelPadCoord(propKey, ev.clientX, ev.clientY, rect);
+      const onMouseMove = (ev) => calculateWheelCoord(wheelKey, ev.clientX, ev.clientY, rect);
       const onMouseUp = () => {
         window.removeEventListener('mousemove', onMouseMove);
         window.removeEventListener('mouseup', onMouseUp);
@@ -185,17 +225,15 @@ export default function ColorWheels({ clip }) {
       window.addEventListener('mouseup', onMouseUp);
     };
 
-    // 모바일 터치 드래그 핸들러
     const handleTouchStart = (e) => {
       if (!padRef.current) return;
       const rect = padRef.current.getBoundingClientRect();
       const touch = e.touches[0];
-      handleWheelPadCoord(propKey, touch.clientX, touch.clientY, rect);
+      calculateWheelCoord(wheelKey, touch.clientX, touch.clientY, rect);
 
       const onTouchMove = (ev) => {
         ev.preventDefault();
-        const t = ev.touches[0];
-        handleWheelPadCoord(propKey, t.clientX, t.clientY, rect);
+        calculateWheelCoord(wheelKey, ev.touches[0].clientX, ev.touches[0].clientY, rect);
       };
       const onTouchEnd = () => {
         window.removeEventListener('touchmove', onTouchMove);
@@ -206,60 +244,59 @@ export default function ColorWheels({ clip }) {
     };
 
     return (
-      <div className="flex flex-col items-center bg-[#090A0E] p-2.5 rounded-xl border border-white/5 space-y-2 select-none">
-        
-        {/* 라벨 및 리셋 버튼 */}
+      <div className="flex flex-col items-center bg-[#11131A] p-2 rounded-xl border border-zinc-800 space-y-1.5 select-none">
+        {/* 헤더 & 개별 리셋 */}
         <div className="w-full flex items-center justify-between px-0.5">
-          <span className="text-[10px] font-black text-white font-mono tracking-wider">{label}</span>
+          <span className="text-[10px] font-mono font-bold text-zinc-300 uppercase">{label}</span>
           <button 
-            onClick={() => resetSingleWheel(propKey)}
-            className="text-zinc-500 hover:text-white p-0.5 cursor-pointer"
-            title={`${label} 휠 리셋`}
+            onClick={() => resetWheel(wheelKey)}
+            className="text-zinc-500 hover:text-zinc-200 p-0.5 cursor-pointer"
+            title={`${label} 리셋`}
           >
-            <SvgReset />
+            <IconReset />
           </button>
         </div>
-        
-        {/* 🎨 다빈치 리졸브 원형 색상환 패드 (터치 & 마우스 하이브리드) */}
-        <div 
+
+        {/* 원형 색상환 (DaVinci Resolve Conic Gradient Wheel) */}
+        <div
           ref={padRef}
           onMouseDown={handleMouseDown}
           onTouchStart={handleTouchStart}
-          onDoubleClick={() => resetSingleWheel(propKey)}
-          className="w-19 h-19 rounded-full relative cursor-crosshair border border-white/20 shadow-inner overflow-hidden active:scale-98 transition-transform"
+          onDoubleClick={() => resetWheel(wheelKey)}
+          className="w-17 h-17 rounded-full relative cursor-crosshair border border-zinc-700/80 shadow-inner overflow-hidden active:scale-98 transition-transform"
           style={{
-            background: 'radial-gradient(circle, #ffffff 0%, rgba(255,255,255,0.05) 60%), conic-gradient(red, yellow, lime, aqua, blue, magenta, red)'
+            background: 'radial-gradient(circle, #ffffff 0%, rgba(255,255,255,0.08) 55%), conic-gradient(red, yellow, lime, aqua, blue, magenta, red)'
           }}
           title="더블클릭 시 틴트 중앙 리셋"
         >
-          {/* 중앙 기준 십자선 */}
+          {/* 정밀 십자선 */}
           <div className="absolute inset-0 pointer-events-none opacity-20 flex items-center justify-center">
             <div className="w-full h-px bg-white" />
             <div className="h-full w-px bg-white absolute" />
           </div>
 
-          {/* 실시간 틴트 조작 노즐 포인트 */}
-          <div 
-            className="w-3.5 h-3.5 rounded-full border-2 border-white bg-black/90 shadow-[0_0_8px_rgba(0,0,0,0.9)] absolute -translate-x-1/2 -translate-y-1/2 pointer-events-none transition-all duration-75"
+          {/* 틴트 인디케이터 노즐 */}
+          <div
+            className="w-3 h-3 rounded-full border-2 border-white bg-black/90 shadow-[0_0_6px_rgba(0,0,0,0.9)] absolute -translate-x-1/2 -translate-y-1/2 pointer-events-none"
             style={{ left: `${posX}px`, top: `${posY}px` }}
           />
         </div>
 
-        {/* 틴트 X/Y 수치 인디케이터 */}
-        <div className="text-[9px] font-mono text-zinc-400 font-bold">
+        {/* 틴트 수치 */}
+        <div className="text-[8.5px] font-mono text-zinc-400">
           X: {tintVal?.x > 0 ? `+${tintVal.x}` : tintVal?.x || 0} Y: {tintVal?.y > 0 ? `+${tintVal.y}` : tintVal?.y || 0}
         </div>
 
-        {/* 마스터 밝기 슬라이더 */}
-        <div className="w-full space-y-0.5 pt-0.5 border-t border-white/5">
-          <div className="flex justify-between text-[9.5px] font-mono text-zinc-400 font-bold">
-            <span>MASTER</span>
-            <span className="text-[#00E5FF]">{sliderVal}</span>
+        {/* 마스터 휘도 다이얼 (Master Wheel Ring) */}
+        <div className="w-full space-y-0.5 pt-1 border-t border-zinc-800">
+          <div className="flex justify-between text-[9px] font-mono">
+            <span className="text-zinc-500">MASTER</span>
+            <span className="text-amber-400 font-bold">{currentVal}</span>
           </div>
-          <input 
-            type="range" min={sliderMin} max={sliderMax} value={sliderVal}
-            onChange={(e) => handleSlider(propKey, e.target.value)}
-            className="w-full h-1 bg-zinc-800 rounded accent-[#00E5FF] cursor-pointer"
+          <input
+            type="range" min={minVal} max={maxVal} value={currentVal}
+            onChange={(e) => handleUpdate(wheelKey, Number(e.target.value))}
+            className="w-full h-1 bg-zinc-800 accent-amber-500 rounded cursor-pointer"
           />
         </div>
       </div>
@@ -267,323 +304,437 @@ export default function ColorWheels({ clip }) {
   };
 
   return (
-    <div className="p-3.5 bg-[#12141C] border border-white/10 rounded-2xl space-y-3.5 select-none text-zinc-300 font-sans shadow-xl text-xs">
+    <div 
+      className="flex flex-col h-full bg-[#0D0E13] border-l border-zinc-800 text-zinc-300 font-sans select-none text-[12px]"
+      onClick={(e) => e.stopPropagation()}
+    >
       
-      {/* =========================================================================
-          [1] 상단 헤더, A/B 전후 비교 바이패스, 전체 리셋
-          ========================================================================= */}
-      <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
-        <div className="flex items-center gap-1.5">
-          <span className="p-1 rounded bg-[#00E5FF]/10 text-[#00E5FF]"><SvgColorWheel /></span>
-          <span className="font-mono font-black text-xs text-white tracking-wider">
-            DAVINCI COLOR STUDIO PRO
+      {/* 1. 최상단 인스펙터 마스터 헤더 */}
+      <div className="px-3.5 py-2.5 bg-[#12141C] border-b border-zinc-800 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]" />
+          <span className="font-mono font-semibold text-zinc-100 text-[11px] uppercase tracking-wider">
+            DaVinci Color Studio : Primary Grading
           </span>
         </div>
 
         <div className="flex items-center gap-1.5">
-          {/* 전후 비교 A/B 바이패스 버튼 */}
+          {/* A/B 바이패스 토글 */}
           <button
             type="button"
             onClick={() => setIsBypassed(!isBypassed)}
-            className={`px-2 py-0.5 rounded text-[10px] font-bold border flex items-center gap-1 cursor-pointer transition-colors ${
+            className={`px-2 py-0.5 rounded text-[10.5px] font-mono font-bold border transition-colors cursor-pointer ${
               isBypassed 
                 ? 'bg-amber-500/20 border-amber-500 text-amber-300' 
-                : 'bg-white/5 border-white/10 text-zinc-400 hover:text-white'
+                : 'bg-zinc-800/80 border-zinc-700 text-zinc-400 hover:text-white'
             }`}
-            title="원본과 색보정 결과 비교 토글"
           >
-            <SvgEye /> {isBypassed ? 'BYPASS' : 'GRADE'}
+            {isBypassed ? 'BYPASS ON' : 'GRADE ACTIVE'}
           </button>
 
-          <button 
-            onClick={resetAll}
-            className="text-[10px] font-bold text-zinc-400 hover:text-white px-2 py-0.5 bg-white/5 hover:bg-white/10 rounded border border-white/10 transition-colors flex items-center gap-1 cursor-pointer"
+          <button
+            onClick={resetAllColor}
+            className="text-[10.5px] font-mono text-zinc-400 hover:text-white px-2 py-0.5 bg-zinc-800/80 hover:bg-zinc-700 rounded border border-zinc-700 transition-colors flex items-center gap-1 cursor-pointer"
+            title="모든 컬러 그레이딩 초기화"
           >
-            <SvgReset /> RESET
+            <IconReset /> RESET
           </button>
         </div>
       </div>
 
-      {/* =========================================================================
-          [2] 🌟 RGB 파라레이드 & 히스토그램 실시간 비디오 스코프
-          ========================================================================= */}
-      <div className="bg-[#08090C] p-2.5 rounded-xl border border-white/5 space-y-1.5">
-        <div className="flex items-center justify-between text-[9px] font-mono text-zinc-400">
-          <span className="flex items-center gap-1 text-zinc-300 font-bold">
-            <SvgHistogram /> RGB PARADE SCOPES
-          </span>
-          <span>100 IRE (PEAK)</span>
-        </div>
-
-        <div className="h-10 grid grid-cols-3 gap-2 bg-black/60 rounded-lg p-1.5 border border-white/5">
-          {/* R 채널 */}
-          <div className="h-full flex items-end justify-center bg-zinc-950 rounded overflow-hidden">
-            <div 
-              className="w-full bg-gradient-to-t from-red-900 to-red-500 transition-all duration-150"
-              style={{ height: `${scopeHeights.r}%` }}
-            />
-          </div>
-
-          {/* G 채널 */}
-          <div className="h-full flex items-end justify-center bg-zinc-950 rounded overflow-hidden">
-            <div 
-              className="w-full bg-gradient-to-t from-emerald-900 to-emerald-400 transition-all duration-150"
-              style={{ height: `${scopeHeights.g}%` }}
-            />
-          </div>
-
-          {/* B 채널 */}
-          <div className="h-full flex items-end justify-center bg-zinc-950 rounded overflow-hidden">
-            <div 
-              className="w-full bg-gradient-to-t from-blue-900 to-sky-400 transition-all duration-150"
-              style={{ height: `${scopeHeights.b}%` }}
-            />
-          </div>
-        </div>
-
-        <div className="flex justify-around text-[8.5px] font-mono font-bold">
-          <span className="text-red-400">RED</span>
-          <span className="text-emerald-400">GREEN</span>
-          <span className="text-sky-400">BLUE</span>
-        </div>
-      </div>
-
-      {/* =========================================================================
-          [3] 3-Way 색상환 3분할 랙 (LIFT, GAMMA, GAIN)
-          ========================================================================= */}
-      <div className="grid grid-cols-3 gap-2">
-        <ColorWheelUnit label="LIFT (SHADOW)" propKey="lift" sliderMin={-100} sliderMax={100} sliderVal={color.lift} tintVal={color.liftTint} />
-        <ColorWheelUnit label="GAMMA (MID)" propKey="gamma" sliderMin={50} sliderMax={150} sliderVal={color.gamma} tintVal={color.gammaTint} />
-        <ColorWheelUnit label="GAIN (HILIGHT)" propKey="gain" sliderMin={50} sliderMax={150} sliderVal={color.gain} tintVal={color.gainTint} />
-      </div>
-
-      {/* =========================================================================
-          [4] 화이트 밸런스 정밀 캘리브레이션 (색온도 Kelvin & 틴트)
-          ========================================================================= */}
-      <div className="p-3 bg-[#090A0E] rounded-xl border border-white/5 space-y-2.5">
-        <span className="text-[10px] font-mono font-black text-zinc-400 tracking-wider block">
-          WHITE BALANCE & TEMPERATURE
-        </span>
-
-        {/* 색온도 슬라이더 (2500K ~ 9500K) */}
-        <div className="space-y-0.5">
-          <div className="flex justify-between text-[10.5px] font-bold">
-            <span className="text-zinc-400">COLOR TEMP (색온도)</span>
-            <span className={`font-mono ${color.temperature > 6500 ? 'text-amber-400' : color.temperature < 6500 ? 'text-sky-400' : 'text-white'}`}>
-              {color.temperature}K
+      {/* 2. 10비트 실시간 RGB 파라레이드 비디오 스코프 */}
+      {showScopes && (
+        <div className="p-3 bg-[#0B0C10] border-b border-zinc-800 space-y-1.5">
+          <div className="flex items-center justify-between text-[9.5px] font-mono text-zinc-500">
+            <span className="flex items-center gap-1 text-zinc-400 font-bold">
+              <IconScope /> 10-BIT RGB PARADE SCOPES
             </span>
+            <span>100 IRE (PEAK 1023)</span>
           </div>
-          <input 
-            type="range" min="2500" max="9500" step="50"
-            value={color.temperature}
-            onChange={(e) => handleSlider('temperature', e.target.value)}
-            className="w-full h-1.5 rounded cursor-pointer accent-amber-400"
-            style={{
-              background: 'linear-gradient(to right, #60A5FA 0%, #FFFFFF 50%, #F59E0B 100%)'
-            }}
-          />
-        </div>
 
-        {/* 틴트 슬라이더 (-50 ~ +50) */}
-        <div className="space-y-0.5">
-          <div className="flex justify-between text-[10.5px] font-bold">
-            <span className="text-zinc-400">TINT (틴트/색조)</span>
-            <span className={`font-mono ${color.tint > 0 ? 'text-fuchsia-400' : color.tint < 0 ? 'text-emerald-400' : 'text-white'}`}>
-              {color.tint > 0 ? `+${color.tint}` : color.tint}
-            </span>
+          <div className="h-10 grid grid-cols-3 gap-1.5 bg-[#050608] rounded-md p-1 border border-zinc-800/80">
+            {/* Red 채널 */}
+            <div className="h-full flex items-end justify-center bg-zinc-950 rounded overflow-hidden relative">
+              <div className="absolute top-1/4 w-full border-t border-red-500/20" />
+              <div 
+                className="w-full bg-gradient-to-t from-red-950 via-red-700 to-red-400 transition-all duration-100"
+                style={{ height: `${scopeValues.r}%` }}
+              />
+            </div>
+            {/* Green 채널 */}
+            <div className="h-full flex items-end justify-center bg-zinc-950 rounded overflow-hidden relative">
+              <div className="absolute top-1/4 w-full border-t border-emerald-500/20" />
+              <div 
+                className="w-full bg-gradient-to-t from-emerald-950 via-emerald-700 to-emerald-400 transition-all duration-100"
+                style={{ height: `${scopeValues.g}%` }}
+              />
+            </div>
+            {/* Blue 채널 */}
+            <div className="h-full flex items-end justify-center bg-zinc-950 rounded overflow-hidden relative">
+              <div className="absolute top-1/4 w-full border-t border-sky-500/20" />
+              <div 
+                className="w-full bg-gradient-to-t from-sky-950 via-sky-700 to-sky-400 transition-all duration-100"
+                style={{ height: `${scopeValues.b}%` }}
+              />
+            </div>
           </div>
-          <input 
-            type="range" min="-50" max="50" step="1"
-            value={color.tint}
-            onChange={(e) => handleSlider('tint', e.target.value)}
-            className="w-full h-1.5 rounded cursor-pointer accent-fuchsia-400"
-            style={{
-              background: 'linear-gradient(to right, #10B981 0%, #FFFFFF 50%, #EC4899 100%)'
-            }}
-          />
+
+          <div className="flex justify-around text-[8.5px] font-mono font-bold">
+            <span className="text-red-400">RED ({Math.round(scopeValues.r * 10.23)})</span>
+            <span className="text-emerald-400">GREEN ({Math.round(scopeValues.g * 10.23)})</span>
+            <span className="text-sky-400">BLUE ({Math.round(scopeValues.b * 10.23)})</span>
+          </div>
         </div>
+      )}
+
+      {/* 3. 워크플로우 탭 바 (Wheels / Bars / HSL / LUT) */}
+      <div className="flex border-b border-zinc-800 bg-[#101217] px-2 pt-1 gap-1">
+        {[
+          { id: 'wheels', label: '4-Way 컬러 휠', icon: <IconWheelMode /> },
+          { id: 'bars', label: '프라이머리 바', icon: <IconBarsMode /> },
+          { id: 'hsl', label: 'HSL 퀄리파이어', icon: <IconHslMode /> },
+          { id: 'lut', label: '필름 프린트 LUT', icon: <IconScope /> }
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveMode(tab.id)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium border-b-2 transition-colors -mb-[1px] whitespace-nowrap cursor-pointer ${
+              activeMode === tab.id
+                ? 'border-amber-500 text-amber-300 bg-zinc-800/40 font-semibold'
+                : 'border-transparent text-zinc-400 hover:text-zinc-200'
+            }`}
+          >
+            {tab.icon}
+            <span>{tab.label}</span>
+          </button>
+        ))}
       </div>
 
-      {/* =========================================================================
-          [5] 🌟 HSL 셀렉티브 컬러 튜너 (인물 피부톤 & 자연풍경 추출)
-          ========================================================================= */}
-      <div className="p-3 bg-[#090A0E] rounded-xl border border-white/5 space-y-2.5">
-        <div className="flex items-center justify-between">
-          <span className="text-[10px] font-mono font-black text-zinc-400 tracking-wider">
-            HSL SELECTIVE COLOR TUNER
-          </span>
-          <span className="text-[9px] font-mono text-[#00E5FF] uppercase font-bold">
-            {selectedHslColor}
-          </span>
-        </div>
+      {/* 4. 세부 컨트롤 패널 */}
+      <div className="flex-1 overflow-y-auto p-3 space-y-4">
 
-        {/* 5대 색상군 탭 셀렉터 */}
-        <div className="flex items-center gap-1.5">
-          {[
-            { id: 'skin', label: '인물 피부', color: 'bg-amber-400' },
-            { id: 'red', label: '레드/립', color: 'bg-rose-500' },
-            { id: 'yellow', label: '옐로우', color: 'bg-yellow-400' },
-            { id: 'green', label: '그린/배경', color: 'bg-emerald-500' },
-            { id: 'blue', label: '블루/하늘', color: 'bg-sky-500' }
-          ].map(c => (
-            <button
-              key={c.id}
-              type="button"
-              onClick={() => setSelectedHslColor(c.id)}
-              className={`flex-1 py-1 rounded-md text-[9.5px] font-bold border transition-colors flex items-center justify-center gap-1 cursor-pointer ${
-                selectedHslColor === c.id 
-                  ? 'bg-white/15 border-white text-white font-black' 
-                  : 'bg-black/40 border-white/5 text-zinc-400'
-              }`}
-            >
-              <span className={`w-1.5 h-1.5 rounded-full ${c.color}`} />
-              {c.label}
-            </button>
-          ))}
-        </div>
-
-        {/* HSL 슬라이더 (색조/채도/휘도) */}
-        <div className="space-y-1.5 pt-1">
-          <div className="space-y-0.5">
-            <div className="flex justify-between text-[10px] font-bold">
-              <span className="text-zinc-400">HUE (색상 변환)</span>
-              <span className="text-[#00E5FF] font-mono">{color.hsl[selectedHslColor]?.hue || 0}°</span>
+        {/* =====================================================================
+            TAB 1: 4-WAY COLOR WHEELS (LIFT / GAMMA / GAIN / OFFSET)
+            ===================================================================== */}
+        {activeMode === 'wheels' && (
+          <div className="space-y-4">
+            {/* 4개 휠 2x2 매트릭스 레이아웃 */}
+            <div className="grid grid-cols-2 gap-2">
+              <ColorWheelModule label="LIFT (SHADOWS)" wheelKey="lift" minVal={-100} maxVal={100} currentVal={color.lift} tintVal={color.liftTint} />
+              <ColorWheelModule label="GAMMA (MIDTONES)" wheelKey="gamma" minVal={50} maxVal={150} currentVal={color.gamma} tintVal={color.gammaTint} />
+              <ColorWheelModule label="GAIN (HIGHLIGHTS)" wheelKey="gain" minVal={50} maxVal={150} currentVal={color.gain} tintVal={color.gainTint} />
+              <ColorWheelModule label="OFFSET (MASTER)" wheelKey="offset" minVal={50} maxVal={150} currentVal={color.offset} tintVal={color.offsetTint} />
             </div>
-            <input 
-              type="range" min="-180" max="180" step="5"
-              value={color.hsl[selectedHslColor]?.hue || 0}
-              onChange={e => handleHslSlider('hue', e.target.value)}
-              className="w-full h-1 accent-[#00E5FF] bg-zinc-800 rounded cursor-pointer"
-            />
-          </div>
 
-          <div className="space-y-0.5">
-            <div className="flex justify-between text-[10px] font-bold">
-              <span className="text-zinc-400">SATURATION (선명도)</span>
-              <span className="text-[#00E5FF] font-mono">{color.hsl[selectedHslColor]?.sat || 0}%</span>
+            {/* 마스터 하단 퀵 슬라이더 바 (대비 / 채도 / 색온도) */}
+            <div className="bg-[#11131A] p-3 rounded-xl border border-zinc-800 space-y-2.5">
+              <span className="font-mono text-[10px] text-zinc-500 uppercase tracking-wider block">
+                Quick Primary Controls
+              </span>
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <div className="flex justify-between text-[10px] font-mono text-zinc-400 mb-0.5">
+                    <span>CONTRAST</span>
+                    <span className="text-zinc-200 font-bold">{color.contrast.toFixed(2)}x</span>
+                  </div>
+                  <input
+                    type="range" min="0.5" max="2.0" step="0.02" value={color.contrast}
+                    onChange={(e) => handleUpdate('contrast', Number(e.target.value))}
+                    className="w-full h-1 bg-zinc-800 accent-amber-500 rounded cursor-pointer"
+                  />
+                </div>
+                <div>
+                  <div className="flex justify-between text-[10px] font-mono text-zinc-400 mb-0.5">
+                    <span>SATURATION</span>
+                    <span className="text-zinc-200 font-bold">{color.saturation}%</span>
+                  </div>
+                  <input
+                    type="range" min="0" max="200" value={color.saturation}
+                    onChange={(e) => handleUpdate('saturation', Number(e.target.value))}
+                    className="w-full h-1 bg-zinc-800 accent-amber-500 rounded cursor-pointer"
+                  />
+                </div>
+              </div>
             </div>
-            <input 
-              type="range" min="-100" max="100" step="2"
-              value={color.hsl[selectedHslColor]?.sat || 0}
-              onChange={e => handleHslSlider('sat', e.target.value)}
-              className="w-full h-1 accent-[#00E5FF] bg-zinc-800 rounded cursor-pointer"
-            />
           </div>
-        </div>
+        )}
+
+        {/* =====================================================================
+            TAB 2: PRIMARY BARS & CALIBRATION (다빈치 프라이머리 슬라이더)
+            ===================================================================== */}
+        {activeMode === 'bars' && (
+          <div className="space-y-4">
+            
+            {/* 색온도 Kelvin & 틴트 */}
+            <div className="bg-[#11131A] p-3 rounded-xl border border-zinc-800 space-y-3">
+              <span className="font-mono text-[10px] text-zinc-400 font-semibold uppercase block border-b border-zinc-800 pb-1.5">
+                White Balance Calibration
+              </span>
+
+              {/* 켈빈 색온도 */}
+              <div className="space-y-1">
+                <div className="flex justify-between text-[10.5px] font-mono">
+                  <span className="text-zinc-400">COLOR TEMPERATURE</span>
+                  <span className={`font-bold ${color.temperature > 6500 ? 'text-amber-400' : color.temperature < 6500 ? 'text-sky-400' : 'text-zinc-200'}`}>
+                    {color.temperature}K
+                  </span>
+                </div>
+                <div className="relative flex items-center">
+                  <div className="absolute inset-0 h-1.5 rounded bg-gradient-to-r from-sky-500 via-white to-amber-500 opacity-30 pointer-events-none" />
+                  <input
+                    type="range" min="2500" max="10000" step="50" value={color.temperature}
+                    onChange={(e) => handleUpdate('temperature', Number(e.target.value))}
+                    className="w-full h-1.5 bg-transparent accent-amber-400 rounded cursor-pointer relative z-10"
+                  />
+                </div>
+              </div>
+
+              {/* 틴트 (그린 / 마젠타) */}
+              <div className="space-y-1">
+                <div className="flex justify-between text-[10.5px] font-mono">
+                  <span className="text-zinc-400">TINT (GREEN / MAGENTA)</span>
+                  <span className={`font-bold ${color.tint > 0 ? 'text-fuchsia-400' : color.tint < 0 ? 'text-emerald-400' : 'text-zinc-200'}`}>
+                    {color.tint > 0 ? `+${color.tint}` : color.tint}
+                  </span>
+                </div>
+                <div className="relative flex items-center">
+                  <div className="absolute inset-0 h-1.5 rounded bg-gradient-to-r from-emerald-500 via-white to-fuchsia-500 opacity-30 pointer-events-none" />
+                  <input
+                    type="range" min="-100" max="100" value={color.tint}
+                    onChange={(e) => handleUpdate('tint', Number(e.target.value))}
+                    className="w-full h-1.5 bg-transparent accent-fuchsia-400 rounded cursor-pointer relative z-10"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* 노출, 콘트라스트, 피벗 */}
+            <div className="bg-[#11131A] p-3 rounded-xl border border-zinc-800 space-y-3">
+              <span className="font-mono text-[10.5px] text-zinc-400 font-semibold uppercase block border-b border-zinc-800 pb-1.5">
+                Tone Mapping & Pivot
+              </span>
+
+              {/* 노출 EV */}
+              <div className="space-y-1">
+                <div className="flex justify-between text-[10.5px] font-mono">
+                  <span className="text-zinc-400">EXPOSURE (노출 오프셋)</span>
+                  <span className="text-zinc-100 font-bold">{color.exposure > 0 ? `+${color.exposure.toFixed(2)}` : color.exposure.toFixed(2)} EV</span>
+                </div>
+                <input
+                  type="range" min="-3.0" max="3.0" step="0.05" value={color.exposure}
+                  onChange={(e) => handleUpdate('exposure', Number(e.target.value))}
+                  className="w-full h-1 bg-zinc-800 accent-amber-500 rounded cursor-pointer"
+                />
+              </div>
+
+              {/* 피벗 (Contrast Pivot) */}
+              <div className="space-y-1">
+                <div className="flex justify-between text-[10.5px] font-mono">
+                  <span className="text-zinc-400">CONTRAST PIVOT</span>
+                  <span className="text-zinc-200 font-bold">{color.pivot.toFixed(3)}</span>
+                </div>
+                <input
+                  type="range" min="0.0" max="1.0" step="0.005" value={color.pivot}
+                  onChange={(e) => handleUpdate('pivot', Number(e.target.value))}
+                  className="w-full h-1 bg-zinc-800 accent-zinc-400 rounded cursor-pointer"
+                />
+              </div>
+            </div>
+
+            {/* 미드톤 디테일 & 컬러 부스트 */}
+            <div className="bg-[#11131A] p-3 rounded-xl border border-zinc-800 space-y-3">
+              <span className="font-mono text-[10.5px] text-zinc-400 font-semibold uppercase block border-b border-zinc-800 pb-1.5">
+                Texture & Vibrance
+              </span>
+
+              {/* 미드톤 디테일 (헐리우드 피부결/질감 튜너) */}
+              <div className="space-y-1">
+                <div className="flex justify-between text-[10.5px] font-mono">
+                  <span className="text-zinc-400">MIDTONE DETAIL (피부결 부드러움 / 텍스처)</span>
+                  <span className={`font-bold ${color.midtoneDetail > 0 ? 'text-amber-400' : color.midtoneDetail < 0 ? 'text-rose-400' : 'text-zinc-200'}`}>
+                    {color.midtoneDetail > 0 ? `+${color.midtoneDetail}` : color.midtoneDetail}
+                  </span>
+                </div>
+                <input
+                  type="range" min="-100" max="100" value={color.midtoneDetail}
+                  onChange={(e) => handleUpdate('midtoneDetail', Number(e.target.value))}
+                  className="w-full h-1 bg-zinc-800 accent-amber-500 rounded cursor-pointer"
+                />
+              </div>
+
+              {/* 컬러 부스트 (Vibrance) */}
+              <div className="space-y-1">
+                <div className="flex justify-between text-[10.5px] font-mono">
+                  <span className="text-zinc-400">COLOR BOOST (비선형 채도 가속)</span>
+                  <span className="text-zinc-200 font-bold">{color.colorBoost > 0 ? `+${color.colorBoost}` : color.colorBoost}</span>
+                </div>
+                <input
+                  type="range" min="-100" max="100" value={color.colorBoost}
+                  onChange={(e) => handleUpdate('colorBoost', Number(e.target.value))}
+                  className="w-full h-1 bg-zinc-800 accent-amber-500 rounded cursor-pointer"
+                />
+              </div>
+            </div>
+
+          </div>
+        )}
+
+        {/* =====================================================================
+            TAB 3: 8-VECTOR HSL QUALIFIER CURVES
+            ===================================================================== */}
+        {activeMode === 'hsl' && (
+          <div className="space-y-4">
+            
+            {/* 8대 색상 벡터 채널 셀렉터 */}
+            <div className="space-y-1.5">
+              <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider block">
+                Target Color Vector
+              </span>
+              <div className="grid grid-cols-4 gap-1.5">
+                {[
+                  { id: 'skin', name: '스킨톤', color: '#FBBF24' },
+                  { id: 'red', name: '레드', color: '#EF4444' },
+                  { id: 'yellow', name: '옐로우', color: '#EAB308' },
+                  { id: 'green', name: '그린', color: '#10B981' },
+                  { id: 'cyan', name: '시안', color: '#06B6D4' },
+                  { id: 'blue', name: '블루', color: '#3B82F6' },
+                  { id: 'magenta', name: '마젠타', color: '#D946EF' }
+                ].map((channel) => (
+                  <button
+                    key={channel.id}
+                    onClick={() => setSelectedHslChannel(channel.id)}
+                    className={`py-1.5 px-2 rounded-lg border text-[10.5px] font-medium flex items-center justify-center gap-1.5 cursor-pointer transition-colors ${
+                      selectedHslChannel === channel.id
+                        ? 'bg-zinc-800 border-amber-500 text-white font-bold'
+                        : 'bg-[#11131A] border-zinc-800 text-zinc-400 hover:text-zinc-200'
+                    }`}
+                  >
+                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: channel.color }} />
+                    <span>{channel.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 선택된 벡터 정밀 HSL 튜닝 (Hue vs Hue / Sat / Lum) */}
+            <div className="bg-[#11131A] p-3 rounded-xl border border-zinc-800 space-y-3">
+              <div className="flex justify-between items-center border-b border-zinc-800 pb-1.5">
+                <span className="font-mono text-[10.5px] text-amber-400 font-bold uppercase">
+                  [{selectedHslChannel.toUpperCase()}] VECTOR CURVE OFFSET
+                </span>
+                <button
+                  onClick={() => {
+                    handleHslUpdate('hue', 0);
+                    handleHslUpdate('sat', 0);
+                    handleHslUpdate('lum', 0);
+                  }}
+                  className="text-[10px] text-zinc-500 hover:text-white"
+                >
+                  채널 리셋
+                </button>
+              </div>
+
+              {/* Hue Shift (색상 변환) */}
+              <div className="space-y-1">
+                <div className="flex justify-between text-[10.5px] font-mono">
+                  <span className="text-zinc-400">HUE SHIFT (색상 변환)</span>
+                  <span className="text-zinc-200 font-bold">{color.hsl[selectedHslChannel]?.hue || 0}°</span>
+                </div>
+                <input
+                  type="range" min="-180" max="180" step="2"
+                  value={color.hsl[selectedHslChannel]?.hue || 0}
+                  onChange={(e) => handleHslUpdate('hue', e.target.value)}
+                  className="w-full h-1 bg-zinc-800 accent-amber-500 rounded cursor-pointer"
+                />
+              </div>
+
+              {/* Saturation (채도) */}
+              <div className="space-y-1">
+                <div className="flex justify-between text-[10.5px] font-mono">
+                  <span className="text-zinc-400">SATURATION (선명도)</span>
+                  <span className="text-zinc-200 font-bold">{color.hsl[selectedHslChannel]?.sat > 0 ? `+${color.hsl[selectedHslChannel].sat}` : color.hsl[selectedHslChannel]?.sat || 0}%</span>
+                </div>
+                <input
+                  type="range" min="-100" max="100" step="2"
+                  value={color.hsl[selectedHslChannel]?.sat || 0}
+                  onChange={(e) => handleHslUpdate('sat', e.target.value)}
+                  className="w-full h-1 bg-zinc-800 accent-amber-500 rounded cursor-pointer"
+                />
+              </div>
+
+              {/* Luminance (명도) */}
+              <div className="space-y-1">
+                <div className="flex justify-between text-[10.5px] font-mono">
+                  <span className="text-zinc-400">LUMINANCE (휘도)</span>
+                  <span className="text-zinc-200 font-bold">{color.hsl[selectedHslChannel]?.lum > 0 ? `+${color.hsl[selectedHslChannel].lum}` : color.hsl[selectedHslChannel]?.lum || 0}%</span>
+                </div>
+                <input
+                  type="range" min="-100" max="100" step="2"
+                  value={color.hsl[selectedHslChannel]?.lum || 0}
+                  onChange={(e) => handleHslUpdate('lum', e.target.value)}
+                  className="w-full h-1 bg-zinc-800 accent-amber-500 rounded cursor-pointer"
+                />
+              </div>
+            </div>
+
+          </div>
+        )}
+
+        {/* =====================================================================
+            TAB 4: FILM PRINT LUTS (영화관 표준 3D 룩업 테이블)
+            ===================================================================== */}
+        {activeMode === 'lut' && (
+          <div className="space-y-4">
+            
+            <div className="space-y-1.5">
+              <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider block">
+                PRINT FILM EMULATION (PFE LUTS)
+              </span>
+              <div className="grid grid-cols-1 gap-1.5">
+                {PRINT_LUTS.map((p) => {
+                  const isSelected = (color.lut || 'none') === p.id;
+                  return (
+                    <button
+                      key={p.id}
+                      onClick={() => handleUpdate('lut', p.id)}
+                      className={`p-2.5 rounded-lg border text-left transition-all flex items-center justify-between cursor-pointer ${
+                        isSelected
+                          ? 'bg-amber-500/10 border-amber-500 text-amber-200'
+                          : 'bg-[#11131A] border-zinc-800 hover:border-zinc-700 text-zinc-300'
+                      }`}
+                    >
+                      <div>
+                        <span className="font-semibold text-[11.5px] text-zinc-100 block">{p.name}</span>
+                        <span className="text-[10px] text-zinc-500 block">{p.desc}</span>
+                      </div>
+                      {isSelected && (
+                        <span className="font-mono text-[9px] bg-amber-500 text-black px-1.5 py-0.5 rounded font-black">ACTIVE</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* LUT Mix 강도 */}
+            {color.lut && color.lut !== 'none' && (
+              <div className="bg-[#11131A] p-3 rounded-xl border border-zinc-800 space-y-1">
+                <div className="flex justify-between text-[10.5px] font-mono">
+                  <span className="text-zinc-400">PRINT LUT INTENSITY (믹스 강도)</span>
+                  <span className="text-amber-400 font-bold">{color.lutMix || 100}%</span>
+                </div>
+                <input
+                  type="range" min="0" max="100" value={color.lutMix || 100}
+                  onChange={(e) => handleUpdate('lutMix', Number(e.target.value))}
+                  className="w-full h-1 bg-zinc-800 accent-amber-500 rounded cursor-pointer"
+                />
+              </div>
+            )}
+
+          </div>
+        )}
+
       </div>
-
-      {/* =========================================================================
-          [6] 다이내믹 레인지 & 콘트라스트 (채도, 대비, 하이라이트, 섀도우)
-          ========================================================================= */}
-      <div className="space-y-2.5 pt-1 border-t border-white/5">
-        
-        {/* 채도(Saturation) & 대비(Contrast) */}
-        <div className="grid grid-cols-2 gap-2.5">
-          <div>
-            <div className="flex justify-between items-center text-[10.5px] font-bold text-zinc-400 mb-0.5">
-              <span>SATURATION (채도)</span>
-              <span className="font-mono text-[#00E5FF]">{color.saturation}%</span>
-            </div>
-            <input 
-              type="range" min="0" max="200" value={color.saturation}
-              onChange={(e) => handleSlider('saturation', e.target.value)}
-              className="w-full h-1 bg-zinc-800 rounded accent-[#00E5FF] cursor-pointer"
-            />
-          </div>
-
-          <div>
-            <div className="flex justify-between items-center text-[10.5px] font-bold text-zinc-400 mb-0.5">
-              <span>CONTRAST (대비)</span>
-              <span className="font-mono text-[#00E5FF]">{color.contrast > 0 ? `+${color.contrast}` : color.contrast}</span>
-            </div>
-            <input 
-              type="range" min="-50" max="50" value={color.contrast}
-              onChange={(e) => handleSlider('contrast', e.target.value)}
-              className="w-full h-1 bg-zinc-800 rounded accent-[#00E5FF] cursor-pointer"
-            />
-          </div>
-        </div>
-
-        {/* 하이라이트(Highlights) & 섀도우(Shadows) */}
-        <div className="grid grid-cols-2 gap-2.5 pt-1">
-          <div>
-            <div className="flex justify-between items-center text-[10.5px] font-bold text-zinc-400 mb-0.5">
-              <span>HIGHLIGHTS</span>
-              <span className="font-mono text-white">{color.highlights > 0 ? `+${color.highlights}` : color.highlights || 0}</span>
-            </div>
-            <input 
-              type="range" min="-50" max="50" value={color.highlights || 0}
-              onChange={(e) => handleSlider('highlights', e.target.value)}
-              className="w-full h-1 bg-zinc-800 rounded accent-[#00E5FF] cursor-pointer"
-            />
-          </div>
-
-          <div>
-            <div className="flex justify-between items-center text-[10.5px] font-bold text-zinc-400 mb-0.5">
-              <span>SHADOWS</span>
-              <span className="font-mono text-white">{color.shadows > 0 ? `+${color.shadows}` : color.shadows || 0}</span>
-            </div>
-            <input 
-              type="range" min="-50" max="50" value={color.shadows || 0}
-              onChange={(e) => handleSlider('shadows', e.target.value)}
-              className="w-full h-1 bg-zinc-800 rounded accent-[#00E5FF] cursor-pointer"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* =========================================================================
-          [7] 시네마틱 LUT 퀵 셀렉터 (8종 확장 프리셋)
-          ========================================================================= */}
-      <div className="pt-2 border-t border-white/10 space-y-1.5">
-        <div className="flex items-center justify-between">
-          <span className="text-[10px] font-mono font-black text-zinc-400 tracking-wider">
-            CINEMATIC FILM LUT PROFILES
-          </span>
-          <span className="text-[10px] font-mono text-[#00E5FF] font-bold">{clip.filterPreset || 'Standard'}</span>
-        </div>
-
-        <div className="grid grid-cols-4 gap-1.5">
-          {[
-            { id: 'Standard', label: 'Rec.709' },
-            { id: 'Teal & Orange', label: '틸&오렌지' },
-            { id: 'Warm Moody', label: '웜 샌추어리' },
-            { id: 'Vibrant Film', label: '코닥 200' },
-            { id: 'Fuji Pastel', label: '후지 에테르나' },
-            { id: 'Cinema Noir', label: '시네마 느와르' },
-            { id: 'Golden Hour', label: '골든 아워' },
-            { id: 'Bleach Bypass', label: '블리치 룩' }
-          ].map((preset) => {
-            const isSelected = (clip.filterPreset || 'Standard') === preset.id;
-            return (
-              <button
-                key={preset.id}
-                onClick={() => {
-                  updateClip(clip.id, { filterPreset: preset.id });
-                  // 룩에 맞춘 기본 틴트/온도 지능형 동기화
-                  if (preset.id === 'Warm Moody' || preset.id === 'Golden Hour') {
-                    handleSlider('temperature', 7200);
-                  } else if (preset.id === 'Teal & Orange') {
-                    handleSlider('temperature', 6200);
-                    handleSlider('contrast', 15);
-                  } else if (preset.id === 'Standard') {
-                    handleSlider('temperature', 6500);
-                    handleSlider('contrast', 0);
-                  }
-                }}
-                className={`py-1.5 px-1 rounded-lg text-[10px] font-bold border transition-all truncate cursor-pointer ${
-                  isSelected 
-                    ? 'bg-[#00E5FF] border-[#00E5FF] text-black font-black shadow-sm' 
-                    : 'bg-[#090A0E] border-white/5 text-zinc-400 hover:text-white hover:bg-white/5'
-                }`}
-              >
-                {preset.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
     </div>
   );
 }
