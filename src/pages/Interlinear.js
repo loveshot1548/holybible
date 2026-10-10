@@ -783,7 +783,14 @@ export default function Interlinear({
     setCurrentNetNote(netNotesDb[key] || null);
     setCurrentTargumPeshitta(targumPeshittaDb[key] || null);
 
-    const foundEastonKey = Object.keys(eastonDb).find(k => (koVerseText || '').includes(k));
+    // 🌟 [수정] 한글 본문 및 영어(WEB/직역) 본문 단어 양방향 이스톤 4,000개 표제어 매칭
+    const foundEastonKey = Object.keys(eastonDb).find(k => {
+      if ((koVerseText || '').includes(k)) return true;
+      const lowerK = k.toLowerCase();
+      if ((enVerseText || '').toLowerCase().split(/\s+/).some(w => w.replace(/[^a-z]/g, '') === lowerK)) return true;
+      if ((webVerseText || '').toLowerCase().split(/\s+/).some(w => w.replace(/[^a-z]/g, '') === lowerK)) return true;
+      return false;
+    });
     setCurrentEaston(foundEastonKey ? { word: foundEastonKey, ...eastonDb[foundEastonKey] } : null);
   }, [currentBookMeta.ko, chapter, verse, lxxDatabase, josephusDb, geoDb, commentaryDb, matthewHenryDb, netNotesDb, eastonDb, targumPeshittaDb, koVerseText]);
   
@@ -1978,22 +1985,38 @@ export default function Interlinear({
               </div>
             )}
 
-            {/* 10. 이스톤 성경 백과사전 패널 */}
+            {/* 10. 이스톤 성경 백과사전 패널 (실시간 한국어 번역 버튼 완비) */}
             {currentEaston && (
               <div className={`rounded-xl border ${theme.easton} overflow-hidden`}>
-                <button 
-                  type="button"
-                  onClick={() => togglePanel('easton')}
-                  className="w-full p-2.5 flex items-center justify-between font-serif font-bold text-[12.5px] cursor-pointer"
-                >
-                  <span>📚 10. 이스톤(Easton's) 성경 백과사전 [{currentEaston.word}]</span>
-                  <span className="text-[10px] font-mono font-semibold">Biblical Encyclopedia {openPanels.easton ? '▲' : '▼'}</span>
-                </button>
+                <div className="p-2.5 flex items-center justify-between font-serif font-bold text-[12.5px]">
+                  <span onClick={() => togglePanel('easton')} className="cursor-pointer flex-1">
+                    📚 10. 이스톤(Easton's) 성경 백과사전 [{currentEaston.word}]
+                  </span>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleToggleTranslation(`easton_${chapter}_${verse}`, currentEaston.definition)}
+                      className={`px-2 py-0.5 rounded text-[10px] font-bold border transition-all cursor-pointer ${
+                        translatedMap[`easton_${chapter}_${verse}`]
+                          ? 'bg-purple-600 text-white border-purple-600'
+                          : 'bg-white dark:bg-slate-800 text-purple-900 dark:text-purple-200 border-purple-200 dark:border-purple-800'
+                      }`}
+                    >
+                      {translatingKeys[`easton_${chapter}_${verse}`] ? '단락별 번역 중...' : translatedMap[`easton_${chapter}_${verse}`] ? '원문' : '🌐 한국어 번역'}
+                    </button>
+                    <span onClick={() => togglePanel('easton')} className="cursor-pointer opacity-60">
+                      {openPanels.easton ? '▲' : '▼'}
+                    </span>
+                  </div>
+                </div>
                 {openPanels.easton && (
-                  <div className="p-2.5 pt-0 border-t border-purple-200/60 dark:border-purple-800/40 space-y-1 pt-1.5">
-                    <p className="text-[12px] leading-relaxed font-serif text-stone-800 dark:text-slate-200">
-                      {decodeHtmlEntities(currentEaston.definition)}
-                    </p>
+                  <div className="p-3 pt-0 border-t border-purple-200/60 dark:border-purple-800/40 space-y-1 pt-2">
+                    <div className="text-left">
+                      {renderParagraphBlocks(
+                        translatedMap[`easton_${chapter}_${verse}`] || currentEaston.definition,
+                        theme.textMain
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
