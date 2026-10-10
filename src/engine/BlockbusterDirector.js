@@ -2,9 +2,11 @@
 import { useNLEStore } from '../store/useNLEStore';
 import { checkAndFetchScripture } from './AutoScripture';
 import { audioDSP } from './AudioDSP';
+import { CURVE_PRESETS } from './KeyframeCurveEngine';
+import { OpenCapReelsEngine, VIRAL_CAPTION_STYLES } from './OpenCapReelsEngine';
 
 // =====================================================================
-// 🔐 [보안 복호화 헬퍼] 앱 내부 목장/감사/일기 암호화 데이터 해독
+// 🔐 [보안 암호화 데이터 복호화 헬퍼]
 // =====================================================================
 const ENCRYPT_PREFIX = "ENC_GTC_v1::";
 const decryptField = (cipherText) => {
@@ -13,35 +15,28 @@ const decryptField = (cipherText) => {
   try {
     const payload = cipherText.replace(ENCRYPT_PREFIX, '');
     return decodeURIComponent(atob(payload));
-  } catch (e) {
+  } catch (_) {
     return cipherText;
   }
 };
 
 // =====================================================================
-// 🏛️ 1. 앱 내부 사역 데이터베이스 실시간 지능형 추출 엔진
+// 🏛️ 1. 지능형 영적 사역 데이터 추출 & 카피라이팅 엔진
 // =====================================================================
 export class MinistryContextExtractor {
   static getTodayKey() {
     return new Date().toISOString().split('T')[0];
   }
 
-  /**
-   * 앱 내부에 축적된 영적 데이터를 실시간 스캔하여 정제
-   * @param {string} targetDate - 대상 날짜 (기본 오늘)
-   * @param {string} mode - 'auto' | 'qt' | 'sermon' | 'cell' | 'diary' | 'preset'
-   */
   static scanSpiritualAssets(targetDate, mode = 'auto') {
     const date = targetDate || this.getTodayKey();
 
-    // 1. QT 데이터 스캔 (QT.js / qt_daily)
     let qtData = {};
     try {
       const allQt = JSON.parse(localStorage.getItem('qt_daily') || '{}');
       qtData = allQt[date] || {};
     } catch (_) {}
 
-    // 2. 주일 설교 노트 스캔 (Sermon.js / days_data)
     let sermonData = {};
     try {
       const daysData = JSON.parse(localStorage.getItem('days_data') || '{}');
@@ -52,7 +47,6 @@ export class MinistryContextExtractor {
       }
     } catch (_) {}
 
-    // 3. 목장 나눔 및 감사 피드 스캔 (Cell.js)
     let cellData = {};
     try {
       const draftKeys = Object.keys(localStorage).filter(k => k.startsWith('cell_draft_') && k.endsWith(date));
@@ -65,369 +59,287 @@ export class MinistryContextExtractor {
       }
     } catch (_) {}
 
-    // 4. 제자훈련 10분 일지 및 고난 해석 스캔 (Diary.js)
     let diaryData = {};
     try {
       diaryData = JSON.parse(localStorage.getItem('diary_10min') || '{}');
     } catch (_) {}
 
-    // 5. 기도함 스캔 (PrayerBox.js)
-    let prayerData = {};
-    try {
-      prayerData = JSON.parse(localStorage.getItem('pb_tnote_final_v14') || '{}');
-    } catch (_) {}
-
-    // 🌟 [모드별 우선순위 분기 판별]
     const hasQT = Boolean(qtData.qtTitle || qtData.qtGoldenVerse || qtData.qtGraceLine || qtData.qtMeditation);
     const hasSermon = Boolean(sermonData.sermonConviction || sermonData.sermonTitle || sermonData.sermonPoint1);
     const hasCell = Boolean(cellData.thanksShare || cellData.wordShare || cellData.sharedThanks);
     const hasDiary = Boolean(diaryData.share || diaryData.found || diaryData.thanks);
 
-    // [A] QT 중심 모드
     if (mode === 'qt' || (mode === 'auto' && hasQT)) {
       if (hasQT) {
+        const rawVerse = qtData.qtGoldenVerse || qtData.qtReference || '시 23:1';
         return {
           source: 'QT',
-          badgeText: '오늘의 QT',
-          hookTitle: qtData.qtTitle || '오늘 주신 말씀',
-          subSlug: qtData.qtReference || 'DAILY MEDITATION',
-          scriptureQuery: qtData.qtGoldenVerse || qtData.qtReference || '시 23:1',
-          bodyText: qtData.qtGoldenVerse || qtData.qtGraceLine || qtData.qtMeditation || '',
-          actionText: qtData.qtActionItem || '',
-          recommendedLut: 'tealAndOrange',
-          recommendedFont: 'MaruBuri'
+          badgeText: '오늘의 QT 묵상',
+          hookTitle: qtData.qtTitle ? `"${qtData.qtTitle}"` : '이 말씀이 당신을 살립니다',
+          subSlug: qtData.qtReference ? `WORD OF GOD • ${qtData.qtReference}` : 'DIVINE ENCOUNTER',
+          scriptureQuery: rawVerse,
+          narrativeBody: qtData.qtGraceLine || qtData.qtMeditation || '모든 두려움이 멈추는 하나님의 임재',
+          actionProclamation: qtData.qtActionItem || '오늘 하루 말씀으로 굳게 서기',
+          recommendedLut: 1, // Teal & Orange
+          captionPreset: 'HORMOZI_NEON'
         };
       }
     }
 
-    // [B] 주일 강단 설교 중심 모드
     if (mode === 'sermon' || (mode === 'auto' && hasSermon)) {
       if (hasSermon) {
         const points = [sermonData.sermonPoint1, sermonData.sermonPoint2, sermonData.sermonPoint3].filter(Boolean);
         return {
           source: 'SERMON',
-          badgeText: '강단 선포',
-          hookTitle: sermonData.sermonConviction || sermonData.sermonTitle || '결단의 말씀',
-          subSlug: sermonData.sermonReference || 'SUNDAY MESSAGE',
+          badgeText: '주일 강단 선포',
+          hookTitle: sermonData.sermonConviction || sermonData.sermonTitle || '무너진 자리를 다시 세우라',
+          subSlug: sermonData.sermonReference ? `SUNDAY MESSAGE • ${sermonData.sermonReference}` : 'PROCLAMATION',
           scriptureQuery: sermonData.sermonReference || '롬 8:28',
-          bodyText: points.length > 0 ? points.join('\n') : (sermonData.sermonGraceLine || sermonData.sermonTitle),
-          actionText: sermonData.sermonActionItem || '',
-          recommendedLut: 'bleachBypass',
-          recommendedFont: 'MYArirangGothic'
+          narrativeBody: points.length > 0 ? points.join(' • ') : (sermonData.sermonGraceLine || sermonData.sermonTitle),
+          actionProclamation: sermonData.sermonActionItem || '절대 순종으로 승리하라',
+          recommendedLut: 3, // Fuji Eterna
+          captionPreset: 'SERMON_HOLY_GOLD'
         };
       }
     }
 
-    // [C] 목장 공동체 감사 피드 모드
     if (mode === 'cell' || (mode === 'auto' && hasCell)) {
       if (hasCell) {
         const rawThanks = cellData.thanksShare || cellData.sharedThanks || cellData.wordShare || '';
         return {
           source: 'CELL',
-          badgeText: '감사 나눔',
-          hookTitle: '공동체 감사 고백',
-          subSlug: 'GRACE & FELLOWSHIP',
+          badgeText: '공동체 감사 고백',
+          hookTitle: '가장 깊은 어둠 속 피어난 감사',
+          subSlug: 'GRACE & TESTIMONY',
           scriptureQuery: '살전 5:18',
-          bodyText: decryptField(rawThanks),
-          actionText: cellData.prayerReq || '',
-          recommendedLut: 'warmGrace',
-          recommendedFont: 'KyoboHandwriting'
+          narrativeBody: decryptField(rawThanks) || '우리를 인도하신 주님의 완전한 계획',
+          actionProclamation: cellData.prayerReq || '서로를 위해 기도하며 나아가기',
+          recommendedLut: 2, // Kodak Portra
+          captionPreset: 'MINIMAL_BOX'
         };
       }
     }
 
-    // [D] 10분 훈련 일지 모드
     if (mode === 'diary' || (mode === 'auto' && hasDiary)) {
       if (hasDiary) {
         return {
           source: 'DIARY',
-          badgeText: '제자 훈련',
-          hookTitle: diaryData.share || '말씀 앞의 나',
-          subSlug: diaryData.word || 'DISCIPLESHIP',
+          badgeText: '제자 훈련 일지',
+          hookTitle: diaryData.share || '한 걸음 더 주께 가까이',
+          subSlug: 'DISCIPLESHIP WALK',
           scriptureQuery: diaryData.word || '수 1:9',
-          bodyText: diaryData.found || diaryData.thanks || diaryData.apply || '',
-          actionText: diaryData.obey || '',
-          recommendedLut: 'kodakGold',
-          recommendedFont: 'MYArirangGothic'
+          narrativeBody: diaryData.found || diaryData.thanks || '십자가의 은혜로 새롭게 태어난 삶',
+          actionProclamation: diaryData.obey || '삶의 작은 순종으로 증명하기',
+          recommendedLut: 1,
+          captionPreset: 'HORMOZI_NEON'
         };
       }
     }
 
-    // 기록이 없을 경우: 지능형 성경 동행 기본값 반환
     return {
       source: 'DEFAULT',
-      badgeText: '말씀 동행',
-      hookTitle: '오직 믿음으로',
-      subSlug: 'BY FAITH ALONE',
+      badgeText: '말씀과 동행',
+      hookTitle: '세상이 줄 수 없는 평안',
+      subSlug: 'ETERNAL COVENANT',
       scriptureQuery: '시 23:1',
-      bodyText: '여호와는 나의 목자시니 내게 부족함이 없으리로다',
-      actionText: '오늘 하루도 믿음으로 승리하기',
-      recommendedLut: 'tealAndOrange',
-      recommendedFont: 'MaruBuri'
+      narrativeBody: '여호와는 나의 목자시니 내게 부족함이 없으리로다',
+      actionProclamation: '오늘도 믿음으로 전진하라',
+      recommendedLut: 1,
+      captionPreset: 'HORMOZI_NEON'
     };
   }
 }
 
 // =====================================================================
-// 🌟 2. 헐리우드 5대 블록버스터 프로덕션 DI 컬러 & 연출 프로파일
+// 🎬 2. 할리우드 5대 서사 프로덕션 프로파일
 // =====================================================================
 export const BLOCKBUSTER_STYLES = {
   HOLY_CINEMATIC: {
     id: 'HOLY_CINEMATIC',
-    name: '신성한 영화 예고편 (Inception Style Cinematic)',
-    lut: 'tealAndOrange',
-    hookPool: [
-      { title: '오직 믿음으로', sub: 'BY FAITH ALONE' },
-      { title: '너는 내 것이라', sub: 'YOU ARE MINE' },
-      { title: '고요한 은혜', sub: 'STILL WATERS' },
-      { title: '두려워 말라', sub: 'DO NOT FEAR' },
-      { title: '깊은 곳으로', sub: 'INTO THE DEEP' }
-    ],
-    scripturePool: ['시 23:1', '사 41:10', '요 14:27', '시 46:1', '마 11:28'],
-    badgePool: ['오늘의 말씀', '은혜의 음성', '하늘의 위로', '새벽 기도'],
-    bgmDuckingDb: -20,
-    fontFamily: 'MaruBuri',
-    transitions: ['filmBurn', 'zoomBlur', 'whipLeft', 'dissolveCross'],
-    motions: ['zoomIn', 'slideUp', 'popIn', 'shakeImpact'],
-    auroraColors: ['rgba(0, 229, 255, 0.45)', 'rgba(147, 51, 234, 0.35)', 'rgba(245, 158, 11, 0.25)'],
-    gridMode: 'matrix',
-    speedRamp: true,
-    shutterMotionBlur: true,
-    halation: true,
-    baseColor: { lift: -8, gamma: 112, gain: 118, saturation: 124, temperature: 5800, tint: 4 }
+    name: '인셉션 시네마틱 (Holy Epic Inception)',
+    lutMode: 1, // Teal & Orange
+    letterbox: true, // 2.39:1 시네마스코프 바
+    filmGrain: 14,
+    vignette: 45,
+    cameraPacing: 'aggressive',
+    bgmDuckingDb: -22,
+    sfxKit: ['braam', 'whoosh', 'subdrop', 'impact'],
+    baseColor: { lift: -6, gamma: 110, gain: 118, saturation: 122, temperature: 5900, tint: 3 }
   },
-
-  EPIC_TRAILER: {
-    id: 'EPIC_TRAILER',
-    name: '에픽 블록버스터 액션 (Epic Action Trailer)',
-    lut: 'bleachBypass',
-    hookPool: [
-      { title: '결단의 순간', sub: 'MOMENT OF TRUTH' },
-      { title: '일어나 걸으라', sub: 'RISE AND WALK' },
-      { title: '믿음의 전신갑주', sub: 'ARMOR OF GOD' },
-      { title: '끝까지 견디라', sub: 'STAND FIRM' }
-    ],
-    scripturePool: ['빌 4:13', '수 1:9', '고전 16:13', '롬 8:31', '시 27:1'],
-    badgePool: ['순종과 결단', '영적 전투', '승리의 선포', '믿음의 고백'],
-    bgmDuckingDb: -24,
-    fontFamily: 'MYArirangGothic',
-    transitions: ['flashWhite', 'zoomBlur', 'whipLeft', 'splitDoor'],
-    motions: ['shakeImpact', 'zoomIn', 'popIn', 'slideUp'],
-    auroraColors: ['rgba(239, 68, 68, 0.45)', 'rgba(245, 158, 11, 0.35)', 'rgba(15, 23, 42, 0.90)'],
-    gridMode: 'matrix',
-    speedRamp: true,
-    shutterMotionBlur: true,
-    halation: true,
-    baseColor: { lift: -12, gamma: 98, gain: 125, saturation: 88, temperature: 6600, tint: -2 }
+  DARK_KNIGHT_TRAILER: {
+    id: 'DARK_KNIGHT_TRAILER',
+    name: '다크나이트 에픽 예고편 (Dark Knight Thriller)',
+    lutMode: 4, // Noir/Bleach Mix
+    letterbox: true,
+    filmGrain: 24,
+    vignette: 60,
+    cameraPacing: 'staccato',
+    bgmDuckingDb: -26,
+    sfxKit: ['subdrop', 'riser', 'impact', 'whoosh'],
+    baseColor: { lift: -14, gamma: 96, gain: 128, saturation: 82, temperature: 6800, tint: -4 }
   },
-
   VIRAL_REELS_PRO: {
     id: 'VIRAL_REELS_PRO',
-    name: '바이럴 릴스 프로 100만뷰 (Hyper Viral Reels)',
-    lut: 'kodakGold',
-    hookPool: [
-      { title: '잠시 멈추어', sub: 'PAUSE & REFLECT' },
-      { title: '오늘 당신에게', sub: 'WORD FOR YOU' },
-      { title: '마음이 무거울 때', sub: 'WHEN WEARY' }
-    ],
-    scripturePool: ['마 6:33', '잠 3:5', '갈 6:9', '시 37:5', '요 3:16'],
-    badgePool: ['3초 묵상', '오늘의 질문', '마음 처방전', '말씀 쇼츠'],
+    name: '호르모지 100만뷰 바이럴 숏폼 (Viral Fast-Paced)',
+    lutMode: 1,
+    letterbox: false,
+    filmGrain: 8,
+    vignette: 25,
+    cameraPacing: 'hyperactive',
+    bgmDuckingDb: -18,
+    sfxKit: ['whoosh', 'impact', 'subdrop'],
+    baseColor: { lift: -2, gamma: 104, gain: 112, saturation: 135, temperature: 6300, tint: 2 }
+  },
+  A24_SANCTUARY_DOCU: {
+    id: 'A24_SANCTUARY_DOCU',
+    name: 'A24 감성 필름 다큐멘터리 (A24 Sanctuary)',
+    lutMode: 2, // Kodak Portra
+    letterbox: false,
+    filmGrain: 18,
+    vignette: 35,
+    cameraPacing: 'breathing',
     bgmDuckingDb: -16,
-    fontFamily: 'MYArirangGothic',
-    transitions: ['zoomBlur', 'flashWhite', 'filmBurn', 'whipLeft'],
-    motions: ['popIn', 'zoomIn', 'slideUp', 'shakeImpact'],
-    auroraColors: ['rgba(255, 230, 0, 0.40)', 'rgba(0, 229, 255, 0.40)', 'rgba(244, 63, 94, 0.30)'],
-    gridMode: 'matrix',
-    speedRamp: true,
-    shutterMotionBlur: true,
-    halation: false,
-    baseColor: { lift: -4, gamma: 106, gain: 114, saturation: 130, temperature: 6200, tint: 2 }
-  },
-
-  GRACE_SANCTUARY: {
-    id: 'GRACE_SANCTUARY',
-    name: 'A24 감성 필름 다큐 (A24 Sanctuary Film)',
-    lut: 'warmGrace',
-    hookPool: [
-      { title: '은혜의 발자취', sub: 'FOOTSTEPS OF GRACE' },
-      { title: '작은 감사', sub: 'LITTLE THANKS' },
-      { title: '따스한 동행', sub: 'WALKING WITH YOU' }
-    ],
-    scripturePool: ['살전 5:16', '시 103:1', '골 3:15', '애 3:22', '시 16:11'],
-    badgePool: ['감사의 고백', '동행 일기', '은혜 나눔', '가정 묵상'],
-    bgmDuckingDb: -15,
-    fontFamily: 'KyoboHandwriting',
-    transitions: ['dissolveCross', 'filmBurn', 'dipBlack', 'dissolveCross'],
-    motions: ['slideUp', 'zoomIn', 'popIn', 'slideUp'],
-    auroraColors: ['rgba(251, 191, 36, 0.40)', 'rgba(244, 114, 182, 0.25)', 'rgba(255, 255, 255, 0.20)'],
-    gridMode: 'single',
-    speedRamp: false,
-    shutterMotionBlur: false,
-    halation: true,
-    baseColor: { lift: 2, gamma: 108, gain: 104, saturation: 110, temperature: 5500, tint: 6 }
-  },
-
-  NEON_CYBER: {
-    id: 'NEON_CYBER',
-    name: '모던 네온 임팩트 (Cyber Neon Impact)',
-    lut: 'fujiAstia',
-    hookPool: [
-      { title: '새로운 시작', sub: 'A BRAND NEW DAY' },
-      { title: '다시 일어서다', sub: 'RESTORE & REBUILD' }
-    ],
-    scripturePool: ['사 43:19', '고후 5:17', '계 21:5', '롬 12:2', '시 51:10'],
-    badgePool: ['회복과 동행', '새벽 비전', '청년 말씀', '소망의 외침'],
-    bgmDuckingDb: -22,
-    fontFamily: 'NanumPen',
-    transitions: ['zoomBlur', 'flashWhite', 'whipLeft'],
-    motions: ['popIn', 'shakeImpact', 'zoomIn', 'slideUp'],
-    auroraColors: ['rgba(168, 85, 247, 0.50)', 'rgba(0, 229, 255, 0.45)', 'rgba(236, 72, 153, 0.35)'],
-    gridMode: 'matrix',
-    speedRamp: true,
-    shutterMotionBlur: true,
-    halation: false,
-    baseColor: { lift: -10, gamma: 115, gain: 122, saturation: 140, temperature: 7000, tint: -6 }
+    sfxKit: ['whoosh', 'subdrop'],
+    baseColor: { lift: 4, gamma: 108, gain: 102, saturation: 108, temperature: 5400, tint: 5 }
   }
 };
 
-const pickRandom = (arr) => {
-  if (!Array.isArray(arr) || arr.length === 0) return null;
-  return arr[Math.floor(Math.random() * arr.length)];
-};
-
-const shuffleNonRepeating = (pool, count) => {
-  const result = [];
-  let lastItem = null;
-  for (let i = 0; i < count; i++) {
-    const candidates = pool.filter(item => item !== lastItem);
-    const chosen = pickRandom(candidates.length > 0 ? candidates : pool);
-    result.push(chosen);
-    lastItem = chosen;
-  }
-  return result;
-};
-
 // =====================================================================
-// 🌟 3. Web Audio DSP 5대 물리 사운드 합성기
+// 🔊 3. 오디오 프로덕션: 다빈치/한스 짐머급 물리 사운드 합성기
 // =====================================================================
-class HollywoodSfxSynthesizer {
+class HollywoodAcousticSynthesizer {
   static getAudioContext() {
-    return new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 44100 });
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    return new AudioContextClass({ sampleRate: 48000 });
   }
 
-  static createBraamHornUrl() {
+  // A. [BRAAM] 인셉션/듄 스타일 다중 디튠 브라스 혼 사운드
+  static createHollywoodBraam() {
     try {
       const ctx = this.getAudioContext();
-      const dur = 1.6;
-      const buffer = ctx.createBuffer(1, ctx.sampleRate * dur, ctx.sampleRate);
-      const data = buffer.getChannelData(0);
+      const dur = 2.4;
+      const buffer = ctx.createBuffer(2, ctx.sampleRate * dur, ctx.sampleRate);
+      const left = buffer.getChannelData(0);
+      const right = buffer.getChannelData(1);
 
-      for (let i = 0; i < data.length; i++) {
+      const f0 = 55.0; // A1 저음
+      for (let i = 0; i < buffer.length; i++) {
         const t = i / ctx.sampleRate;
-        const env = Math.exp(-t * 2.2);
-        const fundamental = Math.sin(2 * Math.PI * 55 * t);
-        const octaveDetuned = Math.sin(2 * Math.PI * 110.6 * t) * 0.65;
-        const fifthHarmonic = Math.sin(2 * Math.PI * 165.2 * t) * 0.4;
-        const saw = (2 * ((t * 55) % 1) - 1) * 0.45;
-        const raw = (fundamental + octaveDetuned + fifthHarmonic + saw) * env;
-        data[i] = Math.tanh(raw * 2.0) * 0.95;
+        const env = Math.exp(-t * 1.5) * (1.0 - Math.exp(-t * 40.0)); // 빠른 어택 & 지수 감쇄
+
+        // 3중 디튠 쏘우투스 (앙상블 브라스)
+        const saw1 = (2.0 * ((t * f0) % 1.0) - 1.0);
+        const saw2 = (2.0 * ((t * (f0 * 1.008)) % 1.0) - 1.0) * 0.8;
+        const saw3 = (2.0 * ((t * (f0 * 0.992)) % 1.0) - 1.0) * 0.8;
+
+        // 서브 옥타브
+        const sub = Math.sin(2.0 * Math.PI * (f0 * 0.5) * t) * 0.7;
+
+        // 5차 배음
+        const fifth = Math.sin(2.0 * Math.PI * (f0 * 1.5) * t) * 0.4;
+
+        const raw = (saw1 + saw2 + saw3 + sub + fifth) * env;
+        // 아날로그 세츄레이션
+        const saturated = Math.tanh(raw * 2.8) * 0.95;
+
+        // 스테레오 스프레드
+        left[i] = saturated + (saw2 * 0.15);
+        right[i] = saturated - (saw3 * 0.15);
       }
-      return this.bufferToWaveBlobUrl(buffer);
+      return this.bufferToBlobUrl(buffer);
     } catch (_) { return ''; }
   }
 
-  static createSubDropBoomUrl() {
-    try {
-      const ctx = this.getAudioContext();
-      const dur = 1.0;
-      const buffer = ctx.createBuffer(1, ctx.sampleRate * dur, ctx.sampleRate);
-      const data = buffer.getChannelData(0);
-
-      for (let i = 0; i < data.length; i++) {
-        const t = i / ctx.sampleRate;
-        const freq = 68 * Math.exp(-t * 3.6);
-        const env = Math.exp(-t * 2.5);
-        const sine = Math.sin(2 * Math.PI * freq * t);
-        const harmonic = Math.sin(2 * Math.PI * (freq * 2) * t) * 0.22;
-        data[i] = Math.tanh((sine + harmonic) * env * 1.8) * 0.98;
-      }
-      return this.bufferToWaveBlobUrl(buffer);
-    } catch (_) { return ''; }
-  }
-
-  static createTransientSnapUrl() {
-    try {
-      const ctx = this.getAudioContext();
-      const dur = 0.08;
-      const buffer = ctx.createBuffer(1, ctx.sampleRate * dur, ctx.sampleRate);
-      const data = buffer.getChannelData(0);
-
-      for (let i = 0; i < data.length; i++) {
-        const t = i / ctx.sampleRate;
-        const env = Math.exp(-t * 45);
-        const noise = (Math.random() * 2) - 1;
-        const click = Math.sin(2 * Math.PI * 4200 * t) * 0.8;
-        data[i] = (noise * 0.5 + click) * env * 0.9;
-      }
-      return this.bufferToWaveBlobUrl(buffer);
-    } catch (_) { return ''; }
-  }
-
-  static createWhooshAirUrl() {
-    try {
-      const ctx = this.getAudioContext();
-      const dur = 0.40;
-      const buffer = ctx.createBuffer(1, ctx.sampleRate * dur, ctx.sampleRate);
-      const data = buffer.getChannelData(0);
-
-      for (let i = 0; i < data.length; i++) {
-        const t = i / ctx.sampleRate;
-        const env = Math.sin((t / dur) * Math.PI);
-        const noise = (Math.random() * 2) - 1;
-        data[i] = noise * Math.pow(env, 3.0) * 0.75;
-      }
-      return this.bufferToWaveBlobUrl(buffer);
-    } catch (_) { return ''; }
-  }
-
-  static createTensionRiserUrl() {
+  // B. [SUB-DROP] 808 서브우퍼 폭발 임팩트 (60Hz -> 20Hz 피치 스윕)
+  static createSubDropBoom() {
     try {
       const ctx = this.getAudioContext();
       const dur = 1.8;
-      const buffer = ctx.createBuffer(1, ctx.sampleRate * dur, ctx.sampleRate);
-      const data = buffer.getChannelData(0);
+      const buffer = ctx.createBuffer(2, ctx.sampleRate * dur, ctx.sampleRate);
+      const left = buffer.getChannelData(0);
+      const right = buffer.getChannelData(1);
 
-      for (let i = 0; i < data.length; i++) {
+      for (let i = 0; i < buffer.length; i++) {
         const t = i / ctx.sampleRate;
-        const progress = t / dur;
-        const freq = 90 + Math.pow(progress, 3.2) * 820;
-        const env = Math.pow(progress, 2.2);
-        const saw = (2 * ((t * freq) % 1) - 1) * 0.55;
-        const noise = ((Math.random() * 2) - 1) * 0.35;
-        data[i] = (saw + noise) * env * 0.8;
+        const freq = 65.0 * Math.exp(-t * 2.8) + 18.0;
+        const env = Math.exp(-t * 1.8);
+        const sine = Math.sin(2.0 * Math.PI * freq * t);
+        const drive = Math.tanh(sine * 2.2 * env) * 0.98;
+
+        left[i] = drive;
+        right[i] = drive;
       }
-      return this.bufferToWaveBlobUrl(buffer);
+      return this.bufferToBlobUrl(buffer);
     } catch (_) { return ''; }
   }
 
-  static bufferToWaveBlobUrl(abuffer) {
+  // C. [CINEMATIC WHOOSH] 공기 역학 휩 트랜지션 (에어로다이내믹 스윕)
+  static createCinematicWhoosh() {
+    try {
+      const ctx = this.getAudioContext();
+      const dur = 0.65;
+      const buffer = ctx.createBuffer(2, ctx.sampleRate * dur, ctx.sampleRate);
+      const left = buffer.getChannelData(0);
+      const right = buffer.getChannelData(1);
+
+      for (let i = 0; i < buffer.length; i++) {
+        const t = i / ctx.sampleRate;
+        const env = Math.pow(Math.sin((t / dur) * Math.PI), 2.5);
+        const whiteNoise = (Math.random() * 2.0 - 1.0);
+        // 스테레오 팬 스윕 (-1 -> +1)
+        const pan = (t / dur);
+        left[i] = whiteNoise * env * (1.0 - pan) * 0.85;
+        right[i] = whiteNoise * env * pan * 0.85;
+      }
+      return this.bufferToBlobUrl(buffer);
+    } catch (_) { return ''; }
+  }
+
+  // D. [TENSION RISER] 텐션 지수 증폭 라이저 (오케스트라 현악 스웰)
+  static createTensionRiser() {
+    try {
+      const ctx = this.getAudioContext();
+      const dur = 2.2;
+      const buffer = ctx.createBuffer(2, ctx.sampleRate * dur, ctx.sampleRate);
+      const left = buffer.getChannelData(0);
+      const right = buffer.getChannelData(1);
+
+      for (let i = 0; i < buffer.length; i++) {
+        const t = i / ctx.sampleRate;
+        const p = t / dur;
+        const freq = 120.0 + Math.pow(p, 3.0) * 1100.0;
+        const env = Math.pow(p, 2.5);
+        const osc = Math.sin(2.0 * Math.PI * freq * t) * 0.7;
+        const noise = (Math.random() * 2.0 - 1.0) * 0.3;
+        const val = (osc + noise) * env * 0.9;
+
+        left[i] = val;
+        right[i] = val;
+      }
+      return this.bufferToBlobUrl(buffer);
+    } catch (_) { return ''; }
+  }
+
+  static bufferToBlobUrl(abuffer) {
     const numOfChan = abuffer.numberOfChannels;
     const length = abuffer.length * numOfChan * 2 + 44;
     const out = new DataView(new ArrayBuffer(length));
-    let channels = [], sample, offset = 0, pos = 0;
+    let offset = 0, pos = 0;
 
-    function setUint16(data) { out.setUint16(pos, data, true); pos += 2; }
-    function setUint32(data) { out.setUint32(pos, data, true); pos += 4; }
+    const set16 = (data) => { out.setUint16(pos, data, true); pos += 2; };
+    const set32 = (data) => { out.setUint32(pos, data, true); pos += 4; };
 
-    setUint32(0x46464952); setUint32(length - 8); setUint32(0x45564157); setUint32(0x20746d66);
-    setUint16(16); setUint16(1); setUint16(numOfChan); setUint32(abuffer.sampleRate);
-    setUint32(abuffer.sampleRate * 2 * numOfChan); setUint16(numOfChan * 2); setUint16(16);
-    setUint32(0x61746164); setUint32(length - pos - 4);
+    set32(0x46464952); set32(length - 8); set32(0x45564157); set32(0x20746d66);
+    set16(16); set16(1); set16(numOfChan); set32(abuffer.sampleRate);
+    set32(abuffer.sampleRate * 2 * numOfChan); set16(numOfChan * 2); set16(16);
+    set32(0x61746164); set32(length - pos - 4);
 
-    for (let i = 0; i < abuffer.numberOfChannels; i++) channels.push(abuffer.getChannelData(i));
+    const channels = [];
+    for (let i = 0; i < numOfChan; i++) channels.push(abuffer.getChannelData(i));
+
     while (offset < abuffer.length) {
       for (let i = 0; i < numOfChan; i++) {
-        sample = Math.max(-1, Math.min(1, channels[i][offset]));
+        let sample = Math.max(-1, Math.min(1, channels[i][offset]));
         sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767) | 0;
         out.setInt16(pos, sample, true); pos += 2;
       }
@@ -438,38 +350,105 @@ class HollywoodSfxSynthesizer {
 }
 
 // =====================================================================
-// 🌟 4. 서사 텐션 곡선 수학 모델
+// 🎬 4. 프로덕션 다이내믹 카메라 & 베지어 키프레임 오토-코레오그래퍼
 // =====================================================================
-class CinematicPacingModel {
-  static evaluateTension(normalizedProgress) {
-    const p = Math.max(0, Math.min(1, normalizedProgress));
-    if (p < 0.25) {
-      return 1.0 - Math.pow(p / 0.25, 0.7) * 0.55;
-    } else if (p < 0.6) {
-      const sub = (p - 0.25) / 0.35;
-      return 0.45 + Math.pow(sub, 2.0) * 0.35;
-    } else if (p < 0.85) {
-      const sub = (p - 0.6) / 0.25;
-      return 0.80 + Math.sin(sub * Math.PI) * 0.20;
-    } else {
-      const sub = (p - 0.85) / 0.15;
-      return 0.85 * (1.0 - Math.pow(sub, 1.5));
+class CameraMotionChoreographer {
+  /**
+   * 클립 역할(Act)에 따른 정밀 베지어 키프레임 생성
+   */
+  static generateDynamicKeyframes(act, duration) {
+    const half = duration * 0.5;
+
+    if (act === 'hook') {
+      // 3초 바이럴 훅: 124% 펀치 줌인 -> 초고속 펀치 아웃 104%
+      return {
+        scale: [
+          { time: 0, value: 126, curve: CURVE_PRESETS.SPEED_RAMP_FAST_OUT },
+          { time: 0.35, value: 114, curve: CURVE_PRESETS.DAVINCI_DYNAMIC },
+          { time: duration, value: 106, curve: CURVE_PRESETS.EASE_IN_OUT }
+        ],
+        positionY: [
+          { time: 0, value: -20, curve: CURVE_PRESETS.PREMIERE_EXPONENTIAL },
+          { time: duration, value: 0, curve: CURVE_PRESETS.LINEAR }
+        ],
+        rotation: [
+          { time: 0, value: -1.5, curve: CURVE_PRESETS.DAVINCI_DYNAMIC },
+          { time: 0.4, value: 0.4, curve: CURVE_PRESETS.EASE_IN_OUT },
+          { time: duration, value: 0, curve: CURVE_PRESETS.LINEAR }
+        ]
+      };
     }
+
+    if (act === 'build') {
+      // 빌드업: 느린 푸시인 (100% -> 112%) + 미세 롤링
+      return {
+        scale: [
+          { time: 0, value: 100, curve: CURVE_PRESETS.DAVINCI_DYNAMIC },
+          { time: duration, value: 112, curve: CURVE_PRESETS.DAVINCI_DYNAMIC }
+        ],
+        positionY: [
+          { time: 0, value: 0, curve: CURVE_PRESETS.LINEAR },
+          { time: duration, value: -12, curve: CURVE_PRESETS.LINEAR }
+        ],
+        rotation: [
+          { time: 0, value: 0, curve: CURVE_PRESETS.LINEAR },
+          { time: duration, value: 0.8, curve: CURVE_PRESETS.LINEAR }
+        ]
+      };
+    }
+
+    if (act === 'climax') {
+      // 클라이맥스 드롭: 임팩트 셰이크 펄스 + 120% 스냅 줌
+      return {
+        scale: [
+          { time: 0, value: 122, curve: CURVE_PRESETS.SPEED_RAMP_FAST_OUT },
+          { time: 0.15, value: 108, curve: CURVE_PRESETS.SPEED_RAMP_SLOW_IN },
+          { time: half, value: 115, curve: CURVE_PRESETS.DAVINCI_DYNAMIC },
+          { time: duration, value: 102, curve: CURVE_PRESETS.EASE_IN_OUT }
+        ],
+        positionY: [
+          { time: 0, value: 18, curve: CURVE_PRESETS.PREMIERE_EXPONENTIAL },
+          { time: 0.1, value: -10, curve: CURVE_PRESETS.PREMIERE_EXPONENTIAL },
+          { time: 0.2, value: 0, curve: CURVE_PRESETS.LINEAR },
+          { time: duration, value: 0, curve: CURVE_PRESETS.LINEAR }
+        ],
+        rotation: [
+          { time: 0, value: 1.8, curve: CURVE_PRESETS.SPEED_RAMP_FAST_OUT },
+          { time: 0.15, value: -1.2, curve: CURVE_PRESETS.DAVINCI_DYNAMIC },
+          { time: duration, value: 0, curve: CURVE_PRESETS.LINEAR }
+        ]
+      };
+    }
+
+    // benediction / resolve: 잔잔한 100% 안착
+    return {
+      scale: [
+        { time: 0, value: 105, curve: CURVE_PRESETS.EASE_IN_OUT },
+        { time: duration, value: 100, curve: CURVE_PRESETS.EASE_IN_OUT }
+      ],
+      positionY: [
+        { time: 0, value: -5, curve: CURVE_PRESETS.LINEAR },
+        { time: duration, value: 0, curve: CURVE_PRESETS.LINEAR }
+      ],
+      rotation: [
+        { time: 0, value: 0, curve: CURVE_PRESETS.LINEAR },
+        { time: duration, value: 0, curve: CURVE_PRESETS.LINEAR }
+      ]
+    };
   }
 }
 
 // =====================================================================
-// 🌟 5. 능동형 사역 AI 오케스트레이션 코어 엔진
+// 🌟 5. 메인 블록버스터 오토-디렉터 오케스트레이션 엔진
 // =====================================================================
 export class BlockbusterDirectorEngine {
   /**
-   * 🌟 1-클릭 자율형 릴스 디렉팅 파이프라인
-   * @param {Object} options - 연출 옵션
+   * 1-클릭 할리우드 극장판 오토 디렉팅 실행
    */
   static async directBlockbusterReels(options = {}) {
     const {
       stylePreset = 'HOLY_CINEMATIC',
-      sourceMode = 'auto', // 'auto' | 'qt' | 'sermon' | 'cell' | 'preset'
+      sourceMode = 'auto',
       targetDate = '',
       scriptureQuery = '',
       customHookTitle = '',
@@ -482,76 +461,60 @@ export class BlockbusterDirectorEngine {
 
     const visualClips = allClips.filter(c => c.type === 'video' || c.type === 'image');
     if (visualClips.length === 0 && mediaPool.length === 0) {
-      throw new Error('타임라인이나 미디어 풀에 영상 또는 사진이 최소 1장 이상 등록되어 있어야 연출할 수 있습니다.');
+      throw new Error('편집할 영상이나 사진이 미디어 풀에 최소 1개 이상 등록되어 있어야 합니다.');
     }
 
-    onProgress(10, '1/6. 앱 내부 사역 DB 스캔 및 영적 에셋 추출 중...');
+    onProgress(12, '1/6. 영적 사역 자산 정밀 스캔 & 바이럴 서사 분석...');
 
-    // 🌟 [핵심] 우리 앱 내부 사역 데이터베이스 실시간 스캔 & 지능형 주입
-    const spiritualContext = MinistryContextExtractor.scanSpiritualAssets(targetDate, sourceMode);
+    // 1. 사역 컨텍스트 및 카피라이팅 추출
+    const context = MinistryContextExtractor.scanSpiritualAssets(targetDate, sourceMode);
+    const style = BLOCKBUSTER_STYLES[stylePreset] || BLOCKBUSTER_STYLES.HOLY_CINEMATIC;
 
-    let chosenStyleKey = stylePreset;
-    if (sourceMode !== 'preset' && spiritualContext.recommendedLut) {
-      const matched = Object.keys(BLOCKBUSTER_STYLES).find(k => BLOCKBUSTER_STYLES[k].lut === spiritualContext.recommendedLut);
-      if (matched) chosenStyleKey = matched;
-    }
-    const style = BLOCKBUSTER_STYLES[chosenStyleKey] || BLOCKBUSTER_STYLES.HOLY_CINEMATIC;
+    const finalHookTitle = customHookTitle?.trim() || context.hookTitle;
+    const finalSubSlug = context.subSlug;
+    const rawScriptureTarget = scriptureQuery?.trim() || context.scriptureQuery;
 
-    // 카피 및 구절 확정
-    const selectedHookTitle = customHookTitle?.trim() || spiritualContext.hookTitle || pickRandom(style.hookPool).title;
-    const selectedSubSlug = spiritualContext.subSlug || style.hookPool[0].sub;
-    const rawScriptureTarget = scriptureQuery?.trim() || spiritualContext.scriptureQuery || pickRandom(style.scripturePool);
-    const selectedBadgeText = spiritualContext.badgeText || pickRandom(style.badgePool);
+    onProgress(28, '2/6. 시네마틱 4막 서사 구조화 (Hook ➔ Build ➔ Climax ➔ Resolve)...');
 
-    // 아날로그 필름 컬러 지터
-    const dynamicColor = {
-      ...style.baseColor,
-      temperature: style.baseColor.temperature + Math.floor((Math.random() - 0.5) * 200),
-      saturation: Math.max(80, Math.min(145, style.baseColor.saturation + Math.floor((Math.random() - 0.5) * 8))),
-      gain: style.baseColor.gain + Math.floor((Math.random() - 0.5) * 5)
-    };
+    // 2. 비주얼 소스 재구성 및 서사 분할
+    let orchestratedClips = [];
+    const baseVisualPool = visualClips.length > 0 ? visualClips : mediaPool;
 
-    onProgress(25, '2/6. 시네마틱 4막 타임라인 시퀀스 슬라이싱 중...');
+    if (baseVisualPool.length === 1 && baseVisualPool[0].type === 'video') {
+      const src = baseVisualPool[0];
+      const origDur = Math.max(10.0, src.duration || 10.0);
+      const step = origDur / 4;
 
-    let processedVisualClips = [];
-    if (visualClips.length === 1 && visualClips[0].type === 'video') {
-      const src = visualClips[0];
-      const totalDur = Math.max(9.0, src.duration || 9.0);
-      const d1 = 2.6, d2 = 2.8, d3 = 3.4, d4 = 2.2;
-      const stepIn = totalDur / 4;
-
-      processedVisualClips = [
-        { ...src, id: `${src.id}_act1_hook`, inPoint: 0, duration: d1, act: 'hook' },
-        { ...src, id: `${src.id}_act2_narrative`, inPoint: stepIn * 0.8, duration: d2, act: 'narrative' },
-        { ...src, id: `${src.id}_act3_climax`, inPoint: stepIn * 1.7, duration: d3, act: 'climax' },
-        { ...src, id: `${src.id}_act4_benediction`, inPoint: stepIn * 2.6, duration: d4, act: 'benediction' }
+      orchestratedClips = [
+        { ...src, id: `clip_hook_${Date.now()}`, inPoint: 0, duration: 2.2, act: 'hook' },
+        { ...src, id: `clip_build_${Date.now()}`, inPoint: step * 0.9, duration: 3.2, act: 'build' },
+        { ...src, id: `clip_climax_${Date.now()}`, inPoint: step * 1.8, duration: 3.8, act: 'climax' },
+        { ...src, id: `clip_resolve_${Date.now()}`, inPoint: step * 2.7, duration: 2.8, act: 'resolve' }
       ];
-    } else if (visualClips.length > 1) {
-      processedVisualClips = [...visualClips].sort((a, b) => (a.start || 0) - (b.start || 0)).map((c, i, arr) => {
-        const ratio = i / (arr.length - 1);
-        const act = ratio < 0.25 ? 'hook' : ratio < 0.6 ? 'narrative' : ratio < 0.85 ? 'climax' : 'benediction';
-        return { ...c, act };
-      });
     } else {
-      const img = visualClips[0] || mediaPool[0];
-      processedVisualClips = [
-        { ...img, id: `${img.id}_act1`, duration: 2.6, act: 'hook' },
-        { ...img, id: `${img.id}_act2`, duration: 2.8, act: 'narrative' },
-        { ...img, id: `${img.id}_act3`, duration: 3.4, act: 'climax' },
-        { ...img, id: `${img.id}_act4`, duration: 2.2, act: 'benediction' }
-      ];
+      // 복수 클립을 4막 텐션 곡선에 맞춰 자동 맵핑
+      const sorted = [...baseVisualPool].sort((a, b) => (a.start || 0) - (b.start || 0));
+      orchestratedClips = sorted.map((c, i) => {
+        const ratio = i / Math.max(1, sorted.length - 1);
+        const act = ratio < 0.2 ? 'hook' : ratio < 0.55 ? 'build' : ratio < 0.85 ? 'climax' : 'resolve';
+        const targetDur = act === 'hook' ? 2.2 : act === 'build' ? 2.8 : act === 'climax' ? 3.4 : 2.6;
+        return {
+          ...c,
+          id: `clip_${act}_${Date.now()}_${i}`,
+          duration: targetDur,
+          act
+        };
+      });
     }
 
-    onProgress(42, '3/6. 절차적 트랜지션 & 카메라 모션 시퀀스 편성...');
+    onProgress(45, '3/6. 다빈치 리졸브 3D LUT 컬러 & 아날로그 그레인 동기화...');
 
-    const dynamicTransitions = shuffleNonRepeating(style.transitions, processedVisualClips.length);
-    const dynamicMotions = shuffleNonRepeating(style.motions, processedVisualClips.length);
+    // 3. 트랙 구조 재정비 (V1, V2, T1, T2, A2, A3)
+    const nextTracks = { ...store.entities.tracks };
+    const nextClips = {};
 
-    const targetTracks = { ...store.entities.tracks };
-    const targetClips = {};
-
-    ['V1', 'V2', 'T1', 'T2', 'A2', 'A3'].forEach(tId => {
-      targetTracks[tId] = {
+    ['V1', 'V2', 'T1', 'T2', 'A1', 'A2', 'A3'].forEach(tId => {
+      nextTracks[tId] = {
         id: tId,
         name: tId,
         type: tId.startsWith('V') ? 'video' : tId.startsWith('T') ? 'text' : 'audio',
@@ -559,267 +522,214 @@ export class BlockbusterDirectorEngine {
       };
     });
 
-    let timelineCursor = 0;
-    const totalEstDuration = processedVisualClips.reduce((sum, c) => sum + (c.duration || 3.0), 0);
+    let timeCursor = 0;
 
-    processedVisualClips.forEach((clip, index) => {
-      const isHook = clip.act === 'hook' || index === 0;
-      const isClimax = clip.act === 'climax';
-      const isBenediction = clip.act === 'benediction';
-      const clipDuration = clip.duration || 3.0;
+    // 4. 비디오 클립에 카메라 키프레임 & 셰이더 주입
+    orchestratedClips.forEach((clip, idx) => {
+      const dur = clip.duration || 3.0;
+      const keyframes = CameraMotionChoreographer.generateDynamicKeyframes(clip.act, dur);
 
-      const normP = timelineCursor / totalEstDuration;
-      const tension = CinematicPacingModel.evaluateTension(normP);
-
-      const transitionType = isHook 
-        ? 'filmBurn' 
-        : isClimax 
-          ? 'zoomBlur' 
-          : isBenediction 
-            ? 'dissolveCross' 
-            : dynamicTransitions[index];
-
-      const motion = isHook ? 'zoomIn' : isClimax ? 'shakeImpact' : dynamicMotions[index];
-
-      let gridConfig = { mode: 'single' };
-      if (isClimax && style.gridMode === 'matrix') {
-        const poolUrls = mediaPool.map(m => m.url).filter(Boolean);
-        const fallbackUrl = clip.url || poolUrls[0] || '';
-        if (poolUrls.length >= 3) {
-          gridConfig = {
-            mode: 'matrix',
-            rows: 2,
-            cols: 2,
-            gap: 6,
-            cellMedia: {
-              0: poolUrls[0] || fallbackUrl,
-              1: poolUrls[1] || fallbackUrl,
-              2: poolUrls[2] || fallbackUrl
-            }
-          };
-        }
-      }
-
-      const clipSpeed = isHook && style.speedRamp ? 1.2 : 1.0;
-
-      targetClips[clip.id] = {
+      nextClips[clip.id] = {
         ...clip,
-        start: Number(timelineCursor.toFixed(2)),
-        duration: clipDuration,
+        start: Number(timeCursor.toFixed(2)),
+        duration: dur,
         trackId: 'V1',
-        speed: clipSpeed,
         scaling: 'fill',
-        filterPreset: style.lut,
-        filterIntensity: 90,
-        color: { ...dynamicColor },
-        animation: motion,
-        transition: transitionType,
-        transitionDuration: isHook ? 0.45 : 0.35,
+        filterPreset: 'tealAndOrange',
+        lutMode: style.lutMode,
+        filmGrain: style.filmGrain,
+        vignette: style.vignette,
+        color: {
+          ...style.baseColor,
+          saturation: clip.act === 'climax' ? style.baseColor.saturation + 12 : style.baseColor.saturation
+        },
+        keyframes,
         transform: {
           x: 0,
           y: 0,
-          scale: isHook ? 108 : isClimax ? 104 : 100,
+          scale: 100,
           rotate: 0,
-          opacity: 100
+          borderRadius: 0
         },
-        fx: {
-          vignette: Math.round(16 + tension * 16),
-          filmGrain: Math.round(10 + tension * 12),
-          glow: Math.round(tension * 25),
-          chromatic: isClimax ? 4 : isHook ? 2 : 0,
-          flicker: 0,
-          aurora: true,
-          auroraColors: style.auroraColors,
-          letterbox: isHook,
-          motionBlur: style.shutterMotionBlur,
-          halation: style.halation
-        },
-        gridConfig
+        transition: clip.act === 'hook' ? 'filmBurn' : clip.act === 'climax' ? 'zoomBlur' : 'dissolveCross',
+        transitionDuration: 0.35
       };
 
-      targetTracks['V1'].clipIds.push(clip.id);
-      timelineCursor += clipDuration;
+      nextTracks['V1'].clipIds.push(clip.id);
+      timeCursor += dur;
     });
 
-    onProgress(65, '4/6. 타이포그래피 오케스트레이션 (3초 훅 & 딥 다크 말씀 카드)...');
+    onProgress(68, '4/6. OpenCap 키네틱 단어 팝업 타이포그래피 생성...');
 
-    // 🌟 T2 트랙: 상단 1/3 안전영역 3초 훅 타이틀
-    const hookClipId = `hook_hero_${Date.now()}`;
-    targetClips[hookClipId] = {
-      id: hookClipId,
+    // 5. T2: 상단 3초 훅 킬러 타이틀
+    const hookId = `hero_hook_${Date.now()}`;
+    nextClips[hookId] = {
+      id: hookId,
       type: 'text',
-      content: `${selectedHookTitle}\n${selectedSubSlug}`,
-      start: 0.15,
-      duration: 2.2,
+      content: `${finalHookTitle}\n${finalSubSlug}`,
+      start: 0.1,
+      duration: 2.1,
       trackId: 'T2',
-      animation: 'popIn',
       style: {
-        fontSize: 20,
+        fontSize: 22,
         preset: 'standard',
-        fontFamily: spiritualContext.recommendedFont || style.fontFamily,
+        fontFamily: 'Montserrat, sans-serif',
         color: '#FFFFFF',
+        strokeColor: '#000000',
+        strokeWidth: 4,
         align: 'center',
-        lineHeight: 1.3
+        lineHeight: 1.25
       },
-      transform: { x: 0, y: -175, scale: 100, rotate: 0 },
-      opacity: 100
+      transform: { x: 0, y: -190, scale: 100, rotate: 0 },
+      opacity: 100,
+      animation: 'popIn'
     };
-    targetTracks['T2'].clipIds.push(hookClipId);
+    nextTracks['T2'].clipIds.push(hookId);
 
-    // 🌟 T1 트랙: 앱 내부 사역 본문 및 성구 파싱
-    let finalScriptureContent = spiritualContext.bodyText || '';
-    if (!finalScriptureContent || finalScriptureContent.length < 5) {
-      try {
-        finalScriptureContent = await checkAndFetchScripture(rawScriptureTarget, { formatReels: true });
-      } catch (_) {
-        finalScriptureContent = rawScriptureTarget;
-      }
+    // 6. T1: 말씀/사역 본문 (OpenCap 키네틱 워드 바이럴 자막 주입)
+    let finalScriptureText = context.narrativeBody || '';
+    try {
+      finalScriptureText = await checkAndFetchScripture(rawScriptureTarget, { formatReels: true });
+    } catch (_) {
+      finalScriptureText = context.narrativeBody;
     }
 
-    const textLen = finalScriptureContent.length;
-    const dynamicFontSize = textLen > 55 ? 13 : textLen > 35 ? 15 : 17;
-    const dynamicDuration = Math.min(6.5, Math.max(3.8, textLen * 0.1));
-    const badgeStartTime = Math.max(2.4, (timelineCursor - dynamicDuration) / 2);
+    const scriptureDuration = Math.min(6.5, Math.max(4.0, timeCursor - 2.8));
+    const scriptureStart = 2.4;
 
-    const scriptureClipId = `scripture_badge_${Date.now()}`;
-    targetClips[scriptureClipId] = {
-      id: scriptureClipId,
+    const scriptureId = `kinetic_scripture_${Date.now()}`;
+    const wordTokens = OpenCapReelsEngine.generateWordTokensFromSentence(
+      finalScriptureText,
+      scriptureStart,
+      scriptureDuration
+    );
+
+    nextClips[scriptureId] = {
+      id: scriptureId,
       type: 'text',
-      content: finalScriptureContent,
-      start: Number(badgeStartTime.toFixed(2)),
-      duration: Number(dynamicDuration.toFixed(2)),
+      content: finalScriptureText,
+      start: scriptureStart,
+      duration: scriptureDuration,
       trackId: 'T1',
-      animation: 'slideUp',
+      _wordTokens: wordTokens,
       style: {
-        fontSize: dynamicFontSize,
+        fontSize: 20,
         preset: 'sermon-badge',
-        badgeText: selectedBadgeText,
-        fontFamily: spiritualContext.recommendedFont || style.fontFamily,
+        badgeText: context.badgeText,
+        fontFamily: 'MaruBuri, serif',
         color: '#FFFFFF',
         align: 'center',
         lineHeight: 1.45
       },
-      transform: { x: 0, y: 165, scale: 100, rotate: 0 },
-      opacity: 100
+      transform: { x: 0, y: 155, scale: 100, rotate: 0 },
+      opacity: 100,
+      animation: 'slideUp'
     };
-    targetTracks['T1'].clipIds.push(scriptureClipId);
+    nextTracks['T1'].clipIds.push(scriptureId);
 
-    onProgress(82, '5/6. 헐리우드 Web Audio DSP 5대 물리 사운드 합성 중...');
+    onProgress(84, '5/6. 48kHz 물리 사운드 합성 (Braam / 808 Sub-Drop / Whoosh)...');
 
-    const braamUrl = HollywoodSfxSynthesizer.createBraamHornUrl();
-    const snapUrl = HollywoodSfxSynthesizer.createTransientSnapUrl();
-    const subDropUrl = HollywoodSfxSynthesizer.createSubDropBoomUrl();
-    const whooshUrl = HollywoodSfxSynthesizer.createWhooshAirUrl();
-    const riserUrl = HollywoodSfxSynthesizer.createTensionRiserUrl();
+    // 7. A3: 물리 합성 사운드 FX 레이어링
+    const braamUrl = HollywoodAcousticSynthesizer.createHollywoodBraam();
+    const subDropUrl = HollywoodAcousticSynthesizer.createSubDropBoom();
+    const whooshUrl = HollywoodAcousticSynthesizer.createCinematicWhoosh();
+    const riserUrl = HollywoodAcousticSynthesizer.createTensionRiser();
 
+    // 훅 시작점: Braam 브라스 작렬
     if (braamUrl) {
       const braamId = `sfx_braam_${Date.now()}`;
-      targetClips[braamId] = {
+      nextClips[braamId] = {
         id: braamId,
         type: 'audio',
-        name: '📯 Hollywood BRAAM Brass Horn',
+        name: '📯 Hollywood BRAAM Horn',
         url: braamUrl,
         start: 0,
-        duration: 1.6,
-        volume: 92,
-        trackId: 'A3'
-      };
-      targetTracks['A3'].clipIds.push(braamId);
-    }
-
-    if (snapUrl) {
-      const snapId = `sfx_snap_${Date.now()}_0`;
-      targetClips[snapId] = {
-        id: snapId,
-        type: 'audio',
-        name: '⚡ High Transient Snap',
-        url: snapUrl,
-        start: 0,
-        duration: 0.08,
-        volume: 80,
-        trackId: 'A3'
-      };
-      targetTracks['A3'].clipIds.push(snapId);
-    }
-
-    const climaxTime = Number((timelineCursor * 0.62).toFixed(2));
-    if (riserUrl && climaxTime > 2.0) {
-      const riserId = `sfx_riser_${Date.now()}`;
-      targetClips[riserId] = {
-        id: riserId,
-        type: 'audio',
-        name: '📈 Tension Exponential Riser',
-        url: riserUrl,
-        start: Math.max(0, climaxTime - 1.8),
-        duration: 1.8,
-        volume: 85,
-        trackId: 'A3'
-      };
-      targetTracks['A3'].clipIds.push(riserId);
-    }
-
-    if (subDropUrl && climaxTime > 2.0) {
-      const subDropId = `sfx_subdrop_${Date.now()}`;
-      targetClips[subDropId] = {
-        id: subDropId,
-        type: 'audio',
-        name: '💥 Sub-Drop Impact Boom',
-        url: subDropUrl,
-        start: climaxTime,
-        duration: 1.0,
+        duration: 2.2,
         volume: 95,
         trackId: 'A3'
       };
-      targetTracks['A3'].clipIds.push(subDropId);
+      nextTracks['A3'].clipIds.push(braamId);
     }
 
+    // 훅 -> 빌드업 전환점: Whoosh
     if (whooshUrl) {
-      let cursor = 0;
-      processedVisualClips.forEach((c, idx) => {
-        if (idx > 0 && cursor > 0.5) {
-          const whooshId = `sfx_whoosh_${Date.now()}_${idx}`;
-          targetClips[whooshId] = {
-            id: whooshId,
-            type: 'audio',
-            name: '💨 Aero-Dynamic Whoosh Transition',
-            url: whooshUrl,
-            start: Math.max(0, cursor - 0.2),
-            duration: 0.40,
-            volume: 75,
-            trackId: 'A3'
-          };
-          targetTracks['A3'].clipIds.push(whooshId);
-        }
-        cursor += (c.duration || 3.0);
-      });
+      const whooshId = `sfx_whoosh_0_${Date.now()}`;
+      nextClips[whooshId] = {
+        id: whooshId,
+        type: 'audio',
+        name: '💨 Cinema Whoosh Air',
+        url: whooshUrl,
+        start: 1.9,
+        duration: 0.65,
+        volume: 80,
+        trackId: 'A3'
+      };
+      nextTracks['A3'].clipIds.push(whooshId);
     }
 
-    onProgress(95, '6/6. 사이드체인 오디오 더킹 DSP 연결 및 0초 상영 개시...');
+    // 클라이맥스 직전: Riser
+    const climaxStart = orchestratedClips.find(c => c.act === 'climax')?.duration 
+      ? (nextClips[orchestratedClips.find(c => c.act === 'climax').id]?.start || 5.0) 
+      : 5.0;
 
+    if (riserUrl && climaxStart >= 2.0) {
+      const riserId = `sfx_riser_${Date.now()}`;
+      nextClips[riserId] = {
+        id: riserId,
+        type: 'audio',
+        name: '📈 Tension Orchestral Riser',
+        url: riserUrl,
+        start: Math.max(0, climaxStart - 2.0),
+        duration: 2.0,
+        volume: 85,
+        trackId: 'A3'
+      };
+      nextTracks['A3'].clipIds.push(riserId);
+    }
+
+    // 클라이맥스 시작점: 808 Sub-Drop 폭발
+    if (subDropUrl) {
+      const subDropId = `sfx_subdrop_${Date.now()}`;
+      nextClips[subDropId] = {
+        id: subDropId,
+        type: 'audio',
+        name: '💥 808 Sub-Drop Impact',
+        url: subDropUrl,
+        start: climaxStart,
+        duration: 1.6,
+        volume: 98,
+        trackId: 'A3'
+      };
+      nextTracks['A3'].clipIds.push(subDropId);
+    }
+
+    onProgress(96, '6/6. Fairlight 안티-펌핑 오디오 더킹 DSP 가동 & 상영...');
+
+    // 8. Fairlight 스마트 사이드체인 더킹 설정
     if (typeof audioDSP?.setDucking === 'function') {
       audioDSP.setDucking(true, 'A2', style.bgmDuckingDb);
     }
 
+    // 9. NLE 스토어에 원자적 업데이트 반영 & 0초 자동 상영
     useNLEStore.setState({
       entities: {
         ...store.entities,
-        tracks: targetTracks,
-        clips: targetClips
+        tracks: nextTracks,
+        clips: nextClips
       },
-      projectDuration: Math.max(3.5, Number(timelineCursor.toFixed(1))),
+      projectDuration: Math.max(4.0, Number(timeCursor.toFixed(1))),
       playhead: 0,
       isPlaying: true
     });
 
-    onProgress(100, `✨ [${spiritualContext.badgeText}: ${selectedHookTitle}] 맞춤 릴스 완성!`);
+    onProgress(100, `✨ [${context.badgeText}: ${finalHookTitle}] 블록버스터 릴스 완성!`);
 
     return {
-      totalDuration: timelineCursor,
-      clipsCount: processedVisualClips.length,
+      totalDuration: timeCursor,
+      clipsCount: orchestratedClips.length,
       style: style.name,
-      source: spiritualContext.source,
-      badge: selectedBadgeText,
-      hook: selectedHookTitle
+      badge: context.badgeText,
+      hook: finalHookTitle
     };
   }
 }

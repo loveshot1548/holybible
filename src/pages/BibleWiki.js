@@ -1,3 +1,4 @@
+// src/pages/BibleWiki.js
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { SearchIcon } from '../components/icons';
 import { MapContainer, TileLayer, Marker, Tooltip, Polyline, useMap } from 'react-leaflet';
@@ -14,6 +15,100 @@ import {
   holyWeekData,
   masterCharacterDictionary 
 } from '../data/bibleWikiData';
+
+// =====================================================================
+// 🏛️ [원어 성경 연구 규격] 고고학 OpenBible GPS 정밀 7대 구속사 여정 데이터셋
+// =====================================================================
+const COMPREHENSIVE_BIBLE_ROUTES = [
+  {
+    id: 'route_abraham',
+    name: '아브라함의 믿음의 순례 여정',
+    color: '#0284C7',
+    dashArray: '6, 6',
+    places: [
+      { id: 'ab_1', name: '갈대아 우르', nameEn: 'Ur of the Chaldees', nameOrig: 'אוּר כַּשְׂדִּים', coords: [30.962, 46.103], region: '메소포타미아 남부', verse: '창세기 11:31', event: '주권적 소명', desc: '우상 숭배의 땅 메소포타미아에서 하나님의 일방적인 은혜로 부름을 받은 구속사의 출발점.' },
+      { id: 'ab_2', name: '하란', nameEn: 'Haran', nameOrig: 'חָרָן', coords: [36.864, 39.027], region: '메소포타미아 북부', verse: '창세기 12:4', event: '데라의 죽음과 재출발', desc: '아버지 데라가 죽은 후 본토 친척 아비 집을 완전히 떠나 약속의 땅으로 발걸음을 옮긴 순종의 자리.' },
+      { id: 'ab_3', name: '세겜 (모레 상수리)', nameEn: 'Shechem', nameOrig: 'שְׁכֶם', coords: [32.213, 35.281], region: '가나안 중부', verse: '창세기 12:6-7', event: '가나안 첫 단', desc: '약속의 땅에 도착하여 여호와의 나타나심을 경험하고 최초로 여호와의 이름을 부르며 단을 쌓은 성소.' },
+      { id: 'ab_4', name: '벧엘과 아이 사이', nameEn: 'Bethel', nameOrig: 'בֵּית־אֵל', coords: [31.930, 35.239], region: '베냐민 산지', verse: '창세기 13:3-4', event: '언약 백성의 정체성', desc: '애굽의 실패를 딛고 돌아와 처음 단을 쌓았던 자리에서 다시금 여호와의 이름을 부르며 신앙을 회복한 곳.' },
+      { id: 'ab_5', name: '헤브론 (마므레)', nameEn: 'Hebron', nameOrig: 'חֶבְרוֹן', coords: [31.532, 35.099], region: '유다 산지', verse: '창세기 13:18', event: '언약의 영구 정착지', desc: '조카 롯과 결별한 후 마므레 상수리 수풀에 거하며 막벨라 굴을 매장지로 사서 언약적 소망을 묻은 땅.' },
+      { id: 'ab_6', name: '모리아 산', nameEn: 'Mt. Moriah', nameOrig: 'הַר הַמּוֹרִיָּה', coords: [31.778, 35.235], region: '예루살렘 성전산', verse: '창세기 22:2', event: '이삭 번제와 여호와 이레', desc: '독자 이삭을 번제로 바치며 부활의 신앙을 증명한 곳. 하나님이 친히 어린양(예수 그리스도)을 예비하신 십자가의 모형.' },
+      { id: 'ab_7', name: '브엘세바', nameEn: 'Beersheba', nameOrig: 'בְּאֵר שֶׁבַע', coords: [31.245, 34.841], region: '네게브 광야', verse: '창세기 21:33', event: '영생하시는 하나님 경배', desc: '에셀 나무를 심고 영원하신 여호와의 이름을 부르며 평화의 언약을 체결한 신앙의 안식처.' }
+    ]
+  },
+  {
+    id: 'route_exodus',
+    name: '모세의 출애굽과 광야 40년 여정',
+    color: '#D97706',
+    dashArray: '6, 6',
+    places: [
+      { id: 'ex_1', name: '라암셋', nameEn: 'Rameses', nameOrig: 'רַעְמְסֵס', coords: [30.800, 31.833], region: '애굽 고센 땅', verse: '출애굽기 12:37', event: '유월절과 출애굽', desc: '어린양의 피로 죽음의 재앙을 넘어가고 430년 노예 생활의 사슬을 끊고 행진을 시작한 구원의 출발점.' },
+      { id: 'ex_2', name: '숙곳', nameEn: 'Succoth', nameOrig: 'סֻכֹּות', coords: [30.633, 32.083], region: '동부 국경지대', verse: '출애굽기 13:20', event: '첫 장막', desc: '애굽 국경을 벗어나 광야 길로 접어들며 장막을 치고 하나님의 구름기둥과 불기둥의 인도를 받기 시작한 곳.' },
+      { id: 'ex_3', name: '홍해 (마라)', nameEn: 'Marah', nameOrig: 'מָרָה', coords: [29.916, 32.550], region: '수르 광야', verse: '출애굽기 15:23', event: '쓴 물의 치유', desc: '홍해 도하의 감격 직후 마주한 쓴 물 앞에서 한 나무를 던져 물을 달게 하신 치료자 여호와 라파의 계시.' },
+      { id: 'ex_4', name: '엘림', nameEn: 'Elim', nameOrig: 'אֵילִם', coords: [29.317, 33.150], region: '시나이 반도', verse: '출애굽기 15:27', event: '오아시스의 쉼', desc: '물샘 열둘과 종려나무 일흔 그루가 예비된 하나님의 풍성한 위로와 안식의 오아시스.' },
+      { id: 'ex_5', name: '시내산 (호렙산)', nameEn: 'Mt. Sinai', nameOrig: 'הַר סִינַי', coords: [28.539, 33.975], region: '시나이 반도 남부', verse: '출애굽기 19:2', event: '율법과 성막 수여', desc: '우레와 번개 속에 임재하신 하나님과 시내산 언약을 체결하고 십계명과 성막의 식양을 계시받은 거룩한 산.' },
+      { id: 'ex_6', name: '가데스 바네아', nameEn: 'Kadesh Barnea', nameOrig: 'קָדֵשׁ בַּרְנֵעַ', coords: [30.648, 34.420], region: '바란 광야', verse: '민수기 13:26', event: '12정탐꾼과 38년 방랑', desc: '10명의 불신앙 보고로 인해 가나안 입성이 좌절되고 1세대가 광야에서 엎드러지도록 판결받은 영적 분기점.' },
+      { id: 'ex_7', name: '모압 평지 (느보산)', nameEn: 'Mt. Nebo', nameOrig: 'הַר נְבוֹ', coords: [31.767, 35.725], region: '요단 동편', verse: '신명기 34:1', event: '모세의 고별과 임종', desc: '신명기 고별 설교를 마치고 약속의 땅을 바라보며 모세가 하나님의 품에 안긴 약속의 문턱.' }
+    ]
+  },
+  {
+    id: 'route_joshua',
+    name: '여호수아 가나안 정복 전쟁',
+    color: '#059669',
+    dashArray: '5, 5',
+    places: [
+      { id: 'jos_1', name: '길갈', nameEn: 'Gilgal', nameOrig: 'גִּלְגָּל', coords: [31.880, 35.480], region: '요단 계곡', verse: '여호수아 5:9', event: '수치의 굴러감 & 할례', desc: '요단강을 마른 땅으로 건넌 후 12돌 기념비를 세우고 광야 세대에게 할례를 행하여 애굽의 수치를 굴려버린 진영.' },
+      { id: 'jos_2', name: '여리고', nameEn: 'Jericho', nameOrig: 'יְרִיחוֹ', coords: [31.871, 35.444], region: '요단 계곡 서안', verse: '여호수아 6:20', event: '믿음의 함성과 난공불락 함락', desc: '칼과 창이 아니라 7일간 궤를 메고 행진하여 외친 믿음의 함성으로 성벽이 무너져 내린 첫 열매의 승리.' },
+      { id: 'jos_3', name: '아이성', nameEn: 'Ai', nameOrig: 'הָעַי', coords: [31.917, 35.258], region: '중부 산지', verse: '여호수아 8:18', event: '아간의 죄와 회복의 승리', desc: '아간의 탐욕으로 패배했으나 죄를 도려낸 후 하나님의 복병 전략으로 온전히 정복한 거룩함의 교훈.' },
+      { id: 'jos_4', name: '기브온 (아얄론)', nameEn: 'Gibeon', nameOrig: 'גִּבְעוֹן', coords: [31.848, 35.185], region: '베냐민 지파', verse: '여호수아 10:12', event: '태양이 머문 이적', desc: '아모리 5대 왕 연합군과의 전쟁에서 여호수아의 기도에 응답하사 해와 달이 하늘에 멈추어 선 기적의 전장.' },
+      { id: 'jos_5', name: '하솔', nameEn: 'Hazor', nameOrig: 'חָצוֹר', coords: [33.018, 35.568], region: '갈릴리 북부', verse: '여호수아 11:10', event: '북부 동맹군 격파', desc: '북부 가나안 연합군 총사령부인 하솔을 불사르고 가나안 땅의 주요 거점을 완전히 평정한 대승의 자리.' }
+    ]
+  },
+  {
+    id: 'route_david',
+    name: '다윗의 광야 도피와 왕권 확립',
+    color: '#8B5CF6',
+    dashArray: '4, 4',
+    places: [
+      { id: 'dav_1', name: '기브아', nameEn: 'Gibeah', nameOrig: 'גִּבְעָה', coords: [31.823, 35.231], region: '사울의 수도', verse: '사무엘상 19:11', event: '사울의 암살 시도 (시 59편)', desc: '사울이 다윗의 집을 지키고 죽이려 할 때 미갈의 도움으로 창문에서 탈출한 도피의 시작.' },
+      { id: 'dav_2', name: '가드', nameEn: 'Gath', nameOrig: 'גַּת', coords: [31.699, 34.848], region: '블레셋 평야', verse: '사무엘상 21:13', event: '미친 체함 (시 34, 56편)', desc: '아기스 왕 앞에서 침을 수염에 흘리며 미친 체하여 죽음의 위기를 벗어난 절대 굴욕과 신뢰의 자리.' },
+      { id: 'dav_3', name: '아둘람 굴', nameEn: 'Adullam Cave', nameOrig: 'מְעָרַת עֲדֻלָּם', coords: [31.650, 34.996], region: '유다 저지대 셰펠라', verse: '사무엘상 22:1', event: '환난당한 자들의 피난처 (시 57, 142편)', desc: '환난당하고 빚진 자 400명이 모여 다윗 왕국의 영적 핵심 정병으로 빚어진 은혜의 도가니.' },
+      { id: 'dav_4', name: '엔게디 요새', nameEn: 'Ein Gedi', nameOrig: 'עֵין גֶּדִי', coords: [31.458, 35.388], region: '사해 서안 절벽', verse: '사무엘상 24:4', event: '사울 옷자락과 원수 사랑', desc: '굴속에 들어온 사울을 손수 죽이지 않고 하나님의 공의로운 심판에 온전히 맡긴 언약적 순종.' },
+      { id: 'dav_5', name: '시글락', nameEn: 'Ziklag', nameOrig: 'צִקְלַג', coords: [31.385, 34.622], region: '네게브 남단', verse: '사무엘상 30:6', event: '아말렉 침공과 영적 회복', desc: '가족이 포로로 잡혀 백성들이 돌로 치려 할 때 하나님을 힘입고 용기를 얻어 전리품을 탈환한 반전의 땅.' },
+      { id: 'dav_6', name: '헤브론', nameEn: 'Hebron', nameOrig: 'חֶבְרוֹן', coords: [31.532, 35.099], region: '유다 산지', verse: '사무엘하 2:4', event: '유다 지파의 왕 대관', desc: '사울 사후 유다 족속의 기름 부음을 받고 7년 6개월간 통치하며 통일 이스라엘의 왕도를 예비한 곳.' },
+      { id: 'dav_7', name: '예루살렘 (시온산)', nameEn: 'Jerusalem', nameOrig: 'יְרוּשָׁלַיִם', coords: [31.778, 35.235], region: '유다 산지', verse: '사무엘하 5:7', event: '시온 산성 정복과 다윗 언약 (시 18, 24편)', desc: '여부스 족속의 요새를 함락하여 다윗 성으로 삼고 법궤를 안치하며 영원한 메시아 언약을 받은 수도.' }
+    ]
+  },
+  {
+    id: 'route_jesus',
+    name: '예수님의 공생애 & 십자가 구속 여정',
+    color: '#EF4444',
+    dashArray: 'none',
+    places: [
+      { id: 'jes_1', name: '베들레헴', nameEn: 'Bethlehem', nameOrig: 'Βηθλεέμ', coords: [31.705, 35.207], region: '유대 산지', verse: '미가 5:2, 마태 2:1', event: '성육신 탄생', desc: '떡집이라는 이름처럼 생명의 떡으로 오사 낮고 천한 말구유에 누이신 만왕의 왕의 탄생지.' },
+      { id: 'jes_2', name: '나사렛', nameEn: 'Nazareth', nameOrig: 'Ναζαρέτ', coords: [32.702, 35.298], region: '갈릴리 남부', verse: '누가복음 4:16', event: '순종의 성장과 희년 선포', desc: '가난한 목수로 순종하며 자라나사 가난한 자에게 복음을 전하는 은혜의 해를 선포하신 고향.' },
+      { id: 'jes_3', name: '요단강 세례터 (베다니)', nameEn: 'Bethabara / Jordan', nameOrig: 'Βηθαβαρά', coords: [31.838, 35.546], region: '요단강 하류', verse: '마태복음 3:16', event: '세례와 삼위일체 임재', desc: '모든 의를 이루기 위해 세례를 받으실 때 하늘이 열리고 성령이 비둘기처럼 임하신 공생애의 시작.' },
+      { id: 'jes_4', name: '가나', nameEn: 'Cana', nameOrig: 'Κανᾶ', coords: [32.747, 35.339], region: '갈릴리 중부', verse: '요한복음 2:11', event: '물로 포도주를 만드신 첫 표적', desc: '혼인 잔치에서 물을 포도주로 바꾸어 장차 어린양의 혼인 잔치에서 완성될 구원의 기쁨을 계시하신 곳.' },
+      { id: 'jes_5', name: '가버나움', nameEn: 'Capernaum', nameOrig: 'Καπερναούμ', coords: [32.880, 35.575], region: '갈릴리 호수 북안', verse: '마태복음 4:13', event: '공생애 사역의 본부', desc: '수많은 병자를 고치시고 천국 복음을 전파하사 흑암에 앉은 백성에게 큰 빛으로 비취신 갈릴리 사역의 중심지.' },
+      { id: 'jes_6', name: '수가성 (야곱의 우물)', nameEn: 'Sychar', nameOrig: 'Συχάρ', coords: [32.210, 35.284], region: '사마리아', verse: '요한복음 4:14', event: '사마리아 여인과 생수', desc: '버림받은 사마리아 여인에게 영원히 목마르지 않는 영생의 생수를 주사 참된 영과 진리의 예배자로 회복시키신 곳.' },
+      { id: 'jes_7', name: '겟세마네 동산', nameEn: 'Gethsemane', nameOrig: 'Γεθσημανῆ', coords: [31.779, 35.240], region: '감람산 기슭', verse: '마태복음 26:39', event: '피땀 어린 순종의 기도', desc: '기름 짜는 틀이라는 뜻처럼 땀방울이 핏방울이 되도록 \"내 뜻대로 마옵시고 아버지의 원대로 하옵소서\" 기도하신 곳.' },
+      { id: 'jes_8', name: '골고다 (갈보리 언덕)', nameEn: 'Golgotha', nameOrig: 'Γολγοθᾶ', coords: [31.778, 35.229], region: '예루살렘 성벽 밖', verse: '요한복음 19:30', event: '십자가 대속과 \"다 이루었다\"', desc: '인류의 모든 죄악을 짊어지시고 피 흘려 죽으심으로 구속 언약을 단번에 영원히 완성하신 구원의 심장.' }
+    ]
+  },
+  {
+    id: 'route_paul',
+    name: '사도 바울의 복음 전도 & 로마 압송 항해',
+    color: '#0284C7',
+    dashArray: '4, 4',
+    places: [
+      { id: 'pl_1', name: '다메섹', nameEn: 'Damascus', nameOrig: 'Δαμασκός', coords: [33.513, 36.292], region: '수리아', verse: '사도행전 9:3', event: '부활의 주님과의 직면', desc: '그리스도인들을 체포하러 가던 중 하늘의 강렬한 빛 속에 부활하신 예수님을 만나 이방인의 사도로 회심한 곳.' },
+      { id: 'pl_2', name: '수리아 안디옥', nameEn: 'Antioch', nameOrig: 'Ἀντιόχεια', coords: [36.202, 36.160], region: '수리아 북부', verse: '사도행전 11:26', event: '이방 선교의 전초기지', desc: '성도들이 비로소 \'그리스도인\'이라 일컬음을 받고 바울과 바나바를 세계 최초의 선교사로 파송한 모교회.' },
+      { id: 'pl_3', name: '에베소', nameEn: 'Ephesus', nameOrig: 'Ἔφεσος', coords: [37.940, 27.341], region: '소아시아 서안', verse: '사도행전 19:10', event: '두란노 서원과 아시아의 부흥', desc: '2년 동안 날마다 두란노 서원에서 말씀을 강론하여 온 아시아에 주의 말씀이 흥왕하게 만든 전도 거점.' },
+      { id: 'pl_4', name: '빌립보', nameEn: 'Philippi', nameOrig: 'Φίλιπποι', coords: [41.013, 24.286], region: '마게도냐', verse: '사도행전 16:14', event: '유럽 선교의 첫 성문', desc: '루디아의 회심과 감옥 터진 이적 속에서 \"주 예수를 믿으라 그리하면 너와 네 집이 구원을 받으리라\" 선포된 유럽의 관문.' },
+      { id: 'pl_5', name: '아테네 (아레오바고)', nameEn: 'Athens', nameOrig: 'Ἀθῆναι', coords: [37.974, 23.725], region: '아가야', verse: '사도행전 17:22', event: '알지 못하는 신과 부활 변증', desc: '철학의 중심지에서 우상 숭배를 파하고 천지만물의 주재이신 하나님과 예수 그리스도의 부활을 논증한 현장.' },
+      { id: 'pl_6', name: '로마', nameEn: 'Rome', nameOrig: 'Ῥώμη', coords: [41.902, 12.496], region: '이탈리아 제국 수도', verse: '사도행전 28:31', event: '셋집에서의 담대한 하나님 나라 전파', desc: '쇠사슬에 매인 몸이었으나 거침없이 담대하게 하나님 나라를 전파하며 복음이 땅끝까지 행진하도록 마감한 성도의 무대.' }
+    ]
+  }
+];
 
 const Icons = {
   Book: (props) => <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" /></svg>,
@@ -67,7 +162,7 @@ const getVersesFromQuery = (query, bibles) => {
             const txt = bObj.chapters[c - 1][v - 1];
             if (txt) {
               let cTxt = typeof txt === 'object' ? (txt.text || txt.content) : txt;
-              results.push({ ref: `${currentBook} ${c}:${v}`, text: cTxt.replace(/|'/g, "'").replace(/"/g, '"') });
+              results.push({ ref: `${currentBook} ${c}:${v}`, text: cTxt.replace(/ |'/g, "'").replace(/"/g, '"') });
             }
           }
         }
@@ -77,10 +172,26 @@ const getVersesFromQuery = (query, bibles) => {
   return results.length > 0 ? results : [{ ref: query, text: '본문을 불러오지 못했습니다. 앱 내 성경을 확인해주세요.' }];
 };
 
-const createPinIcon = (isActive) => L.divIcon({
+// 🌟 고해상도 벡터 핀 마커 (원어 성경 연구 스타일)
+const createPinIcon = (isActive, indexStr) => L.divIcon({
   className: 'custom-pin-icon',
-  html: `<div style="color: ${isActive ? '#EF4444' : '#0284C7'}; transform: translate(-50%, -100%); width: ${isActive ? '36px' : '28px'}; height: ${isActive ? '36px' : '28px'}; transition: all 0.3s ease;">
-           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 010-5 2.5 2.5 0 010 5z" /></svg>
+  html: `<div style="
+           background: ${isActive ? '#EF4444' : '#0284C7'};
+           color: #FFFFFF;
+           border: 2.5px solid #FFFFFF;
+           box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+           border-radius: 50%;
+           width: ${isActive ? '32px' : '26px'};
+           height: ${isActive ? '32px' : '26px'};
+           display: flex;
+           align-items: center;
+           justify-content: center;
+           font-size: ${isActive ? '12px' : '10px'};
+           font-weight: 900;
+           transform: translate(-50%, -50%);
+           transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+         ">
+           ${indexStr || '📍'}
          </div>`,
   iconSize: [0, 0], iconAnchor: [0, 0]
 });
@@ -89,10 +200,10 @@ function MapController({ selectedLoc, positions }) {
   const map = useMap();
   useEffect(() => {
     if (selectedLoc) {
-      map.flyTo(selectedLoc.coords, 8, { duration: 1.5 });
+      map.flyTo(selectedLoc.coords, 9, { duration: 1.2 });
     } else if (positions && positions.length > 0) {
       const bounds = L.latLngBounds(positions);
-      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 6, animate: true, duration: 1.2 });
+      map.fitBounds(bounds, { padding: [40, 40], maxZoom: 7, animate: true, duration: 1.0 });
     }
     const timer = setTimeout(() => map.invalidateSize(), 300);
     return () => clearTimeout(timer);
@@ -122,6 +233,10 @@ export default function BibleWiki({
   const graphRef = useRef();
   const graphContainerRef = useRef(null);
   const [graphSize, setGraphSize] = useState({ width: window.innerWidth || 800, height: 600 });
+  
+  // 🌟 고도화된 지도 상태 (타일 모드: 'satellite' | 'topo' | 'osm')
+  const [mapTileType, setMapTileType] = useState('satellite'); 
+  const [activeRouteId, setActiveRouteId] = useState('route_abraham');
   const [mapSearch, setMapSearch] = useState('');
   const [selectedLoc, setSelectedLoc] = useState(null);
 
@@ -148,16 +263,41 @@ export default function BibleWiki({
     );
   }, [cleanTerm]);
 
+  // 🌟 구속사 7대 이동 경로 결합 및 실시간 검색 필터
+  const allRoutesList = useMemo(() => {
+    const base = COMPREHENSIVE_BIBLE_ROUTES;
+    const additional = (wikiData && wikiData.mapRoutes) ? wikiData.mapRoutes : [];
+    const merged = [...base];
+    additional.forEach(ar => {
+      if (!merged.some(m => m.id === ar.id)) merged.push(ar);
+    });
+    return merged;
+  }, []);
+
+  const activeRoute = useMemo(() => {
+    return allRoutesList.find(r => r.id === activeRouteId) || allRoutesList[0];
+  }, [allRoutesList, activeRouteId]);
+
   const displayRoutes = useMemo(() => {
     const term = mapSearch.replace(/\s+/g, '').toLowerCase() || cleanTerm;
-    if (!term) return wikiData.mapRoutes;
-    return wikiData.mapRoutes.map(route => {
-      const filteredPlaces = route.places.filter(p => p.name.replace(/\s+/g, '').toLowerCase().includes(term));
+    if (!term) return allRoutesList;
+    return allRoutesList.map(route => {
+      const filteredPlaces = route.places.filter(p => 
+        p.name.replace(/\s+/g, '').toLowerCase().includes(term) ||
+        (p.nameEn && p.nameEn.toLowerCase().includes(term)) ||
+        (p.region && p.region.toLowerCase().includes(term)) ||
+        (p.event && p.event.toLowerCase().includes(term))
+      );
       return { ...route, places: filteredPlaces };
     }).filter(route => route.places.length > 0);
-  }, [cleanTerm, mapSearch]);
+  }, [allRoutesList, cleanTerm, mapSearch]);
   
-  const mapPositions = useMemo(() => wikiData.mapRoutes.flatMap(r => r.places.map(p => p.coords)), []);
+  const mapPositions = useMemo(() => {
+    if (activeRoute && activeRoute.places) {
+      return activeRoute.places.map(p => p.coords);
+    }
+    return allRoutesList.flatMap(r => r.places.map(p => p.coords));
+  }, [allRoutesList, activeRoute]);
 
   const displayGraph = useMemo(() => {
     const nodes = wikiData.network.nodes.map(n => {
@@ -223,12 +363,14 @@ export default function BibleWiki({
           </svg>
       </div>
 
+      {/* 상단 글로벌 헤더 */}
       <div className={`px-3 sm:px-6 py-3 backdrop-blur-md border-b ${borderStyle} sticky top-0 z-[100] flex items-center gap-3 bg-transparent`}>
         <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className={`p-2 rounded-[12px] transition-colors border shadow-sm ${isDark ? 'bg-[#111827]/90 border-[#1E293B] text-[#F8FAFC] hover:bg-[#1E293B]' : 'bg-white/90 border-[#E2E8F0] text-[#0F172A] hover:bg-[#F8FAFC]'}`}><Icons.Menu className="w-5 h-5"/></button>
         <button onClick={() => setActiveScreen('home')} className={`p-2 rounded-[12px] transition-colors border shadow-sm ${isDark ? 'bg-[#111827]/90 border-[#1E293B] text-[#F8FAFC] hover:bg-[#1E293B]' : 'bg-white/90 border-[#E2E8F0] text-[#0F172A] hover:bg-[#F8FAFC]'}`}><Icons.Back className="w-5 h-5"/></button>
         <div className="flex-1"><h1 className={`text-[15px] sm:text-[16px] font-bold ${textMainStyle} tracking-tight`}>성경 위키</h1></div>
       </div>
 
+      {/* 검색 바 */}
       <div className={`px-3 sm:px-6 py-2.5 backdrop-blur-md z-50 flex items-center gap-2 bg-transparent`}>
         <div className={`flex-1 flex items-center gap-2 px-3 py-2 rounded-[12px] border transition-colors ${inputBgStyle}`}>
           <Icons.SearchRef className={`w-4 h-4 ${textSubStyle} shrink-0`} />
@@ -245,6 +387,7 @@ export default function BibleWiki({
         </div>
       </div>
 
+      {/* 상단 6대 탭 바 */}
       <div className={`flex overflow-x-auto hide-scrollbar px-3 sm:px-6 pt-2 pb-2.5 z-40 border-b ${borderStyle} bg-transparent`}>
         {[
           { id: 'analysis', label: '성경 분석', icon: <Icons.Book className="w-4 h-4 mr-1.5" /> },
@@ -257,7 +400,7 @@ export default function BibleWiki({
           <button 
             key={tab.id} 
             onClick={() => setActiveTab(tab.id)} 
-            className={`flex items-center shrink-0 px-3.5 py-2 mb-1 mr-2 rounded-[12px] text-[12.5px] sm:text-[13px] font-bold transition-all shadow-sm border ${activeTab === tab.id ? `${bgAccentFresh} border-transparent shadow-md` : `${isDark ? 'bg-[#111827]/80 text-[#94A3B8] border-[#1E293B]' : 'bg-white/80 text-[#64748B] border-[#E2E8F0]'} hover:opacity-80`}`}
+            className={`flex items-center shrink-0 px-3.5 py-2 mb-1 mr-2 rounded-[12px] text-[12.5px] sm:text-[13px] font-bold transition-all shadow-sm border cursor-pointer ${activeTab === tab.id ? `${bgAccentFresh} border-transparent shadow-md` : `${isDark ? 'bg-[#111827]/80 text-[#94A3B8] border-[#1E293B]' : 'bg-white/80 text-[#64748B] border-[#E2E8F0]'} hover:opacity-80`}`}
           >
             {tab.icon}
             {tab.label}
@@ -267,7 +410,9 @@ export default function BibleWiki({
 
       <div className="flex-1 overflow-y-auto p-3 sm:p-5 md:p-8 relative z-10 hide-scrollbar w-full max-w-none mx-auto">
         
-        {/* 성경 심층 분석 탭 */}
+        {/* ========================================================================= */}
+        {/* 1. 성경 심층 분석 탭 (시편 포함)                                          */}
+        {/* ========================================================================= */}
         {activeTab === 'analysis' && (
           <div className="w-full space-y-4 pb-20 animate-fade-in-up">
              
@@ -276,7 +421,7 @@ export default function BibleWiki({
                    <button 
                       key={bookKey}
                       onClick={() => setSelectedAnalysisBook(bookKey)}
-                      className={`px-3.5 py-2 rounded-[12px] text-[12.5px] sm:text-[13px] font-bold shadow-sm whitespace-nowrap transition-all border ${selectedAnalysisBook === bookKey ? `${bgAccentFresh} border-transparent` : `${isDark ? 'bg-[#0F172A] border-[#1E293B]' : 'bg-white border-[#E2E8F0]'} ${textMainStyle}`}`}
+                      className={`px-3.5 py-2 rounded-[12px] text-[12.5px] sm:text-[13px] font-bold shadow-sm whitespace-nowrap transition-all border cursor-pointer ${selectedAnalysisBook === bookKey ? `${bgAccentFresh} border-transparent` : `${isDark ? 'bg-[#0F172A] border-[#1E293B]' : 'bg-white border-[#E2E8F0]'} ${textMainStyle}`}`}
                    >
                       {bookAnalysisData[bookKey].meta.name}
                    </button>
@@ -745,7 +890,7 @@ export default function BibleWiki({
               <div className="px-5 sm:px-6 pb-6 sm:pb-8 grid sm:grid-cols-2 md:grid-cols-3 gap-4 pt-5">
                 {holyWeekData.palmSunday.symbols.map((sym, i) => (
                   <div key={i} className={`p-4 sm:p-5 rounded-[16px] ${bgSubCard} border shadow-sm flex flex-col items-center text-center`}>
-                    <div className={`w-12 h-12 rounded-[14px] ${isDark ? 'bg-[#0F172A]' : 'bg-white'} border ${borderStyle} flex items-center justify-center text-[20px] mb-3`}><span className="opacity-0"></span>{/* 이모지 제거됨, UI만 유지 */}🌿</div>
+                    <div className={`w-12 h-12 rounded-[14px] ${isDark ? 'bg-[#0F172A]' : 'bg-white'} border ${borderStyle} flex items-center justify-center text-[20px] mb-3`}>🌿</div>
                     <h3 className={`text-[13.5px] sm:text-[14px] font-bold mb-1.5 ${textMainStyle}`}>{sym.title}</h3>
                     {sym.situation && <p className={`text-[11.5px] sm:text-[12px] font-medium leading-[1.6] mb-2.5 ${textSubStyle} bg-black/5 dark:bg-white/5 p-2.5 rounded-[10px]`}>{sym.situation}</p>}
                     <p className={`text-[12px] sm:text-[12.5px] font-medium leading-[1.6] mb-3 ${textMainStyle}`}>{sym.meaning}</p>
@@ -774,7 +919,6 @@ export default function BibleWiki({
                   {holyWeekData.holyWeek.timeline.map((day, i) => (
                     <div key={i} className="flex gap-4 sm:gap-5">
                       <div className={`w-8 h-8 sm:w-9 sm:h-9 shrink-0 rounded-[12px] ${isDark ? 'bg-[#0F172A] border-[#1E293B]' : 'bg-white border-[#E2E8F0]'} shadow-sm border flex items-center justify-center text-[14px] z-10`}>
-                        {/* 이모지 제거됨, 대체 텍스트 */}
                         <span className={`font-bold ${textSubStyle} text-[10px]`}>{i+1}</span>
                       </div>
                       <div className="flex-1 pt-0.5">
@@ -809,7 +953,7 @@ export default function BibleWiki({
               <div className="px-5 sm:px-6 pb-6 sm:pb-8 grid sm:grid-cols-2 md:grid-cols-3 gap-4 pt-5">
                 {holyWeekData.easter.symbols.map((sym, i) => (
                   <div key={i} className={`p-4 sm:p-5 rounded-[16px] ${bgSubCard} border shadow-sm flex flex-col items-center text-center`}>
-                    <div className={`w-12 h-12 rounded-[14px] ${isDark ? 'bg-[#0F172A]' : 'bg-white'} border ${borderStyle} flex items-center justify-center text-[20px] mb-3`}><span className="opacity-0"></span>🥚</div>
+                    <div className={`w-12 h-12 rounded-[14px] ${isDark ? 'bg-[#0F172A]' : 'bg-white'} border ${borderStyle} flex items-center justify-center text-[20px] mb-3`}>🥚</div>
                     <h3 className={`text-[13.5px] sm:text-[14px] font-bold mb-1.5 ${textMainStyle}`}>{sym.title}</h3>
                     <p className={`text-[12px] sm:text-[12.5px] font-medium leading-[1.6] mb-3 ${textSubStyle}`}>{sym.text}</p>
                     <div 
@@ -825,101 +969,285 @@ export default function BibleWiki({
           </div>
         )}
 
-        {/* 지도 이동 탭 */}
+        {/* ========================================================================= */}
+        {/* 🌟 6. [고도화 완성] 지도 이동 탭: API Key 불필요 고고학 위성·지형 엔진     */}
+        {/* ========================================================================= */}
         {activeTab === 'map' && (
-          <div className={`flex flex-col md:flex-row w-full h-[70vh] min-h-[450px] md:min-h-[550px] ${glassCard} overflow-hidden animate-fade-in-up`}>
+          <div className={`flex flex-col md:flex-row w-full h-[75vh] min-h-[500px] md:min-h-[620px] ${glassCard} overflow-hidden animate-fade-in-up border ${borderStyle}`}>
             
-            <div className={`flex flex-col w-full h-[40%] md:h-full md:w-1/3 md:max-w-[300px] border-b md:border-b-0 md:border-r ${borderStyle} ${isDark ? 'bg-[#0B1120]/50' : 'bg-white/50'}`}>
-              <div className={`p-3 border-b ${borderStyle}`}>
-                <div className={`flex items-center gap-2 px-3 py-1.5 rounded-[10px] ${inputBgStyle} border`}>
+            {/* [좌측 패널]: 구속사 7대 여정 선택 & 장소 타임라인 리스트 */}
+            <div className={`flex flex-col w-full h-[42%] md:h-full md:w-1/3 md:max-w-[320px] border-b md:border-b-0 md:border-r ${borderStyle} ${isDark ? 'bg-[#0F172A]/90' : 'bg-white/90'}`}>
+              
+              {/* 여정 선택 셀렉터 & 검색 바 */}
+              <div className={`p-3 border-b ${borderStyle} space-y-2`}>
+                <div className="flex items-center justify-between">
+                  <span className={`text-[11px] font-bold font-mono ${isDark ? 'text-[#38BDF8]' : 'text-[#0284C7]'}`}>
+                    BIBLICAL EXPEDITION
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-mono">
+                    {activeRoute?.places?.length || 0}개 유적지
+                  </span>
+                </div>
+
+                <select
+                  value={activeRouteId}
+                  onChange={(e) => {
+                    setActiveRouteId(e.target.value);
+                    setSelectedLoc(null);
+                  }}
+                  className={`w-full px-2.5 py-1.5 rounded-[10px] text-[12px] font-bold outline-none border cursor-pointer ${
+                    isDark ? 'bg-[#1E293B] border-[#334155] text-white' : 'bg-slate-50 border-slate-200 text-slate-800'
+                  }`}
+                >
+                  {allRoutesList.map(r => (
+                    <option key={r.id} value={r.id}>
+                      {r.name}
+                    </option>
+                  ))}
+                </select>
+
+                <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-[10px] border ${inputBgStyle}`}>
                   <Icons.SearchRef className={`w-3.5 h-3.5 ${textSubStyle} shrink-0`} />
                   <input 
                     type="text" 
                     value={mapSearch} 
                     onChange={(e) => setMapSearch(e.target.value)}
-                    placeholder="장소, 인물 검색..." 
-                    className={`w-full bg-transparent text-[12.5px] sm:text-[13px] outline-none font-medium ${textMainStyle}`}
+                    placeholder="지명, 성구, 사건 검색..." 
+                    className={`w-full bg-transparent text-[11.5px] outline-none font-medium ${textMainStyle}`}
                   />
+                  {mapSearch && <button onClick={() => setMapSearch('')} className="text-[10px] text-slate-400">✕</button>}
                 </div>
               </div>
-              <div className="flex-1 overflow-y-auto hide-scrollbar">
-                {displayRoutes.length === 0 ? (
-                  <div className={`p-6 text-center text-[11.5px] sm:text-[12px] font-medium ${textSubStyle}`}>검색 결과가 없습니다.</div>
+
+              {/* 순차적 장소 리스트 */}
+              <div className="flex-1 overflow-y-auto hide-scrollbar divide-y divide-slate-100 dark:divide-slate-800/60">
+                {displayRoutes.flatMap(r => r.places).length === 0 ? (
+                  <div className={`p-8 text-center text-[12px] font-medium ${textSubStyle}`}>검색된 성경 장소가 없습니다.</div>
                 ) : (
-                  displayRoutes.map(route => (
-                    <div key={route.id} className="mb-2">
-                      <div className={`px-3.5 py-1.5 text-[10.5px] font-bold ${isDark ? 'text-[#38BDF8] bg-[#0F172A]' : 'text-[#0284C7] bg-[#F0F9FF]'} sticky top-0 z-10 backdrop-blur-md`}>
-                        {route.name}
-                      </div>
-                      {route.places.map(loc => (
-                        <div 
-                          key={loc.id} 
-                          onClick={() => setSelectedLoc(loc)}
-                          className={`p-3.5 border-b ${borderStyle} cursor-pointer transition-colors ${selectedLoc?.id === loc.id ? (isDark ? 'bg-[#38BDF8]/10' : 'bg-[#E0F2FE]') : (isDark ? 'hover:bg-[#1E293B]' : 'hover:bg-[#F8FAFC]')}`}
-                        >
-                          <h4 className={`text-[13px] sm:text-[13.5px] font-bold ${textMainStyle} mb-1 flex items-center justify-between`}>
-                            {loc.name}
-                            <Icons.ChevronRight className={`w-3.5 h-3.5 ${textSubStyle}`} />
-                          </h4>
-                          <p className={`text-[11.5px] font-medium ${textSubStyle} line-clamp-1`}>{loc.event}</p>
+                  (activeRoute?.places || []).map((loc, idx) => {
+                    const isSelected = selectedLoc?.id === loc.id;
+                    return (
+                      <div 
+                        key={loc.id} 
+                        onClick={() => setSelectedLoc(loc)}
+                        className={`p-3 cursor-pointer transition-all flex items-start gap-2.5 ${
+                          isSelected 
+                            ? (isDark ? 'bg-[#0284C7]/20 border-l-4 border-[#38BDF8]' : 'bg-[#E0F2FE] border-l-4 border-[#0284C7]') 
+                            : (isDark ? 'hover:bg-[#1E293B]/60' : 'hover:bg-slate-50')
+                        }`}
+                      >
+                        <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 mt-0.5 ${
+                          isSelected ? 'bg-rose-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200'
+                        }`}>
+                          {idx + 1}
+                        </span>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-1">
+                            <h4 className={`text-[12.5px] font-bold ${textMainStyle} truncate`}>
+                              {loc.name}
+                            </h4>
+                            <span className="text-[10px] font-mono text-slate-400 shrink-0">{loc.verse.split(' ')[0]}</span>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            {loc.nameOrig && (
+                              <span className="text-[10.5px] font-serif text-amber-600 dark:text-amber-400 font-bold" dir="rtl">
+                                {loc.nameOrig}
+                              </span>
+                            )}
+                            <span className="text-[10px] text-slate-400 truncate">({loc.region})</span>
+                          </div>
+
+                          <p className={`text-[11px] font-medium ${textSubStyle} truncate mt-0.5`}>
+                            {loc.event}
+                          </p>
                         </div>
-                      ))}
-                    </div>
-                  ))
+                      </div>
+                    );
+                  })
                 )}
               </div>
             </div>
 
-            <div className={`w-full h-[60%] md:h-full md:flex-1 relative ${isDark ? 'bg-[#000000]' : 'bg-[#F2F2F7]'} z-0`}>
+            {/* [우측 지도 뷰포트]: 워터마크 없는 Esri 위성 / 지형도 + OpenStreetMap & 레이블 레이어 */}
+            <div className="w-full h-[58%] md:h-full md:flex-1 relative z-0">
+              
+              {/* 상단 3단 지도 모드 스위처 (위성 / 지형도 / 표준) */}
+              <div className="absolute top-3 right-3 z-[1000] flex items-center p-1 rounded-xl bg-black/75 backdrop-blur-md border border-white/20 shadow-lg gap-1">
+                <button
+                  type="button"
+                  onClick={() => setMapTileType('satellite')}
+                  className={`px-2.5 py-1 rounded-lg text-[10.5px] font-bold transition-all cursor-pointer ${
+                    mapTileType === 'satellite' 
+                      ? 'bg-[#0284C7] text-white shadow-xs' 
+                      : 'text-slate-300 hover:text-white'
+                  }`}
+                >
+                  🛰️ 고고학 위성
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMapTileType('topo')}
+                  className={`px-2.5 py-1 rounded-lg text-[10.5px] font-bold transition-all cursor-pointer ${
+                    mapTileType === 'topo' 
+                      ? 'bg-[#0284C7] text-white shadow-xs' 
+                      : 'text-slate-300 hover:text-white'
+                  }`}
+                >
+                  ⛰️ 지형도
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMapTileType('osm')}
+                  className={`px-2.5 py-1 rounded-lg text-[10.5px] font-bold transition-all cursor-pointer ${
+                    mapTileType === 'osm' 
+                      ? 'bg-[#0284C7] text-white shadow-xs' 
+                      : 'text-slate-300 hover:text-white'
+                  }`}
+                >
+                  🗺️ 표준
+                </button>
+              </div>
+
               <MapContainer 
                 center={[31.7, 35.2]} 
-                zoom={5} 
+                zoom={6} 
                 scrollWheelZoom={true} 
                 dragging={true}
                 zoomControl={true}
                 style={{ height: '100%', width: '100%', zIndex: 0 }}
               >
                 <MapController selectedLoc={selectedLoc} positions={mapPositions} /> 
-                {isDark ? (
-                  <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" attribution='&copy; <a href="https://carto.com/">CARTO</a>' />
-                ) : (
-                  <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" attribution='&copy; <a href="https://carto.com/">CARTO</a>' />
+                
+                {/* 🌟 1. 위성 지도 모드 (Esri World Imagery + 지명/경계선 오버레이) */}
+                {mapTileType === 'satellite' && (
+                  <>
+                    <TileLayer 
+                      url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" 
+                      attribution="&copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community"
+                      maxZoom={18}
+                    />
+                    <TileLayer 
+                      url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}" 
+                      attribution=""
+                      maxZoom={18}
+                    />
+                  </>
                 )}
-                {displayRoutes.map((route, rIdx) => (
-                  <React.Fragment key={route.id}>
-                    {route.places.map((loc) => {
-                      const isActive = selectedLoc?.id === loc.id;
-                      return (
-                        <Marker 
-                          key={`${route.id}-${loc.id}`} 
-                          position={loc.coords} 
-                          icon={createPinIcon(isActive)}
-                          eventHandlers={{ click: () => setSelectedLoc(loc) }}
-                        >
-                          <Tooltip direction="top" offset={[0, -30]} opacity={1} className="custom-tooltip">
-                            <span className="font-bold text-[12.5px]">{loc.name}</span>
-                          </Tooltip>
-                        </Marker>
-                      );
-                    })}
-                    <Polyline positions={route.places.map(p => p.coords)} color={rIdx % 2 === 0 ? (isDark ? "#38BDF8" : "#0284C7") : (isDark ? "#A78BFA" : "#7C3AED")} weight={3} opacity={0.6} dashArray="5, 8" />
-                  </React.Fragment>
-                ))}
+
+                {/* 🌟 2. 등고선 고고학 지형도 모드 (Esri World Topo Map) */}
+                {mapTileType === 'topo' && (
+                  <TileLayer 
+                    url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}" 
+                    attribution="&copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and the GIS User Community"
+                    maxZoom={18}
+                  />
+                )}
+
+                {/* 🌟 3. 오픈스트리트맵 표준 타일 모드 (워터마크 완전 무료) */}
+                {mapTileType === 'osm' && (
+                  <TileLayer 
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" 
+                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    maxZoom={19}
+                  />
+                )}
+
+                {/* 경로 이동 선 (Polyline) */}
+                {activeRoute && activeRoute.places && (
+                  <Polyline 
+                    positions={activeRoute.places.map(p => p.coords)} 
+                    color={activeRoute.color || '#0284C7'} 
+                    weight={3.5} 
+                    opacity={0.8} 
+                    dashArray={activeRoute.dashArray || '6, 6'} 
+                  />
+                )}
+
+                {/* 장소 마커 및 툴팁 */}
+                {(activeRoute?.places || []).map((loc, idx) => {
+                  const isActive = selectedLoc?.id === loc.id;
+                  return (
+                    <Marker 
+                      key={`${activeRoute.id}-${loc.id}`} 
+                      position={loc.coords} 
+                      icon={createPinIcon(isActive, String(idx + 1))}
+                      eventHandlers={{ click: () => setSelectedLoc(loc) }}
+                    >
+                      <Tooltip direction="top" offset={[0, -22]} opacity={0.95} className="custom-tooltip">
+                        <div className="text-center font-sans">
+                          <span className="font-black text-[12px] block">{loc.name}</span>
+                          <span className="text-[10px] text-blue-500 font-bold">{loc.verse}</span>
+                        </div>
+                      </Tooltip>
+                    </Marker>
+                  );
+                })}
               </MapContainer>
               
+              {/* 🌟 원어 성경 연구 6번 스타일 고고학 OpenBible GPS 인스펙터 플로팅 카드 */}
               {selectedLoc && (
-                <div className={`absolute bottom-3 left-1/2 -translate-x-1/2 w-[90%] max-w-sm ${isDark ? 'bg-[#0B1120]/95 border-[#1E293B]' : 'bg-white/95 border-[#E2E8F0]'} backdrop-blur-xl p-4 rounded-[16px] shadow-lg border z-[1000] animate-fade-in-up`}>
-                  <div className="flex justify-between items-start mb-1.5">
-                    <h3 className={`text-[14px] sm:text-[14.5px] font-bold ${textMainStyle}`}>{selectedLoc.name}</h3>
-                    <button onClick={() => setSelectedLoc(null)} className={`${textSubStyle} hover:${textMainStyle} p-1`}>✕</button>
+                <div className={`absolute bottom-3 left-3 right-3 sm:left-4 sm:right-auto sm:max-w-md ${
+                  isDark ? 'bg-[#0B1120]/95 border-[#1E293B] text-white' : 'bg-white/95 border-slate-200 text-slate-900'
+                } backdrop-blur-xl p-4 sm:p-5 rounded-2xl shadow-2xl border z-[1000] animate-fade-in-up space-y-2.5`}>
+                  
+                  <div className="flex justify-between items-start border-b border-dashed pb-2 border-slate-200 dark:border-slate-800">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-[15px] font-black">
+                          {selectedLoc.name}
+                        </h3>
+                        {selectedLoc.nameOrig && (
+                          <span className="text-[13px] font-serif font-black text-amber-600 dark:text-amber-400" dir="rtl">
+                            {selectedLoc.nameOrig}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1.5 text-[11px] text-slate-400 mt-0.5">
+                        <span>{selectedLoc.nameEn || ''}</span>
+                        <span>•</span>
+                        <span className="font-bold text-sky-500">{selectedLoc.region || '성경 지명'}</span>
+                      </div>
+                    </div>
+
+                    <button 
+                      onClick={() => setSelectedLoc(null)} 
+                      className="text-slate-400 hover:text-white p-1 text-xs font-bold cursor-pointer"
+                    >
+                      ✕
+                    </button>
                   </div>
-                  <p className={`text-[11.5px] sm:text-[12px] font-bold ${isDark ? 'text-[#38BDF8]' : 'text-[#0284C7]'} mb-1.5`}>{selectedLoc.event}</p>
-                  <p className={`leading-[1.6] font-medium ${textSubStyle} text-[11.5px] sm:text-[12px] line-clamp-3 mb-2.5`}>{selectedLoc.desc}</p>
-                  <div 
-                    onClick={() => setPopupVerseData({ query: selectedLoc.verse, verses: getVersesFromQuery(selectedLoc.verse, bibles) })}
-                    className={`text-[10.5px] sm:text-[11px] font-bold ${textMainStyle} cursor-pointer inline-block ${isDark ? 'bg-[#1E293B]' : 'bg-[#F1F5F9]'} px-2.5 py-1 rounded-[8px]`}
-                  >
-                    📖 {selectedLoc.verse} 보기
+
+                  {/* 위경도 GPS & 구글 위성 바로가기 바 */}
+                  <div className="flex items-center justify-between text-[10.5px] font-mono px-2.5 py-1 rounded-lg bg-black/40 border border-white/10">
+                    <span className="text-slate-300">
+                      GPS: {selectedLoc.coords[0].toFixed(3)}, {selectedLoc.coords[1].toFixed(3)}
+                    </span>
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${selectedLoc.coords[0]},${selectedLoc.coords[1]}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-sky-400 hover:text-sky-300 font-bold hover:underline flex items-center gap-0.5"
+                    >
+                      📍 구글 지도 위성 보기 ↗
+                    </a>
+                  </div>
+
+                  {/* 역사적 사건 및 고고학 주해 */}
+                  <p className="text-[12px] leading-relaxed font-medium text-slate-300 whitespace-pre-wrap break-keep">
+                    {selectedLoc.desc}
+                  </p>
+
+                  {/* 성경 구절 본문 팝업 버튼 */}
+                  <div className="pt-1 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => setPopupVerseData({ query: selectedLoc.verse, verses: getVersesFromQuery(selectedLoc.verse, bibles) })}
+                      className="px-3 py-1.5 rounded-xl bg-[#0284C7] hover:bg-[#0369A1] text-white text-[11px] font-bold shadow-xs cursor-pointer flex items-center gap-1"
+                    >
+                      📖 {selectedLoc.verse} 말씀 읽기
+                    </button>
                   </div>
                 </div>
               )}
@@ -930,6 +1258,7 @@ export default function BibleWiki({
 
       </div>
 
+      {/* 말씀 팝업 모달 */}
       {popupVerseData && (
         <div className="fixed inset-0 bg-[#0F172A]/80 backdrop-blur-md z-[1000] flex items-center justify-center p-4 pointer-events-auto">
           <div className={`${isDark ? 'bg-[#0B1120] border-[#1E293B]' : 'bg-white border-[#E2E8F0]'} rounded-[24px] shadow-2xl border overflow-hidden w-full max-w-md animate-fade-in-up max-h-[85vh] flex flex-col`}>
@@ -937,7 +1266,7 @@ export default function BibleWiki({
               <h3 className={`font-bold ${textMainStyle} text-[13.5px] sm:text-[14px]`}>
                 {popupVerseData.query}
               </h3>
-              <button onClick={() => setPopupVerseData(null)} className={`${textSubStyle} hover:${textMainStyle} text-xl w-7 h-7 flex items-center justify-center rounded-full transition-colors`}>
+              <button onClick={() => setPopupVerseData(null)} className={`${textSubStyle} hover:${textMainStyle} text-xl w-7 h-7 flex items-center justify-center rounded-full transition-colors cursor-pointer`}>
                 &times;
               </button>
             </div>
@@ -953,6 +1282,7 @@ export default function BibleWiki({
         </div>
       )}
 
+      {/* 인물 상세 모달 */}
       {selectedCharacter && (
         <div className="fixed inset-0 bg-[#0F172A]/80 backdrop-blur-md z-[1000] flex items-center justify-center p-4 pointer-events-auto">
           <div className={`${isDark ? 'bg-[#0B1120] border-[#1E293B]' : 'bg-white border-[#E2E8F0]'} rounded-[24px] shadow-2xl border overflow-hidden w-full max-w-lg animate-fade-in-up flex flex-col max-h-[85vh]`}>
@@ -965,7 +1295,7 @@ export default function BibleWiki({
                   {selectedCharacter.name}
                 </h3>
               </div>
-              <button onClick={() => setSelectedCharacter(null)} className={`${textSubStyle} hover:${textMainStyle} text-2xl w-7 h-7 flex items-center justify-center rounded-full transition-colors`}>
+              <button onClick={() => setSelectedCharacter(null)} className={`${textSubStyle} hover:${textMainStyle} text-2xl w-7 h-7 flex items-center justify-center rounded-full transition-colors cursor-pointer`}>
                 &times;
               </button>
             </div>
@@ -994,7 +1324,7 @@ export default function BibleWiki({
           background: ${isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)'} !important;
           border: 1px solid ${isDark ? 'rgba(30, 41, 59, 1)' : 'rgba(226, 232, 240, 1)'} !important;
           border-radius: 10px !important;
-          box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
+          box-shadow: 0 4px 15px rgba(0,0,0,0.2) !important;
           padding: 6px 10px !important;
           color: ${isDark ? '#F8FAFC' : '#0F172A'} !important;
           font-family: inherit !important;

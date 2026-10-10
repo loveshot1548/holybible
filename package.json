@@ -17,6 +17,7 @@
     "@supabase/supabase-js": "^2.112.4",
     "@tldraw/tldraw": "^5.2.5",
     "@xzdarcy/react-timeline-editor": "^1.0.0",
+    "bezier-easing": "^3.2.0",
     "crypto-js": "^4.2.0",
     "d3-force": "^3.0.0",
     "fabric": "^7.4.0",
@@ -24,6 +25,7 @@
     "immer": "^11.1.18",
     "leaflet": "^1.9.4",
     "maplibre-gl": "^6.2.0",
+    "mp4box": "^2.4.1",
     "perfect-freehand": "^1.2.3",
     "pixi.js": "^8.21.0",
     "react": "^19.2.7",
@@ -38,9 +40,9 @@
   },
   "scripts": {
     "start": "react-scripts start",
-  "build": "CI=false react-scripts build",
-  "test": "react-scripts test",
-  "eject": "react-scripts eject"
+    "build": "CI=false react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
   },
   "browserslist": {
     "production": [

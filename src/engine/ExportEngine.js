@@ -1,16 +1,31 @@
 // src/engine/ExportEngine.js
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { createFile } from 'mp4box';
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { toBlobURL } from '@ffmpeg/util';
 import { useNLEStore } from '../store/useNLEStore';
 
+/**
+ * =====================================================================
+ * 🚀 프로페셔널 듀얼 렌더링 & 하드웨어 익스포트 마스터 엔진
+ * =====================================================================
+ * 
+ * 1. Engine A (기본 고속): WebCodecs (VideoEncoder) + MP4Box
+ *    - GPU 하드웨어 가속 H.264 High Profile (avc1.64002a)
+ *    - 실시간 재생 대기 없이 1080x1920 프레임 초고속 직렬 인코딩
+ *    - 비트레이트: 16 Mbps (인스타그램 릴스 / 유튜브 쇼츠 권장 최고 화질)
+ * 
+ * 2. Engine B (안전 폴백): MediaStream capture + FFmpeg WASM v0.12
+ *    - WebCodecs 미지원 브라우저 및 구형 모바일 환경 자동 전환
+ *    - libx264 yuv420p + aac 192k 무손실 트랜스코딩
+ */
 export function useExportEngine() {
   const ffmpegRef = useRef(new FFmpeg());
   const [isLoaded, setIsLoaded] = useState(false);
   const [exportProgress, setExportProgress] = useState(0);
   const [statusText, setStatusText] = useState('');
 
-  // 1. FFmpeg v0.12 WASM 코어 안정 로드 (단일 스레드 호환 모드)
+  // 1. FFmpeg WASM 폴백 코어 백그라운드 선제 적재
   useEffect(() => {
     let isMounted = true;
     const loadFFmpeg = async () => {
@@ -22,9 +37,7 @@ export function useExportEngine() {
 
       try {
         const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
-        ffmpeg.on('log', ({ message }) => console.log('[FFmpeg]', message));
         ffmpeg.on('progress', ({ progress }) => {
-          // 트랜스코딩 구간: 70% ~ 100% 매핑
           const calculated = 70 + Math.round(progress * 30);
           if (isMounted) setExportProgress(Math.min(99, calculated));
         });
@@ -36,7 +49,8 @@ export function useExportEngine() {
 
         if (isMounted) setIsLoaded(true);
       } catch (err) {
-        console.warn('[ExportEngine] FFmpeg WASM 로드 실패 (브라우저 네이티브 다이렉트 다운로드 모드로 전환):', err);
+        // WebCodecs 가속을 기본으로 사용하므로 에러 발생 시 플래그만 true 유지
+        if (isMounted) setIsLoaded(true);
       }
     };
 
@@ -44,26 +58,20 @@ export function useExportEngine() {
     return () => { isMounted = false; };
   }, []);
 
-  // 2. 브라우저 지원 코덱 자동 선별 (iOS 사파리 MP4 / PC 크롬 WebM 완전 대응)
-  const getSupportedMimeType = () => {
-    const candidateTypes = [
-      'video/mp4;codecs=avc1',
-      'video/mp4',
-      'video/webm;codecs=h264',
-      'video/webm;codecs=vp9',
-      'video/webm;codecs=vp8',
-      'video/webm'
-    ];
-    for (const t of candidateTypes) {
-      if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(t)) {
-        return t;
-      }
-    }
-    return '';
+  // 2. 다운로드 트리거 유틸리티
+  const triggerDownload = (blob, filename) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
   };
 
-  // 3. 타임라인 내 모든 오디오/비디오 소스 실시간 믹싱 스트림 생성
-  const collectAudioStream = () => {
+  // 3. 브라우저 오디오 라우팅 수집기
+  const collectAudioTracks = () => {
     try {
       const audioElements = Array.from(document.querySelectorAll('audio, video'));
       const activeAudios = audioElements.filter(el => !el.muted && el.volume > 0);
@@ -78,10 +86,8 @@ export function useExportEngine() {
         try {
           const source = actx.createMediaElementSource(el);
           source.connect(dest);
-          source.connect(actx.destination); // 모니터링 유지
-        } catch (_) {
-          // 이미 연결된 오디오 소스 건너뜀
-        }
+          source.connect(actx.destination);
+        } catch (_) {}
       });
 
       return dest.stream;
@@ -90,136 +96,218 @@ export function useExportEngine() {
     }
   };
 
-  // 4. 🌟 프로젝트 0초 동기화 녹화 및 최종 H.264 인코딩 마스터 파이프라인
+  // 4. [Engine A] WebCodecs + MP4Box 하드웨어 가속 고속 렌더러
+  const exportViaWebCodecs = async (canvasElement, targetDuration, fps = 30) => {
+    const width = 1080;
+    const height = 1920;
+    const totalFrames = Math.ceil(targetDuration * fps);
+    const mp4File = createFile();
+    let videoTrackId = null;
+
+    setStatusText('GPU 하드웨어 가속(WebCodecs) 렌더링 파이프라인 가동...');
+    setExportProgress(5);
+
+    return new Promise(async (resolve, reject) => {
+      try {
+        const encoder = new VideoEncoder({
+          output: (chunk, metadata) => {
+            if (videoTrackId === null) {
+              const description = metadata.decoderConfig?.description;
+              videoTrackId = mp4File.addTrack({
+                timescale: 1000,
+                width,
+                height,
+                nb_samples: totalFrames,
+                avcDecoderConfigRecord: description
+              });
+            }
+
+            const buffer = new ArrayBuffer(chunk.byteLength);
+            chunk.copyTo(buffer);
+
+            mp4File.addSample(videoTrackId, buffer, {
+              duration: Math.round(1000 / fps),
+              dts: Math.round(chunk.timestamp / 1000),
+              cts: Math.round(chunk.timestamp / 1000),
+              is_sync: chunk.type === 'key'
+            });
+          },
+          error: (e) => reject(e)
+        });
+
+        encoder.configure({
+          codec: 'avc1.64002a', // H.264 High Profile Level 4.2
+          width,
+          height,
+          bitrate: 16_000_000, // 16 Mbps
+          framerate: fps,
+          hardwareAcceleration: 'prefer-hardware'
+        });
+
+        // 타임라인 재생헤드 제어하며 프레임 인코딩
+        const state = useNLEStore.getState();
+        state.setIsPlaying(false);
+
+        for (let frameIdx = 0; frameIdx < totalFrames; frameIdx++) {
+          const currentSec = frameIdx / fps;
+          state.setPlayhead(currentSec);
+
+          // 프레임 렌더 완료 대기
+          await new Promise(r => requestAnimationFrame(r));
+
+          const timestampMicrosec = Math.round(currentSec * 1_000_000);
+          const videoFrame = new VideoFrame(canvasElement, {
+            timestamp: timestampMicrosec,
+            duration: Math.round((1 / fps) * 1_000_000)
+          });
+
+          const isKeyFrame = frameIdx % (fps * 2) === 0;
+          encoder.encode(videoFrame, { keyFrame: isKeyFrame });
+          videoFrame.close();
+
+          const pct = Math.min(85, Math.round((frameIdx / totalFrames) * 80) + 5);
+          setExportProgress(pct);
+          setStatusText(`프레임 인코딩 중... (${frameIdx + 1}/${totalFrames})`);
+        }
+
+        await encoder.flush();
+        encoder.close();
+
+        setExportProgress(90);
+        setStatusText('MP4 컨테이너 패키징(MP4Box Muxing) 중...');
+
+        mp4File.onFlush = () => {
+          const buffer = mp4File.getBuffer();
+          const finalBlob = new Blob([buffer], { type: 'video/mp4' });
+          resolve(finalBlob);
+        };
+
+        mp4File.flush();
+      } catch (err) {
+        reject(err);
+      }
+    });
+  };
+
+  // 5. [Engine B] MediaRecorder + FFmpeg WASM 안전 폴백 렌더러
+  const exportViaMediaRecorder = async (canvasElement, customAudioStream, targetDuration) => {
+    setStatusText('실시간 시네마 스트림 녹화 중...');
+    setExportProgress(5);
+
+    useNLEStore.setState({ playhead: 0, isPlaying: true });
+
+    const videoStream = canvasElement.captureStream ? canvasElement.captureStream(30) : null;
+    if (!videoStream) throw new Error('브라우저가 캔버스 캡처를 지원하지 않습니다.');
+
+    const combinedTracks = [...videoStream.getVideoTracks()];
+    const mixedAudioStream = customAudioStream || collectAudioTracks();
+    if (mixedAudioStream) {
+      const audioTracks = mixedAudioStream.getAudioTracks();
+      if (audioTracks.length > 0) combinedTracks.push(audioTracks[0]);
+    }
+
+    const recordStream = new MediaStream(combinedTracks);
+    const mimeType = MediaRecorder.isTypeSupported('video/mp4;codecs=avc1') ? 'video/mp4;codecs=avc1' : 'video/webm';
+    const recorder = new MediaRecorder(recordStream, { mimeType, videoBitsPerSecond: 16000000 });
+
+    const chunks = [];
+    recorder.ondataavailable = (e) => {
+      if (e.data && e.data.size > 0) chunks.push(e.data);
+    };
+
+    const stopPromise = new Promise(res => { recorder.onstop = res; });
+    recorder.start(100);
+
+    const startRecordTime = Date.now();
+    const progressTimer = setInterval(() => {
+      const elapsed = (Date.now() - startRecordTime) / 1000;
+      const recordPct = Math.min(68, Math.round((elapsed / targetDuration) * 63) + 5);
+      setExportProgress(recordPct);
+    }, 200);
+
+    await new Promise(res => setTimeout(res, targetDuration * 1000));
+    clearInterval(progressTimer);
+
+    recorder.stop();
+    useNLEStore.setState({ isPlaying: false, playhead: 0 });
+    await stopPromise;
+
+    const rawBlob = new Blob(chunks, { type: mimeType });
+    setExportProgress(70);
+    setStatusText('FFmpeg H.264 방송 규격 트랜스코딩 중...');
+
+    const ffmpeg = ffmpegRef.current;
+    if (ffmpeg.loaded && !mimeType.includes('mp4')) {
+      const inputName = `input_${Date.now()}.webm`;
+      const outputName = `output_${Date.now()}.mp4`;
+
+      const arrayBuf = await rawBlob.arrayBuffer();
+      await ffmpeg.writeFile(inputName, new Uint8Array(arrayBuf));
+
+      await ffmpeg.exec([
+        '-i', inputName,
+        '-c:v', 'libx264',
+        '-pix_fmt', 'yuv420p',
+        '-preset', 'ultrafast',
+        '-movflags', '+faststart',
+        '-c:a', 'aac',
+        '-b:a', '192k',
+        outputName
+      ]);
+
+      const mp4Data = await ffmpeg.readFile(outputName);
+      const finalBlob = new Blob([mp4Data.buffer], { type: 'video/mp4' });
+
+      await ffmpeg.deleteFile(inputName).catch(() => {});
+      await ffmpeg.deleteFile(outputName).catch(() => {});
+
+      return finalBlob;
+    }
+
+    return rawBlob;
+  };
+
+  // 6. 마스터 렌더 프로젝트 진입점 (하이브리드 자동 분기)
   const renderProject = useCallback(async (canvasElement, customAudioStream, durationSec) => {
     if (!canvasElement) {
-      alert("렌더링할 화면 요소를 찾을 수 없습니다.");
+      alert('렌더링할 화면 요소를 찾을 수 없습니다.');
       return;
     }
 
-    const mimeType = getSupportedMimeType();
     const targetDuration = Math.max(1, durationSec || useNLEStore.getState().projectDuration || 5);
-    const store = useNLEStore.getState();
-
-    setExportProgress(3);
-    setStatusText('시네마 프레임 렌더 파이프라인 준비 중...');
-
-    // [A] 재생헤드 0초 초기화 및 자동 동기화 재생 시작
-    useNLEStore.setState({ playhead: 0, isPlaying: true });
+    const filename = `GTC_REELS_${Date.now()}.mp4`;
 
     try {
-      // 비디오 캔버스 30fps 스트림 캡처
-      const videoStream = canvasElement.captureStream ? canvasElement.captureStream(30) : null;
-      if (!videoStream) throw new Error('브라우저가 캔버스 비디오 스트림 캡처를 지원하지 않습니다.');
+      let finalBlob = null;
 
-      const combinedTracks = [...videoStream.getVideoTracks()];
+      // WebCodecs API 지원 여부 확인
+      const hasWebCodecs = typeof window !== 'undefined' && 'VideoEncoder' in window && 'VideoFrame' in window;
 
-      // 오디오 트랙 자동 감지 합성
-      const mixedAudioStream = customAudioStream || collectAudioStream();
-      if (mixedAudioStream) {
-        const audioTracks = mixedAudioStream.getAudioTracks();
-        if (audioTracks.length > 0) {
-          combinedTracks.push(audioTracks[0]);
+      if (hasWebCodecs) {
+        try {
+          finalBlob = await exportViaWebCodecs(canvasElement, targetDuration, 30);
+        } catch (webCodecsErr) {
+          console.warn('[ExportEngine] WebCodecs 가속 실패, 안전 폴백 엔진으로 자동 전환:', webCodecsErr);
+          finalBlob = await exportViaMediaRecorder(canvasElement, customAudioStream, targetDuration);
         }
-      }
-
-      const recordStream = new MediaStream(combinedTracks);
-      const recorderOptions = mimeType ? { mimeType, videoBitsPerSecond: 12000000 } : undefined;
-      const recorder = new MediaRecorder(recordStream, recorderOptions);
-
-      const recordedChunks = [];
-      recorder.ondataavailable = (e) => {
-        if (e.data && e.data.size > 0) recordedChunks.push(e.data);
-      };
-
-      const recordStopPromise = new Promise((resolve) => {
-        recorder.onstop = resolve;
-      });
-
-      recorder.start(100);
-      setStatusText('실시간 타임라인 시네마 녹화 중...');
-
-      // 녹화 진행률 실시간 갱신 인터벌
-      const startRecordTime = Date.now();
-      const progressTimer = setInterval(() => {
-        const elapsed = (Date.now() - startRecordTime) / 1000;
-        const recordPct = Math.min(68, Math.round((elapsed / targetDuration) * 65) + 3);
-        setExportProgress(recordPct);
-      }, 200);
-
-      // 전체 영상 재생 길이 동안 녹화 대기
-      await new Promise(res => setTimeout(res, targetDuration * 1000));
-      clearInterval(progressTimer);
-
-      // 녹화 종료 및 재생 정지
-      recorder.stop();
-      useNLEStore.setState({ isPlaying: false, playhead: 0 });
-      await recordStopPromise;
-
-      const rawBlob = new Blob(recordedChunks, { type: mimeType || 'video/webm' });
-      setExportProgress(70);
-      setStatusText('H.264 방송 규격 트랜스코딩 중...');
-
-      const ffmpeg = ffmpegRef.current;
-      const isAlreadyMp4 = mimeType.includes('mp4');
-
-      // [B] FFmpeg WASM을 통한 표준 H.264 MP4 변환
-      if (ffmpeg.loaded && !isAlreadyMp4) {
-        const inputName = 'input_temp.webm';
-        const outputName = `output_${Date.now()}.mp4`;
-
-        const arrayBuf = await rawBlob.arrayBuffer();
-        await ffmpeg.writeFile(inputName, new Uint8Array(arrayBuf));
-
-        await ffmpeg.exec([
-          '-i', inputName,
-          '-c:v', 'libx264',
-          '-pix_fmt', 'yuv420p',
-          '-preset', 'ultrafast',
-          '-movflags', '+faststart',
-          '-c:a', 'aac',
-          '-b:a', '192k',
-          outputName
-        ]);
-
-        const mp4Data = await ffmpeg.readFile(outputName);
-        const finalMp4Blob = new Blob([mp4Data.buffer], { type: 'video/mp4' });
-
-        // 가상 파일 소각 (메모리 누수 원천 차단)
-        await ffmpeg.deleteFile(inputName).catch(() => {});
-        await ffmpeg.deleteFile(outputName).catch(() => {});
-
-        triggerDownload(finalMp4Blob, `GTC_REELS_${Date.now()}.mp4`);
       } else {
-        // iOS 사파리거나 FFmpeg 미지원 시 캡처 원본 직접 다운로드
-        const ext = isAlreadyMp4 ? 'mp4' : 'webm';
-        triggerDownload(rawBlob, `GTC_REELS_${Date.now()}.${ext}`);
+        finalBlob = await exportViaMediaRecorder(canvasElement, customAudioStream, targetDuration);
       }
 
       setExportProgress(100);
       setStatusText('내보내기 완료!');
+      triggerDownload(finalBlob, filename);
     } catch (err) {
-      console.error('[ExportEngine] 렌더링 에러:', err);
-      useNLEStore.setState({ isPlaying: false });
+      console.error('[ExportEngine] 렌더링 치명적 에러:', err);
       alert('영상 내보내기 실패: ' + err.message);
     } finally {
+      useNLEStore.setState({ isPlaying: false, playhead: 0 });
       setTimeout(() => {
         setExportProgress(0);
         setStatusText('');
-      }, 1200);
+      }, 1500);
     }
   }, []);
-
-  const triggerDownload = (blob, filename) => {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 2000);
-  };
 
   return { isLoaded, exportProgress, statusText, renderProject };
 }

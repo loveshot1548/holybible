@@ -17,6 +17,7 @@ import { Matthew } from './books/Matthew';
 import { Mark } from './books/Mark';
 import { Luke } from './books/Luke';
 import { John } from './books/John';
+import { Psalms } from './books/Psalms';
 
 // 💡 2. 성경 약어 맵
 export const BIBLE_ABBREV_MAP = {
@@ -118,6 +119,7 @@ export const bookAnalysisData = {
   "Ruth": Ruth,
   "1 Samuel": FirstSamuel,
   "2 Samuel": SecondSamuel,
+  "Psalms": Psalms,
   "GospelsOverview": GospelsOverview,
   "Matthew": Matthew,
   "Mark": Mark,

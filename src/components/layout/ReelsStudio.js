@@ -11,7 +11,8 @@ import { storageEngine } from '../../engine/StorageEngine';
 import { audioDSP } from '../../engine/AudioDSP';
 import Teleprompter from '../viewer/Teleprompter';
 
-// 🌟 블록버스터 오토-디렉터 엔진 연동
+// 🌟 OpenCap 바이럴 엔진 & 블록버스터 오토-디렉터 엔진 직결
+import { OpenCapReelsEngine, VIRAL_CAPTION_STYLES } from '../../engine/OpenCapReelsEngine';
 import { BlockbusterDirectorEngine, BLOCKBUSTER_STYLES } from '../../engine/BlockbusterDirector';
 
 import DesktopLayout from './DesktopLayout';
@@ -42,6 +43,11 @@ const SvgClose = () => (
     <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
   </svg>
 );
+const SvgZap = () => (
+  <svg fill="currentColor" viewBox="0 0 24 24" className="w-4 h-4">
+    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+  </svg>
+);
 
 const SCRIPTURE_PRESETS = [
   { label: '요 3:16', code: '요 3:16' },
@@ -53,11 +59,11 @@ const SCRIPTURE_PRESETS = [
 ];
 
 const REELS_CAPTION_STYLES = [
+  { id: 'hormozi_neon', label: '🔥 호르모지 네온 옐로우 (100만뷰 바이럴 팝업)', preset: 'hormozi', bg: 'transparent', color: '#FFE600', stroke: '#000000' },
   { id: 'sermon_badge', label: '🏷️ 설교 적용질문 뱃지 폼 (블루 그라데이션)', preset: 'sermon-badge', bg: 'linear-gradient(135deg, rgba(3,105,161,0.9), rgba(14,116,144,0.95))', color: '#FFFFFF', stroke: '#000000' },
-  { id: 'reels_caption', label: '릴스 표준 하단바 (반투명 블랙)', preset: 'standard', bg: 'rgba(0,0,0,0.65)', color: '#FFFFFF', stroke: '#000000' },
-  { id: 'bold_yellow', label: '바이럴 볼드 (옐로우 + 외곽선)', preset: 'standard', bg: 'transparent', color: '#FFE600', stroke: '#000000' },
-  { id: 'clean_white', label: '클린 시네마틱 (화이트 + 소프트 섀도우)', preset: 'standard', bg: 'transparent', color: '#FFFFFF', stroke: 'rgba(0,0,0,0.8)' },
-  { id: 'gradient_gold', label: '은혜 골드 (골드 텍스트 + 박스)', preset: 'standard', bg: 'rgba(20,15,5,0.75)', color: '#FFD700', stroke: '#5A4500' }
+  { id: 'cyberpunk_cyan', label: '⚡ 사이버펑크 네온 시안 (단어 바운스)', preset: 'standard', bg: 'rgba(0,0,0,0.7)', color: '#00E5FF', stroke: '#000000' },
+  { id: 'minimal_box', label: '📄 알리 압달 미니멀 클린 뱃지', preset: 'standard', bg: 'rgba(255,255,255,0.95)', color: '#000000', stroke: 'transparent' },
+  { id: 'gradient_gold', label: '✨ 은혜 골드 (성경 구절 딥 다크 박스)', preset: 'standard', bg: 'rgba(20,15,5,0.85)', color: '#FFD700', stroke: '#5A4500' }
 ];
 
 const STUDIO_FONTS = [
@@ -90,7 +96,7 @@ export default function ReelsStudio({ setActiveScreen = () => {} }) {
   const [showGridWallModal, setShowGridWallModal] = useState(false);
   const [showCaptionModal, setShowCaptionModal] = useState(false);
   
-  // 🌟 [핵심] 영적 사역 소스 선택 상태 ('auto' | 'qt' | 'sermon' | 'cell' | 'diary')
+  // 영적 사역 소스 선택 상태 ('auto' | 'qt' | 'sermon' | 'cell' | 'diary')
   const [magicSourceMode, setMagicSourceMode] = useState('auto');
 
   const [toastMessage, setToastMessage] = useState(null);
@@ -105,7 +111,7 @@ export default function ReelsStudio({ setActiveScreen = () => {} }) {
   }, []);
 
   const [captionInput, setCaptionInput] = useState('');
-  const [captionStylePreset, setCaptionStylePreset] = useState('sermon_badge');
+  const [captionStylePreset, setCaptionStylePreset] = useState('hormozi_neon');
   const [captionFontFamily, setCaptionFontFamily] = useState('MaruBuri');
   const [captionBadgeText, setCaptionBadgeText] = useState('적용질문');
   const [captionDuration, setCaptionDuration] = useState(4.0);
@@ -487,7 +493,7 @@ export default function ReelsStudio({ setActiveScreen = () => {} }) {
     });
 
     useNLEStore.setState({ projectDuration: Math.max(cursor, 3.5), playhead: 0, isPlaying: false });
-    showToast(`🎞️️ 총 ${sortedClips.length}장의 사진이 0초부터 ${cursor.toFixed(1)}초까지 순차 정렬되었습니다.`);
+    showToast(`🎞 총 ${sortedClips.length}장의 사진이 0초부터 ${cursor.toFixed(1)}초까지 순차 정렬되었습니다.`);
   }, [updateClip, showToast]);
 
   // 비디오월 레이아웃 적용
@@ -535,7 +541,7 @@ export default function ReelsStudio({ setActiveScreen = () => {} }) {
     showToast(`📐 그리드 레이아웃(${mode})이 적용되었습니다.`);
   }, [updateClip, showToast]);
 
-  // 🌟 [핵심] 사역 DB 연동 자율형 AI 릴스 오케스트레이션 실행 파이프라인
+  // 🌟 [핵심] 사역 DB 연동 4막 블록버스터 오케스트레이션 실행 파이프라인
   const runMagicAction = useCallback(async (actionType, stylePresetKey = 'HOLY_CINEMATIC', chosenSource = magicSourceMode) => {
     const allClips = Object.values(entities?.clips || {});
     if (allClips.length === 0 && (mediaPool?.length || 0) === 0) {
@@ -544,7 +550,7 @@ export default function ReelsStudio({ setActiveScreen = () => {} }) {
 
     if (actionType === 'all' || actionType === 'blockbuster') {
       setShowMagicModal(false);
-      showToast('🎬 사역 데이터 연동 블록버스터 릴스 오케스트레이션 실행 중...');
+      showToast('🎬 할리우드 4막 사역 오케스트레이션 가동 중...');
       try {
         const result = await BlockbusterDirectorEngine.directBlockbusterReels({
           stylePreset: stylePresetKey,
@@ -552,7 +558,7 @@ export default function ReelsStudio({ setActiveScreen = () => {} }) {
           scriptureQuery: captionInput.trim(),
           onProgress: (pct, msg) => showToast(msg)
         });
-        showToast(`✨ [${result.badge || '사역'}: ${result.hook || '은혜'}] 릴스 제작 완료!`);
+        showToast(`✨ [${result.badge || '사역'}: ${result.hook || '은혜'}] 완성!`);
       } catch (err) {
         showToast('연출 오류: ' + err.message);
       }
@@ -569,16 +575,17 @@ export default function ReelsStudio({ setActiveScreen = () => {} }) {
       allClips.filter(c => c.type === 'video' || c.type === 'image').forEach(c => {
         updateClip(c.id, {
           filterPreset: 'tealAndOrange',
+          lutMode: 1,
           color: { lift: -4, gamma: 110, gain: 108, saturation: 125, temperature: 6200, tint: 4 }
         });
       });
-      showToast('🎨 할리우드 틸 앤 오렌지 필름 룩 적용 완료');
+      showToast('🎨 다빈치 리졸브 3D LUT 컬러 사이언스 적용 완료');
     } else if (actionType === 'hook') {
       const firstClip = allClips.find(c => c.start === 0 && (c.type === 'video' || c.type === 'image'));
       if (firstClip) {
         updateClip(firstClip.id, {
-          scale: 114,
-          transform: { ...(firstClip.transform || {}), scale: 114, x: 0, y: 0 },
+          scale: 118,
+          transform: { ...(firstClip.transform || {}), scale: 118, x: 0, y: 0 },
           animation: 'popIn',
           transition: 'filmBurn'
         });
@@ -588,6 +595,34 @@ export default function ReelsStudio({ setActiveScreen = () => {} }) {
 
     setShowMagicModal(false);
   }, [entities?.clips, mediaPool, captionInput, magicSourceMode, updateClip, showToast]);
+
+  // 🌟 [핵심] OpenCap 바이럴 릴스 원클릭 자동 완성 (무음컷팅 + 단어팝업자막 + 펀치줌)
+  const handleExecuteOpenCapViralReel = useCallback(async () => {
+    const allClips = Object.values(entities?.clips || {});
+    const videoClips = allClips.filter(c => c.type === 'video' || c.type === 'image');
+    if (videoClips.length === 0 && (mediaPool?.length || 0) === 0) {
+      return showToast('편집할 영상이나 사진을 먼저 등록해주세요.');
+    }
+
+    showToast('⚡ OpenCap 바이럴 엔진 가동: 무음 컷팅 + 키네틱 단어 팝업...');
+    try {
+      // 1. 영상 클립 무음 자동 컷팅 분석 시도
+      if (videoClips.length > 0 && videoClips[0].type === 'video') {
+        await OpenCapReelsEngine.autoCutSilenceFromClip(videoClips[0].id);
+      }
+
+      // 2. 블록버스터 4막 디렉터와 연계하여 바이럴 릴스 자동 완성
+      await BlockbusterDirectorEngine.directBlockbusterReels({
+        stylePreset: 'VIRAL_REELS_PRO',
+        sourceMode: magicSourceMode,
+        onProgress: (pct, msg) => showToast(msg)
+      });
+
+      showToast('🎉 OpenCap 100만뷰 바이럴 릴스 완성! 재생을 확인하세요.');
+    } catch (err) {
+      showToast('바이럴 생성 오류: ' + err.message);
+    }
+  }, [entities?.clips, mediaPool, magicSourceMode, showToast]);
 
   // 스마트 오디오 더킹 DSP 적용
   const handleApplyDuckingSettings = () => {
@@ -626,7 +661,7 @@ export default function ReelsStudio({ setActiveScreen = () => {} }) {
     setShowCaptionModal(true);
   }, []);
 
-  // 자막/성경 구절 생성 확정
+  // 🌟 [핵심] 자막 생성 시 OpenCap 단어 토큰(_wordTokens) 자동 탑재
   const handleConfirmAddCaption = async () => {
     if (!captionInput.trim()) return showToast('자막 또는 성경 구절을 입력하세요.');
 
@@ -635,13 +670,22 @@ export default function ReelsStudio({ setActiveScreen = () => {} }) {
       const processedText = await checkAndFetchScripture(captionInput.trim());
       const targetTrackId = getAvailableTrackId('text', playhead, captionDuration) || 'T1';
       const selectedStyle = REELS_CAPTION_STYLES.find(s => s.id === captionStylePreset) || REELS_CAPTION_STYLES[0];
+      const dur = Number(captionDuration) || 4.0;
+
+      // OpenCap 단어 단위 타임스탬프 토큰 자동 생성
+      const wordTokens = OpenCapReelsEngine.generateWordTokensFromSentence(
+        processedText,
+        playhead,
+        dur
+      );
 
       addClipToTrack(targetTrackId, {
         content: processedText,
         type: 'text',
         start: playhead,
-        duration: Number(captionDuration) || 4.0,
+        duration: dur,
         trackId: targetTrackId,
+        _wordTokens: wordTokens,
         style: {
           fontSize: 22,
           preset: selectedStyle.preset || 'standard',
@@ -660,7 +704,7 @@ export default function ReelsStudio({ setActiveScreen = () => {} }) {
 
       setCaptionInput('');
       setShowCaptionModal(false);
-      showToast('💬 새 자막이 타임라인에 배치되었습니다.');
+      showToast('💬 키네틱 단어 팝업 자막이 타임라인에 배치되었습니다.');
     } catch (e) {
       showToast('자막 생성 실패: ' + e.message);
     } finally {
@@ -689,6 +733,7 @@ export default function ReelsStudio({ setActiveScreen = () => {} }) {
     handleMagicWandAutoEdit: () => setShowMagicModal(true),
     handleOpenDuckingModal: () => setShowDuckingModal(true),
     handleOpenGridWallModal: () => setShowGridWallModal(true),
+    handleExecuteOpenCapViralReel,
     duckingSettings,
     activeGridWallLayout,
     applyVideoWallLayout,
@@ -711,7 +756,8 @@ export default function ReelsStudio({ setActiveScreen = () => {} }) {
     handleSmartSplit, deleteClip, selectedClipId, moveClipToTrack, updateClip,
     uploadMode, reelsFrameMode, duckingSettings, activeGridWallLayout,
     applyVideoWallLayout, handleExport, undo, redo, historyIndex, isMagnetic, toggleMagnetic,
-    handleAutoSequenceAllClips, handleTogglePlay, handleRewindToStart, playhead, setPlayhead, isPlaying, setIsPlaying, projectDuration
+    handleAutoSequenceAllClips, handleTogglePlay, handleRewindToStart, handleExecuteOpenCapViralReel,
+    playhead, setPlayhead, isPlaying, setIsPlaying, projectDuration
   ]);
 
   return (
@@ -724,7 +770,7 @@ export default function ReelsStudio({ setActiveScreen = () => {} }) {
         </div>
       )}
 
-      {/* 🌟 1. AI DIRECTING STUDIO PRO (앱 내부 사역 DB 연동 선택 모달) */}
+      {/* 🌟 1. AI DIRECTING STUDIO PRO 모달 (할리우드 4막 & OpenCap 원클릭) */}
       {showMagicModal && (
         <div className="fixed inset-0 z-[120] bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in select-none">
           <div className="w-full max-w-lg bg-[#11131A] border border-white/15 rounded-3xl p-5 shadow-2xl flex flex-col gap-3.5 max-h-[92vh] overflow-y-auto hide-scrollbar">
@@ -733,20 +779,35 @@ export default function ReelsStudio({ setActiveScreen = () => {} }) {
               <div className="flex items-center gap-2">
                 <span className="p-1.5 rounded-lg bg-[#C59B51]/20 text-[#C59B51]"><SvgMagicWand /></span>
                 <div>
-                  <h3 className="text-sm font-black text-white">AI MINISTRY REELS DIRECTOR 2.0</h3>
-                  <span className="text-[10px] text-zinc-400 font-mono">AUTONOMOUS SPIRITUAL ASSETS SCANNER</span>
+                  <h3 className="text-sm font-black text-white">AI DIRECTING STUDIO PRO</h3>
+                  <span className="text-[10px] text-zinc-400 font-mono">OPENCAP & HOLLYWOOD 4-ACT ORCHESTRATION</span>
                 </div>
               </div>
               <button onClick={() => setShowMagicModal(false)} className="text-zinc-400 hover:text-white p-1 cursor-pointer"><SvgClose /></button>
             </div>
 
-            {/* 🌟 [신규] 영적 사역 데이터 소스 연동 셀렉터 */}
+            {/* 원클릭 OpenCap 바이럴 릴스 마스터 버튼 */}
+            <button
+              onClick={handleExecuteOpenCapViralReel}
+              className="w-full p-3.5 rounded-2xl bg-gradient-to-r from-amber-500 via-rose-600 to-purple-600 text-white font-black text-xs cursor-pointer shadow-lg active:scale-98 transition-all flex items-center justify-between"
+            >
+              <div className="flex items-center gap-2">
+                <span className="p-1 rounded-lg bg-black/30"><SvgZap /></span>
+                <div className="text-left">
+                  <span className="block text-[13px] font-black">⚡ OpenCap 100만뷰 원클릭 자동 완성</span>
+                  <span className="block text-[9.5px] text-white/80 font-normal">무음 컷팅 + 키네틱 단어 팝업 + 펀치 줌 + 물리 사운드 일괄 완성</span>
+                </div>
+              </div>
+              <span className="text-lg">➔</span>
+            </button>
+
+            {/* 영적 사역 데이터 소스 연동 셀렉터 */}
             <div className="space-y-1.5 bg-black/40 p-3 rounded-2xl border border-white/10">
               <div className="flex items-center justify-between">
                 <span className="text-[10.5px] font-mono text-[#00E5FF] font-black tracking-wider">
-                  1. 영적 사역 데이터 소스 (MINISTRY CONTEXT SOURCE)
+                  사역 데이터 소스 (MINISTRY CONTEXT SOURCE)
                 </span>
-                <span className="text-[9.5px] text-zinc-500 font-bold">우리 앱 DB 1000% 연동</span>
+                <span className="text-[9.5px] text-zinc-500 font-bold">우리 앱 DB 100% 직결</span>
               </div>
               
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 pt-1">
@@ -773,10 +834,10 @@ export default function ReelsStudio({ setActiveScreen = () => {} }) {
               </div>
             </div>
 
-            {/* 🌟 2. 헐리우드 극장판 스타일 선택 & 즉시 실행 */}
+            {/* 할리우드 극장판 서사 스타일 선택 */}
             <div className="space-y-1.5">
-              <span className="text-[10px] font-mono text-zinc-400 font-bold tracking-wider block">
-                2. 헐리우드 시네마틱 스타일 선택 & 1-클릭 실행
+              <span className="text-[10.5px] font-mono text-zinc-400 font-bold tracking-wider block">
+                할리우드 서사 스타일 선택 & 1-클릭 실행
               </span>
 
               <div className="grid grid-cols-1 gap-2">
@@ -786,59 +847,43 @@ export default function ReelsStudio({ setActiveScreen = () => {} }) {
                 >
                   <div className="space-y-0.5 max-w-[85%]">
                     <div className="text-xs font-black text-[#00E5FF] flex items-center gap-1.5">
-                      <span>🎬 신성한 영화 예고편 (Holy Cinematic)</span>
+                      <span>🎬 인셉션 시네마틱 (Holy Cinematic)</span>
                       <span className="text-[9px] px-1.5 py-0.2 rounded bg-[#00E5FF]/20 text-cyan-200 border border-[#00E5FF]/30 font-mono">BRAAM SFX</span>
                     </div>
                     <div className="text-[10px] text-zinc-300 leading-tight">
-                      2.35:1 레터박스 + 틸&오렌지 + 인셉션 브람 타격음 + 오로라 앰비언트 + 코닥 헐레이션
+                      2.39:1 레터박스 + 틸&오렌지 + 인셉션 브람 타격음 + 35mm 필름 그레인
                     </div>
                   </div>
                   <span className="text-base text-[#00E5FF] font-black">▶</span>
                 </button>
 
                 <button
-                  onClick={() => runMagicAction('blockbuster', 'EPIC_TRAILER', magicSourceMode)}
+                  onClick={() => runMagicAction('blockbuster', 'DARK_KNIGHT_TRAILER', magicSourceMode)}
                   className="p-3 rounded-2xl bg-gradient-to-r from-rose-950/80 via-amber-950/80 to-zinc-900 border border-rose-500/40 text-white font-bold text-left flex items-center justify-between cursor-pointer active:scale-98 transition-all hover:border-rose-400"
                 >
                   <div className="space-y-0.5 max-w-[85%]">
                     <div className="text-xs font-black text-rose-300 flex items-center gap-1.5">
-                      <span>⚡ 에픽 할리우드 임팩트 (Epic Impact)</span>
-                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-rose-500/20 text-rose-200 border border-rose-500/30 font-mono">SUB-DROP</span>
+                      <span>⚡ 다크나이트 에픽 예고편 (Dark Knight Thriller)</span>
+                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-rose-500/20 text-rose-200 border border-rose-500/30 font-mono">808 SUB-DROP</span>
                     </div>
                     <div className="text-[10px] text-zinc-300 leading-tight">
-                      블리치 바이패스 + 서브우퍼 붐 타격 + 줌 블러 + 3D 플립 + 텐션 라이저
+                      고대비 느와르 + 808 서브우퍼 붐 타격 + 텐션 라이저 + 스태카토 몽타주
                     </div>
                   </div>
                   <span className="text-base text-rose-300 font-black">▶</span>
                 </button>
 
                 <button
-                  onClick={() => runMagicAction('blockbuster', 'VIRAL_REELS_PRO', magicSourceMode)}
-                  className="p-3 rounded-2xl bg-gradient-to-r from-amber-950/80 via-yellow-950/80 to-zinc-900 border border-yellow-500/40 text-white font-bold text-left flex items-center justify-between cursor-pointer active:scale-98 transition-all hover:border-yellow-400"
-                >
-                  <div className="space-y-0.5 max-w-[85%]">
-                    <div className="text-xs font-black text-amber-300 flex items-center gap-1.5">
-                      <span>🚀 바이럴 릴스 프로 100만뷰 (Viral Hook)</span>
-                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-yellow-500/20 text-yellow-200 border border-yellow-500/30 font-mono">3초 펀치</span>
-                    </div>
-                    <div className="text-[10px] text-zinc-300 leading-tight">
-                      상단 미니멀 타이틀 + 네온 글로우 + 코닥 골드 + 시네마틱 몽타주 분할
-                    </div>
-                  </div>
-                  <span className="text-base text-amber-300 font-black">▶</span>
-                </button>
-
-                <button
-                  onClick={() => runMagicAction('blockbuster', 'GRACE_SANCTUARY', magicSourceMode)}
+                  onClick={() => runMagicAction('blockbuster', 'A24_SANCTUARY_DOCU', magicSourceMode)}
                   className="p-3 rounded-2xl bg-gradient-to-r from-emerald-950/80 via-stone-900 to-zinc-900 border border-emerald-500/40 text-white font-bold text-left flex items-center justify-between cursor-pointer active:scale-98 transition-all hover:border-emerald-400"
                 >
                   <div className="space-y-0.5 max-w-[85%]">
                     <div className="text-xs font-black text-emerald-300 flex items-center gap-1.5">
-                      <span>🕊️ 따뜻한 은혜 다큐 (Warm Sanctuary)</span>
-                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-200 border border-emerald-500/30 font-mono">35mm VINTAGE</span>
+                      <span>🕊️ A24 감성 필름 다큐 (A24 Sanctuary)</span>
+                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-200 border border-emerald-500/30 font-mono">KODAK PORTRA</span>
                     </div>
                     <div className="text-[10px] text-zinc-300 leading-tight">
-                      35mm 아날로그 필름 번 + 앰비언트 더스트 + 손글씨 감성 뱃지 + 소프트 디졸브
+                      코닥 포트라 따뜻한 톤 + 35mm 소프트 그레인 + 손글씨 뱃지 + 디졸브
                     </div>
                   </div>
                   <span className="text-base text-emerald-300 font-black">▶</span>
@@ -846,7 +891,7 @@ export default function ReelsStudio({ setActiveScreen = () => {} }) {
               </div>
             </div>
 
-            {/* 보조 원클릭 도구들 */}
+            {/* 개별 매크로 도구 */}
             <div className="pt-2 border-t border-white/10 space-y-1.5">
               <span className="text-[10px] font-mono text-zinc-400 font-bold block">INDIVIDUAL AI MACROS</span>
               <div className="grid grid-cols-2 gap-1.5">
@@ -1014,7 +1059,7 @@ export default function ReelsStudio({ setActiveScreen = () => {} }) {
                 <span className="p-1.5 rounded-lg bg-[#00E5FF]/20 text-[#00E5FF]"><SvgText /></span>
                 <div>
                   <h3 className="text-sm font-black text-white">REELS CAPTION & SCRIPTURE</h3>
-                  <span className="text-[10px] text-zinc-400 font-mono">AUTO SCRIPTURE PARSER & STYLER</span>
+                  <span className="text-[10px] text-zinc-400 font-mono">OPENCAP WORD-LEVEL TOKENIZER</span>
                 </div>
               </div>
               <button onClick={() => setShowCaptionModal(false)} className="text-zinc-400 hover:text-white p-1 cursor-pointer"><SvgClose /></button>
@@ -1042,7 +1087,7 @@ export default function ReelsStudio({ setActiveScreen = () => {} }) {
                 rows={3}
                 value={captionInput}
                 onChange={e => setCaptionInput(e.target.value)}
-                placeholder="예: 요 3:16 또는 오늘 설교 말씀의 핵심 나눔 질문을 입력하세요..."
+                placeholder="예: 요 3:16 또는 오늘 묵상한 핵심 구절을 입력하세요..."
                 className="w-full p-3 bg-black/50 border border-white/15 rounded-xl text-white text-xs leading-relaxed outline-none focus:border-[#00E5FF] transition-all resize-none"
               />
             </div>
@@ -1148,7 +1193,7 @@ export default function ReelsStudio({ setActiveScreen = () => {} }) {
             <div className="w-full h-3 bg-black rounded-full overflow-hidden border border-white/10">
               <div className="h-full bg-gradient-to-r from-[#00E5FF] to-blue-600 transition-all duration-150 rounded-full" style={{ width: `${exportProgress}%` }} />
             </div>
-            <p className="text-xs text-zinc-400 font-mono truncate">{statusText || '고해상도 캔버스 프레임 인코딩 중...'}</p>
+            <p className="text-xs text-zinc-400 font-mono truncate">{statusText || '고해상도 프레임 인코딩 중...'}</p>
           </div>
         </div>
       )}

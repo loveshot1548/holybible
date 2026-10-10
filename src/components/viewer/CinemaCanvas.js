@@ -4,7 +4,20 @@ import { useNLEStore } from '../../store/useNLEStore';
 import { TRANSITIONS, FILTERS, computeClipMotion } from '../../engine/EffectsLibrary';
 import { audioDSP } from '../../engine/AudioDSP';
 import { generateCSSNativeFilter } from '../../engine/ColorMatrixEngine';
+import { OpenCapReelsEngine, VIRAL_CAPTION_STYLES } from '../../engine/OpenCapReelsEngine';
 
+/**
+ * =====================================================================
+ * 🎬 OpenCap & 다빈치 리졸브 21 규격 60FPS 시네마 뷰포트 캔버스
+ * =====================================================================
+ * 
+ * 주요 핵심 업그레이드:
+ * 1. OpenCap 실시간 단어 단위(Word-by-Word) 키네틱 팝업 & 네온 하이라이트 렌더러
+ * 2. 3.6초 주기 다이내믹 펀치 줌 (100% ➔ 118% 인물 상반신 락)
+ * 3. 텍스트 클립 온스크린 기즈모 조작 지원 (화면에서 자막 직접 드래그/확대/회전)
+ * 4. 2.39:1 시네마 오프닝 레터박스, 35mm 필름 헐레이션, 아날로그 그레인
+ * 5. 오디오-비디오 48kHz 완전 동기화 및 0초 더블탭 리와인드
+ */
 export default function CinemaCanvas() {
   const {
     entities, mediaPool, playhead, isPlaying, setIsPlaying, setPlayhead,
@@ -18,6 +31,7 @@ export default function CinemaCanvas() {
   const playheadStartRef = useRef(0);
   const viewportRef = useRef(null);
 
+  // 기즈모 직접 조작 상태 (미디어 + 자막 통합 지원)
   const [gizmoAction, setGizmoAction] = useState(null);
   const [snapGuideX, setSnapGuideX] = useState(false);
   const [snapGuideY, setSnapGuideY] = useState(false);
@@ -35,7 +49,7 @@ export default function CinemaCanvas() {
     return clip?.url || '';
   }, [mediaPool, entities]);
 
-  // 절대 시간 기반 60FPS 타이머 루프 및 필름 그레인 난수 시드 업데이트
+  // 60FPS 절대 시간 기반 애니메이션 루프 & 그레인 지터
   const animate = useCallback((now) => {
     if (isPlaying) {
       const elapsedSec = (now - playStartTimeRef.current) / 1000;
@@ -47,7 +61,7 @@ export default function CinemaCanvas() {
         setPlayhead(0);
       } else {
         setPlayhead(Number(targetPlayhead.toFixed(3)));
-        if (Math.random() > 0.6) {
+        if (Math.random() > 0.65) {
           setGrainSeed(Math.floor(Math.random() * 100));
         }
         requestRef.current = requestAnimationFrame(animate);
@@ -75,7 +89,7 @@ export default function CinemaCanvas() {
     };
   }, [isPlaying, animate, setPlayhead]);
 
-  // 모든 비주얼 클립
+  // 모든 비주얼 클립 추출[cite: 21]
   const allVisualClips = useMemo(() => {
     if (!entities?.tracks || !entities?.clips) return [];
     return Object.values(entities.tracks).flatMap(track => {
@@ -86,7 +100,7 @@ export default function CinemaCanvas() {
     });
   }, [entities]);
 
-  // 모든 오디오 클립
+  // 모든 오디오 클립 추출[cite: 21]
   const allAudioClips = useMemo(() => {
     if (!entities?.tracks || !entities?.clips) return [];
     return Object.values(entities.tracks).flatMap(track => {
@@ -97,7 +111,7 @@ export default function CinemaCanvas() {
     });
   }, [entities]);
 
-  // 현재 재생헤드 위치의 활성 클립
+  // 현재 활성화된 클립 목록[cite: 21]
   const activeClips = useMemo(() => {
     return allVisualClips.filter(clip => {
       const start = clip.start || 0;
@@ -106,7 +120,12 @@ export default function CinemaCanvas() {
     });
   }, [allVisualClips, playhead]);
 
-  // AudioDSP 48kHz 시그널 체인 연동
+  // 🌟 OpenCap 3.6초 주기 다이내믹 펀치 줌 카메라 연산
+  const punchZoom = useMemo(() => {
+    return OpenCapReelsEngine.calculateDynamicPunchZoom(playhead, projectDuration);
+  }, [playhead, projectDuration]);
+
+  // AudioDSP 48kHz 시그널 체인 연동[cite: 21]
   useEffect(() => {
     allAudioClips.forEach(clip => {
       const aRef = audioRefs.current[clip.id];
@@ -147,7 +166,7 @@ export default function CinemaCanvas() {
   const selectedClip = selectedClipId ? entities?.clips?.[selectedClipId] : null;
   const isSelectedClipActive = activeClips.some(c => c.id === selectedClipId);
 
-  // 기즈모 조작 핸들러
+  // 🌟 기즈모 직접 조작 핸들러 (영상/사진은 물론 '자막'까지 캔버스에서 직접 이동/크기 조절)[cite: 21]
   const startGizmoAction = (e, mode, handleType = null) => {
     e.stopPropagation();
     if (!selectedClip || !viewportRef.current) return;
@@ -262,13 +281,13 @@ export default function CinemaCanvas() {
     return false;
   }, []);
 
-  // 🌟 [핵심 개선 1] CCTV 4분할 격자 박멸 ➔ 시네마틱 멀티-프레임 몽타주 렌더러
+  // 시네마틱 3막 몽타주 & 미디어 렌더러[cite: 21]
   const renderMediaElement = useCallback((clip, sourceUrl, extraClass = '') => {
     const grid = clip.gridConfig || { mode: 'single' };
     const resolvedUrl = resolveClipUrl(clip) || sourceUrl;
     const isVideo = isVideoSource(clip, resolvedUrl);
 
-    // 클라이맥스 멀티 프레임 (CCTV식 4분할 대신 메인 1 + 서브 2 시네마틱 몽타주 레이아웃)
+    // 클라이맥스 멀티 프레임 (메인 1 + 서브 2 시네마틱 몽타주)[cite: 21]
     if (grid.mode === 'matrix' && (grid.rows > 1 || grid.cols > 1)) {
       const cellMedia = grid.cellMedia || {};
       const urls = [
@@ -279,7 +298,6 @@ export default function CinemaCanvas() {
 
       return (
         <div className="w-full h-full flex flex-col gap-1.5 p-2 bg-[#020305]">
-          {/* 상단 메인 프레임 */}
           <div className="flex-1 w-full rounded-2xl overflow-hidden relative shadow-2xl border border-white/10">
             {isVideoSource(clip, urls[0]) ? (
               <video src={urls[0]} className="w-full h-full object-cover" autoPlay loop muted playsInline />
@@ -288,7 +306,6 @@ export default function CinemaCanvas() {
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent pointer-events-none" />
           </div>
-          {/* 하단 2분할 서브 프레임 */}
           <div className="h-1/3 w-full flex gap-1.5">
             <div className="flex-1 rounded-xl overflow-hidden relative border border-white/10 shadow-lg">
               {isVideoSource(clip, urls[1]) ? (
@@ -344,83 +361,152 @@ export default function CinemaCanvas() {
     );
   }, [resolveClipUrl, isVideoSource]);
 
-  // 🌟 [핵심 개선 2 & 3] 13단계 워드아트 그림자 및 파란 박스 영구 퇴출
+  // 🌟 [핵심] OpenCap 단어 단위(Word-by-Word) 키네틱 팝업 자막 렌더러
   const renderTextClip = (clip) => {
     const style = clip.style || {};
-    const fontSize = style.fontSize || 20;
+    const fontSize = style.fontSize || 22;
     const color = style.color || '#FFFFFF';
     const fontFamily = style.fontFamily || 'MaruBuri, sans-serif';
     const isBadgePreset = style.preset === 'sermon-badge';
     const isHeroTitle = clip.trackId === 'T2';
+    const isHormozi = style.preset === 'hormozi' || !style.preset;
 
-    // [A] T2 트랙: 인물 얼굴을 가리지 않는 상단 1/3 지점의 세련된 미니멀 타이틀
+    // [A] T2 트랙: 상단 3초 바이럴 킬러 훅 타이틀[cite: 21]
     if (isHeroTitle) {
       return (
-        <div className="flex flex-col items-center justify-center text-center px-4 pointer-events-none select-none">
+        <div className="flex flex-col items-center justify-center text-center px-4 pointer-events-none select-none animate-fade-in">
           <span className="text-[10px] font-mono tracking-[0.25em] text-[#00E5FF] uppercase font-bold mb-1 opacity-90 drop-shadow">
             PROLOGUE
           </span>
           <h2
             style={{
               fontFamily: fontFamily,
-              fontSize: `${Math.min(24, fontSize)}px`,
-              letterSpacing: '0.12em',
-              lineHeight: 1.3,
+              fontSize: `${Math.min(26, fontSize)}px`,
+              letterSpacing: '0.08em',
+              lineHeight: 1.25,
               fontWeight: 900,
               color: '#FFFFFF',
-              // 13단계 워드아트 그림자를 완전히 제거하고 깔끔한 필름 섀도우만 적용
-              textShadow: '0 2px 12px rgba(0, 0, 0, 0.85), 0 0 20px rgba(0, 229, 255, 0.35)'
+              textShadow: '0 2px 14px rgba(0, 0, 0, 0.9), 0 0 25px rgba(0, 229, 255, 0.45)'
             }}
             className="break-keep font-black"
           >
             {clip.content || 'THE MOMENT'}
           </h2>
-          <div className="w-8 h-[2px] bg-gradient-to-r from-transparent via-[#00E5FF] to-transparent mt-2 opacity-80 rounded-full" />
+          <div className="w-10 h-[2px] bg-gradient-to-r from-transparent via-[#00E5FF] to-transparent mt-2 opacity-90 rounded-full" />
         </div>
       );
     }
 
-    // [B] T1 트랙: 촌스러운 파란 플라스틱 박스 퇴출 ➔ 넷플릭스 숏폼 규격 반투명 딥 다크 스크림
+    // 🌟 단어 토큰이 없으면 실시간 생성
+    if (!clip._wordTokens && clip.content) {
+      clip._wordTokens = OpenCapReelsEngine.generateWordTokensFromSentence(
+        clip.content,
+        clip.start || 0,
+        clip.duration || 3.5
+      );
+    }
+    const tokens = clip._wordTokens || [];
+
+    // [B] T1 트랙: 넷플릭스 숏폼 규격 딥 다크 아크릴 글래스 + 키네틱 단어 팝업[cite: 21]
     if (isBadgePreset) {
       return (
         <div 
-          className="relative w-[88%] max-w-[340px] px-4.5 py-3.5 rounded-2xl pointer-events-none select-none transition-all duration-300"
+          className="relative w-[88%] max-w-[340px] px-4.5 py-3.5 rounded-2xl pointer-events-none select-none transition-all duration-300 shadow-2xl"
           style={{
-            // 답답한 파란색 대신 배경 영상을 온전히 살리는 딥 다크 아크릴 글래스
-            background: 'linear-gradient(180deg, rgba(8, 12, 18, 0.75) 0%, rgba(4, 6, 10, 0.88) 100%)',
+            background: 'linear-gradient(180deg, rgba(8, 12, 18, 0.78) 0%, rgba(4, 6, 10, 0.90) 100%)',
             backdropFilter: 'blur(16px)',
             WebkitBackdropFilter: 'blur(16px)',
             border: '1px solid rgba(255, 255, 255, 0.12)',
             boxShadow: '0 12px 35px rgba(0, 0, 0, 0.75), inset 0 1px 1px rgba(255, 255, 255, 0.2)'
           }}
         >
-          {/* 정제된 미니 뱃지 라벨 */}
-          <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#00E5FF]/15 border border-[#00E5FF]/30 mb-1.5">
+          <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#00E5FF]/15 border border-[#00E5FF]/30 mb-2">
             <span className="w-1.5 h-1.5 rounded-full bg-[#00E5FF] shadow-[0_0_6px_#00E5FF] animate-pulse" />
             <span className="text-[#00E5FF] font-black text-[9.5px] tracking-widest font-mono">
               {style.badgeText || '말씀'}
             </span>
           </div>
 
+          {/* 단어별 키네틱 렌더링 루프 */}
           <p
             style={{
               fontFamily: fontFamily,
-              fontSize: `${Math.min(18, fontSize)}px`,
-              color: color,
-              fontWeight: 700,
-              lineHeight: 1.48,
-              whiteSpace: 'pre-wrap',
-              textShadow: '0 1px 3px rgba(0, 0, 0, 0.9)'
+              fontSize: `${Math.min(19, fontSize)}px`,
+              lineHeight: 1.5,
+              fontWeight: 700
             }}
-            className="break-keep text-left tracking-normal"
+            className="break-keep text-left flex flex-wrap gap-x-1.5 gap-y-1"
           >
-            {clip.content || '여호와는 나의 목자시니 내게 부족함이 없으리로다'}
+            {tokens.length > 0 ? (
+              tokens.map((tok, tIdx) => {
+                const isActive = playhead >= tok.start && playhead < tok.end;
+                return (
+                  <span
+                    key={tok.id || tIdx}
+                    className={`transition-all duration-100 inline-block ${
+                      isActive 
+                        ? 'text-[#00E5FF] scale-110 font-black drop-shadow-[0_0_12px_rgba(0,229,255,0.8)]' 
+                        : 'text-white/80'
+                    }`}
+                  >
+                    {tok.word}
+                    {tok.emoji && isActive && <span className="ml-0.5 animate-bounce inline-block">{tok.emoji}</span>}
+                  </span>
+                );
+              })
+            ) : (
+              <span className="text-white">{clip.content}</span>
+            )}
           </p>
         </div>
       );
     }
 
-    // [C] 표준 자막
+    // [C] 호르모지 스타일 100만뷰 바이럴 키네틱 팝업 자막 (바운스 + 네온 옐로우)
+    if (isHormozi) {
+      return (
+        <div className="px-4 py-2 text-center pointer-events-none select-none max-w-[92%] flex flex-wrap justify-center gap-x-2 gap-y-1">
+          {tokens.length > 0 ? (
+            tokens.map((tok, tIdx) => {
+              const isActive = playhead >= tok.start && playhead < tok.end;
+              return (
+                <span
+                  key={tok.id || tIdx}
+                  style={{
+                    fontFamily: fontFamily,
+                    fontSize: `${fontSize * (isActive ? 1.22 : 1.0)}px`,
+                    fontWeight: 900,
+                    color: isActive ? '#FFE600' : '#FFFFFF',
+                    WebkitTextStroke: '2.5px #000000',
+                    textShadow: isActive 
+                      ? '0 0 24px rgba(255, 230, 0, 0.9), 0 4px 8px rgba(0,0,0,0.9)' 
+                      : '0 3px 6px rgba(0,0,0,0.85)'
+                  }}
+                  className={`transition-all duration-100 inline-block ${isActive ? 'scale-115 z-20' : 'scale-100 z-10'}`}
+                >
+                  {tok.word}
+                  {tok.emoji && isActive && <span className="ml-1 text-[1.2em] animate-bounce inline-block">{tok.emoji}</span>}
+                </span>
+              );
+            })
+          ) : (
+            <span
+              style={{
+                fontFamily: fontFamily,
+                fontSize: `${fontSize}px`,
+                fontWeight: 900,
+                color: '#FFE600',
+                WebkitTextStroke: '2px #000000'
+              }}
+            >
+              {clip.content}
+            </span>
+          )}
+        </div>
+      );
+    }
+
+    // [D] 표준 자막[cite: 21]
     return (
       <div className="px-4 py-1.5 rounded-lg bg-black/60 backdrop-blur-md text-center pointer-events-none select-none">
         <span
@@ -450,7 +536,7 @@ export default function CinemaCanvas() {
       className="relative w-full h-full flex items-center justify-center p-2 select-none overflow-hidden"
       onClick={() => selectClip(null)}
     >
-      {/* 백그라운드 오디오 트랙 */}
+      {/* 백그라운드 오디오 트랙[cite: 21] */}
       <div className="hidden">
         {allAudioClips.map(clip => (
           <audio
@@ -462,7 +548,7 @@ export default function CinemaCanvas() {
         ))}
       </div>
 
-      {/* SVG 하드웨어 가속 필름 그레인 & 톤매핑 정의 */}
+      {/* SVG 하드웨어 가속 필름 그레인 & 톤매핑 정의[cite: 21] */}
       <svg className="absolute w-0 h-0 pointer-events-none">
         <filter id="cinematic-film-grain" x="0%" y="0%" width="100%" height="100%">
           <feTurbulence type="fractalNoise" baseFrequency="0.82" numOctaves="3" seed={grainSeed} result="noise" />
@@ -471,9 +557,10 @@ export default function CinemaCanvas() {
         </filter>
       </svg>
 
-      {/* 뷰포트 (9:16) */}
+      {/* 9:16 모니터 뷰포트[cite: 21] */}
       <div 
         ref={viewportRef}
+        data-cinema-viewport="true"
         onClick={(e) => { e.stopPropagation(); handleViewportDoubleTap(); }}
         style={{ isolation: 'isolate' }}
         className="relative z-0 h-full max-h-[660px] aspect-[9/16] bg-[#020305] border border-white/10 rounded-2xl shadow-[0_25px_80px_rgba(0,0,0,0.98)] overflow-hidden flex items-center justify-center ring-1 ring-white/10 cursor-pointer"
@@ -492,7 +579,7 @@ export default function CinemaCanvas() {
           </div>
         )}
 
-        {/* 스마트 센터 스냅 십자 가이드라인 */}
+        {/* 스마트 센터 스냅 십자 가이드라인[cite: 21] */}
         {snapGuideX && (
           <div className="absolute top-0 bottom-0 left-1/2 w-px -translate-x-1/2 bg-[#00E5FF] shadow-[0_0_8px_#00E5FF] pointer-events-none z-40" />
         )}
@@ -500,178 +587,185 @@ export default function CinemaCanvas() {
           <div className="absolute left-0 right-0 top-1/2 h-px -translate-y-1/2 bg-[#00E5FF] shadow-[0_0_8px_#00E5FF] pointer-events-none z-40" />
         )}
 
-        {/* 모든 시각 에셋 렌더링 파이프라인 */}
-        {allVisualClips
-          .sort((a, b) => {
-            const zMap = { V1: 10, V2: 20, V3: 30, V4: 40, T1: 50, T2: 60 };
-            return (zMap[a.trackId] || 10) - (zMap[b.trackId] || 10);
-          })
-          .map(clip => {
-            const start = clip.start || 0;
-            const duration = clip.duration || 3.5;
-            const inPoint = clip.inPoint || clip.mediaOffset || 0;
-            const isActive = playhead >= (start - 0.001) && playhead < (start + duration);
+        {/* 🌟 [다이내믹 카메라 레이어] OpenCap 펀치 줌이 적용되는 스테이지 */}
+        <div 
+          className="absolute inset-0 flex items-center justify-center pointer-events-none transition-transform duration-300 ease-out"
+          style={{
+            transform: `translate(${punchZoom.offsetX}px, ${punchZoom.offsetY}px) scale(${punchZoom.scale})`
+          }}
+        >
+          {allVisualClips
+            .sort((a, b) => {
+              const zMap = { V1: 10, V2: 20, V3: 30, V4: 40, T1: 50, T2: 60 };
+              return (zMap[a.trackId] || 10) - (zMap[b.trackId] || 10);
+            })
+            .map(clip => {
+              const start = clip.start || 0;
+              const duration = clip.duration || 3.5;
+              const inPoint = clip.inPoint || clip.mediaOffset || 0;
+              const isActive = playhead >= (start - 0.001) && playhead < (start + duration);
 
-            const tf = clip.transform || { x: 0, y: 0, scale: 100, rotate: 0, opacity: 100 };
-            const crop = clip.crop || { left: 0, right: 0, top: 0, bottom: 0, softness: 0 };
-            const fx = clip.fx || {};
-            const color = clip.color || {};
-            const timeFromStart = Math.max(0, playhead - start);
-            const timeToEnd = Math.max(0, (start + duration) - playhead);
-            const currentClipUrl = resolveClipUrl(clip);
-            const isVideo = isVideoSource(clip, currentClipUrl);
+              const tf = clip.transform || { x: 0, y: 0, scale: 100, rotate: 0, opacity: 100 };
+              const crop = clip.crop || { left: 0, right: 0, top: 0, bottom: 0, softness: 0 };
+              const fx = clip.fx || {};
+              const color = clip.color || {};
+              const timeFromStart = Math.max(0, playhead - start);
+              const timeToEnd = Math.max(0, (start + duration) - playhead);
+              const currentClipUrl = resolveClipUrl(clip);
+              const isVideo = isVideoSource(clip, currentClipUrl);
 
-            // 비디오 하드웨어 싱크
-            if (isVideo && mediaRefs.current[clip.id]) {
-              const vRef = mediaRefs.current[clip.id];
-              const targetTime = Math.max(0, inPoint + (timeFromStart * (clip.speed || 1.0)));
-              const clipVolume = clip.volume ?? 100;
-              
-              vRef.volume = Math.max(0, Math.min(1, clipVolume / 100));
-              vRef.muted = clipVolume === 0;
+              // 비디오 하드웨어 싱크[cite: 21]
+              if (isVideo && mediaRefs.current[clip.id]) {
+                const vRef = mediaRefs.current[clip.id];
+                const targetTime = Math.max(0, inPoint + (timeFromStart * (clip.speed || 1.0)));
+                const clipVolume = clip.volume ?? 100;
+                
+                vRef.volume = Math.max(0, Math.min(1, clipVolume / 100));
+                vRef.muted = clipVolume === 0;
 
-              if (isActive) {
-                if (isPlaying) {
-                  if (vRef.paused) {
-                    vRef.play().catch(() => {
-                      vRef.muted = true;
-                      vRef.play().catch(() => {});
-                    });
-                  }
-                  if (Math.abs(vRef.currentTime - targetTime) > 0.25) {
-                    vRef.currentTime = targetTime;
+                if (isActive) {
+                  if (isPlaying) {
+                    if (vRef.paused) {
+                      vRef.play().catch(() => {
+                        vRef.muted = true;
+                        vRef.play().catch(() => {});
+                      });
+                    }
+                    if (Math.abs(vRef.currentTime - targetTime) > 0.25) {
+                      vRef.currentTime = targetTime;
+                    }
+                  } else {
+                    if (!vRef.paused) vRef.pause();
+                    if (Math.abs(vRef.currentTime - targetTime) > 0.04) {
+                      vRef.currentTime = targetTime;
+                    }
                   }
                 } else {
                   if (!vRef.paused) vRef.pause();
-                  if (Math.abs(vRef.currentTime - targetTime) > 0.04) {
-                    vRef.currentTime = targetTime;
-                  }
                 }
-              } else {
-                if (!vRef.paused) vRef.pause();
+                vRef.playbackRate = clip.speed || 1.0;
               }
-              vRef.playbackRate = clip.speed || 1.0;
-            }
 
-            // 트랜지션 연산
-            let transTransform = '';
-            let transOpacity = (clip.opacity ?? tf.opacity ?? 100) / 100;
-            let transFilter = '';
-            let transClipPath = '';
-            const transDur = clip.transitionDuration || 0.4;
+              // 트랜지션 연산[cite: 21]
+              let transTransform = '';
+              let transOpacity = (clip.opacity ?? tf.opacity ?? 100) / 100;
+              let transFilter = '';
+              let transClipPath = '';
+              const transDur = clip.transitionDuration || 0.4;
 
-            if (isActive && clip.transition && clip.transition !== 'none' && timeToEnd <= transDur && timeToEnd >= 0) {
-              const progress = 1 - (timeToEnd / transDur);
-              const transEngine = TRANSITIONS[clip.transition] || TRANSITIONS.none;
-              if (transEngine && typeof transEngine.compute === 'function') {
-                const res = transEngine.compute(progress);
-                transTransform = res.transform || '';
-                if (res.opacity !== undefined) transOpacity = res.opacity;
-                if (res.filter) transFilter = res.filter;
-                if (res.clipPath) transClipPath = res.clipPath;
+              if (isActive && clip.transition && clip.transition !== 'none' && timeToEnd <= transDur && timeToEnd >= 0) {
+                const progress = 1 - (timeToEnd / transDur);
+                const transEngine = TRANSITIONS[clip.transition] || TRANSITIONS.none;
+                if (transEngine && typeof transEngine.compute === 'function') {
+                  const res = transEngine.compute(progress);
+                  transTransform = res.transform || '';
+                  if (res.opacity !== undefined) transOpacity = res.opacity;
+                  if (res.filter) transFilter = res.filter;
+                  if (res.clipPath) transClipPath = res.clipPath;
+                }
               }
-            }
 
-            // 인-모션 연산
-            const motionTransform = typeof computeClipMotion === 'function'
-              ? computeClipMotion(clip.animation, timeFromStart, duration)
-              : '';
+              // 인-모션 연산[cite: 21]
+              const motionTransform = typeof computeClipMotion === 'function'
+                ? computeClipMotion(clip.animation, timeFromStart, duration)
+                : '';
 
-            const totalScale = (tf.scale || 100) / 100;
-            const flipScaleX = tf.flipH ? -1 : 1;
-            const flipScaleY = tf.flipV ? -1 : 1;
-            const compTransform = `translate(${tf.x || 0}px, ${tf.y || 0}px) scale(${totalScale * flipScaleX}, ${totalScale * flipScaleY}) rotate(${tf.rotate || 0}deg) ${transTransform} ${motionTransform}`.trim();
+              const totalScale = (tf.scale || 100) / 100;
+              const flipScaleX = tf.flipH ? -1 : 1;
+              const flipScaleY = tf.flipV ? -1 : 1;
+              const compTransform = `translate(${tf.x || 0}px, ${tf.y || 0}px) scale(${totalScale * flipScaleX}, ${totalScale * flipScaleY}) rotate(${tf.rotate || 0}deg) ${transTransform} ${motionTransform}`.trim();
 
-            const nativeColorFilter = generateCSSNativeFilter(color);
-            const lutObj = clip.filterPreset && FILTERS?.[clip.filterPreset];
-            const lutFilter = lutObj ? lutObj.filter : '';
-            const fxBlur = fx.blur ? `blur(${fx.blur}px)` : '';
+              const nativeColorFilter = generateCSSNativeFilter(color);
+              const lutObj = clip.filterPreset && FILTERS?.[clip.filterPreset];
+              const lutFilter = lutObj ? lutObj.filter : '';
+              const fxBlur = fx.blur ? `blur(${fx.blur}px)` : '';
 
-            const compFilter = `${nativeColorFilter} ${lutFilter} ${fxBlur} ${transFilter}`.trim();
-            const clipPathStyle = transClipPath || `inset(${crop.top}% ${crop.right}% ${crop.bottom}% ${crop.left}% round ${crop.softness || 0}px)`;
-            const objectFitClass = clip.scaling === 'fit' ? 'object-contain' : 'object-cover';
+              const compFilter = `${nativeColorFilter} ${lutFilter} ${fxBlur} ${transFilter}`.trim();
+              const clipPathStyle = transClipPath || `inset(${crop.top}% ${crop.right}% ${crop.bottom}% ${crop.left}% round ${crop.softness || 0}px)`;
+              const objectFitClass = clip.scaling === 'fit' ? 'object-contain' : 'object-cover';
 
-            return (
-              <div
-                key={clip.id}
-                onClick={(e) => { e.stopPropagation(); if (isActive) selectClip(clip.id); }}
-                className={`absolute inset-0 flex items-center justify-center select-none ${
-                  isActive ? 'cursor-pointer pointer-events-auto z-20' : 'pointer-events-none opacity-0 z-0'
-                }`}
-                style={{
-                  transform: compTransform,
-                  filter: clip.type === 'text' ? 'none' : compFilter,
-                  clipPath: clip.type === 'text' ? 'none' : clipPathStyle,
-                  opacity: isActive ? transOpacity : 0,
-                  mixBlendMode: tf.blendMode || clip.blendMode || 'normal',
-                  zIndex: clip.trackId === 'T2' ? 65 : clip.trackId === 'T1' ? 50 : clip.trackId === 'V4' ? 40 : clip.trackId === 'V3' ? 30 : clip.trackId === 'V2' ? 20 : 10
-                }}
-              >
-                {/* 1. 비디오/이미지/자막 에셋 */}
-                {clip.type === 'text' ? (
-                  renderTextClip(clip)
-                ) : (
-                  renderMediaElement(clip, currentClipUrl, objectFitClass)
-                )}
+              return (
+                <div
+                  key={clip.id}
+                  onClick={(e) => { e.stopPropagation(); if (isActive) selectClip(clip.id); }}
+                  className={`absolute inset-0 flex items-center justify-center select-none ${
+                    isActive ? 'cursor-pointer pointer-events-auto z-20' : 'pointer-events-none opacity-0 z-0'
+                  }`}
+                  style={{
+                    transform: compTransform,
+                    filter: clip.type === 'text' ? 'none' : compFilter,
+                    clipPath: clip.type === 'text' ? 'none' : clipPathStyle,
+                    opacity: isActive ? transOpacity : 0,
+                    mixBlendMode: tf.blendMode || clip.blendMode || 'normal',
+                    zIndex: clip.trackId === 'T2' ? 65 : clip.trackId === 'T1' ? 50 : clip.trackId === 'V4' ? 40 : clip.trackId === 'V3' ? 30 : clip.trackId === 'V2' ? 20 : 10
+                  }}
+                >
+                  {/* 1. 에셋 렌더러[cite: 21] */}
+                  {clip.type === 'text' ? (
+                    renderTextClip(clip)
+                  ) : (
+                    renderMediaElement(clip, currentClipUrl, objectFitClass)
+                  )}
 
-                {/* 2. 2.35:1 시네마 오프닝 레터박스 커튼 (0s~2s) */}
-                {fx.letterbox && timeFromStart <= 2.0 && (
-                  <div className="absolute inset-0 pointer-events-none z-30 flex flex-col justify-between overflow-hidden">
+                  {/* 2. 2.39:1 시네마 오프닝 레터박스 커튼[cite: 21] */}
+                  {fx.letterbox && timeFromStart <= 2.0 && (
+                    <div className="absolute inset-0 pointer-events-none z-30 flex flex-col justify-between overflow-hidden">
+                      <div 
+                        className="w-full bg-black transition-all ease-out"
+                        style={{
+                          height: `${Math.max(0, (1 - timeFromStart / 2.0) * 12)}%`,
+                          transitionDuration: '100ms'
+                        }}
+                      />
+                      <div 
+                        className="w-full bg-black transition-all ease-out"
+                        style={{
+                          height: `${Math.max(0, (1 - timeFromStart / 2.0) * 12)}%`,
+                          transitionDuration: '100ms'
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {/* 3. 35mm 필름 헐레이션[cite: 21] */}
+                  {fx.halation && clip.type !== 'text' && (
                     <div 
-                      className="w-full bg-black transition-all ease-out"
+                      className="absolute inset-0 pointer-events-none z-24 mix-blend-screen opacity-40 overflow-hidden"
                       style={{
-                        height: `${Math.max(0, (1 - timeFromStart / 2.0) * 12)}%`,
-                        transitionDuration: '100ms'
+                        background: 'radial-gradient(ellipse at center, rgba(239, 68, 68, 0.45) 0%, rgba(245, 158, 11, 0.20) 45%, transparent 75%)',
+                        filter: 'blur(22px)'
                       }}
                     />
+                  )}
+
+                  {/* 4. 부드러운 코너 라이트 리크[cite: 21] */}
+                  {timeFromStart <= 1.4 && clip.type !== 'text' && (
                     <div 
-                      className="w-full bg-black transition-all ease-out"
+                      className="absolute inset-0 pointer-events-none z-28 mix-blend-screen transition-opacity duration-300"
                       style={{
-                        height: `${Math.max(0, (1 - timeFromStart / 2.0) * 12)}%`,
-                        transitionDuration: '100ms'
+                        background: 'radial-gradient(circle at 10% 10%, rgba(255, 185, 60, 0.45) 0%, rgba(255, 100, 40, 0.18) 35%, transparent 70%)',
+                        opacity: Math.max(0, 1 - timeFromStart / 1.4),
+                        filter: 'blur(18px)'
                       }}
                     />
-                  </div>
-                )}
+                  )}
 
-                {/* 3. 35mm 필름 헐레이션 (고대비 경계면 소프트 글로우) */}
-                {fx.halation && clip.type !== 'text' && (
-                  <div 
-                    className="absolute inset-0 pointer-events-none z-24 mix-blend-screen opacity-40 overflow-hidden"
-                    style={{
-                      background: 'radial-gradient(ellipse at center, rgba(239, 68, 68, 0.45) 0%, rgba(245, 158, 11, 0.20) 45%, transparent 75%)',
-                      filter: 'blur(22px)'
-                    }}
-                  />
-                )}
+                  {/* 5. 은은한 필름 비네팅[cite: 21] */}
+                  {clip.type !== 'text' && (
+                    <div 
+                      className="absolute inset-0 pointer-events-none z-22"
+                      style={{
+                        background: 'radial-gradient(circle, transparent 65%, rgba(0,0,0,0.6) 100%)'
+                      }}
+                    />
+                  )}
+                </div>
+              );
+            })}
+        </div>
 
-                {/* 4. 부드러운 코너 라이트 리크 (가짜 1px 파란 막대기 제거 ➔ 유기적 35mm 빛 번짐) */}
-                {timeFromStart <= 1.4 && clip.type !== 'text' && (
-                  <div 
-                    className="absolute inset-0 pointer-events-none z-28 mix-blend-screen transition-opacity duration-300"
-                    style={{
-                      background: 'radial-gradient(circle at 10% 10%, rgba(255, 185, 60, 0.45) 0%, rgba(255, 100, 40, 0.18) 35%, transparent 70%)',
-                      opacity: Math.max(0, 1 - timeFromStart / 1.4),
-                      filter: 'blur(18px)'
-                    }}
-                  />
-                )}
-
-                {/* 5. 은은한 필름 비네팅 */}
-                {clip.type !== 'text' && (
-                  <div 
-                    className="absolute inset-0 pointer-events-none z-22"
-                    style={{
-                      background: 'radial-gradient(circle, transparent 65%, rgba(0,0,0,0.6) 100%)'
-                    }}
-                  />
-                )}
-              </div>
-            );
-          })}
-
-        {/* 선택 클립 기즈모 박스 */}
-        {selectedClip && isSelectedClipActive && (selectedClip.type === 'video' || selectedClip.type === 'image') && (
+        {/* 🌟 선택 클립 통합 기즈모 박스 (미디어 및 '자막'까지 온스크린 직접 조작 지원)[cite: 21] */}
+        {selectedClip && isSelectedClipActive && (
           <div
             className="absolute inset-0 z-[70] pointer-events-none border-2 border-[#00E5FF] shadow-[0_0_15px_rgba(0,229,255,0.6)]"
             style={{
