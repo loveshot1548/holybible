@@ -1270,6 +1270,29 @@ export default function Interlinear({
             📚 서재
           </button>
           
+          {/* 🎒 어린이 탐험관 원터치 전환 버튼 */}
+<button
+  type="button"
+  onClick={() => {
+    try {
+      localStorage.setItem('interlinear_jump', JSON.stringify({
+        book: currentBookMeta.ko,
+        chapter,
+        verse
+      }));
+    } catch (_) {}
+    setActiveScreen('interlinear_kids');
+  }}
+  className={`px-2.5 py-1 rounded-lg text-[11px] font-black border cursor-pointer flex items-center gap-1 transition-all shadow-xs ${
+    isDark 
+      ? 'bg-amber-950/40 border-amber-800 text-amber-300 hover:bg-amber-900/60' 
+      : 'bg-amber-100 border-amber-300 text-amber-900 hover:bg-amber-200'
+  }`}
+  title="어린이 눈높이 원어 탐험관으로 전환"
+>
+  <span>🎒</span> 어린이 탐험관 ➔
+</button>
+
           <button
             type="button"
             onClick={handleCopyComprehensiveReport}

@@ -42,6 +42,7 @@ import MemoryFestivalBanner from './components/MemoryFestivalBanner';
 import { useAppStore } from './store/useAppStore';
 import AdminConsole from './components/AdminConsole';
 import ReelsStudio from './components/layout/ReelsStudio';
+import InterlinearKids from './pages/InterlinearKids';
 
 // 🛡️ 앱 크래시 방어선 (Error Boundary)
 class AppErrorBoundary extends React.Component {
@@ -1869,6 +1870,19 @@ export default function CompleteQtApp() {
             bibles={bibles} isLoadingInter={isLoadingInter} getArr={getArr} getKoName={getKoName} openModal={openModal}
           />
         );
+      
+        case 'interlinear_kids':
+      case 'interlinearKids':
+        return (
+          <InterlinearKids 
+            t={t}
+            isDarkMode={isDarkMode}
+            setActiveScreen={setActiveScreen}
+            setIsSidebarOpen={setIsSidebarOpen}
+            bibles={bibles}
+            getArr={getArr}
+          />
+        );
 
       case 'bibleWiki':
       case 'bibleWikiAdvanced':
@@ -1948,7 +1962,7 @@ export default function CompleteQtApp() {
             <div className="flex-1 overflow-hidden relative z-10 w-full h-full pointer-events-auto">{renderScreen()}</div>
 
             {/* 하단 모바일 도크 바 */}
-            {!['login', 'adminConsole', 'cell', 'cellAttendance', 'secretChat', 'meditationPilgrimage', 'bible', 'reelsStudio', 'interlinear', 'mcheyne'].includes(activeScreen) && (
+            {!['login', 'adminConsole', 'cell', 'cellAttendance', 'interlinear_kids', 'secretChat', 'meditationPilgrimage', 'bible', 'reelsStudio', 'interlinear', 'mcheyne'].includes(activeScreen) && (
               <div className={`md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-[390px] h-[64px] z-[90] pointer-events-auto rounded-full backdrop-blur-2xl shadow-[0_12px_36px_rgba(0,0,0,0.25)] border transition-all ${
                 isDarkMode 
                   ? 'bg-[#1C1C1E]/90 border-white/10' 

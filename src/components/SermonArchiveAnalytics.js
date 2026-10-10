@@ -1,5 +1,6 @@
 // src/components/SermonArchiveAnalytics.js
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { supabase } from '../lib/supabase';
 
 // =====================================================================
 // 전역 성경 약어 사전 및 캐논 66권 매핑
@@ -22,7 +23,7 @@ const BIBLE_ABBREV_MAP = {
   "고린도전서": "고린도전서", "고전": "고린도전서", "고린도후서": "고린도후서", "고후": "고린도후서", "갈라디아서": "갈라디아서", "갈": "갈라디아서", 
   "에베소서": "에베소서", "엡": "에베소서", "빌립보서": "빌립보서", "빌": "빌립보서", "골로새서": "골로새서", "골": "골로새서", 
   "데살로니가전서": "데살로니가전서", "살전": "데살로니가전서", "데살로니가후서": "데살로니가후서", "살후": "데살로니가후서", 
-  "디모데전서": "디모데전서", "딤전": "디모데전서", "딤후": "디모데후서", "디도서": "디도서", "딛": "디도서", 
+  "디모데전서": "디모데전서", "딤전": "디모데전서", "디모데후서": "디모데후서", "딤후": "디모데후서", "디도서": "디도서", "딛": "디도서", 
   "빌레몬서": "빌레몬서", "몬": "빌레몬서", "히브리서": "히브리서", "히": "히브리서", "야고보서": "야고보서", "약": "야고보서", 
   "베드로전서": "베드로전서", "벧전": "베드로전서", "베드로후서": "베드로후서", "벧후": "베드로후서", "요한일서": "요한일서", "요일": "요한일서", 
   "요한이서": "요한이서", "요이": "요한이서", "요한삼서": "요한삼서", "요삼": "요한삼서", "유다서": "유다서", "유": "유다서", "요한계시록": "요한계시록", "계": "요한계시록"
@@ -31,6 +32,27 @@ const BIBLE_ABBREV_MAP = {
 const BIBLE_BOOKS_ORDER = Array.from(new Set(Object.values(BIBLE_ABBREV_MAP)));
 const BIBLE_KEYS = Object.keys(BIBLE_ABBREV_MAP).sort((a, b) => b.length - a.length).join('|');
 const BIBLE_VERSE_SINGLE_REGEX = new RegExp(`(?:^|[^가-힣])(${BIBLE_KEYS})\\s*(\\d+)\\s*(?:장|편|:)\\s*(\\d+)?(?:\\s*(?:-|~)\\s*(\\d+))?(?:절)?`);
+
+// 구약 여부 판별 (창세기~말라기)
+const isOTBook = (bookName) => {
+  const clean = BIBLE_ABBREV_MAP[bookName] || bookName;
+  const idx = BIBLE_BOOKS_ORDER.indexOf(clean);
+  return idx >= 0 && idx <= 38;
+};
+
+// 성경 본문 정밀 레퍼런스 파서
+function parseBibleReference(text) {
+  if (!text) return null;
+  const regex = new RegExp(`(?:^|[^가-힣])(${BIBLE_KEYS})\\s*(\\d+)(?:\\s*장|\\s*편|\\s*:)\\s*(\\d+)?(?:\\s*(?:-|~)\\s*(\\d+))?(?:절)?`);
+  const match = text.match(regex);
+  if (!match) return null;
+  const rawBook = match[1].trim();
+  const book = BIBLE_ABBREV_MAP[rawBook] || rawBook;
+  const chapter = parseInt(match[2], 10) || 1;
+  const startVerse = match[3] ? parseInt(match[3], 10) : 1;
+  const endVerse = match[4] ? parseInt(match[4], 10) : startVerse;
+  return { book, chapter, startVerse, endVerse, raw: match[0].trim() };
+}
 
 function extractVerses(text) {
   if (!text) return [];
@@ -62,7 +84,6 @@ function extractTheologicalTags(text) {
   return Array.from(tags);
 }
 
-// 🌟 HTML 엔티티 복원 (정상 공백 유지)
 function decodeHtmlEntities(str) {
   if (!str) return '';
   return str
@@ -91,6 +112,7 @@ const IconLock = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={StrokeW
 const IconUnlock = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={StrokeW} stroke="currentColor" className="w-3.5 h-3.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>;
 const IconSearch = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor" className="w-4 h-4"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>;
 const IconShare = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={StrokeW} stroke="currentColor" className="w-3.5 h-3.5"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>;
+const IconVolume = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.757 3.63 8.25 4.51 8.25H6.75z" /></svg>;
 
 // 제자훈련 12주차 마스터 코스
 const DISCIPLESHIP_12WEEKS_CURRICULUM = {
@@ -235,21 +257,24 @@ const HighlightedText = ({ text, searchHighlight }) => {
   );
 };
 
-// 🌟 본문 및 성경 구절 정밀 파서 (원어 성경 1:1 직결 매핑 적용)
-const SermonContentParser = ({ text, searchTerm, isDark, onVerseClick, onJumpInterlinear, defaultBook = "갈라디아서" }) => {
+// 🌟 본문 및 성경 구절 정밀 파서
+const SermonContentParser = ({ text, searchTerm, isDark, onVerseClick, onOpenInterlinear, activeReference }) => {
   if (!text) return null;
   const lines = text.split('\n');
-
-  // 책과 장 추정
-  let currentChapter = 1;
-  const chapMatch = text.match(/(?:(\d+)장|\:)/);
-  if (chapMatch && chapMatch[1]) currentChapter = parseInt(chapMatch[1], 10);
+  const baseBook = activeReference?.book || "갈라디아서";
+  let activeChapter = activeReference?.chapter || 1;
 
   return lines.map((line, idx) => {
     let trimmed = line.trim();
     if (!trimmed) return <div key={idx} className="h-2"></div>;
     trimmed = trimmed.replace(/#말씀묵상/g, '').trim();
     if (!trimmed) return null;
+
+    // 본문 내 장 번호 전환 감지 (예: "3장", "제 3 장")
+    const chapInline = trimmed.match(/(?:제\s*)?(\d+)\s*장/);
+    if (chapInline && chapInline[1] && trimmed.length < 30) {
+      activeChapter = parseInt(chapInline[1], 10);
+    }
 
     // 1. 적용 질문 단락
     if (trimmed.match(/^(적용:|적용 질문|Q\.|질문:|적용 포인트)/) || (trimmed.endsWith('?') && trimmed.length < 90 && !trimmed.match(/^\d+/))) {
@@ -282,15 +307,15 @@ const SermonContentParser = ({ text, searchTerm, isDark, onVerseClick, onJumpInt
             </p>
           </div>
 
-          {/* 🌟 구절별 원어 성경 1:1 직결 버튼 */}
+          {/* 🌟 구절별 원어 성경 연동 팝업 버튼 */}
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              if (onJumpInterlinear) onJumpInterlinear(defaultBook, currentChapter, vNum);
+              if (onOpenInterlinear) onOpenInterlinear(baseBook, activeChapter, vNum);
             }}
             className="px-2 py-0.8 rounded-md text-[10.5px] font-semibold border bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 shrink-0 flex items-center gap-1 cursor-pointer shadow-2xs active:scale-95 transition-all"
-            title="원어 분해 및 10대 학술 사료로 즉시 이동"
+            title="원어 분해 및 10대 학술 사료 팝업 열기"
           >
             <span>📖</span> 원어
           </button>
@@ -304,7 +329,7 @@ const SermonContentParser = ({ text, searchTerm, isDark, onVerseClick, onJumpInt
       return (
         <div key={idx} className="my-1.5 text-left flex items-center gap-1.5 flex-wrap">
           <button 
-            onClick={() => onVerseClick && onVerseClick(verseMatch[0])}
+            onClick={() => onVerseClick && onVerseClick(verseMatch[0].trim())}
             className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[12px] font-serif font-bold transition-all cursor-pointer border ${isDark ? 'bg-white/5 border-white/10 text-stone-200 hover:bg-white/10' : 'bg-stone-100 border-stone-200 text-stone-800 hover:bg-stone-200'}`}
           >
             <IconBook /> {trimmed}
@@ -313,7 +338,7 @@ const SermonContentParser = ({ text, searchTerm, isDark, onVerseClick, onJumpInt
       );
     }
 
-    // 4. 설교 대지 및 소제목 라인 (예: "1. 들어가며", "2. 지난주 복습")
+    // 4. 설교 대지 및 소제목 라인
     if (trimmed.match(/^(\d+\.\s*|첫째|둘째|셋째|들어가며|결론)/) || (trimmed.endsWith(':') && trimmed.length < 40)) {
       return (
         <h4 key={idx} className={`mt-4 mb-1.5 text-[14.5px] sm:text-[15.5px] font-serif font-bold tracking-tight text-left flex items-center gap-1.5 ${isDark ? 'text-amber-400' : 'text-stone-900'}`}>
@@ -332,11 +357,21 @@ const SermonContentParser = ({ text, searchTerm, isDark, onVerseClick, onJumpInt
   });
 };
 
-const SermonCard = ({ record, searchTerm, onNavigateVerse, setSelectedTag, onVersePopup, onJumpInterlinear, isDark }) => {
+const SermonCard = ({ record, searchTerm, onNavigateVerse, setSelectedTag, onVersePopup, onOpenInterlinear, isDark }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  // 🌟 공백 유지 정제 (replace(/ /gi, '') 버그 완전 제거)
   const cleanRawText = decodeHtmlEntities(record.raw_text?.replace(/<[^>]*>?/gm, ''))?.replace(/#말씀묵상/g, '');
   const isLongText = cleanRawText.length > 220;
+
+  // 설교 제목/본문에서 책과 장을 지능형 추출
+  const activeReference = useMemo(() => {
+    const combined = `${record.title || ''} ${record.mappedVerse || ''} ${cleanRawText?.slice(0, 300) || ''}`;
+    const parsed = parseBibleReference(combined);
+    if (parsed) {
+      return { book: parsed.book, chapter: parsed.chapter, verse: parsed.startVerse };
+    }
+    const detectedBook = record.detectedBook && record.detectedBook !== '기타 말씀' ? record.detectedBook : '갈라디아서';
+    return { book: detectedBook, chapter: 1, verse: 1 };
+  }, [record, cleanRawText]);
 
   return (
     <div className={`p-4 sm:p-5 rounded-2xl border text-left transition-all overflow-hidden break-words ${isDark ? 'bg-[#121316] border-white/10 shadow-xs' : 'bg-white border-stone-200/80 shadow-2xs'}`}>
@@ -348,27 +383,27 @@ const SermonCard = ({ record, searchTerm, onNavigateVerse, setSelectedTag, onVer
             {record.date}
           </span>
           <button 
-            onClick={() => onNavigateVerse && onNavigateVerse(record.detectedBook)}
+            onClick={() => onNavigateVerse && onNavigateVerse(activeReference.book)}
             className="px-2 py-0.5 rounded-md text-[11px] font-serif font-bold text-stone-800 dark:text-stone-200 bg-stone-100 hover:bg-stone-200 dark:bg-white/10 dark:hover:bg-white/15 transition-colors cursor-pointer"
           >
-            {record.detectedBook}
+            {activeReference.book} {activeReference.chapter}장
           </button>
         </div>
 
         <div className="flex items-center gap-1.5">
-          {/* 🌟 카드 상단 대표 원어 성경 연구실 직결 버튼 */}
+          {/* 🌟 카드 상단 대표 원어 성경 연동 팝업 버튼 */}
           <button 
             type="button"
-            onClick={() => onJumpInterlinear && onJumpInterlinear(record.detectedBook, 1, 1)}
+            onClick={() => onOpenInterlinear && onOpenInterlinear(activeReference.book, activeReference.chapter, activeReference.verse)}
             className="px-2 py-1 rounded-md text-[10.5px] font-bold border flex items-center gap-1 transition-all cursor-pointer bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 shadow-2xs"
-            title="해당 성경 원어 연구실로 이동"
+            title="원어 분해 및 10대 학술 사료 팝업 열기"
           >
-            <span>🔬</span> 원어 연구
+            <span>🔬</span> 원어 연동
           </button>
 
           <button 
             onClick={() => { 
-              navigator.clipboard.writeText(`[${record.date} 예배노트]\n본문: ${record.detectedBook}\n제목: ${record.title}\n설교: ${record.preacher}\n\n${cleanRawText}`); 
+              navigator.clipboard.writeText(`[${record.date} 예배노트]\n본문: ${activeReference.book} ${activeReference.chapter}장\n제목: ${record.title}\n설교: ${record.preacher}\n\n${cleanRawText}`); 
               alert('설교 전문이 클립보드에 복사되었습니다.'); 
             }} 
             className="p-1.5 rounded-lg text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 transition-colors cursor-pointer"
@@ -397,8 +432,8 @@ const SermonCard = ({ record, searchTerm, onNavigateVerse, setSelectedTag, onVer
             searchTerm={searchTerm} 
             isDark={isDark} 
             onVerseClick={onVersePopup} 
-            onJumpInterlinear={onJumpInterlinear}
-            defaultBook={record.detectedBook}
+            onOpenInterlinear={onOpenInterlinear}
+            activeReference={activeReference}
           />
         </div>
         {!isExpanded && isLongText && (
@@ -432,6 +467,218 @@ const SermonCard = ({ record, searchTerm, onNavigateVerse, setSelectedTag, onVer
   );
 };
 
+// =====================================================================
+// 🌟 원어 성경 인라인 연동 팝업 모달 (Interlinear Quick Modal)
+// =====================================================================
+const InterlinearQuickModal = ({ target, onClose, onJumpStudio, getBibleText, isDark }) => {
+  const [words, setWords] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState("");
+
+  const isOT = isOTBook(target.book);
+  const originalFontStyle = isOT
+    ? { fontFamily: "'SBL Hebrew', 'Taamey Frank CLM', 'Ezra SIL', serif", direction: 'rtl' }
+    : { fontFamily: "'SBL Greek', 'Cardo', 'Times New Roman', serif", direction: 'ltr' };
+
+  // 단어별 TTS 발음 재생
+  const speakWord = (text) => {
+    try {
+      if (!('speechSynthesis' in window)) return;
+      window.speechSynthesis.cancel();
+      const clean = text.replace(/[\u0591-\u05AF]/g, '');
+      const utterance = new SpeechSynthesisUtterance(clean);
+      utterance.lang = isOT ? 'he-IL' : 'el-GR';
+      utterance.rate = 0.85;
+      window.speechSynthesis.speak(utterance);
+    } catch (_) {}
+  };
+
+  useEffect(() => {
+    let isMounted = true;
+    setLoading(true);
+    setErrorMsg("");
+
+    const fetchWords = async () => {
+      try {
+        if (!supabase) {
+          throw new Error("Supabase 연결 객체를 찾을 수 없습니다.");
+        }
+
+        const { data, error } = await supabase
+          .from('interlinear_bible')
+          .select('*')
+          .eq('book', target.book)
+          .eq('chapter', target.chapter)
+          .eq('verse', target.verse)
+          .order('word_order', { ascending: true });
+
+        if (error) throw error;
+        if (!data || data.length === 0) {
+          throw new Error(`${target.book} ${target.chapter}:${target.verse}에 해당하는 원어 분해 데이터가 존재하지 않습니다.`);
+        }
+
+        if (isMounted) {
+          setWords(data);
+          setLoading(false);
+        }
+      } catch (err) {
+        if (isMounted) {
+          console.error("원어 팝업 로드 오류:", err);
+          setErrorMsg(err.message || "원어 데이터를 불러오지 못했습니다.");
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchWords();
+    return () => { isMounted = false; };
+  }, [target]);
+
+  const verseKorean = getBibleText(`${target.book} ${target.chapter}:${target.verse}`) || `${target.book} ${target.chapter}장 ${target.verse}절`;
+
+  return (
+    <div className="fixed inset-0 z-[1200] bg-black/70 backdrop-blur-xs flex items-center justify-center p-2.5 sm:p-4 animate-fade-in select-none">
+      <div className={`w-full max-w-2xl rounded-2xl border shadow-2xl flex flex-col max-h-[85vh] overflow-hidden ${
+        isDark ? 'bg-[#0F141F] border-slate-700 text-white' : 'bg-white border-stone-300 text-stone-900'
+      }`}>
+        
+        {/* 헤더 */}
+        <div className="px-4 py-3 border-b flex justify-between items-center shrink-0 border-stone-200 dark:border-slate-800">
+          <div className="flex items-center gap-2 text-left">
+            <span className="text-[12px] font-mono px-2 py-0.5 rounded font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+              {isOT ? '구약 히브리어 (BHS)' : '신약 헬라어 (GNT)'}
+            </span>
+            <h3 className="font-serif font-bold text-[15px] sm:text-[16px]">
+              {target.book} {target.chapter}장 {target.verse}절 원어 분해
+            </h3>
+          </div>
+          <button onClick={onClose} className="p-1 rounded-md text-stone-400 hover:text-stone-900 dark:hover:text-white cursor-pointer">
+            <IconX />
+          </button>
+        </div>
+
+        {/* 본문 뷰포트 */}
+        <div className="p-4 sm:p-5 overflow-y-auto hide-scrollbar space-y-3.5 text-left flex-1">
+          
+          {/* 개역개정 본문 요약 박스 */}
+          <div className={`p-3 rounded-xl border ${isDark ? 'bg-slate-900/60 border-slate-800' : 'bg-stone-50 border-stone-200'}`}>
+            <span className="text-[10px] font-bold text-stone-400 block mb-1 font-mono uppercase">[개역개정 본문]</span>
+            <p className="text-[13.5px] sm:text-[14.5px] font-serif leading-[1.8] font-medium break-keep">
+              {verseKorean}
+            </p>
+          </div>
+
+          {/* 원어 분해 그리드 */}
+          {loading ? (
+            <div className="py-12 text-center text-stone-400 font-mono text-[13px]">
+              ⏳ 히브리어/헬라어 원어 형태소 파싱 중...
+            </div>
+          ) : errorMsg ? (
+            <div className="py-10 text-center space-y-2">
+              <p className="text-[12.5px] text-rose-500 font-medium">{errorMsg}</p>
+              <button
+                type="button"
+                onClick={() => onJumpStudio(target.book, target.chapter, target.verse)}
+                className="px-3 py-1.5 rounded-lg text-xs font-bold bg-indigo-600 text-white cursor-pointer"
+              >
+                원어 연구실 전체 화면에서 열기 ➔
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <div className="flex justify-between items-center text-[11px] font-bold text-stone-400 px-1">
+                <span>1:1 형태론 전수 분해 ({words.length}개 어절)</span>
+                <span className="font-mono">터치 시 발음 듣기</span>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2" dir={isOT ? 'rtl' : 'ltr'}>
+                {words.map((w, wIdx) => (
+                  <div
+                    key={w.id || wIdx}
+                    onClick={() => speakWord(w.original_word)}
+                    className={`p-2.5 rounded-xl border flex flex-col justify-between transition-all cursor-pointer ${
+                      isDark ? 'bg-slate-900/80 border-slate-800 hover:border-slate-600' : 'bg-white border-stone-200/90 hover:border-stone-400 shadow-2xs'
+                    }`}
+                  >
+                    <div className={isOT ? 'text-right' : 'text-left'}>
+                      <div className="flex items-center justify-between gap-1">
+                        <span style={originalFontStyle} className="text-[20px] font-bold leading-tight block">
+                          {w.original_word}
+                        </span>
+                        <span className="text-stone-400 p-0.5"><IconVolume /></span>
+                      </div>
+                      <span className="text-[10px] font-mono text-stone-400 block mt-0.5" dir="ltr">
+                        {w.pronunciation ? `[${w.pronunciation.replace(/[[\]]/g, '')}]` : ''}
+                      </span>
+                    </div>
+
+                    <div className="w-full h-px bg-stone-200 dark:bg-slate-800 my-1.5"></div>
+
+                    <div className="text-left" dir="ltr">
+                      <div className="flex justify-between items-baseline">
+                        <span className="font-bold text-[12.5px] text-amber-700 dark:text-amber-300 truncate block">
+                          {w.korean_trans || w.gloss || '원어 어휘'}
+                        </span>
+                        <span className="text-[9px] font-mono text-stone-400">
+                          {w.strongs_id}
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-medium text-stone-500 dark:text-stone-400 block truncate mt-0.5">
+                        {w.grammar}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+        </div>
+
+        {/* 하단 액션 바 */}
+        <div className="p-3 border-t shrink-0 flex items-center justify-between gap-2 border-stone-200 dark:border-slate-800 bg-stone-50/50 dark:bg-slate-900/50">
+          <div className="flex gap-1">
+            <button
+              type="button"
+              onClick={() => {
+                const nextV = Math.max(1, target.verse - 1);
+                onClose();
+                setTimeout(() => onJumpStudio(target.book, target.chapter, nextV, true), 50);
+              }}
+              className="px-2.5 py-1.5 rounded-lg text-[11px] font-bold border border-stone-200 dark:border-slate-700 bg-white dark:bg-slate-800 cursor-pointer"
+            >
+              ◀ 이전 절
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const nextV = target.verse + 1;
+                onClose();
+                setTimeout(() => onJumpStudio(target.book, target.chapter, nextV, true), 50);
+              }}
+              className="px-2.5 py-1.5 rounded-lg text-[11px] font-bold border border-stone-200 dark:border-slate-700 bg-white dark:bg-slate-800 cursor-pointer"
+            >
+              다음 절 ▶
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              onClose();
+              onJumpStudio(target.book, target.chapter, target.verse, false);
+            }}
+            className="px-3.5 py-1.5 rounded-lg text-[11.5px] font-bold bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-1.5 cursor-pointer shadow-xs transition-all active:scale-95"
+          >
+            <span>🔬</span> 원어 연구실 전체 화면 이동 ➔
+          </button>
+        </div>
+
+      </div>
+    </div>
+  );
+};
+
 export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles, t, isDarkMode, dailyData = {}, updateDay, setActiveScreen }) {
   const [sermonData, setSermonData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -441,13 +688,16 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
   const [selectedTag, setSelectedTag] = useState("all");
   const [filterMonth, setFilterMonth] = useState(""); 
   
-  const [activeTab, setActiveTab] = useState('list'); // 기본 보기: 설교 검색
+  const [activeTab, setActiveTab] = useState('list');
   const [selectedWeek, setSelectedWeek] = useState(1);
   const [isSecretMode, setIsSecretMode] = useState(false);
 
   const [sermonPopup, setSermonPopup] = useState(null);
   const [popupVerse, setPopupVerse] = useState(null);
   const [popupVerseText, setPopupVerseText] = useState("");
+
+  // 🌟 원어 성경 연동 팝업 타겟 상태
+  const [interlinearTarget, setInterlinearTarget] = useState(null); // { book, chapter, verse }
 
   const [reportData, setReportData] = useState(() => {
     try {
@@ -481,8 +731,8 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
 
   const isDark = isDarkMode;
 
-  // 🌟 원어 성경 연구실로 1:1 점프 연동
-  const handleJumpToInterlinear = useCallback((book, chapter, verse) => {
+  // 🌟 원어 성경 연구실(Interlinear Studio)로 안전 점프
+  const handleJumpToInterlinear = useCallback((book, chapter, verse, reopenPopup = false) => {
     const cleanBook = BIBLE_ABBREV_MAP[book] || book || '갈라디아서';
     const cNum = Number(chapter) || 1;
     const vNum = Number(verse) || 1;
@@ -495,31 +745,42 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
       }));
     } catch (_) {}
 
+    if (reopenPopup) {
+      setInterlinearTarget({ book: cleanBook, chapter: cNum, verse: vNum });
+      return;
+    }
+
     if (typeof setActiveScreen === 'function') {
       setActiveScreen('interlinear');
     } else if (typeof onNavigateVerse === 'function') {
       onNavigateVerse(`${cleanBook} ${cNum}:${vNum}`);
     } else {
-      alert(`[${cleanBook} ${cNum}:${vNum}] 원어 성경 연구실로 이동합니다.`);
+      window.dispatchEvent(new CustomEvent('NAVIGATE_INTERLINEAR', { detail: { book: cleanBook, chapter: cNum, verse: vNum } }));
     }
   }, [setActiveScreen, onNavigateVerse]);
+
+  // 🌟 원어 성경 팝업 열기 핸들러
+  const handleOpenInterlinearModal = useCallback((book, chapter, verse) => {
+    const cleanBook = BIBLE_ABBREV_MAP[book] || book || '갈라디아서';
+    const cNum = Number(chapter) || 1;
+    const vNum = Number(verse) || 1;
+    setInterlinearTarget({ book: cleanBook, chapter: cNum, verse: vNum });
+  }, []);
 
   const getBibleTextLocal = useCallback((verseQuery) => {
     if (!bibles) return "성경 데이터를 찾을 수 없습니다.";
     if (!verseQuery) return "";
-    const match = verseQuery.match(BIBLE_VERSE_SINGLE_REGEX);
-    if (!match) return `구절 형식을 해석할 수 없습니다: ${verseQuery}`;
-    const bookAbbrev = match[1];
-    const fullBookName = BIBLE_ABBREV_MAP[bookAbbrev] || bookAbbrev;
-    const chapter = parseInt(match[2], 10);
-    const startVerse = match[3] ? parseInt(match[3], 10) : 1;
-    const endVerse = match[4] ? parseInt(match[4], 10) : startVerse;
-    const bookIndex = BIBLE_BOOKS_ORDER.indexOf(fullBookName);
-    if (bookIndex === -1) return `성경 책을 찾을 수 없습니다: ${fullBookName}`;
-    const targetBook = bibles[bookIndex];
-    if (!targetBook || !targetBook.chapters) return `${fullBookName} 데이터를 불러올 수 없습니다.`;
+    const parsed = parseBibleReference(verseQuery);
+    if (!parsed) return `구절 형식을 해석할 수 없습니다: ${verseQuery}`;
+    
+    const { book, chapter, startVerse, endVerse } = parsed;
+    const list = Array.isArray(bibles) ? bibles : [];
+    const targetBook = list.find(b => b?.name === book || b?.name === BIBLE_ABBREV_MAP[book]) || list[BIBLE_BOOKS_ORDER.indexOf(book)];
+    
+    if (!targetBook || !targetBook.chapters) return `${book} 본문을 불러올 수 없습니다.`;
     const chapterData = targetBook.chapters[chapter - 1]; 
-    if (!chapterData) return `${fullBookName} ${chapter}장을 찾을 수 없습니다.`;
+    if (!chapterData) return `${book} ${chapter}장을 찾을 수 없습니다.`;
+
     let results = [];
     for (let v = startVerse; v <= endVerse; v++) {
       const verseData = chapterData[v - 1];
@@ -562,10 +823,9 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
       const title = rec.title || rec.filename || `설교 ${index + 1}`;
 
       let detectedBook = "기타 말씀";
-      const bookRegex = new RegExp(`(?:^|[^가-힣])(${BIBLE_KEYS})\\s*\\d+(?:장|:)`);
-      const bookMatch = raw.match(bookRegex) || title.match(bookRegex);
-      if (bookMatch) {
-          detectedBook = BIBLE_ABBREV_MAP[bookMatch[1]] || "기타 말씀";
+      const parsedRef = parseBibleReference(`${title} ${raw.slice(0, 200)}`);
+      if (parsedRef) {
+        detectedBook = parsedRef.book;
       }
 
       let tags = (rec.tags && rec.tags.length > 0 ? rec.tags : ["말씀묵상"]).filter(t => t !== '말씀묵상');
@@ -610,7 +870,7 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
     return parsedJsonRecords.sort((a, b) => b.timestamp - a.timestamp);
   }, [sermonData, dailyData]);
 
-  // 성경 66권 캐논 커버리지 및 연산
+  // 통계 집계 연산
   const { bookList, tagList, citedVerseStats, stats, recentQuestions, trainingStats, aggregateHub, theologicalStats, canonCoverage } = useMemo(() => {
     const books = new Set(), tags = new Set(), citedVerses = new Map();
     let otCount = 0, ntCount = 0;
@@ -673,10 +933,6 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
       });
     }
 
-    qtCount = Math.max(qtCount, 0);
-    thanksCount = Math.max(thanksCount, 0);
-    prayerCount = Math.max(prayerCount, 0);
-
     const themeCounts = {};
 
     enrichedSermonRecords.forEach(rec => {
@@ -688,9 +944,8 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
         rec.theoTags.forEach(t => { themeCounts[t] = (themeCounts[t] || 0) + 1; });
       }
 
-      const bookIdx = BIBLE_BOOKS_ORDER.indexOf(book);
-      if (bookIdx >= 0 && bookIdx <= 38) otCount++;
-      else if (bookIdx >= 39) ntCount++;
+      if (isOTBook(book)) otCount++;
+      else ntCount++;
 
       if (rec.date && rec.date.startsWith(currentYear)) {
          const month = parseInt(rec.date.split('-')[1], 10);
@@ -1274,7 +1529,7 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
                     onNavigateVerse={onNavigateVerse} 
                     setSelectedTag={setSelectedTag} 
                     onVersePopup={setPopupVerse} 
-                    onJumpInterlinear={handleJumpToInterlinear}
+                    onOpenInterlinear={handleOpenInterlinearModal}
                     isDark={isDark} 
                   />
                 ))
@@ -1315,12 +1570,12 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
                 <button
                   type="button"
                   onClick={() => {
-                    handleJumpToInterlinear(sermonPopup.detectedBook, 1, 1);
+                    handleOpenInterlinearModal(sermonPopup.detectedBook, 1, 1);
                     setSermonPopup(null);
                   }}
                   className="px-2.5 py-1 rounded-md text-[11px] font-bold border bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 flex items-center gap-1 cursor-pointer"
                 >
-                  <span>🔬</span> 원어성경연구실 ➔
+                  <span>🔬</span> 원어 연동 팝업 ➔
                 </button>
               </div>
 
@@ -1328,11 +1583,11 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
                 <SermonContentParser 
                   text={(sermonPopup.raw_text || '').replace(/#말씀묵상/g, '')} 
                   isDark={isDark} 
-                  onJumpInterlinear={(b, c, v) => {
-                    handleJumpToInterlinear(b, c, v);
+                  onOpenInterlinear={(b, c, v) => {
+                    handleOpenInterlinearModal(b, c, v);
                     setSermonPopup(null);
                   }}
-                  defaultBook={sermonPopup.detectedBook}
+                  activeReference={{ book: sermonPopup.detectedBook, chapter: 1, verse: 1 }}
                 />
               </div>
             </div>
@@ -1350,16 +1605,16 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
                 <button
                   type="button"
                   onClick={() => {
-                    const match = popupVerse.match(BIBLE_VERSE_SINGLE_REGEX);
-                    const b = match ? (BIBLE_ABBREV_MAP[match[1]] || match[1]) : "갈라디아서";
-                    const c = match && match[2] ? parseInt(match[2], 10) : 1;
-                    const v = match && match[3] ? parseInt(match[3], 10) : 1;
-                    handleJumpToInterlinear(b, c, v);
+                    const parsed = parseBibleReference(popupVerse);
+                    const b = parsed ? parsed.book : "갈라디아서";
+                    const c = parsed ? parsed.chapter : 1;
+                    const v = parsed ? parsed.startVerse : 1;
+                    handleOpenInterlinearModal(b, c, v);
                     setPopupVerse(null);
                   }}
                   className="px-2 py-0.5 rounded text-[10.5px] font-bold border bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 flex items-center gap-1 cursor-pointer"
                 >
-                  <span>🔬</span> 원어 연구실 ➔
+                  <span>🔬</span> 원어 연동 ➔
                 </button>
                 <button onClick={() => setPopupVerse(null)} className="p-1 text-stone-400 hover:text-stone-800 dark:hover:text-white cursor-pointer">
                   <IconX />
@@ -1373,6 +1628,17 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
             </div>
           </div>
         </div>
+      )}
+
+      {/* 5. 🌟 원어 성경 연동 팝업 모달 (Interlinear Quick Modal) */}
+      {interlinearTarget && (
+        <InterlinearQuickModal
+          target={interlinearTarget}
+          onClose={() => setInterlinearTarget(null)}
+          onJumpStudio={(b, c, v, reopen) => handleJumpToInterlinear(b, c, v, reopen)}
+          getBibleText={getBibleTextLocal}
+          isDark={isDark}
+        />
       )}
 
     </div>
