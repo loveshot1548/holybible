@@ -1,4 +1,4 @@
-// src/components/guide/AppGuidebook.js (PART 1/2)
+// src/components/guide/AppGuidebook.js
 import React, { useState } from 'react';
 
 // =====================================================================
@@ -15,7 +15,7 @@ const IconChevronRight = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth=
 const IconCheck = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-3.5 h-3.5"><polyline points="20 6 9 17 4 12" /></svg>;
 const IconMic = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={StrokeW} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" /></svg>;
 const IconActivity = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={StrokeW} stroke="currentColor" className="w-4 h-4"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg>;
-const IconMessage = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={StrokeW} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.269z" /></svg>;
+const IconMessage = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={StrokeW} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.269z" /></svg>;
 const IconCompass = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={StrokeW} stroke="currentColor" className="w-4 h-4"><circle cx="12" cy="12" r="10" /><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" /></svg>;
 const IconShield = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={StrokeW} stroke="currentColor" className="w-4 h-4"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>;
 const IconBriefcase = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={StrokeW} stroke="currentColor" className="w-4 h-4"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>;
@@ -40,7 +40,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
     secondaryBg: isDark ? 'bg-white/10 text-white hover:bg-white/15' : 'bg-stone-100 text-stone-700 hover:bg-stone-200',
   };
 
-  // 영적 성장 파이프라인 데이터 (100% 보존)
+  // 영적 성장 파이프라인 데이터 (100% 완전 보존)
   const roadmapSteps = [
     {
       step: 'PHASE 01',
@@ -89,7 +89,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
     }
   ];
 
-  // 상황별 처방 데이터 (100% 보존)
+  // 상황별 처방 데이터 (100% 완전 보존)[cite: 37]
   const contextCurations = [
     {
       situation: '오늘 본문 말씀이 잘 해석되지 않고 궁금한 점이 생길 때',
@@ -157,7 +157,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
     }
   ];
 
-  // 스마트 팁 데이터 (100% 보존)
+  // 스마트 팁 데이터 (100% 완전 보존)[cite: 37]
   const smartTips = [
     { title: '원어 묵상 1-클릭 QT & 설교 삽입', desc: '단어 카드 모달 하단의 [🌿 QT 묵상에 삽입] 또는 [📖 설교노트에 삽입]을 누르면 원어 표제어, Strongs 번호, 형태론, 구속사 문법 주석이 오늘 묵상 일지에 자동 기록됩니다.', icon: <IconAcademic /> },
     { title: '성경 본문 스페이스바 자동완성', desc: 'QT 질문란이나 말씀 노트에서 [신명기 22:13]처럼 장:절을 적고 스페이스바를 누르면 성경 말씀 본문이 그 자리에 자동으로 쏙 들어옵니다.', icon: <IconActivity /> },
@@ -205,7 +205,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
               </span>
             </div>
             <p className={`text-[11px] font-medium ${ui.textSub} leading-tight truncate mt-0.5`}>
-              원어 성경 연구 10대 학술 엔진 · 성경통독 365 & 맥체인 1:1 직결 · WEB 영한사전 총람
+              원어 성경 연구 10-Core 바이블 · 성경통독 365 & 맥체인 직결 · 1:1 형태론 전수 해설
             </p>
           </div>
         </div>
@@ -218,7 +218,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
         </button>
       </header>
 
-      {/* 가로 스크롤 네비게이션 탭 (11대 전체 탭 유지 및 원어성경 연구 탭 선두 배치) */}
+      {/* 가로 스크롤 네비게이션 탭 (11대 전체 탭 100% 보존) */}
       <nav className={`flex w-full px-4 sm:px-6 overflow-x-auto hide-scrollbar border-b ${ui.border} shrink-0 relative z-20 backdrop-blur-md gap-3 sm:gap-5 bg-white/50 dark:bg-black/20`}>
         {[
           { id: 'interlinearSuite', label: '🏛️ 원어성경 연구 10-Core 바이블' },
@@ -252,7 +252,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
         <div className="w-full max-w-4xl mx-auto p-3.5 sm:p-5 md:p-6 flex flex-col gap-5 sm:gap-6 animate-fade-in">
           
           {/* ========================================================================= */}
-          {/* 🏛️ [탭 1] 원어 성경 연구 (Interlinear Exegetical Suite) 학술 총람           */}
+          {/* 🏛️ [탭 1] 원어 성경 연구 (Interlinear Exegetical Suite) 초고도화 바이블      */}
           {/* ========================================================================= */}
           {activeTab === 'interlinearSuite' && (
             <div className="flex flex-col gap-5 sm:gap-6">
@@ -265,36 +265,181 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
                       Logos-Class Academic Suite
                     </span>
                     <span className="text-[11.5px] font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1">
-                      <IconSparkles /> 10대 학술 코퍼스 · 4대 역본 · WEB 영한사전 완비
+                      <IconSparkles /> BHS & NA28 원전 · 1:1 형태론 · 10대 학술 코퍼스 완비
                     </span>
                   </div>
                   <h3 className={`text-[19px] sm:text-[23px] font-black ${ui.textMain} tracking-tight leading-snug break-keep`}>
-                    원어 성경 연구(Interlinear) 10-Core 종합 바이블
+                    원어 성경 연구(Interlinear) 10-Core 완전정복 가이드
                   </h3>
                   <p className={`text-[12.5px] sm:text-[13px] font-medium ${ui.textSub} leading-relaxed break-keep mt-0.5`}>
-                    WLC 마소라 히브리어 원문과 NA28 헬라어 원전을 바탕으로, 성경 66권 전체 31,102구절의 형태론과 10대 학술 사료를 유기적으로 연결하는 전문 주석 연구 환경입니다. 성경 통독 365 및 맥체인과의 1:1 직결 파이프라인과 WEB 영단어 사전 엔진의 모든 사용법을 상세히 안내합니다.
+                    성경 66권 31,102구절 전체를 어절 단위로 1:1 분해하고, 원어 어순 무삭제 직역(Literal Interlinear)과 마소라 4단 조판 스위처, 히브리어 7대 어간(Binyan) 및 헬라어 시제·태를 전수 분석하는 최고 수준의 구속사 주석 연구 플랫폼입니다.
                   </p>
                 </div>
                 <button 
                   onClick={() => setActiveScreen && setActiveScreen('interlinear')} 
                   className="px-5 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[13px] shadow-md active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
                 >
-                  연구실 바로가기 <IconChevronRight />
+                  원어 연구실 입장 <IconChevronRight />
                 </button>
               </div>
 
-              {/* 시청각 도식: 3대 본문 뷰어 상호 연동 파이프라인 */}
-              <div className={`p-4 sm:p-5 rounded-3xl border ${ui.cardBg} flex flex-col gap-3 shadow-xs`}>
-                <div className="flex items-center justify-between border-b pb-2.5 border-dashed border-stone-200 dark:border-white/10">
-                  <span className="text-[12.5px] font-black flex items-center gap-1.5 text-indigo-900 dark:text-indigo-200">
-                    🔄 성경 통독 365 ⇄ 맥체인 ⇄ 원어 연구실 3각 직결 파이프라인
-                  </span>
-                  <span className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded">
-                    0.1s TELEPORT
-                  </span>
+              {/* CHAPTER 01: 6대 핵심 조작 마스터 */}
+              <div className={`p-5 sm:p-6 rounded-3xl border ${ui.cardBg} flex flex-col gap-4 shadow-xs`}>
+                <div className="flex items-center gap-3 border-b pb-4 border-stone-200/80 dark:border-white/10">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-700 dark:text-amber-400 flex items-center justify-center text-xl font-black shrink-0">📜</div>
+                  <div className="min-w-0 flex-1">
+                    <h4 className={`text-[16.5px] sm:text-[17.5px] font-black ${ui.textMain} tracking-tight leading-snug break-keep`}>
+                      CHAPTER 01. 원어 인터페이스 6대 핵심 조작 마스터
+                    </h4>
+                    <p className={`text-[12px] font-bold text-amber-700 dark:text-amber-400 mt-0.5 truncate`}>
+                      원어 어순 직역, 4단 조판 모드, 1:1 형태론 뱃지, WEB 영한사전 활용법
+                    </p>
+                  </div>
                 </div>
 
-                <div className="p-3.5 rounded-xl bg-stone-900 text-slate-200 font-mono text-[11px] sm:text-[11.5px] leading-relaxed overflow-x-auto hide-scrollbar">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                  
+                  {/* 조작 1: 원어 어순 1:1 영문 직역 */}
+                  <div className={`p-4 rounded-2xl border flex flex-col gap-2 ${ui.innerCard}`}>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12.5px] font-black text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                        1. 원어 어순 1:1 직역 (Literal Interlinear)
+                      </span>
+                      <span className="text-[9.5px] font-mono bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 px-2 py-0.5 rounded font-bold">
+                        정통 인터리니어
+                      </span>
+                    </div>
+                    <p className={`text-[11.8px] leading-relaxed ${ui.textSub} font-medium break-keep`}>
+                      한국어 성경의 의역된 어순이 아닌, <b>히브리어/헬라어 원문 어순 그대로 1:1 직독직해</b>를 제공합니다.
+                    </p>
+                    <div className="p-2.5 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/40 text-[11px] font-mono leading-relaxed text-emerald-950 dark:text-emerald-200">
+                      <code>in beginning created God the heavens and the earth</code>
+                      <br /><span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-sans">↳ 성경 기자가 성령의 감동으로 단어를 배치한 강조의 우선순위가 그대로 드러납니다.</span>
+                    </div>
+                  </div>
+
+                  {/* 조작 2: 마소라 4단 조판 스위처 */}
+                  <div className={`p-4 rounded-2xl border flex flex-col gap-2 ${ui.innerCard}`}>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12.5px] font-black text-blue-700 dark:text-sky-400 flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-blue-500" />
+                        2. 마소라 4단 조판 스위처 (Typography)
+                      </span>
+                      <span className="text-[9.5px] font-mono bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-sky-300 px-2 py-0.5 rounded font-bold">
+                        BHS RTL
+                      </span>
+                    </div>
+                    <p className={`text-[11.8px] leading-relaxed ${ui.textSub} font-medium break-keep`}>
+                      원문 상단 토글 캡슐을 통해 본문 표기 방식을 자유자재로 변경합니다:
+                    </p>
+                    <div className="grid grid-cols-2 gap-1.5 text-[10.5px] font-mono">
+                      <div className="p-2 bg-white dark:bg-black/40 rounded-lg border border-stone-200 dark:border-white/5">
+                        <b className="text-blue-600 dark:text-sky-400 block">[모음부호]</b> 마소라 Niqqud 표준 모음
+                      </div>
+                      <div className="p-2 bg-white dark:bg-black/40 rounded-lg border border-stone-200 dark:border-white/5">
+                        <b className="text-amber-600 dark:text-amber-400 block">[자음만]</b> 고대 사본 순수 자음 텍스트
+                      </div>
+                      <div className="p-2 bg-white dark:bg-black/40 rounded-lg border border-stone-200 dark:border-white/5">
+                        <b className="text-purple-600 dark:text-purple-400 block">[악센트]</b> 낭송 및 구문론 대휴지 보존
+                      </div>
+                      <div className="p-2 bg-white dark:bg-black/40 rounded-lg border border-stone-200 dark:border-white/5">
+                        <b className="text-emerald-600 dark:text-emerald-400 block">[발음독음]</b> 원어민 한글 음역 낭독 스트림
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 조작 3: 단어별 1:1 분해 및 형태론 뱃지 */}
+                  <div className={`p-4 rounded-2xl border flex flex-col gap-2 ${ui.innerCard}`}>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12.5px] font-black text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-amber-500" />
+                        3. 단어별 1:1 분해 & 형태론 뱃지 (Morphology)
+                      </span>
+                      <span className="text-[9.5px] font-mono bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded font-bold">
+                        Strongs 1:1
+                      </span>
+                    </div>
+                    <p className={`text-[11.8px] leading-relaxed ${ui.textSub} font-medium break-keep`}>
+                      어절 카드를 누르면 <b>원문 어형(Inflected)</b>과 <b>사전 원형(Lemma)</b>, <b>Strong's 번호</b>, <b>문맥 번역어</b>, 그리고 성·수·격 뱃지가 나타납니다. 뱃지를 클릭하면 문법 대백과 사전이 열립니다.
+                    </p>
+                    <div className="p-2.5 rounded-lg bg-stone-100 dark:bg-black/40 border border-stone-200 dark:border-white/5 text-[11px] font-medium text-stone-600 dark:text-slate-300">
+                      💡 원형과 문맥 번역어가 다를 때만 <code>(원형뜻)</code>을 병기하여 화면의 텍스트 중복 피로도를 완전히 해소했습니다.
+                    </div>
+                  </div>
+
+                  {/* 조작 4: 히브리어 7대 어간 & 헬라어 시제 주석 */}
+                  <div className={`p-4 rounded-2xl border flex flex-col gap-2 ${ui.innerCard}`}>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12.5px] font-black text-purple-700 dark:text-purple-400 flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-purple-500" />
+                        4. 히브리어 7대 어간(Binyan) & 헬라어 시제 신학
+                      </span>
+                      <span className="text-[9.5px] font-mono bg-purple-100 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 px-2 py-0.5 rounded font-bold">
+                        Theology
+                      </span>
+                    </div>
+                    <p className={`text-[11.8px] leading-relaxed ${ui.textSub} font-medium break-keep`}>
+                      동사의 문법 코드를 단순 기호로 넘기지 않고 영적 신학 통찰로 자동 해석합니다:
+                    </p>
+                    <ul className="text-[11px] font-mono space-y-1 text-stone-700 dark:text-slate-300">
+                      <li>• <b>Qal(단순능동)</b> vs <b>Piel(강조능동)</b> vs <b>Hiphil(사역능동)</b></li>
+                      <li>• <b>Niphal(신적 수동태)</b>: 하나님이 직접 이루시는 불가항력적 구원</li>
+                      <li>• <b>Aorist(부정과거)</b>: 십자가 대속과 같이 영단번에 완성된 단회적 사건</li>
+                      <li>• <b>Perfect(완료)</b>: 영구히 유효한 은혜의 법적 상태 선언</li>
+                    </ul>
+                  </div>
+
+                  {/* 조작 5: WEB 영단어 터치 사전 */}
+                  <div className={`p-4 rounded-2xl border flex flex-col gap-2 ${ui.innerCard}`}>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12.5px] font-black text-cyan-700 dark:text-cyan-400 flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-cyan-500" />
+                        5. WEB 인터랙티브 영단어 터치 사전
+                      </span>
+                      <span className="text-[9.5px] font-mono bg-cyan-100 dark:bg-cyan-950/60 text-cyan-800 dark:text-cyan-300 px-2 py-0.5 rounded font-bold">
+                        Lexicon + Audio
+                      </span>
+                    </div>
+                    <p className={`text-[11.8px] leading-relaxed ${ui.textSub} font-medium break-keep`}>
+                      WEB 성경에서 밑줄 점선이 그어진 영단어를 터치하면 하단 시트가 호출되어 <b>한글 품사, 성경적 구속사 정의, 미국식 원어민 음성(`en-US`)</b>을 실시간 제공합니다.
+                    </p>
+                  </div>
+
+                  {/* 조작 6: QT 및 설교노트 1-클릭 전송 */}
+                  <div className={`p-4 rounded-2xl border flex flex-col gap-2 ${ui.innerCard}`}>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12.5px] font-black text-rose-700 dark:text-rose-400 flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-rose-500" />
+                        6. 1-클릭 QT & 설교노트 원어 주석 주입
+                      </span>
+                      <span className="text-[9.5px] font-mono bg-rose-100 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 px-2 py-0.5 rounded font-bold">
+                        0-Click Export
+                      </span>
+                    </div>
+                    <p className={`text-[11.8px] leading-relaxed ${ui.textSub} font-medium break-keep`}>
+                      단어 상세 카드 하단의 <code>[🌿 QT 묵상에 삽입]</code> 또는 <code>[📖 설교노트에 삽입]</code>을 클릭하면 표제어, Strongs, 원형, 문법 주석, 연구자 메모가 당일 일지로 자동 전송됩니다.
+                    </p>
+                  </div>
+
+                </div>
+              </div>
+
+              {/* CHAPTER 02: 3대 본문 뷰어 상호 연동 파이프라인 */}
+              <div className={`p-5 sm:p-6 rounded-3xl border ${ui.cardBg} flex flex-col gap-4 shadow-xs`}>
+                <div className="flex items-center gap-3 border-b pb-4 border-stone-200/80 dark:border-white/10">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 flex items-center justify-center text-xl font-black shrink-0">🔄</div>
+                  <div className="min-w-0 flex-1">
+                    <h4 className={`text-[16.5px] sm:text-[17.5px] font-black ${ui.textMain} tracking-tight leading-snug break-keep`}>
+                      CHAPTER 02. 성경통독 365 ⇄ 맥체인 ⇄ 원어 연구실 직결 파이프라인
+                    </h4>
+                    <p className={`text-[12px] font-bold text-indigo-700 dark:text-indigo-400 mt-0.5 truncate`}>
+                      본문 끝 [📖 원어] 클릭으로 0.1초 만에 연구실 텔레포트
+                    </p>
+                  </div>
+                </div>
+
+                <div className="p-3.5 sm:p-4 rounded-2xl bg-stone-900 text-slate-200 font-mono text-[11px] sm:text-[11.5px] leading-relaxed overflow-x-auto hide-scrollbar">
                   <pre className="whitespace-pre">
 {`┌───────────────────────┐          ┌───────────────────────┐
 │  성경통독 365 (Bible)  │          │   맥체인 (Mcheyne)    │
@@ -304,18 +449,18 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
             │ [📖 원어 클릭 / 롱프레스]           │ [📖 원어 클릭 / 롱프레스]
             ▼                                  ▼
 ┌──────────────────────────────────────────────────────────┐
-│         인라인 학술 인스펙터 (Exegetical Inspector)         │
-│   • 개역개정 vs 쉬운성경 vs World English Bible 3단 대조   │
-│   • 단어별 1:1 형태론 / Strongs / 히브리어·헬라어 원문    │
-│   • [🔬 원어성경연구실 ➔] 점프 버튼 클릭                  │
+│       인라인 학술 인스펙터 (Exegetical Inspector)         │
+│   • 개역개정 vs 쉬운성경 vs World English Bible 3단 대조  │
+│   • 단어별 1:1 형태론 / Strongs / 히브리어·헬라어 원문     │
+│   • [🔬 원어성경연구실 ➔] 점프 버튼 클릭                 │
 └────────────────────────────┬─────────────────────────────┘
                              │ LocalStorage: interlinear_jump
                              ▼
 ┌──────────────────────────────────────────────────────────┐
-│       원어 성경 연구실 (Interlinear Exegetical Suite)      │
-│   • 10대 학술 코퍼스 (TSK, BHS, LXX, 타르굼, 반즈 주석 등)   │
-│   • WEB 영한 사전 인터랙티브 단어 뜻풀이 & 원어민 낭독      │
-│   • [🌿 QT 묵상에 삽입] & [📖 설교노트에 삽입] 원클릭 전송 │
+│       원어 성경 연구실 (Interlinear Exegetical Suite)     │
+│   • 10대 학술 코퍼스 (TSK, BHS, LXX, 타르굼, 반즈 주석 등) │
+│   • WEB 영한 사전 인터랙티브 단어 뜻풀이 & 원어민 낭독     │
+│   • [🌿 QT 묵상에 삽입] & [📖 설교노트에 삽입] 원클릭 전송│
 └──────────────────────────────────────────────────────────┘`}
                   </pre>
                 </div>
@@ -323,174 +468,219 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1 text-[11.5px] font-medium leading-relaxed">
                   <div className={`p-3 rounded-xl border ${ui.innerCard}`}>
                     <b className="text-amber-800 dark:text-amber-300 block mb-1">1. 끊김 없는 정통 본문</b>
-                    절마다 박스를 씌우지 않고 종이 성경처럼 유려하게 읽으며, 각 절 끝의 <b>[📖 원어]</b> 배지로 0.1초 만에 인스펙터를 호출합니다.
+                    종이 성경처럼 유려하게 통독하다가, 깊은 묵상이 필요한 구절 끝의 <b>[📖 원어]</b>를 가볍게 터치합니다.
                   </div>
                   <div className={`p-3 rounded-xl border ${ui.innerCard}`}>
-                    <b className="text-indigo-800 dark:text-indigo-300 block mb-1">2. 안전한 오버레이</b>
-                    하단 탭바만 정밀 숨김 처리하여 팝업 오픈 시 흰 화면(Blank Screen)이 발생하는 버그를 완벽하게 차단했습니다.
+                    <b className="text-indigo-800 dark:text-indigo-300 block mb-1">2. 화면 이탈 방지</b>
+                    하단 탭바를 지능적으로 제어하여 팝업 호출 시의 깜빡임이나 흰 화면(Blank Screen) 버그를 원천 차단했습니다.
                   </div>
                   <div className={`p-3 rounded-xl border ${ui.innerCard}`}>
                     <b className="text-emerald-800 dark:text-emerald-300 block mb-1">3. 책·장·절 상태 계승</b>
-                    통독 중 보던 구절(예: 열왕기상 12:4)의 번호를 그대로 물고 원어 연구실로 이동해 즉시 심층 연구를 이어갑니다.
+                    통독 중 보던 구절의 번호를 그대로 물고 연구실로 순간 이동하여 연속성 있는 주석 연구를 완성합니다.
                   </div>
                 </div>
               </div>
 
-              {/* 4대 역본 & WEB 인터랙티브 영한 사전 */}
-              <div className={`p-4 sm:p-5 rounded-3xl border ${ui.cardBg} flex flex-col gap-3 shadow-xs`}>
-                <div className="flex items-center justify-between border-b pb-2.5 border-dashed border-stone-200 dark:border-white/10">
-                  <span className="text-[12.5px] font-black flex items-center gap-1.5 text-blue-900 dark:text-blue-200">
-                    📖 4대 역본 대조 & WEB 영단어 사전 (Biblical English Lexicon)
-                  </span>
-                  <span className="text-[10px] font-mono font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 px-2 py-0.5 rounded">
-                    NEW FEATURE
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div className={`p-3.5 rounded-xl border ${ui.innerCard} flex flex-col gap-2`}>
-                    <h5 className="font-bold text-[13px] text-stone-900 dark:text-white flex items-center gap-1.5">
-                      🔀 4대 역본 원터치 스위처
-                    </h5>
-                    <ul className="text-[12px] space-y-1.5 text-stone-600 dark:text-slate-300 leading-relaxed font-medium">
-                      <li>• <b>개역개정 (KRV)</b>: 정통 개혁주의 공인 예배용 성경</li>
-                      <li>• <b>쉬운성경 (Easy)</b>: 현대적 어휘로 문맥을 쉽게 풀어낸 현대어 성경</li>
-                      <li>• <b>World English Bible (WEB)</b>: 전 세계 공인 31,102절 직역 영문 성경</li>
-                      <li>• <b>동시대조 (Parallel)</b>: 3개 역본을 한 화면에서 나란히 대조 렌더링</li>
-                    </ul>
-                  </div>
-
-                  <div className={`p-3.5 rounded-xl border ${ui.innerCard} flex flex-col gap-2`}>
-                    <h5 className="font-bold text-[13px] text-blue-800 dark:text-blue-300 flex items-center gap-1.5">
-                      🔍 WEB 영단어 터치 사전 작동법
-                    </h5>
-                    <p className="text-[11.5px] text-stone-600 dark:text-slate-300 leading-relaxed font-medium">
-                      WEB 성경이나 동시대조 화면에서 영단어(예: <code>created</code>, <code>covenant</code>, <code>grace</code>)를 터치하면 하단 시트가 즉각 호출됩니다:
-                    </p>
-                    <div className="p-2.5 rounded-lg bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50 text-[11px] font-mono leading-relaxed text-blue-950 dark:text-blue-200">
-                      ✓ 한글 품사 및 번역어 정의 자동 분석
-                      <br />✓ 핵심 신학 어휘 구속사적 뜻풀이 (`theology`) 표시
-                      <br />✓ [🔊 발음] 버튼 클릭 시 미국식 원어민 음성(`en-US`) 재생
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* 10대 학술 코퍼스 아키텍처 */}
-              <div className={`p-4 sm:p-5 rounded-3xl border ${ui.cardBg} flex flex-col gap-3.5 shadow-xs`}>
-                <div className="flex items-center justify-between border-b pb-2.5 border-dashed border-stone-200 dark:border-white/10">
-                  <div>
-                    <h4 className="text-[14.5px] font-black text-stone-900 dark:text-white tracking-tight">
-                      🏛️ 10대 글로벌 정밀 학술 코퍼스 (10-Core Exegetical Suite)
+              {/* CHAPTER 03: 10대 정밀 학술 코퍼스 완벽 활용 매뉴얼 */}
+              <div className={`p-5 sm:p-6 rounded-3xl border ${ui.cardBg} flex flex-col gap-4 shadow-xs`}>
+                <div className="flex items-center gap-3 border-b pb-4 border-stone-200/80 dark:border-white/10">
+                  <div className="w-10 h-10 rounded-xl bg-sky-500/10 text-sky-700 dark:text-sky-400 flex items-center justify-center text-xl font-black shrink-0">🏛️</div>
+                  <div className="min-w-0 flex-1">
+                    <h4 className={`text-[16.5px] sm:text-[17.5px] font-black ${ui.textMain} tracking-tight leading-snug break-keep`}>
+                      CHAPTER 03. 10대 글로벌 정밀 학술 코퍼스 활용 매뉴얼
                     </h4>
-                    <p className="text-[11px] text-stone-500 font-medium mt-0.5">
-                      정통 개혁주의·복음주의 표준 사료 전수 탑재
+                    <p className={`text-[12px] font-bold text-sky-700 dark:text-sky-400 mt-0.5 truncate`}>
+                      성경이 성경을 해석하는 아카데믹 주석과 역사문헌 총람
                     </p>
                   </div>
-                  <span className="text-[10px] font-mono font-bold bg-stone-100 dark:bg-white/10 text-stone-600 dark:text-stone-300 px-2 py-0.5 rounded">
-                    10 ENGINES
-                  </span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  <div className="p-3 rounded-xl border bg-sky-50/70 border-sky-200/80 dark:bg-sky-950/20 dark:border-sky-900/60 text-left flex flex-col gap-1">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="p-3.5 rounded-2xl border bg-sky-50/70 border-sky-200/80 dark:bg-sky-950/20 dark:border-sky-900/60 text-left flex flex-col gap-1.5">
                     <div className="flex justify-between items-center">
-                      <span className="font-bold text-[12px] text-sky-950 dark:text-sky-200">🔗 1. TSK 상호교차참조</span>
-                      <span className="text-[9.5px] font-mono px-1.5 py-0.2 rounded bg-white dark:bg-black/40 border border-sky-300 dark:border-sky-800 text-sky-800 dark:text-sky-300">34만 구절</span>
+                      <span className="font-bold text-[12.5px] text-sky-950 dark:text-sky-200">🔗 1. TSK 상호교차참조</span>
+                      <span className="text-[9.5px] font-mono px-2 py-0.5 rounded bg-white dark:bg-black/40 border border-sky-300 dark:border-sky-800 text-sky-800 dark:text-sky-300 font-bold">34만 구절</span>
                     </div>
-                    <p className="text-[11.5px] text-sky-900/80 dark:text-sky-300/80 leading-relaxed font-medium">
-                      성경이 성경을 직접 해석하는 종교개혁 표준 교차참조. 클릭 시 해당 장·절로 즉시 이동합니다.
+                    <p className="text-[11.8px] text-sky-900/80 dark:text-sky-300/80 leading-relaxed font-medium">
+                      종교개혁자들의 '성경으로 성경을 푸는(Scriptura sui ipsius interpres)' 원칙에 따라, 구절 배지를 누르면 해당 성경으로 즉시 이동합니다.
                     </p>
                   </div>
 
-                  <div className="p-3 rounded-xl border bg-amber-50/70 border-amber-200/80 dark:bg-amber-950/20 dark:border-amber-900/60 text-left flex flex-col gap-1">
+                  <div className="p-3.5 rounded-2xl border bg-amber-50/70 border-amber-200/80 dark:bg-amber-950/20 dark:border-amber-900/60 text-left flex flex-col gap-1.5">
                     <div className="flex justify-between items-center">
-                      <span className="font-bold text-[12px] text-amber-950 dark:text-amber-200">📜 2. BHS 히브리어 구문론 끊어읽기</span>
-                      <span className="text-[9.5px] font-mono px-1.5 py-0.2 rounded bg-white dark:bg-black/40 border border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-300">Atnach 대휴지</span>
+                      <span className="font-bold text-[12.5px] text-amber-950 dark:text-amber-200">📜 2. BHS 히브리어 구문론 끊어읽기</span>
+                      <span className="text-[9.5px] font-mono px-2 py-0.5 rounded bg-white dark:bg-black/40 border border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-300 font-bold">Atnach 대휴지</span>
                     </div>
-                    <p className="text-[11.5px] text-amber-900/80 dark:text-amber-300/80 leading-relaxed font-medium">
-                      마소라 악센트 체계에 따라 Atnach(대휴지) 전후반부를 문장론적으로 양분하여 신적 기원을 명확히 해설합니다.
+                    <p className="text-[11.8px] text-amber-900/80 dark:text-amber-300/80 leading-relaxed font-medium">
+                      마소라 악센트의 핵심인 Atnach(대휴지) 기호를 기준으로 문장을 전반부와 후반부로 양분하여 구문적 역할을 명확히 해석합니다.
                     </p>
                   </div>
 
-                  <div className="p-3 rounded-xl border bg-stone-100/80 border-stone-300/80 dark:bg-stone-900/40 dark:border-stone-700 text-left flex flex-col gap-1">
+                  <div className="p-3.5 rounded-2xl border bg-stone-100/80 border-stone-300/80 dark:bg-stone-900/40 dark:border-stone-700 text-left flex flex-col gap-1.5">
                     <div className="flex justify-between items-center">
-                      <span className="font-bold text-[12px] text-stone-950 dark:text-stone-200">🏛️ 3. 70인역(LXX) 3단 원전 대조</span>
-                      <span className="text-[9.5px] font-mono px-1.5 py-0.2 rounded bg-white dark:bg-black/40 border border-stone-400 dark:border-stone-600 text-stone-800 dark:text-stone-300">신약 인용</span>
+                      <span className="font-bold text-[12.5px] text-stone-950 dark:text-stone-200">🏛️ 3. 70인역(LXX) 3단 원전 대조</span>
+                      <span className="text-[9.5px] font-mono px-2 py-0.5 rounded bg-white dark:bg-black/40 border border-stone-400 dark:border-stone-600 text-stone-800 dark:text-stone-300 font-bold">GNT · LXX · MT</span>
                     </div>
-                    <p className="text-[11.5px] text-stone-800/80 dark:text-stone-300/80 leading-relaxed font-medium">
-                      [신약 헬라어 GNT] · [구약 70인역 LXX] · [마소라 MT] 3열 대조로 본문비평 이문을 증명합니다.
+                    <p className="text-[11.8px] text-stone-800/80 dark:text-stone-300/80 leading-relaxed font-medium">
+                      신약 저자들이 구약을 인용할 때 사용한 70인역 헬라어 본문과 히브리어 마소라 본문의 차이 및 신학적 의도를 비교합니다.
                     </p>
                   </div>
 
-                  <div className="p-3 rounded-xl border bg-orange-50/70 border-orange-200/80 dark:bg-orange-950/20 dark:border-orange-900/60 text-left flex flex-col gap-1">
+                  <div className="p-3.5 rounded-2xl border bg-orange-50/70 border-orange-200/80 dark:bg-orange-950/20 dark:border-orange-900/60 text-left flex flex-col gap-1.5">
                     <div className="flex justify-between items-center">
-                      <span className="font-bold text-[12px] text-orange-950 dark:text-orange-200">🏺 4. 고대 아람어 타르굼 & 시리아 페시타</span>
-                      <span className="text-[9.5px] font-mono px-1.5 py-0.2 rounded bg-white dark:bg-black/40 border border-orange-300 dark:border-orange-800 text-orange-800 dark:text-orange-300">Semitic</span>
+                      <span className="font-bold text-[12.5px] text-orange-950 dark:text-orange-200">🏺 4. 고대 아람어 타르굼 & 시리아 페시타</span>
+                      <span className="text-[9.5px] font-mono px-2 py-0.5 rounded bg-white dark:bg-black/40 border border-orange-300 dark:border-orange-800 text-orange-800 dark:text-orange-300 font-bold">Semitic Texts</span>
                     </div>
-                    <p className="text-[11.5px] text-orange-900/80 dark:text-orange-300/80 leading-relaxed font-medium">
-                      초대 셈족 언어권 원전과 한국어 직역을 제공하여 고대 유대 낭독 전통을 확인합니다.
+                    <p className="text-[11.8px] text-orange-900/80 dark:text-orange-300/80 leading-relaxed font-medium">
+                      초대 셈족 언어권 원전과 한국어 번역을 나란히 제공하여 1세기 회당 낭독 전통과 초대교회 이본 전승을 고찰합니다.
                     </p>
                   </div>
 
-                  <div className="p-3 rounded-xl border bg-yellow-50/60 border-yellow-200/80 dark:bg-yellow-950/20 dark:border-yellow-900/50 text-left flex flex-col gap-1">
+                  <div className="p-3.5 rounded-2xl border bg-yellow-50/60 border-yellow-200/80 dark:bg-yellow-950/20 dark:border-yellow-900/50 text-left flex flex-col gap-1.5">
                     <div className="flex justify-between items-center">
-                      <span className="font-bold text-[12px] text-yellow-950 dark:text-yellow-200">📜 5. 요세푸스 1세기 유대 고대사/전쟁사</span>
-                      <span className="text-[9.5px] font-mono px-1.5 py-0.2 rounded bg-white dark:bg-black/40 border border-yellow-300 dark:border-yellow-800 text-yellow-800 dark:text-yellow-300">1st Century</span>
+                      <span className="font-bold text-[12.5px] text-yellow-950 dark:text-yellow-200">📜 5. 요세푸스 1세기 유대 고대사/전쟁사</span>
+                      <span className="text-[9.5px] font-mono px-2 py-0.5 rounded bg-white dark:bg-black/40 border border-yellow-300 dark:border-yellow-800 text-yellow-800 dark:text-yellow-300 font-bold">1st Century</span>
                     </div>
-                    <p className="text-[11.5px] text-yellow-900/80 dark:text-yellow-300/80 leading-relaxed font-medium">
-                      헤롯 대왕, 세례 요한, 빌라도 총독 등 1세기 로마-유대 역사적 배경을 1:1로 매핑합니다.
+                    <p className="text-[11.8px] text-yellow-900/80 dark:text-yellow-300/80 leading-relaxed font-medium">
+                      헤롯 대왕의 가계도, 로마 총독들의 통치, 성전 파괴 사건 등 복음서와 사도행전의 역사적 현장을 생생히 증언합니다.
                     </p>
                   </div>
 
-                  <div className="p-3 rounded-xl border bg-teal-50/70 border-teal-200/80 dark:bg-teal-950/20 dark:border-teal-900/60 text-left flex flex-col gap-1">
+                  <div className="p-3.5 rounded-2xl border bg-teal-50/70 border-teal-200/80 dark:bg-teal-950/20 dark:border-teal-900/60 text-left flex flex-col gap-1.5">
                     <div className="flex justify-between items-center">
-                      <span className="font-bold text-[12px] text-teal-950 dark:text-teal-200">🗺️ 6. 역사 지리학 & OpenBible GPS</span>
-                      <span className="text-[9.5px] font-mono px-1.5 py-0.2 rounded bg-white dark:bg-black/40 border border-teal-300 dark:border-teal-800 text-teal-800 dark:text-teal-300">Google Satellite</span>
+                      <span className="font-bold text-[12.5px] text-teal-950 dark:text-teal-200">🗺️ 6. 역사 지리학 & OpenBible GPS</span>
+                      <span className="text-[9.5px] font-mono px-2 py-0.5 rounded bg-white dark:bg-black/40 border border-teal-300 dark:border-teal-800 text-teal-800 dark:text-teal-300 font-bold">Google Satellite</span>
                     </div>
-                    <p className="text-[11.5px] text-teal-900/80 dark:text-teal-300/80 leading-relaxed font-medium">
-                      유적지의 위·경도를 바탕으로 구글 위성 지도를 1-클릭 호출하여 지형을 입체적으로 조망합니다.
+                    <p className="text-[11.8px] text-teal-900/80 dark:text-teal-300/80 leading-relaxed font-medium">
+                      유적지의 정밀 GPS 좌표를 기반으로 <b>[📍 지도 위성 보기 ↗]</b>를 지원하여 지형적·군사적 맥락을 입체 파악합니다.
                     </p>
                   </div>
 
-                  <div className="p-3 rounded-xl border bg-indigo-50/70 border-indigo-200/80 dark:bg-indigo-950/20 dark:border-indigo-900/60 text-left flex flex-col gap-1">
+                  <div className="p-3.5 rounded-2xl border bg-indigo-50/70 border-indigo-200/80 dark:bg-indigo-950/20 dark:border-indigo-900/60 text-left flex flex-col gap-1.5">
                     <div className="flex justify-between items-center">
-                      <span className="font-bold text-[12px] text-indigo-950 dark:text-indigo-200">📖 7. 반즈 & JFB 역사문법 강해 주석</span>
-                      <span className="text-[9.5px] font-mono px-1.5 py-0.2 rounded bg-white dark:bg-black/40 border border-indigo-300 dark:border-indigo-800 text-indigo-800 dark:text-indigo-300">단락별 번역</span>
+                      <span className="font-bold text-[12.5px] text-indigo-950 dark:text-indigo-200">📖 7. 반즈 & JFB 역사문법 강해 주석</span>
+                      <span className="text-[9.5px] font-mono px-2 py-0.5 rounded bg-white dark:bg-black/40 border border-indigo-300 dark:border-indigo-800 text-indigo-800 dark:text-indigo-300 font-bold">단락별 번역</span>
                     </div>
-                    <p className="text-[11.5px] text-indigo-900/80 dark:text-indigo-300/80 leading-relaxed font-medium">
-                      원어 문맥 주해와 교리적 의미를 단락 단위로 깔끔하게 분할 번역하여 깊은 묵상을 돕습니다.
+                    <p className="text-[11.8px] text-indigo-900/80 dark:text-indigo-300/80 leading-relaxed font-medium">
+                      원어 문맥 주해와 교리적 의미를 단락 단위로 분할하여 <b>[🌐 한국어 번역]</b> 토글로 매끄럽게 열람합니다.
                     </p>
                   </div>
 
-                  <div className="p-3 rounded-xl border bg-emerald-50/70 border-emerald-200/80 dark:bg-emerald-950/20 dark:border-emerald-900/60 text-left flex flex-col gap-1">
+                  <div className="p-3.5 rounded-2xl border bg-emerald-50/70 border-emerald-200/80 dark:bg-emerald-950/20 dark:border-emerald-900/60 text-left flex flex-col gap-1.5">
                     <div className="flex justify-between items-center">
-                      <span className="font-bold text-[12px] text-emerald-950 dark:text-emerald-200">🌿 8. 매튜 헨리 구속사적 묵상 강해</span>
-                      <span className="text-[9.5px] font-mono px-1.5 py-0.2 rounded bg-white dark:bg-black/40 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300">청교도 표준</span>
+                      <span className="font-bold text-[12.5px] text-emerald-950 dark:text-emerald-200">🌿 8. 매튜 헨리 구속사적 묵상 강해</span>
+                      <span className="text-[9.5px] font-mono px-2 py-0.5 rounded bg-white dark:bg-black/40 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 font-bold">청교도 표준</span>
                     </div>
-                    <p className="text-[11.5px] text-emerald-900/80 dark:text-emerald-300/80 leading-relaxed font-medium">
-                      영혼의 양식이 되는 정통 청교도 강해와 삶의 실천 권면을 단락 분할로 출력합니다.
+                    <p className="text-[11.8px] text-emerald-900/80 dark:text-emerald-300/80 leading-relaxed font-medium">
+                      청교도 대가 매튜 헨리의 영적 통찰과 삶의 실천 권면을 단락 분할로 출력하여 깊은 은혜를 누립니다.
                     </p>
                   </div>
 
-                  <div className="p-3 rounded-xl border bg-rose-50/70 border-rose-200/80 dark:bg-rose-950/20 dark:border-rose-900/60 text-left flex flex-col gap-1">
+                  <div className="p-3.5 rounded-2xl border bg-rose-50/70 border-rose-200/80 dark:bg-rose-950/20 dark:border-rose-900/60 text-left flex flex-col gap-1.5">
                     <div className="flex justify-between items-center">
-                      <span className="font-bold text-[12px] text-rose-950 dark:text-rose-200">🔍 9. NET Bible 사본/원문 비평 각주</span>
-                      <span className="text-[9.5px] font-mono px-1.5 py-0.2 rounded bg-white dark:bg-black/40 border border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-300">Textual Criticism</span>
+                      <span className="font-bold text-[12.5px] text-rose-950 dark:text-rose-200">🔍 9. NET Bible 본문비평 사본학 각주</span>
+                      <span className="text-[9.5px] font-mono px-2 py-0.5 rounded bg-white dark:bg-black/40 border border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-300 font-bold">Textual Notes</span>
                     </div>
-                    <p className="text-[11.5px] text-rose-900/80 dark:text-rose-300/80 leading-relaxed font-medium">
-                      현대 최고 복음주의 신학자들이 기록한 번역상 난제와 사본학적 각주를 명쾌히 제공합니다.
+                    <p className="text-[11.8px] text-rose-900/80 dark:text-rose-300/80 leading-relaxed font-medium">
+                      최고의 복음주의 학자들이 기록한 번역상 난제, 문법적 이견, 사본학적 차이를 투명하게 밝혀줍니다.
                     </p>
                   </div>
 
-                  <div className="p-3 rounded-xl border bg-purple-50/70 border-purple-200/80 dark:bg-purple-950/20 dark:border-purple-900/60 text-left flex flex-col gap-1">
+                  <div className="p-3.5 rounded-2xl border bg-purple-50/70 border-purple-200/80 dark:bg-purple-950/20 dark:border-purple-900/60 text-left flex flex-col gap-1.5">
                     <div className="flex justify-between items-center">
-                      <span className="font-bold text-[12px] text-purple-950 dark:text-purple-200">📚 10. 이스톤 성경 백과사전 (Easton's)</span>
-                      <span className="text-[9.5px] font-mono px-1.5 py-0.2 rounded bg-white dark:bg-black/40 border border-purple-300 dark:border-purple-800 text-purple-800 dark:text-purple-300">Encyclopedia</span>
+                      <span className="font-bold text-[12.5px] text-purple-950 dark:text-purple-200">📚 10. 이스톤 성경 백과사전 (Easton's)</span>
+                      <span className="text-[9.5px] font-mono px-2 py-0.5 rounded bg-white dark:bg-black/40 border border-purple-300 dark:border-purple-800 text-purple-800 dark:text-purple-300 font-bold">Encyclopedia</span>
                     </div>
-                    <p className="text-[11.5px] text-purple-900/80 dark:text-purple-300/80 leading-relaxed font-medium">
-                      본문에 등장하는 고대 인물, 지명, 제도, 풍습의 역사적 의미를 사전식으로 총망라합니다.
+                    <p className="text-[11.8px] text-purple-900/80 dark:text-purple-300/80 leading-relaxed font-medium">
+                      본문에 등장하는 고대 인물, 지명, 제도, 동식물, 고고학적 유물의 의미를 체계적으로 정리합니다.
                     </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* CHAPTER 04: 실전 원어 강해 워크플로우 */}
+              <div className={`p-5 sm:p-6 rounded-3xl border ${ui.cardBg} flex flex-col gap-4 shadow-xs`}>
+                <div className="flex items-center gap-3 border-b pb-4 border-stone-200/80 dark:border-white/10">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 flex items-center justify-center text-xl font-black shrink-0">💡</div>
+                  <div className="min-w-0 flex-1">
+                    <h4 className={`text-[16.5px] sm:text-[17.5px] font-black ${ui.textMain} tracking-tight leading-snug break-keep`}>
+                      CHAPTER 04. 실전 원어 강해 워크플로우 (창세기 1:1~2 분석 사례)
+                    </h4>
+                    <p className={`text-[12px] font-bold text-emerald-700 dark:text-emerald-400 mt-0.5 truncate`}>
+                      설교 준비와 깊은 묵상을 완성하는 4단계 실전 연구 프로세스
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-3 text-[12.2px] leading-relaxed">
+                  <div className={`p-3.5 rounded-2xl border ${ui.innerCard}`}>
+                    <span className="font-bold text-amber-700 dark:text-amber-300 block mb-1">
+                      1단계: 원어 어순 무삭제 직역 확인
+                    </span>
+                    <p className={ui.textSub}>
+                      <code>in beginning created God the heavens and the earth</code> 직역을 통해 성령께서 '하나님'보다 '태초에'와 '창조하셨다(Bara)'를 먼저 앞세우신 구속사적 선포를 파악합니다.
+                    </p>
+                  </div>
+
+                  <div className={`p-3.5 rounded-2xl border ${ui.innerCard}`}>
+                    <span className="font-bold text-blue-700 dark:text-blue-300 block mb-1">
+                      2단계: 핵심 어절 형태론 & 신학적 어간 분해
+                    </span>
+                    <p className={ui.textSub}>
+                      '바라(Bara, H1254)' 카드를 터치하여 <code>칼(Qal) 완료형</code>임을 확인합니다. 하나님만이 주어가 되시는 절대적 무(無)로부터의 창조임을 교리적으로 확증합니다.
+                    </p>
+                  </div>
+
+                  <div className={`p-3.5 rounded-2xl border ${ui.innerCard}`}>
+                    <span className="font-bold text-purple-700 dark:text-purple-300 block mb-1">
+                      3단계: 10대 학술 코퍼스 교차 검증
+                    </span>
+                    <p className={ui.textSub}>
+                      BHS 구문론에서 Atnach 대휴지를 통해 '하늘들을'에서 문장이 한번 숨을 고르는 낭독 구조를 살피고, 반즈 주석에서 물질의 신적 기원을 읽어냅니다.
+                    </p>
+                  </div>
+
+                  <div className={`p-3.5 rounded-2xl border ${ui.innerCard}`}>
+                    <span className="font-bold text-emerald-700 dark:text-emerald-300 block mb-1">
+                      4단계: 나만의 번역 메모 기록 & QT / 설교노트 전송
+                    </span>
+                    <p className={ui.textSub}>
+                      [✍️ 나의 번역] 탭에 묵상 메모를 영구 저장한 뒤, <code>[🌿 QT 묵상에 삽입]</code> 버튼을 눌러 오늘 나의 묵상 일지에 주석을 자동 기록합니다.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* CHAPTER 05: 단축키 & 연구 서재 치트시트 */}
+              <div className={`p-5 sm:p-6 rounded-3xl border ${ui.cardBg} flex flex-col gap-4 shadow-xs`}>
+                <div className="flex items-center gap-3 border-b pb-4 border-stone-200/80 dark:border-white/10">
+                  <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-700 dark:text-purple-400 flex items-center justify-center text-xl font-black shrink-0">⌨️</div>
+                  <div className="min-w-0 flex-1">
+                    <h4 className={`text-[16.5px] sm:text-[17.5px] font-black ${ui.textMain} tracking-tight leading-snug break-keep`}>
+                      CHAPTER 05. 전문 연구자 단축키 & 연구 서재 치트시트
+                    </h4>
+                    <p className={`text-[12px] font-bold text-purple-700 dark:text-purple-400 mt-0.5 truncate`}>
+                      초고속 탐색과 전권 용례 색인(Concordance) 활용
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[11.5px] font-mono">
+                  <div className="p-3 bg-stone-100/90 dark:bg-black/40 rounded-xl border border-stone-200 dark:border-white/5 flex items-center justify-between">
+                    <span className="text-stone-600 dark:text-slate-400 font-sans">이전 절 / 다음 절 이동:</span>
+                    <span className="text-indigo-600 dark:text-indigo-300 font-bold">좌우 방향키 (◀ / ▶)</span>
+                  </div>
+                  <div className="p-3 bg-stone-100/90 dark:bg-black/40 rounded-xl border border-stone-200 dark:border-white/5 flex items-center justify-between">
+                    <span className="text-stone-600 dark:text-slate-400 font-sans">성경 66권 전권 용례 인출:</span>
+                    <span className="text-amber-600 dark:text-amber-300 font-bold">단어 클릭 ➔ [📊 전권용례]</span>
+                  </div>
+                  <div className="p-3 bg-stone-100/90 dark:bg-black/40 rounded-xl border border-stone-200 dark:border-white/5 flex items-center justify-between">
+                    <span className="text-stone-600 dark:text-slate-400 font-sans">종합 학술 리포트 복사:</span>
+                    <span className="text-emerald-600 dark:text-emerald-300 font-bold">상단 [📋 리포트 복사]</span>
+                  </div>
+                  <div className="p-3 bg-stone-100/90 dark:bg-black/40 rounded-xl border border-stone-200 dark:border-white/5 flex items-center justify-between">
+                    <span className="text-stone-600 dark:text-slate-400 font-sans">내가 저장한 주석 모아보기:</span>
+                    <span className="text-purple-600 dark:text-purple-300 font-bold">상단 [📚 서재] 버튼</span>
                   </div>
                 </div>
               </div>
@@ -499,7 +689,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
           )}
 
           {/* ========================================================================= */}
-          {/* 🎬 [탭 2] 릴스 스튜디오 Pro 완벽 바이블 (100% 완전 보존)                    */}
+          {/* 🎬 [탭 2] 릴스 스튜디오 Pro 완벽 바이블 (100% 완전 보존)[cite: 37]                   */}
           {/* ========================================================================= */}
           {activeTab === 'reelsStudioGuide' && (
             <div className="flex flex-col gap-5 sm:gap-6">
@@ -528,7 +718,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
                 </button>
               </div>
 
-              {/* 타임라인 V/T/A 구조 */}
+              {/* 타임라인 V/T/A 구조[cite: 37] */}
               <div className={`p-5 sm:p-6 rounded-3xl border ${ui.cardBg} flex flex-col gap-4 shadow-sm`}>
                 <div className="flex items-center gap-3 border-b pb-4 border-stone-200/80 dark:border-white/10">
                   <div className="w-10 h-10 rounded-xl bg-sky-100 text-sky-700 dark:bg-sky-500/10 dark:text-sky-400 flex items-center justify-center text-xl font-black shrink-0">🎞️</div>
@@ -595,7 +785,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
                 </div>
               </div>
 
-              {/* 스마트 오디오 더킹 */}
+              {/* 스마트 오디오 더킹[cite: 37] */}
               <div className={`p-5 sm:p-6 rounded-3xl border ${ui.cardBg} flex flex-col gap-4 shadow-sm`}>
                 <div className="flex items-center gap-3 border-b pb-4 border-stone-200/80 dark:border-white/10">
                   <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 flex items-center justify-center text-xl font-black shrink-0">🎛️</div>
@@ -637,7 +827,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
                 </div>
               </div>
 
-              {/* 비디오월 & 3-Way 컬러휠 */}
+              {/* 비디오월 & 3-Way 컬러휠[cite: 37] */}
               <div className={`p-5 sm:p-6 rounded-3xl border ${ui.cardBg} flex flex-col gap-4 shadow-sm`}>
                 <div className="flex items-center gap-3 border-b pb-4 border-stone-200/80 dark:border-white/10">
                   <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 dark:bg-purple-500/10 dark:text-purple-400 flex items-center justify-center text-xl font-black shrink-0">🎨</div>
@@ -690,7 +880,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
                 </div>
               </div>
 
-              {/* 키네틱 타이포 & 프롬프터 & 매직 마스크 */}
+              {/* 키네틱 타이포 & 프롬프터 & 매직 마스크[cite: 37] */}
               <div className={`p-5 sm:p-6 rounded-3xl border ${ui.cardBg} flex flex-col gap-4 shadow-sm`}>
                 <div className="flex items-center gap-3 border-b pb-4 border-stone-200/80 dark:border-white/10">
                   <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400 flex items-center justify-center text-xl font-black shrink-0">✨</div>
@@ -731,7 +921,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
                 </div>
               </div>
 
-              {/* 원클릭 마스터 액션 배너 */}
+              {/* 원클릭 마스터 액션 배너[cite: 37] */}
               <div className={`p-4 sm:p-5 rounded-2xl border ${ui.cardBg} flex flex-col sm:flex-row justify-between sm:items-center gap-3.5 shadow-xs bg-gradient-to-r from-amber-50/70 to-stone-50/90 dark:from-stone-900/60 dark:to-black/80 border-amber-200/80 dark:border-white/10`}>
                 <div className="flex flex-col gap-1 min-w-0 flex-1">
                   <span className="text-xs font-black text-amber-700 dark:text-[#00E5FF] font-mono">ONE-CLICK AI MASTER</span>
@@ -752,7 +942,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
           )}
 
           {/* ========================================================================= */}
-          {/* 🚀 [탭 3] 원스트림(One-Stream) 연동 가이드 (100% 완전 보존)                 */}
+          {/* 🚀 [탭 3] 원스트림(One-Stream) 연동 가이드 (100% 완전 보존)[cite: 37]                 */}
           {/* ========================================================================= */}
           {activeTab === 'oneStream' && (
             <div className="flex flex-col gap-4">
@@ -777,7 +967,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
                 </button>
               </div>
 
-              {/* 기능 1 */}
+              {/* 기능 1[cite: 37] */}
               <div className={`p-4 sm:p-5 rounded-2xl border ${ui.cardBg} flex flex-col gap-3`}>
                 <div className="flex items-center justify-between border-b pb-2.5 border-dashed border-stone-200 dark:border-white/10">
                   <div className="flex items-center gap-2">
@@ -819,7 +1009,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
                 </div>
               </div>
 
-              {/* 기능 2 */}
+              {/* 기능 2[cite: 37] */}
               <div className={`p-4 sm:p-5 rounded-2xl border ${ui.cardBg} flex flex-col gap-3`}>
                 <div className="flex items-center justify-between border-b pb-2.5 border-dashed border-stone-200 dark:border-white/10">
                   <div className="flex items-center gap-2">
@@ -834,7 +1024,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
                 </p>
               </div>
 
-              {/* 기능 3 */}
+              {/* 기능 3[cite: 37] */}
               <div className={`p-4 sm:p-5 rounded-2xl border ${ui.cardBg} flex flex-col gap-3`}>
                 <div className="flex items-center justify-between border-b pb-2.5 border-dashed border-stone-200 dark:border-white/10">
                   <div className="flex items-center gap-2">
@@ -849,7 +1039,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
                 </p>
               </div>
 
-              {/* 기능 4 */}
+              {/* 기능 4[cite: 37] */}
               <div className={`p-4 sm:p-5 rounded-2xl border ${ui.cardBg} flex flex-col gap-3`}>
                 <div className="flex items-center justify-between border-b pb-2.5 border-dashed border-stone-200 dark:border-white/10">
                   <div className="flex items-center gap-2">
@@ -867,7 +1057,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
           )}
 
           {/* ========================================================================= */}
-          {/* 🏛️ [탭 4] 교회 행정·재정 거버넌스 4종 ERP 센터 (100% 완전 보존)           */}
+          {/* 🏛️ [탭 4] 교회 행정·재정 거버넌스 4종 ERP 센터 (100% 완전 보존)[cite: 37]           */}
           {/* ========================================================================= */}
           {activeTab === 'erpSuite' && (
             <div className="flex flex-col gap-5 sm:gap-6">
@@ -893,7 +1083,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
                 </button>
               </div>
 
-              {/* 1. 재무·예산 원장 */}
+              {/* 1. 재무·예산 원장[cite: 37] */}
               <div className={`p-5 sm:p-6 rounded-3xl border ${ui.cardBg} flex flex-col gap-4 shadow-sm relative overflow-hidden`}>
                 <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-[80px] rounded-full pointer-events-none" />
                 
@@ -938,7 +1128,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
                 </div>
               </div>
 
-              {/* 2. 사역 공정 관제 */}
+              {/* 2. 사역 공정 관제[cite: 37] */}
               <div className={`p-5 sm:p-6 rounded-3xl border ${ui.cardBg} flex flex-col gap-4 shadow-sm relative overflow-hidden`}>
                 <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 blur-[80px] rounded-full pointer-events-none" />
                 
@@ -977,7 +1167,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
                 </div>
               </div>
 
-              {/* 3. 회의록 아카이브 */}
+              {/* 3. 회의록 아카이브[cite: 37] */}
               <div className={`p-5 sm:p-6 rounded-3xl border ${ui.cardBg} flex flex-col gap-4 shadow-sm relative overflow-hidden`}>
                 <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 blur-[80px] rounded-full pointer-events-none" />
                 
@@ -1016,7 +1206,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
                 </div>
               </div>
 
-              {/* 4. 목회 기도·감사 요약 */}
+              {/* 4. 목회 기도·감사 요약[cite: 37] */}
               <div className={`p-4 sm:p-5 rounded-2xl border ${ui.cardBg} flex flex-col sm:flex-row justify-between sm:items-center gap-3.5 shadow-xs`}>
                 <div className="flex flex-col gap-1.5 min-w-0">
                   <div className="flex items-center gap-2">
@@ -1031,8 +1221,9 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
 
             </div>
           )}
+
           {/* ========================================================================= */}
-          {/* 📖 [탭 5] 공동체 QT & 목사님 나눔 상세 바이블                             */}
+          {/* 📖 [탭 5] 공동체 QT & 목사님 나눔 상세 바이블 (100% 완전 보존)[cite: 37]             */}
           {/* ========================================================================= */}
           {activeTab === 'qtCommunity' && (
             <div className="flex flex-col gap-4">
@@ -1058,7 +1249,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
                 </button>
               </div>
 
-              {/* 기능 1 */}
+              {/* 기능 1[cite: 37] */}
               <div className={`p-4 sm:p-5 rounded-2xl border ${ui.cardBg} flex flex-col gap-3`}>
                 <div className="flex items-center justify-between border-b pb-2.5 border-dashed border-stone-200 dark:border-white/10">
                   <div className="flex items-center gap-2">
@@ -1081,7 +1272,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
                 </div>
               </div>
 
-              {/* 기능 2 */}
+              {/* 기능 2[cite: 37] */}
               <div className={`p-4 sm:p-5 rounded-2xl border ${ui.cardBg} flex flex-col gap-3`}>
                 <div className="flex items-center justify-between border-b pb-2.5 border-dashed border-stone-200 dark:border-white/10">
                   <div className="flex items-center gap-2">
@@ -1096,7 +1287,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
                 </p>
               </div>
 
-              {/* 기능 3 */}
+              {/* 기능 3[cite: 37] */}
               <div className={`p-4 sm:p-5 rounded-2xl border ${ui.cardBg} flex flex-col gap-3`}>
                 <div className="flex items-center justify-between border-b pb-2.5 border-dashed border-stone-200 dark:border-white/10">
                   <div className="flex items-center gap-2">
@@ -1115,7 +1306,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
           )}
 
           {/* ========================================================================= */}
-          {/* 🕊️ [탭 6] 오늘의 묵상 여정 5단계 리터지 예배                             */}
+          {/* 🕊️ [탭 6] 오늘의 묵상 여정 5단계 리터지 예배 (100% 완전 보존)[cite: 37]             */}
           {/* ========================================================================= */}
           {activeTab === 'pilgrimage' && (
             <div className="flex flex-col gap-4">
@@ -1141,7 +1332,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
                 </button>
               </div>
 
-              {/* 5단계 순서 도식화 */}
+              {/* 5단계 순서 도식화[cite: 37] */}
               <div className="grid grid-cols-1 sm:grid-cols-5 gap-2 text-center">
                 {[
                   { num: '01', title: '침묵과 정돈', desc: '60초 호흡 침묵' },
@@ -1171,7 +1362,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
           )}
 
           {/* ========================================================================= */}
-          {/* 👥 [탭 7] 목장 모임 & Today-7일 오토풀링(Auto-Pulling)                       */}
+          {/* 👥 [탭 7] 목장 모임 & Today-7일 오토풀링(Auto-Pulling) (100% 완전 보존)[cite: 37]       */}
           {/* ========================================================================= */}
           {activeTab === 'cellManual' && (
             <div className="flex flex-col gap-4">
@@ -1197,7 +1388,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
                 </button>
               </div>
 
-              {/* 7일 오토풀링 핵심 원리 */}
+              {/* 7일 오토풀링 핵심 원리[cite: 37] */}
               <div className={`p-4 rounded-2xl border border-stone-200 dark:border-white/10 bg-stone-50/80 dark:bg-black/20 flex flex-col gap-2`}>
                 <div className="flex justify-between items-center">
                   <span className="text-[12px] font-bold text-stone-800 dark:text-stone-200">
@@ -1210,7 +1401,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
                 </p>
               </div>
 
-              {/* 역할별 제출 체계 도식 */}
+              {/* 역할별 제출 체계 도식[cite: 37] */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className={`p-4 rounded-2xl border flex flex-col gap-1.5 ${ui.cardBg}`}>
                   <span className="text-[10.5px] font-bold px-2 py-0.5 rounded-md bg-stone-100 dark:bg-white/10 text-stone-800 dark:text-stone-200 w-max">일반 성도 (목원)</span>
@@ -1233,7 +1424,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
           )}
 
           {/* ========================================================================= */}
-          {/* 🌱 [탭 8] 영적 성장 파이프라인 (100% 완전 보존)                             */}
+          {/* 🌱 [탭 8] 영적 성장 파이프라인 (100% 완전 보존)[cite: 37]                             */}
           {/* ========================================================================= */}
           {activeTab === 'roadmap' && (
             <div className="flex flex-col gap-4">
@@ -1322,7 +1513,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
           )}
 
           {/* ========================================================================= */}
-          {/* 🎯 [탭 9] 상황별 성도 맞춤 처방 솔루션 (100% 완전 보존)                     */}
+          {/* 🎯 [탭 9] 상황별 성도 맞춤 처방 솔루션 (100% 완전 보존)[cite: 37]                     */}
           {/* ========================================================================= */}
           {activeTab === 'context' && (
             <div className="flex flex-col gap-3">
@@ -1395,7 +1586,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
           )}
 
           {/* ========================================================================= */}
-          {/* 🏢 [탭 10] 컨트롤허브(Admin) 사용법 (100% 완전 보존)                       */}
+          {/* 🏢 [탭 10] 컨트롤허브(Admin) 사용법 (100% 완전 보존)[cite: 37]                       */}
           {/* ========================================================================= */}
           {activeTab === 'controlHub' && (
             <div className="flex flex-col gap-4">
@@ -1413,7 +1604,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
                 </p>
               </div>
 
-              {/* 기능 1 */}
+              {/* 기능 1[cite: 37] */}
               <div className={`p-4 sm:p-5 rounded-2xl border ${ui.cardBg} flex flex-col gap-3`}>
                 <div className="flex items-center justify-between border-b pb-2 border-dashed border-stone-200 dark:border-white/10">
                   <div className="flex items-center gap-2">
@@ -1428,7 +1619,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
                 </p>
               </div>
 
-              {/* 기능 2 */}
+              {/* 기능 2[cite: 37] */}
               <div className={`p-4 sm:p-5 rounded-2xl border ${ui.cardBg} flex flex-col gap-3`}>
                 <div className="flex items-center justify-between border-b pb-2 border-dashed border-stone-200 dark:border-white/10">
                   <div className="flex items-center gap-2">
@@ -1443,7 +1634,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
                 </p>
               </div>
 
-              {/* 기능 3 */}
+              {/* 기능 3[cite: 37] */}
               <div className={`p-4 sm:p-5 rounded-2xl border ${ui.cardBg} flex flex-col gap-3`}>
                 <div className="flex items-center justify-between border-b pb-2 border-dashed border-stone-200 dark:border-white/10">
                   <div className="flex items-center gap-2">
@@ -1458,7 +1649,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
                 </p>
               </div>
 
-              {/* 기능 4 */}
+              {/* 기능 4[cite: 37] */}
               <div className={`p-4 sm:p-5 rounded-2xl border ${ui.cardBg} flex flex-col gap-3`}>
                 <div className="flex items-center justify-between border-b pb-2 border-dashed border-stone-200 dark:border-white/10">
                   <div className="flex items-center gap-2">
@@ -1477,7 +1668,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
           )}
 
           {/* ========================================================================= */}
-          {/* 💡 [탭 11] 스마트 꿀팁 (100% 완전 보존)                                   */}
+          {/* 💡 [탭 11] 스마트 꿀팁 (100% 완전 보존)[cite: 37]                                   */}
           {/* ========================================================================= */}
           {activeTab === 'tips' && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">

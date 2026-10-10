@@ -1,4 +1,4 @@
-// src/pages/Interlinear.js (PART 1/2)
+// src/pages/Interlinear.js (PART 1/3)
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { getCrossReferences } from '../lib/tskHelper';
@@ -9,7 +9,7 @@ import GrammarWikiModal from '../lib/GrammarWikiModal';
 // =====================================================================
 // 📜 성경 66권 정경 메타데이터 & 구속사 연대기 마스터 맵
 // =====================================================================
-const BIBLE_66_BOOKS = [
+export const BIBLE_66_BOOKS = [
   // 구약 39권
   { ko: "창세기", en: "Genesis", isOT: true, maxChap: 50, section: "모세오경", era: "B.C. 1446년경 (창조~족장 시대)", empire: "원역사 / 애굽 중왕국" },
   { ko: "출애굽기", en: "Exodus", isOT: true, maxChap: 40, section: "모세오경", era: "B.C. 1446년경 (출애굽과 광야 여정)", empire: "애굽 신왕국(18왕조)" },
@@ -84,7 +84,9 @@ const BIBLE_66_BOOKS = [
 const BOOK_SECTION_LOOKUP = {};
 BIBLE_66_BOOKS.forEach(b => { BOOK_SECTION_LOOKUP[b.ko] = b.section; });
 
-// 🌟 [핵심 신학 영한 사전 DB - 주요 성경 단어 구속사적 뜻풀이 내장]
+// =====================================================================
+// 📖 영한 신학 어휘 사전 & 성경적 용례 매핑
+// =====================================================================
 const BIBLICAL_ENG_KOR_LEXICON = {
   "god": { kor: "하나님, 참 신", pos: "명사", theology: "유일무이하신 천지만물의 창조주이자 구속주 하나님 (Elohim / Theos)" },
   "lord": { kor: "주, 여호와", pos: "명사", theology: "언약의 주권자 여호와(YHWH), 만유의 주재이신 예수 그리스도(Kyrios)" },
@@ -118,7 +120,7 @@ const FALLBACK_ENGLISH_TRANSLATION_MAP = {
   'meet': '만나다', 'king': '왕, 군왕', 'samaria': '사마리아', 'god': '하나님, 신'
 };
 
-// 실시간 단락별 영한 번역 엔진
+// 🌟 실시간 단락별 영한 번역 엔진
 async function fetchKoreanTranslation(text) {
   if (!text || typeof text !== 'string') return '';
   const rawParagraphs = text.split(/\r?\n\s*\r?\n/).map(p => p.trim()).filter(Boolean);
@@ -142,7 +144,7 @@ async function fetchKoreanTranslation(text) {
   return translatedChunks.filter(Boolean).join('\n\n');
 }
 
-// 실시간 영한 단어 사전 인출기
+// 🌟 실시간 영한 단어 사전 인출기
 async function fetchEnglishWordLexicon(word) {
   const clean = word.toLowerCase().trim().replace(/[^a-z]/g, '');
   if (!clean) return null;
@@ -187,15 +189,12 @@ async function fetchEnglishWordLexicon(word) {
   }
 }
 
-// SVG 아이콘 세트
-const IconMenu = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" /></svg>;
-const IconBack = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>;
-const IconVolume = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.757 3.63 8.25 4.51 8.25H6.75z" /></svg>;
-const IconBook = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" /></svg>;
-
+// =====================================================================
+// 🌟 원어 조판 & 텍스트 정제 엔진 (자음·모음·악센트 정밀 분리)
+// =====================================================================
 let cachedMasterStrongs = null;
 
-const decodeHtmlEntities = (text) => {
+export const decodeHtmlEntities = (text) => {
   if (!text || typeof text !== 'string') return text || '';
   return text
     .replace(/&#x27;/gi, "'")
@@ -210,16 +209,43 @@ const decodeHtmlEntities = (text) => {
     .replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(parseInt(dec, 10)));
 };
 
-const cleanTypography = (text, isOT, mode = 'vowels') => {
-  if (!text || typeof text !== 'string') return '';
-  if (!isOT) return text;
-  if (mode === 'consonants') return text.replace(/[\u0591-\u05C7]/g, '');
-  if (mode === 'vowels') return text.replace(/[\u0591-\u05AF]/g, '');
-  return text;
+// 🌟 [핵심] 히브리어 순수 자음 추출기 (모음부호 Niqqud & 악센트 Cantillation \u0591-\u05C7 완전 제거)
+export const stripHebrewVowels = (text) => {
+  if (!text || typeof text !== 'string') return text || '';
+  return text.replace(/[\u0591-\u05C7]/g, '');
 };
 
-// 🌟 [품사 정밀 복원] 어간 및 시제, 신학적 통찰 데이터 전수 복원
-const getTheologicalGrammarInsight = (grammarRaw, isOT) => {
+// 🌟 [핵심] 조판 모드별 텍스트 변환기 (vowels: 모음포함 / full: 악센트포함 / consonants: 순수 자음만)
+export const cleanTypography = (text, isOT, mode = 'vowels') => {
+  if (!text || typeof text !== 'string') return '';
+  if (!isOT) return text;
+  if (mode === 'consonants') return stripHebrewVowels(text);
+  if (mode === 'vowels') return text.replace(/[\u0591-\u05AF]/g, ''); // 악센트만 제거, 모음 유지
+  return text; // 'full': 마소라 모음 및 악센트 원형 보존
+};
+
+// =====================================================================
+// 🌟 원어 어순 직역(Literal Translation) 자동 조립 헬퍼
+// =====================================================================
+// 🌟 [수정] 정통 원어 인터리니어 규격: 원어 어순 1:1 영문 직역(English Literal Interlinear)
+export const assembleLiteralTranslation = (wordsList, isOT) => {
+  if (!wordsList || !Array.isArray(wordsList) || wordsList.length === 0) return '';
+  
+  // 원어 어절 순서대로 정렬하여 1:1 영어 직역 조립
+  const orderedWords = [...wordsList].sort((a, b) => (a.word_order || 0) - (b.word_order || 0));
+  
+  const englishTokens = orderedWords
+    .map(w => w.eng)
+    .filter(e => e && e !== 'n/a' && e !== '-');
+
+  if (englishTokens.length === 0) return '';
+  return englishTokens.join(' ').replace(/\s+/g, ' ').trim();
+};
+
+// =====================================================================
+// 🌟 형태론 및 신학적 주석 통찰 (어간·시제·태·법 전수 디코딩)
+// =====================================================================
+export const getTheologicalGrammarInsight = (grammarRaw, isOT) => {
   if (!grammarRaw || typeof grammarRaw !== 'string') return null;
   const raw = grammarRaw.trim();
 
@@ -284,12 +310,12 @@ const getTheologicalGrammarInsight = (grammarRaw, isOT) => {
   return null;
 };
 
-// 🌟 [품사 분석 완전 복원] 헬라어/히브리어 성·수·격·어간·태·법 전수 디코딩
-const decodeExhaustiveMorphology = (rawCode) => {
+// 🌟 헬라어/히브리어 성·수·격·어간·태·법 전수 디코딩
+export const decodeExhaustiveMorphology = (rawCode) => {
   if (!rawCode || typeof rawCode !== 'string') return { label: '일반어휘', type: 'other', caseType: '', isVerb: false };
   const code = rawCode.trim();
 
-  // 1. 헬라어 형태론 분석 (예: V-AAI-3S, N-NSM, PREP, CONJ)
+  // 1. 헬라어 형태론 분석
   if (code.includes('-') || ['CONJ', 'PREP', 'ADV', 'PRT', 'INJ'].includes(code)) {
     if (code === 'CONJ') return { label: '접속사', type: 'particle', caseType: '', isVerb: false };
     if (code === 'PREP') return { label: '전치사', type: 'particle', caseType: '', isVerb: false };
@@ -344,7 +370,7 @@ const decodeExhaustiveMorphology = (rawCode) => {
     }
   }
 
-  // 2. 히브리어 형태론 분석 (예: verb.qal.perf.p3.m.sg, subs.f.sg.a)
+  // 2. 히브리어 형태론 분석
   if (code.includes('.')) {
     const parts = code.split('.');
     const mainType = parts[0];
@@ -385,7 +411,7 @@ const decodeExhaustiveMorphology = (rawCode) => {
 };
 
 // 🌟 히브리어 방향격(he) 및 헬라어 격변화 완전 적용
-const applyContextualCaseEnding = (baseKor, caseType, isOT, rawGrammar) => {
+export const applyContextualCaseEnding = (baseKor, caseType, isOT, rawGrammar) => {
   if (!baseKor || baseKor === '원어 어휘') return baseKor;
   let word = baseKor.trim();
 
@@ -407,7 +433,7 @@ const applyContextualCaseEnding = (baseKor, caseType, isOT, rawGrammar) => {
   return word;
 };
 
-const parseUnabridgedAcademicLexicon = (rawDesc, masterEntry, isOT) => {
+export const parseUnabridgedAcademicLexicon = (rawDesc, masterEntry, isOT) => {
   const desc = rawDesc || masterEntry?.desc || '';
   let etymology = '', meaning = '', usage = '';
 
@@ -429,7 +455,7 @@ const parseUnabridgedAcademicLexicon = (rawDesc, masterEntry, isOT) => {
   };
 };
 
-const speakAudio = (text, langCode = 'he-IL') => {
+export const speakAudio = (text, langCode = 'he-IL') => {
   try {
     if (!('speechSynthesis' in window)) return;
     window.speechSynthesis.cancel();
@@ -441,7 +467,7 @@ const speakAudio = (text, langCode = 'he-IL') => {
   } catch (_) {}
 };
 
-const renderParagraphBlocks = (rawContent, textColorClass = '') => {
+export const renderParagraphBlocks = (rawContent, textColorClass = '') => {
   if (!rawContent) return null;
   const decoded = decodeHtmlEntities(rawContent);
   const paras = decoded.split(/\r?\n\s*\r?\n/).map(p => p.trim()).filter(Boolean);
@@ -456,12 +482,38 @@ const renderParagraphBlocks = (rawContent, textColorClass = '') => {
     </p>
   ));
 };
-// src/pages/Interlinear.js (PART 2/2 - 계속)
+// src/pages/Interlinear.js (PART 2/3)
+// =====================================================================
+// 🎨 SVG 아이콘 컴포넌트 세트
+// =====================================================================
+const IconMenu = () => (
+  <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" className="w-5 h-5">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+  </svg>
+);
 
+const IconBack = () => (
+  <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" className="w-5 h-5">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+  </svg>
+);
+
+const IconVolume = () => (
+  <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" className="w-3.5 h-3.5">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.757 3.63 8.25 4.51 8.25H6.75z" />
+  </svg>
+);
+
+const IconBook = () => (
+  <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" className="w-4 h-4">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+  </svg>
+);
 export default function Interlinear({
   t, isDarkMode, setActiveScreen, setIsSidebarOpen, isSidebarOpen, 
   bibles, getKoName, getArr
 }) {
+  // ── 1. 권 / 장 / 절 네비게이션 상태 ──
   const [selectedBookIndex, setSelectedBookIndex] = useState(() => {
     try {
       const jump = JSON.parse(localStorage.getItem('interlinear_jump') || '{}');
@@ -491,7 +543,7 @@ export default function Interlinear({
     return 1;
   });
 
-  // 📖 성경 역본 모드
+  // ── 2. 성경 역본 모드 ('krv': 개역개정, 'literal': 원어직역, 'easy': 쉬운성경, 'web': WEB영어, 'parallel': 동시대조) ──
   const [bibleVersion, setBibleVersion] = useState(() => {
     try {
       return localStorage.getItem('interlinear_bible_version') || 'krv';
@@ -509,6 +561,10 @@ export default function Interlinear({
     } catch (_) {}
   };
 
+  // ── 3. 원어 조판 표기 모드 ('vowels': 모음부호, 'consonants': 자음만, 'full': 악센트포함, 'phonetic': 한글음역발음) ──
+  const [typographyMode, setTypographyMode] = useState('vowels');
+
+  // ── 4. 원어 인터리니어 어절 및 사전 상태 ──
   const [words, setWords] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [dictLoaded, setDictLoaded] = useState(false);
@@ -517,18 +573,20 @@ export default function Interlinear({
   const [selectedWordDetail, setSelectedWordDetail] = useState(null);
   const [modalTab, setModalTab] = useState('concordance');
 
-  // 🌟 [신규] WEB 영단어 사전 상태
+  // WEB 영어 단어 심층 렉시콘 모달 상태
   const [selectedWebLexiconWord, setSelectedWebLexiconWord] = useState(null);
   const [isWebLexiconLoading, setIsWebLexiconLoading] = useState(false);
 
+  // 문법 대백과 모달 상태
   const [selectedGrammarWikiKey, setSelectedGrammarWikiKey] = useState(null);
-  const [typographyMode, setTypographyMode] = useState('vowels');
 
+  // 성경 66권 원어 용례 (Concordance) 상태
   const [concordanceTotalCount, setConcordanceTotalCount] = useState(0);
   const [concordanceDistribution, setConcordanceDistribution] = useState({});
   const [concordanceList, setConcordanceList] = useState([]);
   const [isConcordanceLoading, setIsConcordanceLoading] = useState(false);
 
+  // 단락별 한국어 실시간 번역 캐시
   const [translatedMap, setTranslatedMap] = useState({});
   const [translatingKeys, setTranslatingKeys] = useState({});
 
@@ -543,11 +601,12 @@ export default function Interlinear({
     setTranslatingKeys(prev => ({ ...prev, [key]: false }));
   };
 
+  // 연구자 고유 번역 및 주석 메모
   const [customNotesMap, setCustomNotesMap] = useState({});
   const [customInputTrans, setCustomInputTrans] = useState('');
   const [customInputMemo, setCustomInputMemo] = useState('');
 
-  // 10대 학술 아코디언 상태
+  // ── 5. 10대 학술 아코디언 개폐 상태 ──
   const [openPanels, setOpenPanels] = useState({
     tsk: false, hebrewSyntax: true, lxx: false, targumPeshitta: false, josephus: false,
     geo: false, commentary: true, matthewHenry: true, netNotes: false, easton: false
@@ -556,7 +615,7 @@ export default function Interlinear({
 
   const [isLibraryOpen, setIsLibraryOpen] = useState(false);
 
-  // 10대 학술 데이터베이스 상태
+  // ── 6. 10대 학술 코퍼스 데이터베이스 상태 ──
   const [crossRefs, setCrossRefs] = useState([]);
   const [isTskLoading, setIsTskLoading] = useState(false);
   const [lxxDatabase, setLxxDatabase] = useState({});
@@ -579,6 +638,7 @@ export default function Interlinear({
   
   const [currentHebrewSyntax, setCurrentHebrewSyntax] = useState(null);
 
+  // ── 7. 현재 도서 메타데이터 및 본문 텍스트 연산 ──
   const currentBookMeta = BIBLE_66_BOOKS[selectedBookIndex] || BIBLE_66_BOOKS[0];
   const isOT = currentBookMeta.isOT;
 
@@ -591,6 +651,7 @@ export default function Interlinear({
   const chaptersCount = currentBookData?.chapters?.length || currentBookMeta.maxChap;
   const versesCount = currentBookData?.chapters?.[chapter - 1]?.length || 35;
 
+  // 개역개정 본문
   const koVerseText = useMemo(() => {
     if (!currentBookData?.chapters?.[chapter - 1]) return `${currentBookMeta.ko} ${chapter}장 ${verse}절`;
     const v = currentBookData.chapters[chapter - 1][verse - 1];
@@ -598,23 +659,31 @@ export default function Interlinear({
     return decodeHtmlEntities(raw);
   }, [currentBookData, currentBookMeta, chapter, verse]);
 
+  // 쉬운성경 본문
   const easyVerseText = useMemo(() => {
     const key = `${currentBookMeta.ko}-${chapter}-${verse}`;
     return easyBibleDb[key] || '';
   }, [currentBookMeta.ko, chapter, verse, easyBibleDb]);
 
+  // WEB 영어 성경 본문
   const webVerseText = useMemo(() => {
     const keyKo = `${currentBookMeta.ko}-${chapter}-${verse}`;
     const keyEn = `${currentBookMeta.en}-${chapter}-${verse}`;
     return webBibleDb[keyKo] || webBibleDb[keyEn] || '';
   }, [currentBookMeta, chapter, verse, webBibleDb]);
 
+  // 영어 1:1 직역 본문
   const enVerseText = useMemo(() => {
     if (!words || words.length === 0) return '';
     return decodeHtmlEntities(words.map(w => w.eng).filter(e => e && e !== 'n/a' && e !== '-').join(' '));
   }, [words]);
 
-  // WEB 단어 터치 시 영한 사전 오픈
+  // 🌟 [핵심] 원어 어순 무삭제 직역 본문 (조립 헬퍼를 통해 100% 무결점 보장)
+  const literalVerseText = useMemo(() => {
+    return assembleLiteralTranslation(words, isOT);
+  }, [words, isOT]);
+
+  // ── 8. 영단어 터치 사전 오픈 ──
   const handleWordClickInWeb = async (rawWord) => {
     const clean = rawWord.trim().replace(/^[^a-zA-Z]+|[^a-zA-Z]+$/g, '');
     if (!clean || clean.length < 2) return;
@@ -650,6 +719,7 @@ export default function Interlinear({
     });
   };
 
+  // ── 9. 기초 학술 DB 로드 ──
   useEffect(() => {
     fetch('/data/easy_bible.json').then(r => r.ok ? r.json() : {}).then(d => setEasyBibleDb(d || {})).catch(() => {});
     fetch('/data/web_bible.json').then(r => r.ok ? r.json() : {}).then(d => setWebBibleDb(d || {})).catch(() => {});
@@ -677,22 +747,7 @@ export default function Interlinear({
       .catch(() => setMatthewHenryDb({}));
   }, [currentBookMeta.ko, chapter]);
 
-  useEffect(() => {
-    try {
-      const jumpStr = localStorage.getItem('interlinear_jump');
-      if (jumpStr) {
-        const jump = JSON.parse(jumpStr);
-        localStorage.removeItem('interlinear_jump');
-        if (jump?.book) {
-          const idx = BIBLE_66_BOOKS.findIndex(b => b.ko === jump.book || b.en === jump.book);
-          if (idx !== -1) setSelectedBookIndex(idx);
-        }
-        if (jump?.chapter) setChapter(Number(jump.chapter));
-        if (jump?.verse) setVerse(Number(jump.verse));
-      }
-    } catch (_) {}
-  }, []);
-
+  // 전후절 이동
   const handlePrevVerse = useCallback(() => {
     if (verse > 1) setVerse(v => v - 1);
     else if (chapter > 1) { setChapter(c => c - 1); setVerse(1); }
@@ -705,6 +760,7 @@ export default function Interlinear({
     else if (selectedBookIndex < BIBLE_66_BOOKS.length - 1) { setSelectedBookIndex(idx => idx + 1); setChapter(1); setVerse(1); }
   }, [verse, versesCount, chapter, chaptersCount, selectedBookIndex]);
 
+  // 키보드 좌우 방향키 네비게이션
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
@@ -716,6 +772,7 @@ export default function Interlinear({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handlePrevVerse, handleNextVerse, selectedWordDetail, isLibraryOpen, selectedGrammarWikiKey, selectedWebLexiconWord]);
 
+  // 구절 변경 시 10대 학술 데이터 동기화
   useEffect(() => {
     const key = `${currentBookMeta.ko}-${chapter}-${verse}`;
     setCurrentLxxParallel(lxxDatabase[key] || null);
@@ -730,6 +787,7 @@ export default function Interlinear({
     setCurrentEaston(foundEastonKey ? { word: foundEastonKey, ...eastonDb[foundEastonKey] } : null);
   }, [currentBookMeta.ko, chapter, verse, lxxDatabase, josephusDb, geoDb, commentaryDb, matthewHenryDb, netNotesDb, eastonDb, targumPeshittaDb, koVerseText]);
   
+  // 구문론 자동 분석
   useEffect(() => {
     if (isOT && words && words.length > 0) {
       const dynamicSyntax = analyzeHebrewSyntaxFromWords(words);
@@ -739,6 +797,7 @@ export default function Interlinear({
     }
   }, [isOT, words]);
 
+  // TSK 상호참조 인출
   useEffect(() => {
     let isMounted = true;
     setIsTskLoading(true);
@@ -779,6 +838,7 @@ export default function Interlinear({
     };
   }, []);
 
+  // 스트롱 사전 마스터 로드
   useEffect(() => {
     if (cachedMasterStrongs) {
       setDictLoaded(true);
@@ -799,6 +859,7 @@ export default function Interlinear({
       });
   }, []);
 
+  // ── 10. Supabase 원어 인터리니어 어절 및 사전 결합 파이프라인 ──
   useEffect(() => {
     if (!dictLoaded) return;
     let isMounted = true;
@@ -865,7 +926,6 @@ export default function Interlinear({
             }
           }
 
-          // 🌟 방향격(rawGrammar)을 포함한 완전 복원
           const contextualKorean = applyContextualCaseEnding(lemmaMeaning, morphInfo.caseType, isOT, w.grammar);
           let finalPron = masterEntry.pron || (w.pronunciation ? `[${w.pronunciation.replace(/[[\]]/g, '')}]` : '');
           const cleanEng = (masterEntry.eng || w.gloss || w.korean_trans || 'n/a').replace(/[[\]]/g, '').toLowerCase();
@@ -916,6 +976,7 @@ export default function Interlinear({
     return () => { isMounted = false; };
   }, [currentBookMeta, chapter, verse, isOT, dictLoaded, customNotesMap]);
 
+  // 단어 선택 및 성경 전권 용례 인출
   const handleSelectWord = useCallback(async (word) => {
     setActiveWordOrder(word.word_order);
     setSelectedWordDetail(word);
@@ -1007,6 +1068,7 @@ export default function Interlinear({
     report += `> **연대 및 배경:** ${currentBookMeta.era} | ${currentBookMeta.empire}\n\n`;
     report += `### 📜 정경 본문 대조\n`;
     report += `- **개역개정:** ${koVerseText}\n`;
+    if (literalVerseText) report += `- **원어직역:** ${literalVerseText}\n`;
     if (easyVerseText) report += `- **쉬운성경:** ${easyVerseText}\n`;
     if (webVerseText) report += `- **WEB Bible:** ${webVerseText}\n`;
     if (enVerseText) report += `- **영어직역:** "${enVerseText}"\n\n`;
@@ -1027,9 +1089,9 @@ export default function Interlinear({
 
     navigator.clipboard.writeText(decodeHtmlEntities(report));
     alert("📋 학술 서식이 포함된 종합 리포트가 클립보드에 복사되었습니다!");
-  }, [currentBookMeta, chapter, verse, koVerseText, easyVerseText, webVerseText, enVerseText, words, currentHebrewSyntax]);
+  }, [currentBookMeta, chapter, verse, koVerseText, literalVerseText, easyVerseText, webVerseText, enVerseText, words, currentHebrewSyntax]);
 
-  // 🌟 QT 및 설교노트에 원어 주석 즉시 삽입 핸들러
+  // QT 및 설교노트 직결 핸들러
   const handleInsertToQT = useCallback((word) => {
     const today = new Date().toISOString().split('T')[0];
     try {
@@ -1069,7 +1131,7 @@ export default function Interlinear({
     } catch (_) {}
   }, []);
 
-  // 은은한 학술 파스텔 틴트 팔레트
+  // UI 테마 색상 정의
   const isDark = isDarkMode;
   const theme = {
     bg: isDark ? 'bg-[#0B0F17]' : 'bg-[#F9F9F6]',
@@ -1078,6 +1140,7 @@ export default function Interlinear({
     textSub: isDark ? 'text-slate-400' : 'text-stone-600',
     border: isDark ? 'border-slate-800' : 'border-stone-200',
 
+    literal: isDark ? 'bg-emerald-950/25 border-emerald-800/60 text-emerald-200' : 'bg-emerald-50/80 border-emerald-200 text-emerald-950',
     tsk: isDark ? 'bg-sky-950/20 border-sky-900/60 text-sky-200' : 'bg-sky-50/70 border-sky-200/80 text-sky-950',
     bhs: isDark ? 'bg-amber-950/20 border-amber-900/60 text-amber-200' : 'bg-amber-50/70 border-amber-200/80 text-amber-950',
     lxx: isDark ? 'bg-stone-900/40 border-stone-700 text-stone-200' : 'bg-stone-100/80 border-stone-300/80 text-stone-950',
@@ -1093,11 +1156,12 @@ export default function Interlinear({
   const originalFontStyle = isOT
     ? { fontFamily: "'SBL Hebrew', 'Taamey Frank CLM', 'Ezra SIL', serif", direction: 'rtl' }
     : { fontFamily: "'SBL Greek', 'Cardo', 'Times New Roman', serif", direction: 'ltr' };
+    // src/pages/Interlinear.js (PART 3/3 - return 문 이하 완성본)
 
   return (
     <div className={`flex-1 flex flex-col h-full pointer-events-auto ${theme.bg} relative font-sans overflow-hidden select-none`}>
       
-      {/* 1. 상단 슬림 네비게이션 헤더 */}
+      {/* ── 1. 상단 슬림 네비게이션 헤더 ── */}
       <header className={`px-2.5 sm:px-4 py-2 border-b z-[60] sticky top-0 shrink-0 flex items-center justify-between ${
         isDark ? 'bg-[#101622] border-slate-800' : 'bg-white border-stone-200 shadow-2xs'
       }`}>
@@ -1135,16 +1199,6 @@ export default function Interlinear({
             📋 리포트 복사
           </button>
 
-          {isOT && (
-            <div className={`hidden sm:flex items-center p-0.5 rounded-lg border text-[10px] font-bold ${
-              isDark ? 'bg-black/30 border-slate-800 text-slate-300' : 'bg-stone-100 border-stone-200 text-stone-700'
-            }`}>
-              <button type="button" onClick={() => setTypographyMode('vowels')} className={`px-2 py-0.5 rounded ${typographyMode === 'vowels' ? 'bg-stone-800 text-white dark:bg-slate-200 dark:text-slate-900 font-bold' : theme.textSub}`}>모음</button>
-              <button type="button" onClick={() => setTypographyMode('full')} className={`px-2 py-0.5 rounded ${typographyMode === 'full' ? 'bg-stone-800 text-white dark:bg-slate-200 dark:text-slate-900 font-bold' : theme.textSub}`}>악센트</button>
-              <button type="button" onClick={() => setTypographyMode('consonants')} className={`px-2 py-0.5 rounded ${typographyMode === 'consonants' ? 'bg-stone-800 text-white dark:bg-slate-200 dark:text-slate-900 font-bold' : theme.textSub}`}>자음</button>
-            </div>
-          )}
-
           <span className={`text-[10.5px] font-mono px-2 py-0.5 rounded-md border font-bold ${
             isOT 
               ? (isDark ? 'bg-amber-950/40 text-amber-300 border-amber-900/60' : 'bg-amber-50 text-amber-800 border-amber-200')
@@ -1155,7 +1209,7 @@ export default function Interlinear({
         </div>
       </header>
 
-      {/* 2. 메인 뷰포트 (하단 탭바 겹침 방지 pb-36 확보) */}
+      {/* ── 2. 메인 스크롤 뷰포트 (하단 네비게이션 가림 방지 패딩 확보) ── */}
       <main className="flex-1 overflow-y-auto px-2 sm:px-3 md:px-4 pt-2 pb-36 w-full hide-scrollbar space-y-2.5 max-w-5xl mx-auto">
         
         {/* 권/장/절 선택 & 전후절 이동 바 */}
@@ -1222,40 +1276,58 @@ export default function Interlinear({
           </div>
         </div>
 
-        {/* 다중 역본 & 원문 통합 뷰어 */}
-        <div className={`p-3 sm:p-4 rounded-2xl border space-y-3 ${theme.panel}`}>
+        {/* ── 3. 다중 역본 & 원어 원문 통합 뷰어 ── */}
+        <div className={`p-3 sm:p-4 rounded-2xl border space-y-3.5 ${theme.panel}`}>
           
           <div className="flex items-center justify-between pb-1.5 border-b border-stone-200 dark:border-slate-800">
             <h2 className={`text-[15px] sm:text-[16px] font-bold ${theme.textMain}`}>
               {currentBookMeta.ko} {chapter}장 {verse}절
             </h2>
 
+            {/* 역본 선택 탭바 (원어직역 탭 완벽 복원) */}
             <div className={`flex p-0.5 rounded-lg border text-[10.5px] font-bold ${
               isDark ? 'bg-black/40 border-slate-800' : 'bg-stone-100 border-stone-200'
             }`}>
-              {['krv', 'easy', 'web', 'parallel'].map((vKey) => (
+              {[
+                { id: 'krv', label: '개역개정' },
+                { id: 'literal', label: '원어직역' },
+                { id: 'easy', label: '쉬운성경' },
+                { id: 'web', label: 'WEB' },
+                { id: 'parallel', label: '동시대조' }
+              ].map((v) => (
                 <button
-                  key={vKey}
+                  key={v.id}
                   type="button"
-                  onClick={() => handleVersionChange(vKey)}
+                  onClick={() => handleVersionChange(v.id)}
                   className={`px-2 py-0.5 rounded transition-all cursor-pointer ${
-                    bibleVersion === vKey
-                      ? (isDark ? 'bg-slate-800 text-white shadow-xs' : 'bg-white text-stone-900 shadow-2xs font-bold')
+                    bibleVersion === v.id
+                      ? (isDark ? 'bg-slate-800 text-white shadow-xs font-bold' : 'bg-white text-stone-900 shadow-2xs font-bold')
                       : theme.textSub
                   }`}
                 >
-                  {vKey === 'krv' ? '개역개정' : vKey === 'easy' ? '쉬운성경' : vKey === 'web' ? 'WEB' : '동시대조'}
+                  {v.label}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* 본문 텍스트 영역 */}
+          {/* 역본별 본문 텍스트 렌더링 */}
           <div className="text-left space-y-2">
             {bibleVersion === 'krv' && (
               <p className={`text-[15px] sm:text-[16px] font-serif font-medium leading-[1.8] break-keep ${theme.textMain}`}>
                 {koVerseText}
               </p>
+            )}
+
+            {bibleVersion === 'literal' && (
+              <div className="p-3 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/40">
+                <span className="text-[10px] font-bold font-mono text-emerald-700 dark:text-emerald-400 block mb-1">
+                  [원어 어순 직역본 - LITERAL INTERLINEAR]
+                </span>
+                <p className={`text-[15px] sm:text-[16px] font-serif font-medium leading-[1.85] break-keep ${theme.textMain}`}>
+                  {literalVerseText || koVerseText}
+                </p>
+              </div>
             )}
 
             {bibleVersion === 'easy' && (
@@ -1264,7 +1336,6 @@ export default function Interlinear({
               </p>
             )}
 
-            {/* WEB 영어 성경 */}
             {bibleVersion === 'web' && (
               <div className="space-y-1">
                 <p className={`text-[14.5px] sm:text-[15.5px] font-serif leading-[1.75] ${isDark ? 'text-slate-200' : 'text-stone-800'}`}>
@@ -1284,9 +1355,17 @@ export default function Interlinear({
                     {koVerseText}
                   </p>
                 </div>
+                {literalVerseText && (
+                  <div className={`p-2.5 rounded-lg border text-left ${isDark ? 'bg-emerald-950/20 border-emerald-900/50' : 'bg-emerald-50/60 border-emerald-200'}`}>
+                    <span className="text-[9.5px] font-bold text-emerald-600 dark:text-emerald-400 block mb-0.5">[원어 어순 직역]</span>
+                    <p className={`text-[14px] sm:text-[15px] font-serif font-medium leading-[1.8] break-keep ${theme.textMain}`}>
+                      {literalVerseText}
+                    </p>
+                  </div>
+                )}
                 {easyVerseText && (
-                  <div className={`p-2.5 rounded-lg border text-left ${isDark ? 'bg-emerald-950/15 border-emerald-900/40' : 'bg-emerald-50/50 border-emerald-200'}`}>
-                    <span className="text-[9.5px] font-bold text-emerald-700 dark:text-emerald-400 block mb-0.5">[쉬운성경]</span>
+                  <div className={`p-2.5 rounded-lg border text-left ${isDark ? 'bg-amber-950/15 border-amber-900/40' : 'bg-amber-50/50 border-amber-200'}`}>
+                    <span className="text-[9.5px] font-bold text-amber-700 dark:text-amber-400 block mb-0.5">[쉬운성경]</span>
                     <p className={`text-[13.5px] sm:text-[14px] leading-[1.7] break-keep ${theme.textMain}`}>
                       {easyVerseText}
                     </p>
@@ -1305,20 +1384,113 @@ export default function Interlinear({
             )}
           </div>
 
-          {/* 원어 원문 뷰어 */}
-          <div className="pt-2.5 border-t border-stone-200 dark:border-slate-800 text-left">
-            <div className="flex justify-between items-center mb-1">
-              <span className={`text-[10px] font-mono font-bold uppercase tracking-wider ${theme.textSub}`}>
-                {isOT ? 'MASORETIC TEXT (BHS) · 히브리어 원문' : 'NESTLE-ALAND 28 (GNT) · 헬라어 원문'}
-              </span>
-              <span className="text-[10px] font-mono text-stone-400 font-semibold">
-                {isOT ? '오른쪽 ➔ 왼쪽 (RTL)' : '왼쪽 ➔ 오른쪽 (LTR)'}
-              </span>
+          {/* 🌟 [완벽 복원 1] 원어 어순 직역 독립 연구 패널 (역본 모드와 무관하게 상시 직독직해 제공) */}
+          {literalVerseText && bibleVersion !== 'literal' && bibleVersion !== 'parallel' && (
+            <div className={`p-3 rounded-xl border ${theme.literal} text-left transition-all`}>
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-[10.5px] font-mono font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
+                    LITERAL INTERLINEAR • 원어 어순 무삭제 직역
+                  </span>
+                </div>
+                <span className="text-[9.5px] text-emerald-700 dark:text-emerald-400/80 font-medium font-serif">원문 직독직해</span>
+              </div>
+              <p className={`text-[14px] sm:text-[15px] font-serif leading-[1.8] break-keep font-medium ${isDark ? 'text-emerald-100' : 'text-emerald-950'}`}>
+                {literalVerseText}
+              </p>
+            </div>
+          )}
+
+          {/* ── 4. 원어 원문 뷰어 (상단 자음/모음/악센트/발음 4단 스위처 완벽 복원) ── */}
+          <div className="pt-3 border-t border-stone-200 dark:border-slate-800 text-left">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-2 pb-1.5 border-b border-stone-200/60 dark:border-slate-800">
+              <div className="flex items-center gap-1.5">
+                <span className={`text-[11px] font-mono font-bold uppercase tracking-wider ${theme.textSub}`}>
+                  {isOT ? 'MASORETIC TEXT (BHS) · 히브리어' : 'NESTLE-ALAND 28 (GNT) · 헬라어'}
+                </span>
+                <span className="text-[9.5px] font-mono text-stone-400">
+                  {isOT ? '(RTL)' : '(LTR)'}
+                </span>
+              </div>
+
+              {/* 🌟 [완벽 복원 2] 히브리어/헬라어 4단 조판 표기 스위처 (모음부호 / 자음만 / 악센트 / 발음독음) */}
+              <div className={`flex items-center p-0.5 rounded-lg border text-[10.5px] font-bold ${
+                isDark ? 'bg-black/40 border-slate-800 text-slate-300' : 'bg-stone-100 border-stone-200 text-stone-700'
+              }`}>
+                <button
+                  type="button"
+                  onClick={() => setTypographyMode('vowels')}
+                  className={`px-2 py-0.5 rounded transition-all cursor-pointer ${
+                    typographyMode === 'vowels'
+                      ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-sky-400 font-bold shadow-2xs'
+                      : 'hover:text-stone-900 dark:hover:text-white'
+                  }`}
+                  title="자음과 모음부호(Niqqud) 표시"
+                >
+                  모음부호
+                </button>
+                
+                {isOT && (
+                  <button
+                    type="button"
+                    onClick={() => setTypographyMode('consonants')}
+                    className={`px-2 py-0.5 rounded transition-all cursor-pointer ${
+                      typographyMode === 'consonants'
+                        ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-sky-400 font-bold shadow-2xs'
+                        : 'hover:text-stone-900 dark:hover:text-white'
+                    }`}
+                    title="고대 원문 사본처럼 순수 자음만 표시"
+                  >
+                    자음만
+                  </button>
+                )}
+
+                {isOT && (
+                  <button
+                    type="button"
+                    onClick={() => setTypographyMode('full')}
+                    className={`px-2 py-0.5 rounded transition-all cursor-pointer ${
+                      typographyMode === 'full'
+                        ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-sky-400 font-bold shadow-2xs'
+                        : 'hover:text-stone-900 dark:hover:text-white'
+                    }`}
+                    title="음악적 낭송 악센트(Cantillation)까지 전수 표시"
+                  >
+                    악센트
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setTypographyMode('phonetic')}
+                  className={`px-2 py-0.5 rounded transition-all cursor-pointer ${
+                    typographyMode === 'phonetic'
+                      ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-sky-400 font-bold shadow-2xs'
+                      : 'hover:text-stone-900 dark:hover:text-white'
+                  }`}
+                  title="원어민 한글 음역 발음으로 표시"
+                >
+                  발음(독음)
+                </button>
+              </div>
             </div>
 
+            {/* 원문 단어 렌더링 영역 */}
             {isLoading ? (
               <div className="py-4 text-center text-xs text-stone-400 font-mono">원어 형태소 파싱 중...</div>
+            ) : typographyMode === 'phonetic' ? (
+              /* 발음(독음) 모드일 때 전체 한글 음역 문장 출력 */
+              <div className="p-3 rounded-xl bg-stone-50 dark:bg-slate-900/60 border border-stone-200 dark:border-slate-800 text-left">
+                <span className="text-[10px] font-bold text-sky-600 dark:text-sky-400 font-mono block mb-1">
+                  [원어 한글 음역 낭독문 - PHONETIC READING]
+                </span>
+                <p className={`text-[15px] sm:text-[16px] font-serif leading-relaxed font-medium ${theme.textMain}`}>
+                  {words.map(w => w.pron ? w.pron.replace(/[[\]]/g, '') : w.eng).join(' ')}
+                </p>
+              </div>
             ) : (
+              /* 원문 어절 스트림 (자음만 / 모음 / 악센트 반응) */
               <div 
                 className={`w-full flex flex-wrap gap-x-2.5 gap-y-2 items-baseline ${
                   isOT ? 'justify-start text-right' : 'justify-start text-left'
@@ -1349,7 +1521,7 @@ export default function Interlinear({
           </div>
         </div>
 
-        {/* 🌟 [단어별 1:1 분해 그리드] 텍스트 중복 제거 & 풍성한 형태론 뱃지 복원 */}
+        {/* ── 5. 단어별 1:1 분해 그리드 (형태론 토큰 뱃지 전수 출력) ── */}
         {!isLoading && words.length > 0 && (
           <div className="space-y-1.5 text-left">
             <div className="flex justify-between items-center px-1">
@@ -1364,7 +1536,7 @@ export default function Interlinear({
                 const isSelected = activeWordOrder === word.word_order;
                 const displayInflected = cleanTypography(word.inflected, isOT, typographyMode);
                 const displayLemma = cleanTypography(word.lemma, isOT, typographyMode);
-                const grammarTokens = tokenizeGrammarCode(word.grammarRaw, isOT); // 🌟 전체 형태론 토큰 추출
+                const grammarTokens = tokenizeGrammarCode(word.grammarRaw, isOT);
 
                 return (
                   <div 
@@ -1409,7 +1581,7 @@ export default function Interlinear({
                     
                     <div className="w-full h-px bg-stone-200 dark:bg-slate-800 my-1"></div>
                     
-                    {/* 🌟 중복 표기 제거: 문맥 번역어와 원형 기본뜻이 다를 때만 괄호 출력 */}
+                    {/* 번역어 & 스트롱 코드 */}
                     <div className="flex-1 flex flex-col mb-1.5 text-left" dir="ltr">
                       <div className="flex items-center justify-between gap-1">
                         <span className={`text-[12.5px] font-bold ${theme.textMain} truncate block`}>
@@ -1432,7 +1604,7 @@ export default function Interlinear({
                       )}
                     </div>
                     
-                    {/* 🌟 [형태론 뱃지 복원] slice 제거하고 품사·성·수·격·어간 뱃지 전수 출력 */}
+                    {/* 형태론 문법 뱃지 전수 출력 */}
                     <div className="flex flex-wrap gap-1" dir="ltr">
                       {grammarTokens.map((tok, tIdx) => (
                         <button
@@ -1457,7 +1629,7 @@ export default function Interlinear({
           </div>
         )}
 
-        {/* 10대 학술 연구 코퍼스 아코디언 디렉토리*/}
+        {/* ── 6. 10대 학술 연구 코퍼스 아코디언 디렉토리 ── */}
         <div className={`p-3 sm:p-4 rounded-xl border space-y-2.5 ${theme.panel}`}>
           <div className="flex items-center justify-between pb-1.5 border-b border-stone-200 dark:border-slate-800">
             <span className={`text-[12px] font-bold uppercase tracking-tight ${theme.textMain}`}>
@@ -1468,7 +1640,7 @@ export default function Interlinear({
 
           <div className="space-y-2 text-left">
             
-            {/* 1. TSK 상호교차참조*/}
+            {/* 1. TSK 상호교차참조 */}
             <div className={`rounded-xl border ${theme.tsk} overflow-hidden`}>
               <button 
                 type="button"
@@ -1514,7 +1686,7 @@ export default function Interlinear({
               )}
             </div>
 
-            {/* 2. BHS 히브리어 구문론*/}
+            {/* 2. BHS 히브리어 구문론 */}
             {currentHebrewSyntax && (
               <div className={`rounded-xl border ${theme.bhs} overflow-hidden`}>
                 <button 
@@ -1546,7 +1718,7 @@ export default function Interlinear({
               </div>
             )}
 
-            {/* 3. 70인역(LXX) 대조*/}
+            {/* 3. 70인역(LXX) 대조 */}
             {currentLxxParallel && (
               <div className={`rounded-xl border ${theme.lxx} overflow-hidden`}>
                 <button 
@@ -1581,7 +1753,7 @@ export default function Interlinear({
               </div>
             )}
 
-            {/* 4. 고대 아람어 타르굼 & 시리아 페시타*/}
+            {/* 4. 고대 아람어 타르굼 & 시리아 페시타 */}
             {currentTargumPeshitta && (
               <div className={`rounded-xl border ${theme.aramaic} overflow-hidden`}>
                 <button 
@@ -1627,7 +1799,7 @@ export default function Interlinear({
               </div>
             )}
 
-            {/* 5. 요세푸스 사료 패널*/}
+            {/* 5. 요세푸스 사료 패널 */}
             {currentJosephus && (
               <div className={`rounded-xl border ${theme.josephus} overflow-hidden`}>
                 <button 
@@ -1651,7 +1823,7 @@ export default function Interlinear({
               </div>
             )}
 
-            {/* 6. 성경 역사 지리학 및 OpenBible GPS 패널*/}
+            {/* 6. 성경 역사 지리학 및 OpenBible GPS 패널 */}
             {currentGeoData && (
               <div className={`rounded-xl border ${theme.geo} overflow-hidden`}>
                 <div className="p-2.5 flex items-center justify-between font-serif font-bold text-[12.5px]">
@@ -1684,7 +1856,7 @@ export default function Interlinear({
               </div>
             )}
 
-            {/* 7. 반즈 & JFB 학술 주석*/}
+            {/* 7. 반즈 & JFB 학술 주석 */}
             {currentCommentary && (
               <div className={`rounded-xl border ${theme.comm} overflow-hidden`}>
                 <div className="p-2.5 flex items-center justify-between font-serif font-bold text-[12.5px]">
@@ -1727,7 +1899,7 @@ export default function Interlinear({
               </div>
             )}
 
-            {/* 8. 매튜 헨리 묵상 강해*/}
+            {/* 8. 매튜 헨리 묵상 강해 */}
             {currentMatthewHenry && (
               <div className={`rounded-xl border ${theme.mh} overflow-hidden`}>
                 <div className="p-2.5 flex items-center justify-between font-serif font-bold text-[12.5px]">
@@ -1770,7 +1942,7 @@ export default function Interlinear({
               </div>
             )}
 
-            {/* 9. NET Bible 본문 비평 각주*/}
+            {/* 9. NET Bible 본문 비평 각주 */}
             {currentNetNote && (
               <div className={`rounded-xl border ${theme.net} overflow-hidden`}>
                 <div className="p-2.5 flex items-center justify-between font-serif font-bold text-[12.5px]">
@@ -1806,7 +1978,7 @@ export default function Interlinear({
               </div>
             )}
 
-            {/* 10. 이스톤 성경 백과사전 패널*/}
+            {/* 10. 이스톤 성경 백과사전 패널 */}
             {currentEaston && (
               <div className={`rounded-xl border ${theme.easton} overflow-hidden`}>
                 <button 
@@ -1832,7 +2004,7 @@ export default function Interlinear({
 
       </main>
 
-      {/* 🌟 WEB 영단어 사전 & 성경적 뜻풀이 시트 */}
+      {/* ── 7. WEB 영단어 사전 & 성경적 뜻풀이 모달 ── */}
       {selectedWebLexiconWord && (
         <div className="interlinear-modal-portal fixed inset-0 z-[999999] bg-black/75 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-3 animate-fade-in select-none">
           <div className={`w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl border p-4 shadow-2xl flex flex-col max-h-[80vh] overflow-hidden ${
@@ -1919,7 +2091,7 @@ export default function Interlinear({
         </div>
       )}
 
-      {/* 3. 원어 단어 상세 심층 모달 (히브리어/헬라어)*/}
+      {/* ── 8. 원어 단어 심층 렉시콘 모달 (히브리어/헬라어) ── */}
       {selectedWordDetail && (
         <div className="interlinear-modal-portal fixed inset-0 z-[999999] bg-black/75 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-3 animate-fade-in select-none">
           <div className={`w-full sm:max-w-xl rounded-t-3xl sm:rounded-2xl border p-3.5 sm:p-5 shadow-2xl flex flex-col max-h-[88vh] overflow-hidden ${
@@ -2076,7 +2248,7 @@ export default function Interlinear({
               )}
             </div>
 
-            {/* QT 및 설교노트에 원어 주석 즉시 삽입 액션 바*/}
+            {/* QT 및 설교노트에 원어 주석 즉시 삽입 액션 바 */}
             <div className="pt-2.5 border-t border-stone-200 dark:border-slate-800 mt-2 flex gap-2 shrink-0">
               <button
                 type="button"
@@ -2098,7 +2270,7 @@ export default function Interlinear({
         </div>
       )}
 
-      {/* 4. 나의 연구 서재 모달*/}
+      {/* ── 9. 나의 연구 서재 모달 ── */}
       {isLibraryOpen && (
         <div className="interlinear-modal-portal fixed inset-0 z-[999999] bg-black/75 backdrop-blur-xs flex items-center justify-center p-3 select-none">
           <div className={`w-full max-w-md rounded-2xl border p-4 shadow-2xl flex flex-col max-h-[80vh] ${
@@ -2138,7 +2310,7 @@ export default function Interlinear({
         </div>
       )}
 
-      {/* 5. 문법 대백과 모달*/}
+      {/* ── 10. 문법 대백과 모달 ── */}
       {selectedGrammarWikiKey && (
         <GrammarWikiModal
           encyclopediaKey={selectedGrammarWikiKey}
