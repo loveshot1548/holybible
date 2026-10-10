@@ -384,7 +384,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
                       🏛️ 10대 글로벌 정밀 학술 코퍼스 (10-Core Exegetical Suite)
                     </h4>
                     <p className="text-[11px] text-stone-500 font-medium mt-0.5">
-                      이단 사이비 왜곡 없는 정통 개혁주의·복음주의 표준 사료 전수 탑재
+                      정통 개혁주의·복음주의 표준 사료 전수 탑재
                     </p>
                   </div>
                   <span className="text-[10px] font-mono font-bold bg-stone-100 dark:bg-white/10 text-stone-600 dark:text-stone-300 px-2 py-0.5 rounded">
