@@ -15,11 +15,11 @@ const IconMenu = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stro
 const IconCheck = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>;
 const IconBook = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" /></svg>;
 const IconSearch = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>;
-const IconChart = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" /></svg>;
 const IconTarget = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>;
 const IconSend = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" /></svg>;
 const IconLock = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5"><rect x="3" y="11" width="18" height="11" rx="1" ry="1"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>;
-const IconDiploma = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M4.26 10.147a60.436 60.436 0 00-.491 6.347A48.627 48.627 0 0112 20.904a48.627 48.627 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.57 50.57 0 00-2.658-.813A59.905 59.905 0 0112 3.493a59.902 59.902 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0112 13.489a50.702 50.702 0 017.74-3.342" /></svg>;
+const IconChevronDown = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5"><polyline points="6 9 12 15 18 9" /></svg>;
+const IconChevronUp = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5"><polyline points="18 15 12 9 6 15" /></svg>;
 
 // 🌱 영적 성장 4단계 인장 아이콘 (Plant Seals)
 const SeedIcon = () => <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4"><path d="M12 22c5.523 0 10-4.477 10-10 0-4.5-4-9-10-10C6 3 2 7.5 2 12c0 5.523 4.477 10 10 10z"/></svg>;
@@ -129,7 +129,7 @@ const GAMIFIED_PATH_DATA = [
 ];
 
 export default function TrainingCurriculum({ t, isDarkMode, setActiveScreen }) {
-  // 🌟 에러 완치: 단일 불리언 isDark 선언 (_isDark 완전 소멸)
+  // 🌟 에러 완치: _isDark 제거 및 단일 isDark 선언
   const isDark = Boolean(t?.appBg?.includes('dark') || t?.appBg?.includes('121212') || isDarkMode);
 
   // 상단 6대 원본 탭 체계 100% 보존
@@ -137,11 +137,14 @@ export default function TrainingCurriculum({ t, isDarkMode, setActiveScreen }) {
   const [selectedWeek, setSelectedWeek] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
 
+  // 📱 모바일 전용: 지표 패널 접기/펼치기 아코디언 상태 (기본 접힘)
+  const [isMobileStatsOpen, setIsMobileStatsOpen] = useState(false);
+
   // 12주 순례자의 길 및 모든 작성 폼 로컬스토리지 상태 보존
-  const [checks, setChecks] = useState(() => getLocal('tc_final_checks_v6', {}));
-  const [forms, setForms] = useState(() => getLocal('tc_final_forms_v6', {}));
-  const [weeklyCheck, setWeeklyCheck] = useState(() => getLocal('tc_final_weekly_v6', {}));
-  const [rubrics, setRubrics] = useState(() => getLocal('tc_final_rubrics_v6', { word: 3, reflect: 3, apply: 3, community: 3, reproduce: 3 }));
+  const [checks, setChecks] = useState(() => getLocal('tc_final_checks_v7', {}));
+  const [forms, setForms] = useState(() => getLocal('tc_final_forms_v7', {}));
+  const [weeklyCheck, setWeeklyCheck] = useState(() => getLocal('tc_final_weekly_v7', {}));
+  const [rubrics, setRubrics] = useState(() => getLocal('tc_final_rubrics_v7', { word: 3, reflect: 3, apply: 3, community: 3, reproduce: 3 }));
 
   const [completedWeeks, setCompletedWeeks] = useState([]);
   const [gameNotes, setGameNotes] = useState(() => getLocal('diary_curriculum_notes', {}));
@@ -156,10 +159,10 @@ export default function TrainingCurriculum({ t, isDarkMode, setActiveScreen }) {
     setCompletedWeeks(completed);
   }, [gameNotes]);
 
-  useEffect(() => setLocal('tc_final_checks_v6', checks), [checks]);
-  useEffect(() => setLocal('tc_final_forms_v6', forms), [forms]);
-  useEffect(() => setLocal('tc_final_weekly_v6', weeklyCheck), [weeklyCheck]);
-  useEffect(() => setLocal('tc_final_rubrics_v6', rubrics), [rubrics]);
+  useEffect(() => setLocal('tc_final_checks_v7', checks), [checks]);
+  useEffect(() => setLocal('tc_final_forms_v7', forms), [forms]);
+  useEffect(() => setLocal('tc_final_weekly_v7', weeklyCheck), [weeklyCheck]);
+  useEffect(() => setLocal('tc_final_rubrics_v7', rubrics), [rubrics]);
 
   const toggleCheck = (k) => setChecks(p => ({ ...p, [k]: !p[k] }));
   const toggleWeekly = (k) => setWeeklyCheck(p => ({ ...p, [k]: !p[k] }));
@@ -191,7 +194,7 @@ export default function TrainingCurriculum({ t, isDarkMode, setActiveScreen }) {
     return <TreeIcon />;
   };
 
-  // 📖 로고스 학술 테마 톤앤매너 팔레트 (설교분석 스크린샷 톤 일치)
+  // 📖 로고스 학술 테마 팔레트 (설교분석 스크린샷 일치)
   const bgMain = isDark ? 'bg-[#121519]' : 'bg-[#FAF8F5]';
   const textHead = isDark ? 'text-[#E6EDF3]' : 'text-[#1B2430]';
   const textBody = isDark ? 'text-[#C5CDD7]' : 'text-[#334155]';
@@ -245,7 +248,6 @@ export default function TrainingCurriculum({ t, isDarkMode, setActiveScreen }) {
     } catch(e) { alert('연동 중 오류가 발생했습니다.'); }
   };
 
-  // 상단 6대 탭 바인더 정의
   const TABS = [
     { id: 'path', code: '§ 0', label: '12주 순례자의 길' },
     { id: 'overview', code: '§ Ⅰ', label: '제자훈련 신학개관' },
@@ -260,7 +262,7 @@ export default function TrainingCurriculum({ t, isDarkMode, setActiveScreen }) {
   return (
     <div className={`flex-1 flex flex-col h-full overflow-hidden select-none relative ${bgMain} w-full`}>
       
-      {/* ── 1. 학술 헤더 바 (Logos Command Strip) ── */}
+      {/* ── 1. 학술 툴바 헤더 (Command Ribbon) ── */}
       <header className={`relative z-20 px-3 sm:px-4 py-2 flex items-center justify-between border-b shrink-0 ${borderRule} ${isDark ? 'bg-[#161A20]' : 'bg-[#EFECE4]'}`}>
         <div className="flex items-center gap-2 min-w-0">
           <button 
@@ -308,11 +310,97 @@ export default function TrainingCurriculum({ t, isDarkMode, setActiveScreen }) {
         </div>
       </header>
 
-      {/* ── 2. 메인 워크스페이스 프레임 (설교분석 2열 레이아웃 완벽 차용) ── */}
+      {/* ── 2. 메인 워크스페이스 프레임 (모바일 아코디언 / 데스크톱 분할 2열) ── */}
       <main className="flex-1 overflow-hidden flex flex-col md:flex-row w-full max-w-7xl mx-auto min-w-0">
 
-        {/* ── [좌측 패널: 설교분석의 제자훈련 지표 사이드바 스타일 차용] ── */}
-        <aside className={`w-full md:w-72 shrink-0 border-b md:border-b-0 md:border-r ${borderRule} p-3 overflow-y-auto hide-scrollbar flex flex-col gap-3 ${isDark ? 'bg-[#14181E]' : 'bg-[#F5F2EB]'}`}>
+        {/* 📱 [모바일 전용 컴팩트 툴바]: 1줄 가로 주차 슬라이더 + 지표 아코디언 토글 */}
+        <div className={`md:hidden shrink-0 border-b ${borderRule} p-2 flex flex-col gap-1.5 ${isDark ? 'bg-[#14181E]' : 'bg-[#F5F2EB]'}`}>
+          
+          {/* 가로 터치 슬라이더: 1주 ~ 12주 */}
+          <div className="flex items-center gap-1 overflow-x-auto hide-scrollbar touch-pan-x py-0.5">
+            <span className="text-[10px] font-bold text-slate-400 shrink-0 mr-1">주차:</span>
+            {GAMIFIED_PATH_DATA.map(item => {
+              const isSelected = selectedWeek === item.w;
+              const isDone = completedWeeks.includes(item.w);
+              return (
+                <button
+                  key={item.w}
+                  onClick={() => {
+                    setSelectedWeek(item.w);
+                    setActiveTab('path');
+                  }}
+                  className={`px-2.5 py-1 text-[11px] font-bold shrink-0 border transition-all cursor-pointer relative ${
+                    isSelected
+                      ? (isDark ? 'bg-[#7A2E26] text-white border-[#7A2E26]' : 'bg-[#1B365D] text-white border-[#1B365D]')
+                      : (isDark ? 'bg-[#191E25] text-[#848E9B] border-[#2B323D]' : 'bg-[#FFFFFF] text-[#4A5568] border-[#DDD5C7]')
+                  }`}
+                  style={fontSans}
+                >
+                  {item.w}주
+                  {isDone && <span className="absolute top-0.5 right-0.5 w-1 h-1 bg-emerald-500 rounded-full" />}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* 지표 접기/펼치기 아코디언 버튼 */}
+          <div className="flex items-center justify-between pt-1 border-t border-inherit">
+            <button
+              onClick={() => setIsMobileStatsOpen(prev => !prev)}
+              className={`text-[11px] font-bold flex items-center gap-1 cursor-pointer ${textHead}`}
+              style={fontSans}
+            >
+              <span>📊 영적 지표 및 5대 밸런스</span>
+              {isMobileStatsOpen ? <IconChevronUp /> : <IconChevronDown />}
+            </button>
+            <button
+              onClick={() => setActiveScreen && setActiveScreen('trainingSubPages')}
+              className={`text-[10.5px] font-bold px-2 py-0.5 border ${isDark ? 'bg-[#202630] text-[#93C5FD] border-[#364052]' : 'bg-[#EBF3FA] text-[#0F4C81] border-[#C6DCF0]'}`}
+              style={fontSans}
+            >
+              4주 워크북 열기 📖
+            </button>
+          </div>
+
+          {/* 모바일 아코디언 내용부 (기본 숨김, 클릭 시만 슬라이드 펼침) */}
+          {isMobileStatsOpen && (
+            <div className="pt-2 flex flex-col gap-2 border-t border-inherit animate-fade-in">
+              <div className="grid grid-cols-4 gap-1 text-[10px]" style={fontSans}>
+                {[
+                  { label: '완주 주차', val: `${completedWeeks.length} / 12` },
+                  { label: '평가 체크', val: `${Object.values(checks).filter(Boolean).length}개` },
+                  { label: '설교 코퍼스', val: `${SERMON_DATA.length}편` },
+                  { label: '실천 일지', val: `${Object.values(forms).filter(Boolean).length}건` }
+                ].map(stat => (
+                  <div key={stat.label} className={`p-1 border text-center ${cardBox}`}>
+                    <span className="block opacity-60 scale-90">{stat.label}</span>
+                    <strong className="text-[12px]">{stat.val}</strong>
+                  </div>
+                ))}
+              </div>
+              <div className={`p-2 border ${cardBox} space-y-1 text-[10px]`} style={fontSans}>
+                {[
+                  { label: '말씀(Word)', pct: 100 },
+                  { label: '기도(Prayer)', pct: 80 },
+                  { label: '예배(Worship)', pct: 5 },
+                  { label: '교제(Fellowship)', pct: 100 },
+                  { label: '사역(Ministry)', pct: 5 }
+                ].map(b => (
+                  <div key={b.label} className="flex items-center gap-2">
+                    <span className="w-20 shrink-0 text-slate-500">{b.label}</span>
+                    <div className="flex-1 h-1 bg-black/10 dark:bg-white/10 overflow-hidden">
+                      <div style={{ width: `${b.pct}%` }} className={`h-full ${isDark ? 'bg-[#7A2E26]' : 'bg-[#1B365D]'}`} />
+                    </div>
+                    <span className="w-8 font-mono font-bold text-right text-[#7A2E26] dark:text-[#F87171]">{b.pct}%</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 💻 [데스크톱 전용 좌측 사이드바 패널]: md: 이상에서만 고정 280px로 표시 */}
+        <aside className={`hidden md:flex w-72 shrink-0 border-r ${borderRule} p-3 overflow-y-auto hide-scrollbar flex-col gap-3 ${isDark ? 'bg-[#14181E]' : 'bg-[#F5F2EB]'}`}>
           
           <div className="flex items-center justify-between pb-1 border-b border-inherit">
             <span className={`text-[12.5px] font-bold ${textHead}`} style={fontSans}>제자훈련 지표</span>
@@ -410,8 +498,8 @@ export default function TrainingCurriculum({ t, isDarkMode, setActiveScreen }) {
 
         </aside>
 
-        {/* ── [우측 캔버스: 설교분석의 에디토리얼 워크스페이스 스타일 차용] ── */}
-        <section className="flex-1 overflow-y-auto hide-scrollbar p-3 sm:p-5 flex flex-col gap-3.5">
+        {/* ── [우측 캔버스: 설교분석의 에디토리얼 워크스페이스 스타일 차용 (하단 pb-36 여백 확보)] ── */}
+        <section className="flex-1 overflow-y-auto hide-scrollbar p-3 sm:p-5 flex flex-col gap-3.5 pb-36">
 
           {/* ════════ § 0. 12주 순례자의 길 ════════ */}
           {activeTab === 'path' && (
@@ -537,14 +625,14 @@ export default function TrainingCurriculum({ t, isDarkMode, setActiveScreen }) {
                   CANONICAL FOUNDATION • § Ⅰ
                 </span>
                 <h2 className={`text-[17px] sm:text-[19px] font-bold tracking-tight mt-0.5 ${textHead}`} style={fontSerif}>
-                  제자훈련 신학개관 및 15대 핵심 발견 규정
+                  제자훈련 신학개관 및 15대 핵심 발견 규정[cite: 19, 23]
                 </h2>
               </div>
 
               {/* 15대 신규 핵심 발견 카드 그리드 */}
               <div className={`p-3 border ${cardBox}`}>
                 <span className={`text-[11.5px] font-bold block mb-2 ${textHead}`} style={fontSans}>
-                  0. 이번 2판에서 새롭게 확인한 핵심 (15대 규정)
+                  0. 이번 2판에서 새롭게 확인한 핵심 (15대 규정)[cite: 19, 23]
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                   {[
@@ -566,7 +654,7 @@ export default function TrainingCurriculum({ t, isDarkMode, setActiveScreen }) {
                   ].map((r, i) => (
                     <div key={i} className={`p-2 border ${subBox} flex items-start gap-1.5`}>
                       <span className="font-mono text-[10px] font-bold text-[#7A2E26] dark:text-[#F87171] shrink-0 mt-0.5">[{String(i+1).padStart(2,'0')}]</span>
-                      <p className={`text-[12px] leading-relaxed ${textBody} break-keep`} style={fontSerif}>{r.slice(r.indexOf('.') + 2)}</p>
+                      <p className={`text-[12px] leading-relaxed ${textBody} break-keep`} style={fontSerif}>{r.slice(r.indexOf('.') + 2)}[cite: 19, 23]</p>
                     </div>
                   ))}
                 </div>
@@ -575,19 +663,19 @@ export default function TrainingCurriculum({ t, isDarkMode, setActiveScreen }) {
               {/* 연구자료 등급 & 양육 시스템 구조표 */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div className={`p-3 border ${subBox}`}>
-                  <span className={`text-[9.5px] font-mono font-bold uppercase tracking-wider block mb-1 text-[#7A2E26] dark:text-[#F87171]`} style={fontSans}>1. 연구자료 등급 (A~D)</span>
+                  <span className={`text-[9.5px] font-mono font-bold uppercase tracking-wider block mb-1 text-[#7A2E26] dark:text-[#F87171]`} style={fontSans}>1. 연구자료 등급 (A~D)[cite: 19, 23]</span>
                   <div className="space-y-1 text-[11.5px]" style={fontSans}>
-                    <p><strong>A:</strong> 공식 홈페이지, T스쿨, QTM 교재, 공식 유튜브</p>
-                    <p><strong>B:</strong> 공식기관 안내 외부자료, 세미나/인터뷰 안내</p>
-                    <p><strong>C:</strong> 웨스트민스터 신앙고백, 장로교 신학문헌</p>
-                    <p><strong>D:</strong> 연구자 재구성 교육모델 (본 문서 모델/프로토콜)</p>
+                    <p><strong>A:</strong> 공식 홈페이지, T스쿨, QTM 교재, 공식 유튜브[cite: 19, 23]</p>
+                    <p><strong>B:</strong> 공식기관 안내 외부자료, 세미나/인터뷰 안내[cite: 19, 23]</p>
+                    <p><strong>C:</strong> 웨스트민스터 신앙고백, 장로교 신학문헌[cite: 19, 23]</p>
+                    <p><strong>D:</strong> 연구자 재구성 교육모델 (본 문서 모델/프로토콜)[cite: 19, 23]</p>
                   </div>
                 </div>
                 <div className={`p-3 border ${subBox}`}>
-                  <span className={`text-[9.5px] font-mono font-bold uppercase tracking-wider block mb-1 text-[#1B365D] dark:text-[#93C5FD]`} style={fontSans}>2. 양육 시스템 로드맵 & 핵심원리</span>
+                  <span className={`text-[9.5px] font-mono font-bold uppercase tracking-wider block mb-1 text-[#1B365D] dark:text-[#93C5FD]`} style={fontSans}>2. 양육 시스템 로드맵 & 핵심원리[cite: 19, 23]</span>
                   <div className="space-y-1 text-[11.5px]" style={fontSerif}>
-                    <p><strong>기초양육(무엇을 믿는가?):</strong> 하나님 → 구속 → 믿음 → 예배 → 말씀/기도 → 공동체</p>
-                    <p><strong>THINK양육(어떻게 사는가?):</strong> 고백 → 시간 → 큐티 → 기도 → 성령 → 거듭남 → 사명</p>
+                    <p><strong>기초양육(무엇을 믿는가?):</strong> 하나님 → 구속 → 믿음 → 예배 → 말씀/기도 → 공동체[cite: 19, 23]</p>
+                    <p><strong>THINK양육(어떻게 사는가?):</strong> 고백 → 시간 → 큐티 → 기도 → 성령 → 거듭남 → 사명[cite: 19, 23]</p>
                   </div>
                 </div>
               </div>
@@ -595,7 +683,7 @@ export default function TrainingCurriculum({ t, isDarkMode, setActiveScreen }) {
               {/* 수료자 15대 제자도 자격 검증표 */}
               <div className={`p-3 border ${cardBox}`}>
                 <span className={`text-[11.5px] font-bold block mb-2 ${textHead}`} style={fontSans}>
-                  48. 최종 제자도 자격 검증표 (클릭하여 체크)
+                  48. 최종 제자도 자격 검증표 (클릭하여 체크)[cite: 19, 23]
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
                   {[
@@ -620,7 +708,7 @@ export default function TrainingCurriculum({ t, isDarkMode, setActiveScreen }) {
                         <div className={`w-3.5 h-3.5 border shrink-0 flex items-center justify-center ${isChecked ? 'bg-[#7A2E26] border-[#7A2E26] text-white' : 'border-slate-400'}`}>
                           {isChecked && <IconCheck />}
                         </div>
-                        <span className={`text-[12px] ${isChecked ? `${textHead} font-bold` : textBody}`} style={fontSerif}>{c.t}</span>
+                        <span className={`text-[12px] ${isChecked ? `${textHead} font-bold` : textBody}`} style={fontSerif}>{c.t}[cite: 19, 23]</span>
                       </div>
                     );
                   })}
@@ -629,7 +717,7 @@ export default function TrainingCurriculum({ t, isDarkMode, setActiveScreen }) {
 
               {/* 49. 지도자 선언 */}
               <div className={`p-3 border-l-2 border-[#7A2E26] ${subBox} text-[12.5px] leading-relaxed italic ${textBody}`} style={fontSerif}>
-                "나는 성도에게 내 답을 주는 사람이 아니라 성도가 말씀 앞에서 하나님을 만나도록 돕는 사람이다. 나는 성도의 고난을 함부로 해석하지 않는다. 나는 성도의 죄를 이용하지 않는다. 나는 성도의 고백을 안전하게 다룬다. 나는 말씀을 삶에 연결하며 적용을 구체화한다."
+                "나는 성도에게 내 답을 주는 사람이 아니라 성도가 말씀 앞에서 하나님을 만나도록 돕는 사람이다[cite: 19, 23]. 나는 성도의 고난을 함부로 해석하지 않는다[cite: 19, 23]. 나는 성도의 죄를 이용하지 않는다[cite: 19, 23]. 나는 성도의 고백을 안전하게 다룬다[cite: 19, 23]. 나는 말씀을 삶에 연결하며 적용을 구체화한다[cite: 19, 23]."
               </div>
             </div>
           )}
@@ -642,14 +730,14 @@ export default function TrainingCurriculum({ t, isDarkMode, setActiveScreen }) {
                   HERMENEUTICS & PROTOCOL • § Ⅱ
                 </span>
                 <h2 className={`text-[17px] sm:text-[19px] font-bold tracking-tight mt-0.5 ${textHead}`} style={fontSerif}>
-                  고난 해석 12단계 및 감사의 5단계 프로토콜
+                  고난 해석 12단계 및 감사의 5단계 프로토콜[cite: 20, 23]
                 </h2>
               </div>
 
               {/* 16. 고난 해석 12단계 순서도 */}
               <div className={`p-3 border ${cardBox}`}>
                 <span className={`text-[11.5px] font-bold block mb-2 ${textHead}`} style={fontSans}>
-                  16. 고난 해석 12단계 프로토콜 (Protocol 16)
+                  16. 고난 해석 12단계 프로토콜 (Protocol 16)[cite: 20, 23]
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
                   {[
@@ -668,10 +756,10 @@ export default function TrainingCurriculum({ t, isDarkMode, setActiveScreen }) {
                   ].map(item => (
                     <div key={item.s} className={`p-2 border ${subBox}`}>
                       <div className="flex items-center justify-between mb-0.5">
-                        <span className="font-mono text-[9.5px] font-bold text-[#7A2E26] dark:text-[#F87171]">STEP {item.s}</span>
-                        <strong className={`text-[12px] ${textHead}`} style={fontSans}>{item.t}</strong>
+                        <span className="font-mono text-[9.5px] font-bold text-[#7A2E26] dark:text-[#F87171]">STEP {item.s}[cite: 20, 23]</span>
+                        <strong className={`text-[12px] ${textHead}`} style={fontSans}>{item.t}[cite: 20, 23]</strong>
                       </div>
-                      <p className={`text-[11.5px] ${textMuted}`} style={fontSerif}>{item.d}</p>
+                      <p className={`text-[11.5px] ${textMuted}`} style={fontSerif}>{item.d}[cite: 20, 23]</p>
                     </div>
                   ))}
                 </div>
@@ -711,7 +799,7 @@ export default function TrainingCurriculum({ t, isDarkMode, setActiveScreen }) {
               {/* 17. 고난 왜곡 방지 8대 필터 */}
               <div className={`p-3 border ${cardBox}`}>
                 <span className={`text-[11.5px] font-bold block mb-2 text-[#B91C1C] dark:text-[#F87171]`} style={fontSans}>
-                  17. 고난 왜곡 방지 8대 필터 점검표
+                  17. 고난 왜곡 방지 8대 필터 점검표[cite: 20, 23]
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
                   {[
@@ -725,7 +813,7 @@ export default function TrainingCurriculum({ t, isDarkMode, setActiveScreen }) {
                     {k:'f8', t:'하나님께 탄식할 권리를 막지 않는가?'}
                   ].map(f => (
                     <div 
-                      key={f.k}
+                      key={f.k} 
                       onClick={() => toggleCheck(f.k)}
                       className={`p-1.5 border cursor-pointer flex items-center gap-2 ${
                         checks[f.k] ? (isDark ? 'bg-[#2A171A] border-[#55272F]' : 'bg-[#FFF0F0] border-[#FCA5A5]') : subBox
@@ -737,7 +825,7 @@ export default function TrainingCurriculum({ t, isDarkMode, setActiveScreen }) {
                         {checks[f.k] && <IconCheck />}
                       </div>
                       <span className={`text-[11.5px] break-keep ${checks[f.k] ? 'text-[#B91C1C] dark:text-[#F87171] font-bold' : textBody}`} style={fontSerif}>
-                        {f.t}
+                        {f.t}[cite: 20, 23]
                       </span>
                     </div>
                   ))}
@@ -754,14 +842,14 @@ export default function TrainingCurriculum({ t, isDarkMode, setActiveScreen }) {
                   PRACTICAL ASSIGNMENT • § Ⅲ
                 </span>
                 <h2 className={`text-[17px] sm:text-[19px] font-bold tracking-tight mt-0.5 ${textHead}`} style={fontSerif}>
-                  주차별 실천 과제 및 루브릭 평가
+                  주차별 실천 과제 및 루브릭 평가[cite: 21, 23]
                 </h2>
               </div>
 
               {/* 19. 4주 집중과정 요람 */}
               <div className={`p-3 border ${cardBox}`}>
                 <span className={`text-[11.5px] font-bold block mb-2 ${textHead}`} style={fontSans}>
-                  19. 4주 집중과정 교과 요람
+                  19. 4주 집중과정 교과 요람[cite: 21, 23]
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {[
@@ -771,11 +859,11 @@ export default function TrainingCurriculum({ t, isDarkMode, setActiveScreen }) {
                     { w: 4, t: '공동체·섬김·영혼구원', k: '교회, 섬김, 영혼구원, 제자화', p: '한 사람 돌봄, 실제 봉사, 제자화', a: '30일 중보기도, 섬김 1회, 90일 계획' }
                   ].map(item => (
                     <div key={item.w} className={`p-2.5 border ${subBox}`}>
-                      <strong className={`text-[13px] text-[#7A2E26] dark:text-[#F87171] block mb-1`} style={fontSans}>WEEK {item.w}. {item.t}</strong>
+                      <strong className={`text-[13px] text-[#7A2E26] dark:text-[#F87171] block mb-1`} style={fontSans}>WEEK {item.w}. {item.t}[cite: 21, 23]</strong>
                       <div className="space-y-0.5 text-[12px]" style={fontSerif}>
-                        <p><strong className={textMuted}>핵심:</strong> {item.k}</p>
-                        <p><strong className={textMuted}>실습:</strong> {item.p}</p>
-                        <p><strong className={textHead}>과제:</strong> {item.a}</p>
+                        <p><strong className={textMuted}>핵심:</strong> {item.k}[cite: 21, 23]</p>
+                        <p><strong className={textMuted}>실습:</strong> {item.p}[cite: 21, 23]</p>
+                        <p><strong className={textHead}>과제:</strong> {item.a}[cite: 21, 23]</p>
                       </div>
                     </div>
                   ))}
@@ -785,7 +873,7 @@ export default function TrainingCurriculum({ t, isDarkMode, setActiveScreen }) {
               {/* 33. 주간 8대 영적 규율 실천표 */}
               <div className={`p-3 border ${cardBox}`}>
                 <span className={`text-[11.5px] font-bold block mb-2 ${textHead}`} style={fontSans}>
-                  33. 주간 8대 영적 규율 실천 점검표 (월~일)
+                  33. 주간 8대 영적 규율 실천 점검표 (월~일)[cite: 21, 23]
                 </span>
                 <div className="overflow-x-auto hide-scrollbar border border-inherit">
                   <table className="w-full text-center text-[12px] min-w-[440px]" style={fontSans}>
@@ -798,7 +886,7 @@ export default function TrainingCurriculum({ t, isDarkMode, setActiveScreen }) {
                     <tbody className="divide-y divide-inherit">
                       {['QT', '기도', '감사', '회개', '적용', '섬김', '관계회복', '복음'].map(item => (
                         <tr key={item}>
-                          <td className={`p-1 font-bold border-r ${borderRule} ${textHead}`}>{item}</td>
+                          <td className={`p-1 font-bold border-r ${borderRule} ${textHead}`}>{item}[cite: 21, 23]</td>
                           {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(day => {
                             const key = `w_${item}_${day}`;
                             const isChecked = Boolean(weeklyCheck[key]);
@@ -827,14 +915,14 @@ export default function TrainingCurriculum({ t, isDarkMode, setActiveScreen }) {
                   }`}
                   style={fontSans}
                 >
-                  <IconSend /> 위 체크 내역을 오늘의 '영적 5종 세트'에 즉시 동기화
+                  <IconSend /> 위 체크 내역을 오늘의 '영적 5종 세트'에 즉시 동기화[cite: 21, 23]
                 </button>
               </div>
 
               {/* 35. 지도자 평가 루브릭 */}
               <div className={`p-3 border ${cardBox}`}>
                 <span className={`text-[11.5px] font-bold block mb-2 ${textHead}`} style={fontSans}>
-                  35. 지도자 평가 루브릭 5영역 (직접 평가)
+                  35. 지도자 평가 루브릭 5영역 (직접 평가)[cite: 21, 23]
                 </span>
                 <div className="space-y-1.5">
                   {[
@@ -845,9 +933,9 @@ export default function TrainingCurriculum({ t, isDarkMode, setActiveScreen }) {
                     { id: 'reproduce', label: '재생산 (훈련만 받음 ~ 다른 사람 제자화)' }
                   ].map(r => (
                     <div key={r.id} className={`p-2 border flex items-center justify-between gap-2 ${subBox}`}>
-                      <span className={`text-[12px] font-bold ${textHead}`} style={fontSans}>{r.label}</span>
+                      <span className={`text-[12px] font-bold ${textHead}`} style={fontSans}>{r.label}[cite: 21, 23]</span>
                       <div className="flex items-center gap-1.5 shrink-0">
-                        <span className="font-mono text-[12px] font-bold text-[#7A2E26] dark:text-[#F87171]">{rubrics[r.id]}점</span>
+                        <span className="font-mono text-[12px] font-bold text-[#7A2E26] dark:text-[#F87171]">{rubrics[r.id]}점[cite: 21, 23]</span>
                         <input 
                           type="range" min="1" max="5" step="1" 
                           value={rubrics[r.id]||3} 
@@ -870,14 +958,14 @@ export default function TrainingCurriculum({ t, isDarkMode, setActiveScreen }) {
                   HOMILETIC CORPUS • § Ⅳ
                 </span>
                 <h2 className={`text-[17px] sm:text-[19px] font-bold tracking-tight mt-0.5 ${textHead}`} style={fontSerif}>
-                  79편 설교 코퍼스 심층 분석 & 이성현 목사 목회신학
+                  79편 설교 코퍼스 심층 분석 & 이성현 목사 목회신학[cite: 22, 23]
                 </h2>
               </div>
 
               {/* 비교 연구 매트릭스 */}
               <div className={`p-3 border ${cardBox}`}>
                 <span className={`text-[11.5px] font-bold block mb-2 ${textHead}`} style={fontSans}>
-                  60. 김양재 목사(우리들) vs 이성현 목사(김포) 비교 연구 (Thesis 60)
+                  60. 김양재 목사(우리들) vs 이성현 목사(김포) 비교 연구 (Thesis 60)[cite: 22, 23]
                 </span>
                 <div className="w-full overflow-x-auto hide-scrollbar border border-inherit mb-2">
                   <table className="w-full text-left text-[11.5px] min-w-[500px]" style={fontSans}>
@@ -891,18 +979,18 @@ export default function TrainingCurriculum({ t, isDarkMode, setActiveScreen }) {
                     <tbody className="divide-y divide-inherit">
                       <tr>
                         <td className={`p-1.5 font-bold ${textHead} border-r ${borderRule}`}>교육공학</td>
-                        <td className={`p-1.5 border-r ${borderRule} ${textBody}`} style={fontSerif}>절차화된 프로토콜 (5단계 감사 / 12단계 고난)</td>
-                        <td className={`p-1.5 ${textBody}`} style={fontSerif}>정경적 서사 연결 (Lectio Continua 연속 강해)</td>
+                        <td className={`p-1.5 border-r ${borderRule} ${textBody}`} style={fontSerif}>절차화된 프로토콜 (5단계 감사 / 12단계 고난)[cite: 22, 23]</td>
+                        <td className={`p-1.5 ${textBody}`} style={fontSerif}>정경적 서사 연결 (Lectio Continua 연속 강해)[cite: 22, 23]</td>
                       </tr>
                       <tr>
                         <td className={`p-1.5 font-bold ${textHead} border-r ${borderRule}`}>훈련 리듬</td>
-                        <td className={`p-1.5 border-r ${borderRule} ${textBody}`} style={fontSerif}>10주 기수제 양육학교 (T스쿨)</td>
-                        <td className={`p-1.5 ${textBody}`} style={fontSerif}>월례 5일 집중 기상오기 (특새 집중 훈련)</td>
+                        <td className={`p-1.5 border-r ${borderRule} ${textBody}`} style={fontSerif}>10주 기수제 양육학교 (T스쿨)[cite: 22, 23]</td>
+                        <td className={`p-1.5 ${textBody}`} style={fontSerif}>월례 5일 집중 기상오기 (특새 집중 훈련)[cite: 22, 23]</td>
                       </tr>
                       <tr>
                         <td className={`p-1.5 font-bold ${textHead} border-r ${borderRule}`}>신학 언어</td>
-                        <td className={`p-1.5 border-r ${borderRule} ${textBody}`} style={fontSerif}>실존적·관계적 언어 ("내 죄 보기")</td>
-                        <td className={`p-1.5 ${textBody}`} style={fontSerif}>조직신학적 언어 (원죄/형사죄, 정죄/징계 구분)</td>
+                        <td className={`p-1.5 border-r ${borderRule} ${textBody}`} style={fontSerif}>실존적·관계적 언어 ("내 죄 보기")[cite: 22, 23]</td>
+                        <td className={`p-1.5 ${textBody}`} style={fontSerif}>조직신학적 언어 (원죄/형사죄, 정죄/징계 구분)[cite: 22, 23]</td>
                       </tr>
                     </tbody>
                   </table>

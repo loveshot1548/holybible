@@ -53,27 +53,28 @@ const bookNamesKo = {
   "1 John":"요한일서","2 John":"요한이서","3 John":"요한삼서","Jude":"유다서","Revelation":"요한계시록"
 };
 
-// 🌟 신뢰성 높은 정통 피아노 묵상 찬양 트랙 리스트
+// 🌟 평안한 정통 피아노 묵상 찬양 트랙
 const PIANO_TRACKS = [
+  {
+    title: '내 평생에 가는 길 (참된 평안)',
+    url: 'https://upload.wikimedia.org/wikipedia/commons/4/4b/It_is_well_with_my_soul.ogg'
+  },
   {
     title: '바흐 평균율 C장조 프렐류드 (고요한 묵상)',
     url: 'https://upload.wikimedia.org/wikipedia/commons/c/c8/J.S._Bach_-_Well-Tempered_Clavier_1_-_Prelude_and_Fugue_No._1_in_C_major_%28BWV_846%29_-_Klaus_Schiff_%28piano%29.ogg'
-  },
-  {
-    title: '내 평생에 가는 길 / 평안의 기도 선율',
-    url: 'https://upload.wikimedia.org/wikipedia/commons/4/4b/It_is_well_with_my_soul.ogg'
   }
 ];
 
 export default function MeditationPilgrimage({ setActiveScreen, isDarkMode, authUser, logUserAction, bibles = [], date }) {
+  const isDark = Boolean(isDarkMode);
+
   const [hasEntered, setHasEntered] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
-  const [transitionState, setTransitionState] = useState('idle'); // 'idle' | 'exit' | 'enter'
+  const [transitionState, setTransitionState] = useState('idle');
 
   // 침묵 호흡 타이머
-  const [silenceDuration, setSilenceDuration] = useState(60);
   const [silenceTimer, setSilenceTimer] = useState(60);
-  const [breathPhase, setBreathPhase] = useState('inhale'); // 'inhale' (들숨 4s) | 'hold' (2s) | 'exhale' (날숨 4s)
+  const [breathPhase, setBreathPhase] = useState('inhale'); // 'inhale' | 'hold' | 'exhale'
 
   // 골방 기도 상태
   const [isPrayerOffered, setIsPrayerOffered] = useState(false);
@@ -86,14 +87,13 @@ export default function MeditationPilgrimage({ setActiveScreen, isDarkMode, auth
     verseText: '여호와는 나의 목자시니 내게 부족함이 없으리로다 그가 나를 푸른 풀밭에 누이시며 쉴 만한 물 가로 인도하시는도다.',
     reference: '(시편 23:1-2)',
     question: '주님이 나의 선한 목자 되심을 온전히 신뢰하지 못하고 염려했던 삶의 자리는 어디입니까?',
-    originalInsight: '히브리어 [로 에흐사르]: 단순히 물질적 결핍이 없는 것을 넘어, 목자의 품 안에서 영혼의 전적인 안식을 누림을 뜻합니다.'
+    originalInsight: '히브리어 [로 에흐사르]: 물질적 결핍이 없는 것을 넘어, 목자의 품 안에서 영혼의 전적인 안식을 누림을 뜻합니다.'
   });
 
   const [journal, setJournal] = useState({ confession: '', thanksgiving: '', resolution: '' });
   const [prayers, setPrayers] = useState([]);
   const [pIndex, setPIndex] = useState(0);
   const [prayedIds, setPrayedIds] = useState(new Set());
-  const [isSaving, setIsSaving] = useState(false);
 
   // 오디오 시스템 상태
   const audioRef = useRef(null);
@@ -104,15 +104,15 @@ export default function MeditationPilgrimage({ setActiveScreen, isDarkMode, auth
 
   const userName = authUser?.name || (typeof authUser === 'string' ? authUser : '') || '성도';
 
-  // 🌟 고요하고 정제된 수도원적 서정 팔레트 (WCAG AAA 고대비 준수)
+  // 🌟 고요하고 정제된 수도원적 서정 팔레트
   const T = {
-    bg: isDarkMode ? '#0A0B0E' : '#FAF8F5',
-    textMain: isDarkMode ? '#F4F4F6' : '#1F1E1B',
-    textSub: isDarkMode ? '#8E8E98' : '#7C786E',
-    textHighlight: isDarkMode ? '#D4D4D8' : '#3E3B33',
-    line: isDarkMode ? 'rgba(255, 255, 255, 0.10)' : 'rgba(31, 30, 27, 0.10)',
-    candle: isDarkMode ? '#F59E0B' : '#D97706',
-    cardBg: isDarkMode ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)'
+    bg: isDark ? '#0A0B0E' : '#FAF8F5',
+    textMain: isDark ? '#F4F4F6' : '#1F1E1B',
+    textSub: isDark ? '#8E8E98' : '#7C786E',
+    textHighlight: isDark ? '#E4E4E7' : '#3E3B33',
+    line: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(31, 30, 27, 0.08)',
+    candle: isDark ? '#F59E0B' : '#D97706',
+    cardBg: isDark ? 'rgba(255, 255, 255, 0.025)' : 'rgba(0, 0, 0, 0.02)'
   };
 
   // 성경 말씀 무작위 조명
@@ -189,7 +189,7 @@ export default function MeditationPilgrimage({ setActiveScreen, isDarkMode, auth
     fetchPrayers();
   }, [pickRandomScripture]);
 
-  // 🌟 천상의 피아노 선율 페이드인
+  // 피아노 선율 페이드인 및 입장
   const handleEnterRoom = () => {
     if (audioRef.current) {
       audioRef.current.volume = 0;
@@ -207,7 +207,7 @@ export default function MeditationPilgrimage({ setActiveScreen, isDarkMode, auth
               } else { 
                 clearInterval(fadeIn); 
               }
-            }, 140);
+            }, 120);
           })
           .catch(() => {});
       }
@@ -249,7 +249,6 @@ export default function MeditationPilgrimage({ setActiveScreen, isDarkMode, auth
     }
   };
 
-  // 음성 낭독 (Web Speech TTS)
   const speakScripture = (e) => {
     if (e) e.stopPropagation();
     if (!('speechSynthesis' in window)) return;
@@ -261,14 +260,13 @@ export default function MeditationPilgrimage({ setActiveScreen, isDarkMode, auth
     window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(`${scripture.verseText} ${scripture.reference}`);
     u.lang = 'ko-KR';
-    u.rate = 0.84; // 경건하고 침착한 템포
+    u.rate = 0.84;
     u.onend = () => setIsTTSActive(false);
     u.onerror = () => setIsTTSActive(false);
     setIsTTSActive(true);
     window.speechSynthesis.speak(u);
   };
 
-  // 여운을 남기는 페이드아웃 및 퇴장
   const fadeOutAndExit = (target = 'home') => {
     if (window.speechSynthesis) window.speechSynthesis.cancel();
     if (audioRef.current && !audioRef.current.paused) {
@@ -285,22 +283,21 @@ export default function MeditationPilgrimage({ setActiveScreen, isDarkMode, auth
           }
           setActiveScreen(target);
         }
-      }, 80);
+      }, 70);
     } else {
       setActiveScreen(target);
     }
   };
 
-  // 1단계 침묵 타이머 & 4-4-4 성경적 호흡 펄스
+  // 1단계 침묵 타이머 & 호흡 펄스
   useEffect(() => {
     if (hasEntered && stepIndex === 0) {
       const t = setInterval(() => {
         setSilenceTimer(prev => (prev > 0 ? prev - 1 : 0));
       }, 1000);
 
-      // 10초 주기 호흡 루프: 4초 들숨 -> 2초 멈춤 -> 4초 날숨
       const breathTimer = setInterval(() => {
-        const secMod = (silenceDuration - silenceTimer) % 10;
+        const secMod = (60 - silenceTimer) % 10;
         if (secMod < 4) setBreathPhase('inhale');
         else if (secMod < 6) setBreathPhase('hold');
         else setBreathPhase('exhale');
@@ -311,7 +308,7 @@ export default function MeditationPilgrimage({ setActiveScreen, isDarkMode, auth
         clearInterval(breathTimer);
       };
     }
-  }, [hasEntered, stepIndex, silenceDuration, silenceTimer]);
+  }, [hasEntered, stepIndex, silenceTimer]);
 
   useEffect(() => {
     if (stepIndex === 3) {
@@ -323,7 +320,7 @@ export default function MeditationPilgrimage({ setActiveScreen, isDarkMode, auth
     }
   }, [stepIndex]);
 
-  // 부드러운 화면 전환
+  // 화면 전환 핸들러
   const handleScreenTouch = async (e) => {
     if (transitionState !== 'idle' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'BUTTON' || e.target.closest('button') || e.target.closest('textarea')) {
       return;
@@ -331,11 +328,9 @@ export default function MeditationPilgrimage({ setActiveScreen, isDarkMode, auth
 
     if (stepIndex === 2 && !isPrayerOffered) return;
 
-    // 골방 기도문 저장 및 오늘 날짜 QT/루틴 완료 연동
     if (stepIndex === 2 && isPrayerOffered) {
       const full = `[토설] ${journal.confession}\n[감사] ${journal.thanksgiving}\n[결단] ${journal.resolution}`;
       if (full.trim().length > 5) {
-        setIsSaving(true);
         try {
           if (supabase) {
             await supabase.from('diary').insert([{ user_name: userName, content: encryptField(full.trim()), created_at: new Date().toISOString() }]);
@@ -343,7 +338,6 @@ export default function MeditationPilgrimage({ setActiveScreen, isDarkMode, auth
           if (typeof logUserAction === 'function') {
             logUserAction(userName, 'meditationPilgrimage', 'write', `[골방기도] ${journal.resolution.slice(0, 30)}`);
           }
-          // 로컬 QT 일지 체크 자동 반영
           const todayKey = date || new Date().toISOString().split('T')[0];
           const allQt = JSON.parse(localStorage.getItem('qt_daily') || '{}');
           const todayData = allQt[todayKey] || {};
@@ -353,7 +347,6 @@ export default function MeditationPilgrimage({ setActiveScreen, isDarkMode, auth
           };
           localStorage.setItem('qt_daily', JSON.stringify(allQt));
         } catch (_) {}
-        setIsSaving(false);
       }
     }
     
@@ -367,10 +360,8 @@ export default function MeditationPilgrimage({ setActiveScreen, isDarkMode, auth
         const mainEl = document.getElementById('meditation-scroll');
         if (mainEl) mainEl.scrollTop = 0;
 
-        setTimeout(() => {
-          setTransitionState('idle');
-        }, 500);
-      }, 400);
+        setTimeout(() => setTransitionState('idle'), 400);
+      }, 300);
     } else {
       fadeOutAndExit('home');
     }
@@ -383,7 +374,7 @@ export default function MeditationPilgrimage({ setActiveScreen, isDarkMode, auth
 
   return (
     <>
-      {/* 🌟 천상의 피아노 찬양 오디오 엘리먼트 */}
+      {/* 🌟 안정적인 HTML5 오디오 요소 */}
       <audio 
         ref={audioRef} 
         src={PIANO_TRACKS[currentTrackIdx].url}
@@ -395,58 +386,51 @@ export default function MeditationPilgrimage({ setActiveScreen, isDarkMode, auth
       <style>{`
         .meditation-fade-exit {
           opacity: 0;
-          transform: translateY(-10px);
-          transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+          transform: translateY(-8px);
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .meditation-fade-enter {
           opacity: 1;
           transform: translateY(0);
-          transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+          transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
-        @keyframes subtleCandleFlicker {
-          0%, 100% { transform: scale(1) translate(0, 0); opacity: 0.85; filter: drop-shadow(0 0 16px rgba(245, 158, 11, 0.6)); }
-          25% { transform: scale(1.04) translate(-0.5px, -1px); opacity: 0.95; filter: drop-shadow(0 0 22px rgba(245, 158, 11, 0.75)); }
-          50% { transform: scale(0.97) translate(0.5px, 0.5px); opacity: 0.75; filter: drop-shadow(0 0 14px rgba(245, 158, 11, 0.5)); }
-          75% { transform: scale(1.02) translate(-0.3px, 0.3px); opacity: 0.90; filter: drop-shadow(0 0 19px rgba(245, 158, 11, 0.7)); }
-        }
-        @keyframes breathRingInhale {
-          0% { transform: scale(0.85); opacity: 0.15; }
-          100% { transform: scale(1.35); opacity: 0.45; }
+        @keyframes gentleCandleGlow {
+          0%, 100% { opacity: 0.85; filter: drop-shadow(0 0 14px rgba(245, 158, 11, 0.55)); }
+          50% { opacity: 0.98; filter: drop-shadow(0 0 22px rgba(245, 158, 11, 0.75)); }
         }
         @keyframes incenseAscent {
           0% { transform: translateY(0) scale(0.9); opacity: 0; }
-          40% { opacity: 0.8; }
-          100% { transform: translateY(-30px) scale(1.15); opacity: 0; }
+          40% { opacity: 0.85; }
+          100% { transform: translateY(-28px) scale(1.15); opacity: 0; }
         }
       `}</style>
 
-      {/* 1. 고요하고 웅장한 대문 화면 (오프닝 포털) */}
+      {/* ── 1. 고요한 성소 대문 화면 (오프닝 포털) ── */}
       {!hasEntered ? (
         <div 
           onClick={handleEnterRoom}
           className="fixed inset-0 z-[200] flex flex-col items-center justify-between p-8 sm:p-14 text-center cursor-pointer select-none font-sans overflow-hidden transition-colors duration-700"
           style={{ backgroundColor: T.bg }}
         >
-          {/* 상단: 거룩한 성소 앰비언트 글로우 */}
-          <div className="pt-8 flex flex-col items-center gap-2">
-            <span className="text-[10px] tracking-[0.38em] uppercase font-mono font-medium opacity-50" style={{ color: T.textSub }}>
-              The Sanctuary • Liturgy of Life
+          {/* 상단 촛불 표식 */}
+          <div className="pt-6 flex flex-col items-center gap-2">
+            <span className="text-[10px] tracking-[0.35em] uppercase font-mono font-medium opacity-50" style={{ color: T.textSub }}>
+              THE SANCTUARY • LITURGY
             </span>
             <div 
               className="w-1.5 h-1.5 rounded-full"
-              style={{ backgroundColor: T.candle, animation: 'subtleCandleFlicker 3s infinite ease-in-out' }}
+              style={{ backgroundColor: T.candle, animation: 'gentleCandleGlow 3s infinite ease-in-out' }}
             />
           </div>
           
-          {/* 중앙: 상징적인 초대 문구 & 캔들 형상 */}
+          {/* 중앙 초대 문구 */}
           <div className="space-y-6 my-auto max-w-md animate-fade-in">
-            {/* 은은한 성소의 촛불 아이콘 */}
-            <div className="flex justify-center mb-2">
+            <div className="flex justify-center mb-1">
               <svg 
                 viewBox="0 0 24 24" 
                 fill="none" 
                 className="w-8 h-8"
-                style={{ color: T.candle, animation: 'subtleCandleFlicker 4s infinite ease-in-out' }}
+                style={{ color: T.candle, animation: 'gentleCandleGlow 3.5s infinite ease-in-out' }}
               >
                 <path d="M12 2C11 4.5 10 6 10 8C10 9.65685 10.8954 11 12 11C13.1046 11 14 9.65685 14 8C14 6 13 4.5 12 2Z" fill="currentColor" />
                 <path d="M9 13H15V22H9V13Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.6" />
@@ -454,42 +438,48 @@ export default function MeditationPilgrimage({ setActiveScreen, isDarkMode, auth
               </svg>
             </div>
 
-            <h1 className="text-[24px] sm:text-[28px] font-serif font-normal tracking-wide leading-[2.1]" style={{ color: T.textMain }}>
+            <h1 className="text-[23px] sm:text-[27px] font-serif font-normal tracking-wide leading-[2.1]" style={{ color: T.textMain }}>
               일상을 잠시 멈추고<br/>말씀 앞 머무름을 시작합니다
             </h1>
 
             <p className="text-[13px] font-serif leading-[2.2] opacity-70" style={{ color: T.textSub }}>
               분주한 세상의 소리를 끄고 하늘의 음성을 마주하는 골방<br/>
-              <span className="text-[11.5px] opacity-60 font-mono tracking-wider">고요한 피아노 찬양 선율과 함께하는 5단계 여정</span>
+              <span className="text-[11.5px] opacity-60 font-mono tracking-wider">
+                은은한 피아노 선율과 함께하는 5단계 묵상 여정
+              </span>
             </p>
           </div>
 
-          {/* 하단: 터치 초대 */}
-          <div className="pb-8 flex flex-col items-center gap-2">
+          {/* 하단 터치 초대 */}
+          <div className="pb-6">
             <span className="text-[11px] font-medium tracking-[0.25em] font-serif opacity-80 animate-pulse" style={{ color: T.textMain }}>
               화면을 가볍게 터치하여 입장하세요
             </span>
           </div>
         </div>
       ) : (
-        /* 2. 메인 묵상 여정 (5단계 거룩한 리터지) */
+        /* ── 2. 메인 묵상 여정 (5단계 거룩한 리터지) ── */
         <div 
           onClick={handleScreenTouch}
-          className="fixed inset-0 z-[200] flex flex-col w-full font-sans select-none overflow-hidden cursor-pointer transition-colors duration-700"
+          className="fixed inset-0 z-[200] flex flex-col w-full h-full font-sans select-none overflow-hidden cursor-pointer transition-colors duration-700"
           style={{ backgroundColor: T.bg }}
         >
-          {/* 미니멀 헤더 바 (컨트롤 센터 완비) */}
-          <header className="shrink-0 pt-8 pb-3 px-6 sm:px-12 flex items-center justify-between z-10 border-b border-dashed" style={{ borderColor: T.line }} onClick={e => e.stopPropagation()}>
+          {/* 상단 미니멀 헤더 & 피아노 컨트롤 바 */}
+          <header 
+            className="shrink-0 pt-7 pb-3 px-6 sm:px-12 flex items-center justify-between z-10 border-b border-dashed" 
+            style={{ borderColor: T.line }} 
+            onClick={e => e.stopPropagation()}
+          >
             <button 
               onClick={() => fadeOutAndExit('home')} 
-              className="text-[11px] font-medium tracking-[0.25em] uppercase hover:opacity-60 transition-opacity cursor-pointer flex items-center gap-1"
+              className="text-[11px] font-medium tracking-[0.2em] uppercase hover:opacity-60 transition-opacity cursor-pointer flex items-center gap-1"
               style={{ color: T.textSub }}
             >
               <span>✕</span> 나가기
             </button>
             
             {/* 단계 인디케이터 */}
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2">
               <span className="text-[12px] font-serif italic tracking-wider" style={{ color: T.candle }}>
                 {STEPS[stepIndex].num}.
               </span>
@@ -498,11 +488,11 @@ export default function MeditationPilgrimage({ setActiveScreen, isDarkMode, auth
               </span>
             </div>
 
-            {/* 청각 환경 컨트롤러 (음악 토글 / 곡 변경 / 볼륨) */}
+            {/* 청각 컨트롤러 */}
             <div className="flex items-center gap-2">
               <button 
                 onClick={changeTrack}
-                title="다른 피아노 찬양곡으로 변경"
+                title="다른 피아노 곡으로 변경"
                 className="text-[10px] font-mono tracking-wider px-2 py-0.5 rounded border hover:opacity-80 transition-all cursor-pointer hidden sm:inline"
                 style={{ color: T.textSub, borderColor: T.line }}
               >
@@ -528,33 +518,31 @@ export default function MeditationPilgrimage({ setActiveScreen, isDarkMode, auth
             </div>
           </header>
 
-          {/* 메인 묵상 스크롤 뷰포트 */}
+          {/* 메인 묵상 스크롤 뷰포트 (하단 pb-28 여백 확보로 가림 방지) */}
           <main 
             id="meditation-scroll" 
-            className={`flex-1 overflow-y-auto px-6 sm:px-14 py-6 flex flex-col justify-center w-full max-w-xl mx-auto overscroll-contain pb-[110px] hide-scrollbar ${
+            className={`flex-1 overflow-y-auto px-6 sm:px-14 py-6 flex flex-col justify-center w-full max-w-xl mx-auto overscroll-contain pb-28 hide-scrollbar ${
               transitionState === 'exit' ? 'meditation-fade-exit' : 'meditation-fade-enter'
             }`}
           >
             
-            {/* ================================================================= */}
-            {/* I. 침묵과 정돈 (4-4-4 성경적 호흡 펄스 가이드)                     */}
-            {/* ================================================================= */}
+            {/* ════════ I. 침묵과 정돈 (4-2-4 성경적 호흡 펄스) ════════ */}
             {stepIndex === 0 && (
               <div className="flex flex-col items-center justify-center text-center my-auto space-y-10">
                 <div className="relative w-52 h-52 flex items-center justify-center">
-                  {/* 호흡 펄스 링 */}
+                  {/* 부드러운 호흡 펄스 링 */}
                   <div 
                     className="absolute inset-0 rounded-full border border-current transition-all duration-1000 ease-in-out"
                     style={{ 
                       color: T.candle,
-                      transform: breathPhase === 'inhale' ? 'scale(1.28)' : breathPhase === 'hold' ? 'scale(1.28)' : 'scale(0.85)',
+                      transform: breathPhase === 'inhale' ? 'scale(1.26)' : breathPhase === 'hold' ? 'scale(1.26)' : 'scale(0.85)',
                       opacity: breathPhase === 'inhale' ? 0.45 : breathPhase === 'hold' ? 0.35 : 0.15
                     }}
                   />
                   
                   {/* 중앙 남은 시간 */}
                   <div className="flex flex-col items-center justify-center">
-                    <span className="text-[64px] font-extralight tracking-tight font-serif tabular-nums leading-none" style={{ color: T.textMain }}>
+                    <span className="text-[60px] font-extralight tracking-tight font-serif tabular-nums leading-none" style={{ color: T.textMain }}>
                       {String(silenceTimer).padStart(2, '0')}
                     </span>
                     <span className="text-[10px] font-mono tracking-[0.2em] uppercase opacity-40 mt-1" style={{ color: T.textSub }}>
@@ -563,7 +551,7 @@ export default function MeditationPilgrimage({ setActiveScreen, isDarkMode, auth
                   </div>
                 </div>
 
-                {/* 성경적 호흡 가이드 문구 */}
+                {/* 성경적 호흡 안내 */}
                 <div className="space-y-3 max-w-xs">
                   <div className="inline-block px-3 py-1 rounded-full text-[11px] font-serif font-medium border" style={{ color: T.candle, borderColor: T.line, backgroundColor: T.cardBg }}>
                     {breathPhase === 'inhale' && '들숨 • 주님의 은혜와 평안을 채웁니다'}
@@ -578,9 +566,7 @@ export default function MeditationPilgrimage({ setActiveScreen, isDarkMode, auth
               </div>
             )}
 
-            {/* ================================================================= */}
-            {/* II. 말씀 직면 (원어 묵상 한 줄 & 음성 낭독)                       */}
-            {/* ================================================================= */}
+            {/* ════════ II. 말씀 직면 (원어 묵상 한 줄 & 음성 낭독) ════════ */}
             {stepIndex === 1 && (
               <div className="flex flex-col justify-center my-auto space-y-7 text-left w-full">
                 
@@ -607,7 +593,7 @@ export default function MeditationPilgrimage({ setActiveScreen, isDarkMode, auth
                   </div>
                 </div>
 
-                {/* 말씀 본문 (우아한 세리프 & 행간) */}
+                {/* 말씀 본문 */}
                 <div className="space-y-4 pt-1">
                   <p className="text-[19px] sm:text-[22px] leading-[2.4] font-serif font-normal select-text break-keep text-left" style={{ color: T.textMain }}>
                     "{scripture.verseText}"
@@ -642,15 +628,13 @@ export default function MeditationPilgrimage({ setActiveScreen, isDarkMode, auth
               </div>
             )}
 
-            {/* ================================================================= */}
-            {/* III. 골방 기도 (토설 ➔ 감사 ➔ 결단 & 하늘 보좌 승천)             */}
-            {/* ================================================================= */}
+            {/* ════════ III. 골방 기도 (토설 ➔ 감사 ➔ 결단 & 하늘 보좌 승천) ════════ */}
             {stepIndex === 2 && (
-              <div className="space-y-10 my-auto py-3 text-left w-full">
+              <div className="space-y-9 my-auto py-2 text-left w-full">
                 {!isPrayerOffered ? (
-                  <div className="space-y-9">
+                  <div className="space-y-8">
                     
-                    <div className="space-y-2.5">
+                    <div className="space-y-2">
                       <label className="text-[11.5px] font-serif tracking-[0.2em] uppercase block opacity-70" style={{ color: T.textSub }}>
                         I. 오늘 주 앞에 털어놓는 나의 연약함과 죄
                       </label>
@@ -664,7 +648,7 @@ export default function MeditationPilgrimage({ setActiveScreen, isDarkMode, auth
                       />
                     </div>
 
-                    <div className="space-y-2.5">
+                    <div className="space-y-2">
                       <label className="text-[11.5px] font-serif tracking-[0.2em] uppercase block opacity-70" style={{ color: T.textSub }}>
                         II. 그럼에도 부어주신 구원의 은혜와 감사
                       </label>
@@ -678,7 +662,7 @@ export default function MeditationPilgrimage({ setActiveScreen, isDarkMode, auth
                       />
                     </div>
 
-                    <div className="space-y-2.5">
+                    <div className="space-y-2">
                       <label className="text-[11.5px] font-serif tracking-[0.2em] uppercase block opacity-70" style={{ color: T.textSub }}>
                         III. 오늘 살아낼 구체적 순종과 결단
                       </label>
@@ -692,10 +676,10 @@ export default function MeditationPilgrimage({ setActiveScreen, isDarkMode, auth
                       />
                     </div>
 
-                    <div className="pt-4">
+                    <div className="pt-3">
                       <button
                         onClick={() => setIsPrayerOffered(true)}
-                        className="w-full py-4 text-[13px] font-serif tracking-[0.25em] uppercase hover:opacity-75 transition-all cursor-pointer border-b text-center"
+                        className="w-full py-3.5 text-[12.5px] font-serif tracking-[0.25em] uppercase hover:opacity-75 transition-all cursor-pointer border-b text-center"
                         style={{ color: T.textMain, borderColor: T.line }}
                       >
                         기도를 주님 손에 올려드립니다 🕊️
@@ -704,21 +688,21 @@ export default function MeditationPilgrimage({ setActiveScreen, isDarkMode, auth
 
                   </div>
                 ) : (
-                  /* 기도가 향연이 되어 보좌에 상달되는 승천 화면 */
-                  <div className="py-16 text-center space-y-6 animate-fade-in">
+                  /* 향연 승천 화면 */
+                  <div className="py-14 text-center space-y-5 animate-fade-in">
                     <div className="flex justify-center">
                       <span className="text-3xl" style={{ animation: 'incenseAscent 2.5s infinite ease-out' }}>
                         🕊️
                       </span>
                     </div>
 
-                    <h4 className="text-[20px] font-serif font-normal tracking-wide leading-relaxed" style={{ color: T.textMain }}>
+                    <h4 className="text-[19px] font-serif font-normal tracking-wide leading-relaxed" style={{ color: T.textMain }}>
                       당신의 기도가 하늘 보좌에 상달되었습니다
                     </h4>
 
-                    <p className="text-[14px] font-serif leading-[2.4] opacity-80" style={{ color: T.textHighlight }}>
+                    <p className="text-[13.5px] font-serif leading-[2.4] opacity-80" style={{ color: T.textHighlight }}>
                       "향연이 성도의 기도와 함께 천사의 손으로부터<br/>하나님 앞으로 올라가는지라"<br/>
-                      <span className="text-[12px] opacity-60 font-mono">(요한계시록 8:4)</span><br/><br/>
+                      <span className="text-[11.5px] opacity-60 font-mono">(요한계시록 8:4)</span><br/><br/>
                       이제 평안한 마음으로 화면을 가볍게 터치해 다음 여정으로 나아가세요.
                     </p>
                   </div>
@@ -726,13 +710,11 @@ export default function MeditationPilgrimage({ setActiveScreen, isDarkMode, auth
               </div>
             )}
 
-            {/* ================================================================= */}
-            {/* IV. 중보의 연대 (지체들을 위한 손모음)                           */}
-            {/* ================================================================= */}
+            {/* ════════ IV. 중보의 연대 (지체들을 위한 손모음) ════════ */}
             {stepIndex === 3 && (
-              <div className="flex flex-col justify-center my-auto space-y-10 text-center w-full">
+              <div className="flex flex-col justify-center my-auto space-y-9 text-center w-full">
                 {prayers.length === 0 ? (
-                  <p className="text-[15px] font-serif leading-[2.3] opacity-75" style={{ color: T.textHighlight }}>
+                  <p className="text-[14.5px] font-serif leading-[2.3] opacity-75" style={{ color: T.textHighlight }}>
                     현재 등록된 공동체 중보기도 제목이 없습니다.<br/>오늘 하루, 조용히 이웃과 가정을 위해 마음으로 기도해 주세요.
                   </p>
                 ) : (
@@ -747,7 +729,7 @@ export default function MeditationPilgrimage({ setActiveScreen, isDarkMode, auth
                       "{prayers[pIndex]?.content}"
                     </p>
 
-                    <div className="flex flex-col items-center gap-6 w-full max-w-sm mx-auto pt-2">
+                    <div className="flex flex-col items-center gap-5 w-full max-w-sm mx-auto pt-2">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -758,7 +740,7 @@ export default function MeditationPilgrimage({ setActiveScreen, isDarkMode, auth
                             return n;
                           });
                         }}
-                        className="w-full py-3.5 text-[12.5px] font-serif tracking-[0.2em] uppercase transition-all cursor-pointer border rounded-full hover:opacity-80"
+                        className="w-full py-3.5 text-[12px] font-serif tracking-[0.2em] uppercase transition-all cursor-pointer border rounded-full hover:opacity-80"
                         style={{ 
                           color: prayedIds.has(prayers[pIndex].id) ? T.candle : T.textMain,
                           borderColor: prayedIds.has(prayers[pIndex].id) ? T.candle : T.line,
@@ -793,34 +775,32 @@ export default function MeditationPilgrimage({ setActiveScreen, isDarkMode, auth
               </div>
             )}
 
-            {/* ================================================================= */}
-            {/* V. 안식과 파송 (축복의 파송 & 다음 사역 연동)                     */}
-            {/* ================================================================= */}
+            {/* ════════ V. 안식과 파송 (축복의 파송 & 다음 사역) ════════ */}
             {stepIndex === 4 && (
-              <div className="flex flex-col items-center justify-center text-center my-auto space-y-8 animate-fade-in">
+              <div className="flex flex-col items-center justify-center text-center my-auto space-y-7 animate-fade-in">
                 <span className="text-[10px] font-mono tracking-[0.4em] uppercase opacity-50" style={{ color: T.textSub }}>
                   Aaronic Benediction
                 </span>
                 
-                <h2 className="text-[24px] sm:text-[27px] font-serif font-normal tracking-wide" style={{ color: T.textMain }}>
+                <h2 className="text-[23px] sm:text-[26px] font-serif font-normal tracking-wide" style={{ color: T.textMain }}>
                   삶의 예배 자리로 나아갑니다
                 </h2>
                 
                 <div className="space-y-4 max-w-sm">
-                  <p className="text-[14.5px] leading-[2.5] font-serif break-keep font-light opacity-80" style={{ color: T.textHighlight }}>
+                  <p className="text-[14px] leading-[2.5] font-serif break-keep font-light opacity-80" style={{ color: T.textHighlight }}>
                     "여호와는 네게 복을 주시고 너를 지키시기를 원하며<br/>
                     여호와는 그의 얼굴을 네게 비추사 은혜 베푸시기를 원하며<br/>
                     여호와는 그 얼굴을 네게로 향하여 드사 평강 주시기를 원하노라"<br/>
                     <span className="text-[11.5px] opacity-60 font-mono">(민수기 6:24-26)</span>
                   </p>
 
-                  <p className="text-[13px] font-serif pt-2 opacity-70" style={{ color: T.textSub }}>
+                  <p className="text-[12.5px] font-serif pt-1 opacity-70" style={{ color: T.textSub }}>
                     오늘 골방에서 주님과 맺은 언약이<br/>세상 속에서 빛과 소금의 열매로 맺히길 축복합니다.
                   </p>
                 </div>
 
-                {/* 파송 후 다음 사역 바로가기 액션 바 */}
-                <div className="flex flex-col sm:flex-row gap-2.5 w-full max-w-xs pt-4" onClick={e => e.stopPropagation()}>
+                {/* 파송 후 바로가기 */}
+                <div className="flex flex-col sm:flex-row gap-2 w-full max-w-xs pt-3" onClick={e => e.stopPropagation()}>
                   <button
                     onClick={() => fadeOutAndExit('qt')}
                     className="flex-1 py-3 px-4 rounded-xl text-[12px] font-serif font-medium border hover:opacity-80 transition-all cursor-pointer"
@@ -842,7 +822,7 @@ export default function MeditationPilgrimage({ setActiveScreen, isDarkMode, auth
           </main>
 
           {/* 하단 진행 안내 푸터 */}
-          <footer className="shrink-0 pb-8 pt-2 flex flex-col items-center" onClick={e => e.stopPropagation()}>
+          <footer className="shrink-0 pb-6 pt-2 flex flex-col items-center" onClick={e => e.stopPropagation()}>
             {stepIndex < STEPS.length - 1 ? (
               <span className="text-[10px] font-serif tracking-[0.3em] uppercase opacity-40 animate-pulse" style={{ color: T.textSub }}>
                 화면을 가볍게 터치하여 계속하기
