@@ -1,31 +1,31 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 168 150" width="168" height="150">
-    <ellipse cx="84" cy="138" rx="70" ry="10" fill="#361F12" opacity="0.3"/>
-    <!-- 황금 밀밭 고랑 -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 168 160" width="168" height="160">
+    <ellipse cx="84" cy="146" rx="72" ry="11" fill="#2D1A0E" opacity="0.35"/>
+    <!-- 황금 밀밭 이삭 고랑 -->
     
-      <path d="M 20,100 L 90,60" stroke="#FBBF24" stroke-width="4"/>
+      <path d="M 20,108 L 95,68" stroke="#FBBF24" stroke-width="5" stroke-linecap="round"/>
     
-      <path d="M 30,105 L 100,65" stroke="#FBBF24" stroke-width="4"/>
+      <path d="M 32,113 L 107,73" stroke="#FBBF24" stroke-width="5" stroke-linecap="round"/>
     
-      <path d="M 40,110 L 110,70" stroke="#FBBF24" stroke-width="4"/>
+      <path d="M 44,118 L 119,78" stroke="#FBBF24" stroke-width="5" stroke-linecap="round"/>
     
-      <path d="M 50,115 L 120,75" stroke="#FBBF24" stroke-width="4"/>
+      <path d="M 56,123 L 131,83" stroke="#FBBF24" stroke-width="5" stroke-linecap="round"/>
     
-      <path d="M 60,120 L 130,80" stroke="#FBBF24" stroke-width="4"/>
+      <path d="M 68,128 L 143,88" stroke="#FBBF24" stroke-width="5" stroke-linecap="round"/>
     
-    <!-- 석조 방앗간 타워 -->
-    <polygon points="75,115 125,90 125,50 75,75" fill="#D4BC98" stroke="#361F12" stroke-width="2"/>
-    <polygon points="25,90 75,115 75,75 25,50" fill="#FFF8EB" stroke="#361F12" stroke-width="2"/>
-    <!-- 고깔 지붕 -->
-    <polygon points="25,50 75,75 75,30" fill="#ED5E34" stroke="#361F12" stroke-width="2"/>
-    <polygon points="75,75 125,50 75,30" fill="#B33714" stroke="#361F12" stroke-width="2"/>
-    <!-- 4날개 풍차 -->
-    <circle cx="75" cy="52" r="4" fill="#78350F" stroke="#361F12" stroke-width="1.5"/>
-    <line x1="75" y1="52" x2="50" y2="30" stroke="#78350F" stroke-width="3"/>
-    <line x1="75" y1="52" x2="100" y2="74" stroke="#78350F" stroke-width="3"/>
-    <line x1="75" y1="52" x2="52" y2="76" stroke="#78350F" stroke-width="3"/>
-    <line x1="75" y1="52" x2="98" y2="28" stroke="#78350F" stroke-width="3"/>
-    <polygon points="50,30 45,40 75,52" fill="#FFFFFF" stroke="#361F12" stroke-width="1"/>
-    <polygon points="100,74 105,64 75,52" fill="#FFFFFF" stroke="#361F12" stroke-width="1"/>
-    <polygon points="52,76 62,80 75,52" fill="#FFFFFF" stroke="#361F12" stroke-width="1"/>
-    <polygon points="98,28 88,24 75,52" fill="#FFFFFF" stroke="#361F12" stroke-width="1"/>
+    <!-- 원형 석조 풍차 탑 -->
+    <polygon points="76,122 128,96 128,52 76,78" fill="#CBB697" stroke="#2D1A0E" stroke-width="2.2"/>
+    <polygon points="24,96 76,122 76,78 24,52" fill="#F5E8D3" stroke="#2D1A0E" stroke-width="2.2"/>
+    <!-- 고깔 테라코타 지붕 -->
+    <polygon points="24,52 76,78 76,30" fill="#EA580C" stroke="#2D1A0E" stroke-width="2.2"/>
+    <polygon points="76,78 128,52 76,30" fill="#9A3412" stroke="#2D1A0E" stroke-width="2.2"/>
+    <!-- 풍차 4날개 격자 살 -->
+    <circle cx="76" cy="54" r="5" fill="#451A03" stroke="#2D1A0E" stroke-width="1.5"/>
+    <line x1="76" y1="54" x2="46" y2="28" stroke="#451A03" stroke-width="3"/>
+    <line x1="76" y1="54" x2="106" y2="80" stroke="#451A03" stroke-width="3"/>
+    <line x1="76" y1="54" x2="50" y2="82" stroke="#451A03" stroke-width="3"/>
+    <line x1="76" y1="54" x2="102" y2="26" stroke="#451A03" stroke-width="3"/>
+    <polygon points="46,28 40,38 76,54" fill="#FFFFFF" stroke="#2D1A0E" stroke-width="1"/>
+    <polygon points="106,80 112,70 76,54" fill="#FFFFFF" stroke="#2D1A0E" stroke-width="1"/>
+    <polygon points="50,82 60,86 76,54" fill="#FFFFFF" stroke="#2D1A0E" stroke-width="1"/>
+    <polygon points="102,26 92,22 76,54" fill="#FFFFFF" stroke="#2D1A0E" stroke-width="1"/>
   </svg>

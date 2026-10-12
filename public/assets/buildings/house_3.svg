@@ -1,14 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 84 100" width="84" height="100">
-    <ellipse cx="42" cy="94" rx="36" ry="5" fill="#361F12" opacity="0.3"/>
-    <polygon points="42,82 76,64 76,26 42,44" fill="#D4BC98" stroke="#361F12" stroke-width="2"/>
-    <polygon points="8,64 42,82 42,44 8,26" fill="#FFF8EB" stroke="#361F12" stroke-width="2"/>
-    <polygon points="42,44 76,26 42,12 8,26" fill="#E4D1B8" stroke="#361F12" stroke-width="2"/>
-    <!-- 옥상 다락방 -->
-    <polygon points="25,35 48,46 48,32 25,20" fill="#FFF9EE" stroke="#361F12" stroke-width="1.5"/>
-    <polygon points="48,46 62,38 62,24 48,32" fill="#D4BC98" stroke="#361F12" stroke-width="1.5"/>
-    <polygon points="48,32 62,24 48,15 25,20" fill="#A45A17" stroke="#361F12" stroke-width="1.5"/>
-    <!-- 외벽 돌계단 -->
-    <polygon points="12,65 18,68 18,62 12,59" fill="#FFF8EB" stroke="#361F12" stroke-width="1"/>
-    <polygon points="18,62 24,65 24,59 18,56" fill="#FFF8EB" stroke="#361F12" stroke-width="1"/>
-    <polygon points="24,59 30,62 30,56 24,53" fill="#FFF8EB" stroke="#361F12" stroke-width="1"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 84 110" width="84" height="110">
+    <ellipse cx="42" cy="102" rx="36" ry="6" fill="#2D1A0E" opacity="0.35"/>
+    <polygon points="42,90 76,70 76,32 42,50" fill="#CBB697" stroke="#2D1A0E" stroke-width="2"/>
+    <polygon points="8,70 42,90 42,50 8,32" fill="#F5E8D3" stroke="#2D1A0E" stroke-width="2"/>
+    <polygon points="42,50 78,31 42,13 6,31" fill="#EADBC5" stroke="#2D1A0E" stroke-width="2"/>
+    <!-- 옥상 상층 다락방 -->
+    <polygon points="24,38 50,51 50,34 24,21" fill="#FFF9EE" stroke="#2D1A0E" stroke-width="1.8"/>
+    <polygon points="50,51 66,42 66,25 50,34" fill="#CBB697" stroke="#2D1A0E" stroke-width="1.8"/>
+    <polygon points="50,34 66,25 50,15 24,21" fill="#92400E" stroke="#2D1A0E" stroke-width="1.8"/>
+    <!-- 외벽 지그재그 돌계단 -->
+    <polygon points="10,72 16,75 16,68 10,65" fill="#FFF8EB" stroke="#2D1A0E" stroke-width="1"/>
+    <polygon points="16,68 22,71 22,64 16,61" fill="#FFF8EB" stroke="#2D1A0E" stroke-width="1"/>
+    <polygon points="22,64 28,67 28,60 22,57" fill="#FFF8EB" stroke="#2D1A0E" stroke-width="1"/>
   </svg>

@@ -1,9 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 168 130" width="168" height="130">
-    <ellipse cx="84" cy="120" rx="65" ry="8" fill="#361F12" opacity="0.3"/>
-    <!-- 목조 부두 -->
-    <polygon points="35,80 95,110 85,115 25,85" fill="#854D0E" stroke="#361F12" stroke-width="2"/>
-    <!-- 갈릴리 목조 나룻배 -->
-    <ellipse cx="105" cy="85" rx="22" ry="11" fill="#78350F" stroke="#361F12" stroke-width="2"/>
-    <polygon points="105,85 105,45 125,65" fill="#FFFFFF" stroke="#361F12" stroke-width="1.5"/>
-    <line x1="105" y1="85" x2="105" y2="40" stroke="#451A03" stroke-width="2.5"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 168 136" width="168" height="136">
+    <ellipse cx="84" cy="126" rx="68" ry="9" fill="#2D1A0E" opacity="0.35"/>
+    <polygon points="32,84 96,116 86,121 22,89" fill="#854D0E" stroke="#2D1A0E" stroke-width="2.2"/>
+    <ellipse cx="108" cy="90" rx="24" ry="12" fill="#78350F" stroke="#2D1A0E" stroke-width="2"/>
+    <polygon points="108,90 108,48 130,70" fill="#FFFFFF" stroke="#2D1A0E" stroke-width="1.8"/>
+    <line x1="108" y1="90" x2="108,42" stroke="#451A03" stroke-width="3"/>
   </svg>

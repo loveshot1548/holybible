@@ -1,9 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 84 80" width="84" height="80">
-    <ellipse cx="42" cy="74" rx="36" ry="5" fill="#361F12" opacity="0.3"/>
-    <polygon points="42,65 76,48 76,22 42,39" fill="#94A3B8" stroke="#361F12" stroke-width="2"/>
-    <polygon points="8,48 42,65 42,39 8,22" fill="#CBD5E1" stroke="#361F12" stroke-width="2"/>
-    <polygon points="42,39 76,22 42,10 8,22" fill="#E2E8F0" stroke="#361F12" stroke-width="2"/>
-    <!-- 요새 톱니바퀴 흉벽 (Crenels) -->
-    <rect x="12" y="14" width="6" height="8" fill="#CBD5E1" stroke="#361F12" stroke-width="1"/>
-    <rect x="26" y="21" width="6" height="8" fill="#CBD5E1" stroke="#361F12" stroke-width="1"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 84 86" width="84" height="86">
+    <ellipse cx="42" cy="80" rx="36" ry="6" fill="#2D1A0E" opacity="0.35"/>
+    <polygon points="42,70 78,52 78,24 42,42" fill="#94A3B8" stroke="#2D1A0E" stroke-width="2"/>
+    <polygon points="6,52 42,70 42,42 6,24" fill="#CBD5E1" stroke="#2D1A0E" stroke-width="2"/>
+    <polygon points="42,42 78,24 42,12 6,24" fill="#E2E8F0" stroke="#2D1A0E" stroke-width="2"/>
+    <rect x="10" y="16" width="7" height="9" fill="#CBD5E1" stroke="#2D1A0E" stroke-width="1.2"/>
+    <rect x="25" y="24" width="7" height="9" fill="#CBD5E1" stroke="#2D1A0E" stroke-width="1.2"/>
   </svg>

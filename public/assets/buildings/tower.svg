@@ -1,10 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 84 110" width="84" height="110">
-    <ellipse cx="42" cy="104" rx="36" ry="5" fill="#361F12" opacity="0.3"/>
-    <polygon points="42,92 74,75 74,25 42,42" fill="#64748B" stroke="#361F12" stroke-width="2"/>
-    <polygon points="10,75 42,92 42,42 10,25" fill="#94A3B8" stroke="#361F12" stroke-width="2"/>
-    <polygon points="42,42 74,25 42,12 10,25" fill="#CBD5E1" stroke="#361F12" stroke-width="2"/>
-    <!-- 타오르는 봉화 불꽃 -->
-    <ellipse cx="42" cy="12" rx="6" ry="4" fill="#5C381E" stroke="#361F12" stroke-width="1.5"/>
-    <circle cx="42" cy="7" r="5" fill="#F59E0B"/>
-    <circle cx="42" cy="6" r="3" fill="#EF4444"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 84 116" width="84" height="116">
+    <ellipse cx="42" cy="110" rx="36" ry="6" fill="#2D1A0E" opacity="0.35"/>
+    <polygon points="42,98 76,80 76,28 42,46" fill="#64748B" stroke="#2D1A0E" stroke-width="2"/>
+    <polygon points="8,80 42,98 42,46 8,28" fill="#94A3B8" stroke="#2D1A0E" stroke-width="2"/>
+    <polygon points="42,46 76,28 42,14 8,28" fill="#CBD5E1" stroke="#2D1A0E" stroke-width="2"/>
+    <ellipse cx="42" cy="14" rx="7" ry="4" fill="#451A03" stroke="#2D1A0E" stroke-width="1.5"/>
+    <circle cx="42" cy="8" r="6" fill="#F59E0B"/>
+    <circle cx="42" cy="7" r="3.5" fill="#EF4444"/>
   </svg>

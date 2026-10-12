@@ -1,6 +1,5 @@
 // src/components/FamilyScreens.js
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { supabase } from '../lib/supabase';
+import React, { useState, useEffect, useCallback } from 'react';
 
 // =====================================================================
 // 🎨 모던 시스템 라인 아이콘 (2px stroke)
@@ -16,7 +15,6 @@ const IconCollection = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={S
 const IconCheck = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><polyline points="20 6 9 17 4 12" /></svg>;
 const IconCalendar = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>;
 const IconSparkles = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" /></svg>;
-const IconShare = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3 h-3"><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" /></svg>;
 const IconTarget = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={StrokeWidth} stroke="currentColor" className="w-3.5 h-3.5"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>;
 const IconUsers = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={StrokeWidth} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /></svg>;
 const IconVolume = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={StrokeWidth} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.757 3.63 8.25 4.51 8.25H6.75z" /></svg>;
@@ -96,23 +94,23 @@ const LORDS_PRAYER = `하늘에 계신 우리 아버지여,
 export default function FamilyScreens({
   activeScreen, t, isDarkMode, setActiveScreen, isSidebarOpen, setIsSidebarOpen, SubPageHeader,
   familyRoomPw, setFamilyRoomPw, currDay, updateDay, formatFamVerse,
-  familyPublicData, setFamilyPublicData, handleAutoResize, triggerConfetti,
+  familyPublicData, setFamilyPublicData,
   familyRoomData, handleUpdateFamily, openModal, logUserAction, authUser,
   date, setDate, bibles
 }) {
   const getArr = useCallback((val, def = []) => Array.isArray(val) ? val : def, []);
   if (!SubPageHeader) return <div className="p-4 font-bold text-red-500 text-sm">Header Loading Error</div>;
 
-  const isDark = isDarkMode || t?.appBg?.includes('dark') || t?.appBg?.includes('121212');
+  const isDark = Boolean(isDarkMode || t?.appBg?.includes('dark') || t?.appBg?.includes('121212'));
   const [actionToast, setActionToast] = useState(null);
   const safeDate = date || (currDay?.date || new Date().toISOString().split('T')[0]);
 
-  // 🌟 [핵심 모드 토글: 'form' 기록 모드 vs 'liturgy' 온 가족 7단계 실전 인도 모드]
+  // 🌟 [핵심 모드 토글: 'form' 기록 모드 vs 'liturgy' 온 가족 7단계 실전 인도 모드][cite: 20]
   const [familyMode, setFamilyMode] = useState('form');
   const [liturgyStep, setLiturgyStep] = useState(1);
 
   // 온 가족 역할 분담 (인도자, 기도자, 성경봉독자)
-  const [familyRoles, setFamilyRoles] = useState(() => {
+  const [familyRoles] = useState(() => {
     try {
       const saved = localStorage.getItem('family_liturgy_roles_v1');
       if (saved) return JSON.parse(saved);
@@ -126,17 +124,17 @@ export default function FamilyScreens({
   };
 
   const ui = {
-    bgBody: isDark ? 'bg-[#090A0F]' : 'bg-[#F4F5F7]',
-    bgCard: isDark ? 'bg-[#151821] border-white/10 text-white' : 'bg-white border-slate-200/80 text-slate-900',
-    bgInput: isDark ? 'bg-[#0D0F14] border-white/10 text-white focus:border-indigo-400' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-500',
-    border: isDark ? 'border-white/10' : 'border-slate-200/80',
-    textMain: isDark ? 'text-white' : 'text-slate-900',
-    textSub: isDark ? 'text-slate-400' : 'text-slate-500',
-    btnPrimary: isDark ? 'bg-indigo-600 hover:bg-indigo-500 text-white' : 'bg-slate-900 hover:bg-black text-white',
-    btnSecondary: isDark ? 'bg-white/10 hover:bg-white/15 text-white border border-white/10' : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-200'
+    bgBody: isDark ? 'bg-[#0B0D12]' : 'bg-[#F6F8FB]',
+    bgCard: isDark ? 'bg-[#131620]/95 border-white/[0.08] text-white shadow-xs' : 'bg-white border-slate-200/90 text-slate-900 shadow-xs',
+    bgInput: isDark ? 'bg-black/35 border-white/10 text-white focus:border-indigo-400 placeholder:text-slate-500' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-500 focus:bg-white placeholder:text-slate-400',
+    border: isDark ? 'border-white/[0.08]' : 'border-slate-200/90',
+    textMain: isDark ? 'text-[#F8FAFC]' : 'text-[#0F172A]',
+    textSub: isDark ? 'text-[#94A3B8]' : 'text-[#64748B]',
+    btnPrimary: isDark ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-xs' : 'bg-slate-900 hover:bg-black text-white shadow-xs',
+    btnSecondary: isDark ? 'bg-white/5 hover:bg-white/10 text-slate-300 border-white/10' : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
   };
 
-  // 날짜별 공개 가정예배 데이터 관리
+  // 날짜별 공개 가정예배 데이터 관리[cite: 20]
   const [daySpecificData, setDaySpecificData] = useState(() => {
     try {
       const saved = localStorage.getItem(`family_public_${safeDate}`);
@@ -179,7 +177,7 @@ export default function FamilyScreens({
     });
   }, [safeDate, setFamilyPublicData]);
 
-  // 성경 구절 스페이스바 자동완성 핸들러
+  // 성경 구절 스페이스바 자동완성 핸들러[cite: 20]
   const handleWordKeyDown = (e, currentText, onUpdateText) => {
     if (e.key === ' ' || e.key === 'Enter') {
       const cursorIdx = e.target.selectionStart;
@@ -221,7 +219,7 @@ export default function FamilyScreens({
     }
   };
 
-  // 감사 연동 1: 나의 감사일기로 전송[cite: 19]
+  // 감사 연동 1: 나의 감사일기로 전송[cite: 20]
   const handleSendThanksToDiary = (text) => {
     if (!text || !text.trim()) return alert("전송할 감사 내용이 없습니다.");
     try {
@@ -240,13 +238,13 @@ export default function FamilyScreens({
       };
       localStorage.setItem('qt_daily', JSON.stringify(nextDaily));
       if (updateDay) updateDay({ thanksText: updatedThanks, checks: { ...(currDay?.checks || {}), '감사': true } });
-      showToast("💖 [나의 감사일기]로 감사가 성공적으로 등록되었습니다!");
+      showToast("💖 [나의 감사일기]로 감사가 등록되었습니다!");
     } catch (e) {
       showToast("감사일기 연동 중 오류가 발생했습니다.");
     }
   };
 
-  // 감사 연동 2: 목장 나눔으로 전송[cite: 19]
+  // 감사 연동 2: 목장 나눔으로 전송[cite: 20]
   const handleSendThanksToCell = (text) => {
     if (!text || !text.trim()) return alert("전송할 감사 내용이 없습니다.");
     try {
@@ -271,7 +269,7 @@ export default function FamilyScreens({
     }
   };
 
-  // 기도 연동 1: 나의 기도 보관함으로 전송[cite: 19]
+  // 기도 연동 1: 나의 기도 보관함으로 전송[cite: 20]
   const handleSendPrayerToBox = (text) => {
     if (!text || !text.trim()) return alert("전송할 기도제목이 없습니다.");
     try {
@@ -291,7 +289,7 @@ export default function FamilyScreens({
     }
   };
 
-  // 기도 연동 2: 목장 모임 식구 기도로 전송[cite: 19]
+  // 기도 연동 2: 목장 모임 식구 기도로 전송[cite: 20]
   const handleSendPrayerToCell = (text) => {
     if (!text || !text.trim()) return alert("전송할 기도제목이 없습니다.");
     try {
@@ -315,7 +313,7 @@ export default function FamilyScreens({
     }
   };
 
-  // 🌟 [실천 트래커 연동] 가정예배 결단을 ApplyTracker로 즉시 전송
+  // 🌟 [실천 트래커 연동] 가정예배 결단을 ApplyTracker로 즉시 전송[cite: 20]
   const handleExportToApplyTracker = (text) => {
     if (!text || !text.trim()) return;
     try {
@@ -336,22 +334,6 @@ export default function FamilyScreens({
     }
   };
 
-  // 🌟 [3초 릴스 스튜디오 연동]
-  const handleExportToReels = (text) => {
-    const payload = {
-      sourceMode: 'family',
-      targetDate: safeDate,
-      title: '[가정예배] 은혜와 축복',
-      subtitle: safeFamVerse.ref || 'COVENANT HOME',
-      heroText: (text || safeFamVerse.text).slice(0, 40),
-      bodyText: text || safeFamVerse.text,
-      actionText: '가정 안에서 서로 사랑하고 축복합니다.'
-    };
-    localStorage.setItem('reels_direct_trigger', JSON.stringify(payload));
-    showToast("🎬 가정예배 은혜로 릴스 스튜디오를 준비합니다...");
-    if (setActiveScreen) setActiveScreen('reelsStudio');
-  };
-
   switch (activeScreen) {
     case 'familySelect':
       return (
@@ -360,36 +342,36 @@ export default function FamilyScreens({
             <SubPageHeader title="가정 예배 선택" onBack={() => setActiveScreen('fiveSetMenu')} t={t} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
           </div>
           
-          <div className="flex-1 flex items-center justify-center p-4 relative z-10">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 w-full max-w-lg">
+          <div className="flex-1 flex items-center justify-center p-3 sm:p-4 relative z-10">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3.5 w-full max-w-lg">
               <div 
                 onClick={() => setActiveScreen('familyPublic')} 
-                className={`${ui.bgCard} p-5 rounded-2xl border cursor-pointer hover:border-indigo-400 active:scale-[0.99] transition-all shadow-sm flex flex-col items-center text-center`}
+                className={`${ui.bgCard} p-4 sm:p-5 rounded-xl sm:rounded-2xl border cursor-pointer hover:border-indigo-400 active:scale-[0.99] transition-all shadow-xs flex flex-col items-center text-center`}
               >
-                <div className="w-11 h-11 rounded-xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center mb-3">
+                <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center mb-2.5 sm:mb-3">
                   <IconGroup />
                 </div>
-                <h3 className="text-[15px] font-black tracking-tight mb-1">공개 가정예배</h3>
-                <p className="text-[12px] text-slate-400 font-medium leading-relaxed">
+                <h3 className="text-[14.5px] sm:text-[15px] font-black tracking-tight mb-1">공개 가정예배</h3>
+                <p className="text-[11.5px] sm:text-[12px] text-slate-400 font-medium leading-relaxed">
                   날짜별 캘린더 연동 및 자유롭게 열고 기록하는 모임 공간
                 </p>
-                <span className="mt-3.5 px-3 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 text-[11px] font-bold">
+                <span className="mt-3 px-2.5 sm:px-3 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 text-[11px] font-bold">
                   바로 입장하기 →
                 </span>
               </div>
 
               <div 
                 onClick={() => setActiveScreen('familyPrivateLogin')} 
-                className={`${ui.bgCard} p-5 rounded-2xl border cursor-pointer hover:border-indigo-400 active:scale-[0.99] transition-all shadow-sm flex flex-col items-center text-center`}
+                className={`${ui.bgCard} p-4 sm:p-5 rounded-xl sm:rounded-2xl border cursor-pointer hover:border-amber-400 active:scale-[0.99] transition-all shadow-xs flex flex-col items-center text-center`}
               >
-                <div className="w-11 h-11 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center mb-3">
+                <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center mb-2.5 sm:mb-3">
                   <IconLock />
                 </div>
-                <h3 className="text-[15px] font-black tracking-tight mb-1">우리 가족 예배실</h3>
-                <p className="text-[12px] text-slate-400 font-medium leading-relaxed">
+                <h3 className="text-[14.5px] sm:text-[15px] font-black tracking-tight mb-1">우리 가족 예배실</h3>
+                <p className="text-[11.5px] sm:text-[12px] text-slate-400 font-medium leading-relaxed">
                   가족 전용 비밀번호를 통해 동기화되는 프라이빗 공간
                 </p>
-                <span className="mt-3.5 px-3 py-1 rounded-lg bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 text-[11px] font-bold">
+                <span className="mt-3 px-2.5 sm:px-3 py-1 rounded-lg bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 text-[11px] font-bold">
                   비밀번호 입력 →
                 </span>
               </div>
@@ -405,21 +387,21 @@ export default function FamilyScreens({
             <SubPageHeader title="우리 가족 예배실 입장" onBack={() => setActiveScreen('familySelect')} t={t} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
           </div>
           
-          <div className="flex-1 flex items-center justify-center p-4 relative z-10">
-            <div className={`${ui.bgCard} p-6 rounded-2xl border w-full max-w-xs flex flex-col gap-4 shadow-sm`}>
-              <div className="w-11 h-11 mx-auto rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
+          <div className="flex-1 flex items-center justify-center p-3 sm:p-4 relative z-10">
+            <div className={`${ui.bgCard} p-5 sm:p-6 rounded-xl sm:rounded-2xl border w-full max-w-xs flex flex-col gap-3.5 sm:gap-4 shadow-xs`}>
+              <div className="w-10 h-10 sm:w-11 sm:h-11 mx-auto rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
                 <IconLock />
               </div>
               <div className="text-center">
-                <h2 className="text-[15px] font-black tracking-tight">가족 비밀번호 입력</h2>
-                <p className="text-[11.5px] text-slate-400 mt-0.5">우리 가족만의 예배방 비밀번호를 입력해주세요.</p>
+                <h2 className="text-[14.5px] sm:text-[15px] font-black tracking-tight">가족 비밀번호 입력</h2>
+                <p className="text-[11px] sm:text-[11.5px] text-slate-400 mt-0.5">우리 가족만의 예배방 비밀번호를 입력해주세요.</p>
               </div>
               <input 
                 type="password" 
                 placeholder="비밀번호..." 
                 value={familyRoomPw || ''} 
                 onChange={(e) => setFamilyRoomPw && setFamilyRoomPw(e.target.value)} 
-                className={`w-full py-2.5 px-3 rounded-xl text-[14px] font-bold text-center tracking-widest outline-none border ${ui.bgInput}`}
+                className={`w-full py-2 sm:py-2.5 px-3 rounded-xl text-[13.5px] sm:text-[14px] font-bold text-center tracking-widest outline-none border ${ui.bgInput}`}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     if (familyRoomPw) setActiveScreen('familyPrivate');
@@ -433,7 +415,7 @@ export default function FamilyScreens({
                   if (familyRoomPw) setActiveScreen('familyPrivate'); 
                   else alert("비밀번호를 입력해주세요."); 
                 }} 
-                className={`w-full py-2.5 rounded-xl font-black text-[13px] shadow-sm active:scale-95 transition-all cursor-pointer ${ui.btnPrimary}`}
+                className={`w-full py-2.5 rounded-xl font-black text-[13px] shadow-xs active:scale-95 transition-all cursor-pointer ${ui.btnPrimary}`}
               >
                 예배실 입장
               </button>
@@ -533,7 +515,6 @@ export default function FamilyScreens({
             });
           }
 
-          if (triggerConfetti) triggerConfetti();
           if (logUserAction && authUser?.name) {
             logUserAction(authUser.name, '가정예배', 'write', `[가정예배 완료] 참석자: ${safeData.attendees || '가족 일동'}`);
           }
@@ -544,7 +525,7 @@ export default function FamilyScreens({
         }
       };
 
-      // 7단계 실전 예배 순서 메타 데이터[cite: 19]
+      // 7단계 실전 예배 순서 메타 데이터[cite: 20]
       const LITURGY_STEPS = [
         {
           step: 1,
@@ -596,28 +577,28 @@ export default function FamilyScreens({
         <div className={`flex-1 flex flex-col h-full ${ui.bgBody} animate-fade-in relative font-sans select-none overflow-hidden text-left`}>
           
           {actionToast && (
-            <div className="absolute top-14 left-1/2 -translate-x-1/2 z-50 bg-slate-900/95 text-white text-[12px] font-bold px-4 py-2 rounded-full shadow-lg border border-white/20 animate-fade-in flex items-center gap-1.5 pointer-events-none">
+            <div className="absolute top-12 sm:top-14 left-1/2 -translate-x-1/2 z-50 bg-slate-900/95 text-white text-[11px] sm:text-[12px] font-bold px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-full shadow-lg border border-white/20 animate-fade-in flex items-center gap-1.5 pointer-events-none">
               <span className="text-amber-400">✨</span> {actionToast}
             </div>
           )}
 
-          {/* 고정 상단 헤더 & 캘린더 네비게이터[cite: 19] */}
-          <div className={`shrink-0 flex items-center justify-between px-3.5 py-2.5 border-b ${ui.border} bg-white/80 dark:bg-[#12141A]/80 backdrop-blur-md z-20`}>
-            <div className="flex items-center gap-2">
+          {/* 고정 상단 헤더 & 캘린더 네비게이터 (모바일 여백 최적화)[cite: 20] */}
+          <div className={`shrink-0 flex items-center justify-between px-2.5 sm:px-3.5 py-1.5 sm:py-2.5 border-b ${ui.border} bg-white/90 dark:bg-[#12141A]/90 backdrop-blur-md z-20`}>
+            <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
               <button 
                 onClick={() => setActiveScreen('familySelect')}
-                className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-slate-500 cursor-pointer"
+                className="p-1 sm:p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-slate-500 cursor-pointer shrink-0"
               >
                 ←
               </button>
-              <span className="text-[14.5px] font-black tracking-tight flex items-center gap-1.5">
+              <span className="text-[13.5px] sm:text-[14.5px] font-black tracking-tight flex items-center gap-1.5 truncate">
                 {isPriv ? "우리 가족 예배실" : "가정예배 나눔"}
-                <span className="text-amber-500 text-xs font-mono font-bold">[Covenant Altar]</span>
+                <span className="text-amber-500 text-[10px] sm:text-xs font-mono font-bold shrink-0">[Covenant]</span>
               </span>
             </div>
 
-            <div className="flex items-center gap-2">
-              <div className="relative flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-white/10 border border-slate-200 dark:border-white/10 cursor-pointer">
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+              <div className="relative flex items-center gap-1 px-2 py-0.8 sm:px-2.5 sm:py-1 rounded-lg bg-slate-100 dark:bg-white/10 border border-slate-200 dark:border-white/10 cursor-pointer">
                 <IconCalendar />
                 <input 
                   type="date" 
@@ -627,107 +608,107 @@ export default function FamilyScreens({
                   }} 
                   className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10" 
                 />
-                <span className="text-[12px] font-mono font-bold text-slate-700 dark:text-slate-200">
+                <span className="text-[11px] sm:text-[12px] font-mono font-bold text-slate-700 dark:text-slate-200">
                   {safeDate}
                 </span>
               </div>
 
               <button 
                 onClick={handleOpenHistorySafely}
-                className={`px-2.5 py-1 rounded-lg text-[11.5px] font-bold flex items-center gap-1 cursor-pointer transition-all ${ui.btnSecondary}`}
+                className={`px-2 py-0.8 sm:px-2.5 sm:py-1 rounded-lg text-[11px] sm:text-[11.5px] font-bold flex items-center gap-1 cursor-pointer transition-all ${ui.btnSecondary}`}
               >
                 <IconCollection /> 이력
               </button>
             </div>
           </div>
 
-          {/* 🌟 전방위 유기적 딥링크 퀵 바 */}
-          <div className={`px-3 sm:px-6 py-1.5 border-b shrink-0 flex items-center justify-between z-10 ${
+          {/* 전방위 유기적 딥링크 퀵 바 & 모드 전환 토글 (모바일 컴팩트 조율)[cite: 20] */}
+          <div className={`px-2.5 sm:px-6 py-1 sm:py-1.5 border-b shrink-0 flex items-center justify-between z-10 ${
             isDark ? 'border-white/5 bg-[#141720]/80' : 'border-slate-200/60 bg-slate-100/60'
           }`}>
             <div className="flex items-center gap-1 overflow-x-auto hide-scrollbar py-0.5">
               <button
                 onClick={() => setActiveScreen && setActiveScreen('qt')}
-                className={`px-2 py-0.8 rounded text-[10.5px] font-bold border ${isDark ? 'border-slate-700 bg-slate-800 text-gray-300' : 'border-slate-200 bg-white text-slate-700'} flex items-center gap-1 cursor-pointer shrink-0`}
+                className={`px-2 py-0.8 rounded text-[10px] sm:text-[10.5px] font-bold border ${isDark ? 'border-slate-700 bg-slate-800 text-gray-300' : 'border-slate-200 bg-white text-slate-700'} flex items-center gap-1 cursor-pointer shrink-0`}
               >
                 <IconBook /> QT
               </button>
               <button
                 onClick={() => setActiveScreen && setActiveScreen('sermon')}
-                className={`px-2 py-0.8 rounded text-[10.5px] font-bold border ${isDark ? 'border-slate-700 bg-slate-800 text-gray-300' : 'border-slate-200 bg-white text-slate-700'} flex items-center gap-1 cursor-pointer shrink-0`}
+                className={`px-2 py-0.8 rounded text-[10px] sm:text-[10.5px] font-bold border ${isDark ? 'border-slate-700 bg-slate-800 text-gray-300' : 'border-slate-200 bg-white text-slate-700'} flex items-center gap-1 cursor-pointer shrink-0`}
               >
                 <span>🏛️</span> 설교
               </button>
               <button
                 onClick={() => setActiveScreen && setActiveScreen('apply')}
-                className={`px-2 py-0.8 rounded text-[10.5px] font-bold border ${isDark ? 'border-slate-700 bg-slate-800 text-gray-300' : 'border-slate-200 bg-white text-slate-700'} flex items-center gap-1 cursor-pointer shrink-0`}
+                className={`px-2 py-0.8 rounded text-[10px] sm:text-[10.5px] font-bold border ${isDark ? 'border-slate-700 bg-slate-800 text-gray-300' : 'border-slate-200 bg-white text-slate-700'} flex items-center gap-1 cursor-pointer shrink-0`}
               >
                 <IconTarget /> 실천
               </button>
               <button
                 onClick={() => setActiveScreen && setActiveScreen('prayer')}
-                className={`px-2 py-0.8 rounded text-[10.5px] font-bold border ${isDark ? 'border-slate-700 bg-slate-800 text-gray-300' : 'border-slate-200 bg-white text-slate-700'} flex items-center gap-1 cursor-pointer shrink-0`}
+                className={`px-2 py-0.8 rounded text-[10px] sm:text-[10.5px] font-bold border ${isDark ? 'border-slate-700 bg-slate-800 text-gray-300' : 'border-slate-200 bg-white text-slate-700'} flex items-center gap-1 cursor-pointer shrink-0`}
               >
                 <IconPray /> 기도
               </button>
               <button
                 onClick={() => setActiveScreen && setActiveScreen('diary')}
-                className={`px-2 py-0.8 rounded text-[10.5px] font-bold border ${isDark ? 'border-slate-700 bg-slate-800 text-gray-300' : 'border-slate-200 bg-white text-slate-700'} flex items-center gap-1 cursor-pointer shrink-0`}
+                className={`px-2 py-0.8 rounded text-[10px] sm:text-[10.5px] font-bold border ${isDark ? 'border-slate-700 bg-slate-800 text-gray-300' : 'border-slate-200 bg-white text-slate-700'} flex items-center gap-1 cursor-pointer shrink-0`}
               >
                 <IconHeart /> 일기
               </button>
               <button
                 onClick={() => setActiveScreen && setActiveScreen('cell')}
-                className={`px-2 py-0.8 rounded text-[10.5px] font-bold border ${isDark ? 'border-slate-700 bg-slate-800 text-gray-300' : 'border-slate-200 bg-white text-slate-700'} flex items-center gap-1 cursor-pointer shrink-0`}
+                className={`px-2 py-0.8 rounded text-[10px] sm:text-[10.5px] font-bold border ${isDark ? 'border-slate-700 bg-slate-800 text-gray-300' : 'border-slate-200 bg-white text-slate-700'} flex items-center gap-1 cursor-pointer shrink-0`}
               >
                 <IconUsers /> 목장
               </button>
             </div>
 
-            {/* 🌟 모드 전환 토글 (기록 모드 vs 7단계 실전 인도 모드)[cite: 19] */}
-            <div className="flex items-center gap-1 p-0.5 rounded-lg bg-black/5 dark:bg-white/10 shrink-0">
+            {/* 모드 전환 토글 */}
+            <div className="flex items-center gap-0.5 sm:gap-1 p-0.5 rounded-lg bg-black/5 dark:bg-white/10 shrink-0 ml-1.5">
               <button
                 onClick={() => setFamilyMode('form')}
-                className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+                className={`px-2 sm:px-2.5 py-0.8 sm:py-1 rounded-md text-[10.5px] sm:text-[11px] font-bold transition-all cursor-pointer ${
                   familyMode === 'form' 
                     ? (isDark ? 'bg-indigo-600 text-white' : 'bg-slate-900 text-white') 
                     : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
-                ✍️ 작성 모드
+                ✍️ 작성
               </button>
               <button
                 onClick={() => setFamilyMode('liturgy')}
-                className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+                className={`px-2 sm:px-2.5 py-0.8 sm:py-1 rounded-md text-[10.5px] sm:text-[11px] font-bold transition-all cursor-pointer ${
                   familyMode === 'liturgy' 
                     ? 'bg-amber-600 text-white shadow-xs font-black' 
                     : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
-                📖 7단계 인도 가이드
+                📖 7단계 인도
               </button>
             </div>
           </div>
 
           {/* ========================================================================= */}
-          {/* MODE A: 7단계 실전 온 가족 예배 인도 모드 (누구나 쉽게 드리는 가이드)       */}
+          {/* MODE A: 7단계 실전 온 가족 예배 인도 모드[cite: 20]                               */}
           {/* ========================================================================= */}
           {familyMode === 'liturgy' ? (
-            <div className="flex-1 overflow-y-auto p-3 sm:p-5 hide-scrollbar">
-              <div className="max-w-2xl mx-auto space-y-4">
+            <div className="flex-1 overflow-y-auto p-2.5 sm:p-4 md:p-5 hide-scrollbar">
+              <div className="max-w-2xl mx-auto space-y-3 sm:space-y-4">
                 
                 {/* 상단 인도자 안내 바 */}
-                <div className={`p-4 rounded-2xl border ${ui.card} flex justify-between items-center bg-gradient-to-r from-amber-500/10 via-rose-500/10 to-indigo-500/10`}>
+                <div className={`p-3 sm:p-4 rounded-xl sm:rounded-2xl border ${ui.bgCard} flex justify-between items-center bg-gradient-to-r from-amber-500/10 via-rose-500/10 to-indigo-500/10`}>
                   <div>
-                    <span className="text-[10px] font-mono font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest block">
-                      FAMILY WORSHIP LITURGY · STEP {liturgyStep} / 7
+                    <span className="text-[9.5px] sm:text-[10px] font-mono font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest block">
+                      LITURGY · STEP {liturgyStep} / 7
                     </span>
-                    <h2 className="text-[15.5px] font-black text-slate-900 dark:text-white mt-0.5">
+                    <h2 className="text-[14px] sm:text-[15.5px] font-black text-slate-900 dark:text-white mt-0.5">
                       {LITURGY_STEPS[liturgyStep - 1].title}
                     </h2>
                   </div>
 
-                  <span className="px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 font-bold text-xs">
+                  <span className="px-2 py-0.8 sm:px-2.5 sm:py-1 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 font-bold text-[11px] sm:text-xs">
                     담당: {LITURGY_STEPS[liturgyStep - 1].role}
                   </span>
                 </div>
@@ -738,9 +719,9 @@ export default function FamilyScreens({
                     <button
                       key={s.step}
                       onClick={() => setLiturgyStep(s.step)}
-                      className={`py-1.5 rounded-lg text-center text-[10px] font-mono font-bold transition-all cursor-pointer ${
+                      className={`py-1 sm:py-1.5 rounded-lg text-center text-[9.5px] sm:text-[10px] font-mono font-bold transition-all cursor-pointer ${
                         liturgyStep === s.step
-                          ? 'bg-amber-500 text-white shadow-xs scale-105'
+                          ? 'bg-amber-500 text-white shadow-xs scale-102 font-black'
                           : s.step < liturgyStep
                           ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
                           : 'bg-slate-100 dark:bg-white/5 text-slate-400'
@@ -752,28 +733,28 @@ export default function FamilyScreens({
                 </div>
 
                 {/* 현재 단계 합독/인도 카드 */}
-                <div className={`p-6 rounded-3xl border shadow-sm ${ui.card} space-y-4`}>
-                  <div className="flex justify-between items-center border-b pb-2.5 border-slate-100 dark:border-white/10">
-                    <span className="text-xs font-bold text-slate-400 flex items-center gap-1.5">
+                <div className={`p-4 sm:p-6 rounded-2xl sm:rounded-3xl border shadow-xs ${ui.bgCard} space-y-3 sm:space-y-4`}>
+                  <div className="flex justify-between items-center border-b pb-2 border-slate-100 dark:border-white/10">
+                    <span className="text-[11.5px] sm:text-xs font-bold text-slate-400 flex items-center gap-1.5">
                       <IconVolume /> 인도자 안내 & 가족 함께 낭독
                     </span>
-                    <span className="text-xs font-mono font-bold text-amber-500">
+                    <span className="text-[11px] sm:text-xs font-mono font-bold text-amber-500">
                       Step {liturgyStep} of 7
                     </span>
                   </div>
 
-                  <div className="p-4 rounded-2xl bg-amber-50/50 dark:bg-black/30 border border-amber-200/60 dark:border-white/10">
-                    <p className="text-[14.5px] font-serif leading-[2.1] whitespace-pre-wrap font-bold text-slate-800 dark:text-slate-100 break-keep">
+                  <div className="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-amber-50/50 dark:bg-black/30 border border-amber-200/60 dark:border-white/10">
+                    <p className="text-[13.5px] sm:text-[14.5px] font-serif leading-[2.1] whitespace-pre-wrap font-bold text-slate-800 dark:text-slate-100 break-keep">
                       {LITURGY_STEPS[liturgyStep - 1].script}
                     </p>
                   </div>
 
                   {/* 단계별 네비게이션 버튼 */}
-                  <div className="flex justify-between items-center pt-2">
+                  <div className="flex justify-between items-center pt-1.5">
                     <button
                       disabled={liturgyStep === 1}
                       onClick={() => setLiturgyStep(p => Math.max(1, p - 1))}
-                      className="px-4 py-2 rounded-xl text-xs font-bold border border-slate-200 dark:border-white/10 text-slate-500 disabled:opacity-30 cursor-pointer"
+                      className="px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-bold border border-slate-200 dark:border-white/10 text-slate-500 disabled:opacity-30 cursor-pointer"
                     >
                       ◀ 이전 순서
                     </button>
@@ -781,16 +762,16 @@ export default function FamilyScreens({
                     {liturgyStep < 7 ? (
                       <button
                         onClick={() => setLiturgyStep(p => Math.min(7, p + 1))}
-                        className="px-6 py-2.5 rounded-xl text-xs font-black bg-amber-600 hover:bg-amber-500 text-white shadow-md active:scale-95 transition-all cursor-pointer"
+                        className="px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl text-[11.5px] sm:text-xs font-black bg-amber-600 hover:bg-amber-500 text-white shadow-xs active:scale-95 transition-all cursor-pointer"
                       >
-                        다음 순서로 진행 ▶
+                        다음 순서 ▶
                       </button>
                     ) : (
                       <button
                         onClick={handleExecuteComplete}
-                        className="px-6 py-2.5 rounded-xl text-xs font-black bg-emerald-600 hover:bg-emerald-500 text-white shadow-md active:scale-95 transition-all cursor-pointer flex items-center gap-1.5"
+                        className="px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl text-[11.5px] sm:text-xs font-black bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs active:scale-95 transition-all cursor-pointer flex items-center gap-1.5"
                       >
-                        <IconCheck /> 예배 완료 및 은혜 저장 🎉
+                        <IconCheck /> 예배 완료 및 저장 🎉
                       </button>
                     )}
                   </div>
@@ -800,39 +781,30 @@ export default function FamilyScreens({
             </div>
           ) : (
             /* ========================================================================= */
-            /* MODE B: ✍️ 예배 작성 및 데이터 연동 모드                                   */
+            /* MODE B: ✍️ 예배 작성 및 데이터 연동 모드 (릴스 완전 제거)[cite: 20]             */
             /* ========================================================================= */
-            <div className="flex-1 overflow-y-auto p-3 sm:p-4 hide-scrollbar">
-              <div className="max-w-3xl mx-auto flex flex-col gap-3">
+            <div className="flex-1 overflow-y-auto p-2.5 sm:p-4 hide-scrollbar">
+              <div className="max-w-3xl mx-auto flex flex-col gap-2.5 sm:gap-3">
                 
-                {/* 오늘의 말씀 컴팩트 카드 & 릴스 변환 버튼[cite: 19] */}
-                <div className={`p-4 rounded-2xl border ${ui.border} ${ui.bgCard} shadow-xs text-center flex flex-col items-center justify-center relative overflow-hidden`}>
-                  <div className="flex justify-between items-center w-full mb-1">
-                    <span className="text-[10.5px] font-bold text-amber-500 dark:text-amber-400 tracking-wider uppercase">
-                      오늘의 가정예배 말씀
-                    </span>
-                    <button
-                      onClick={() => handleExportToReels(safeFamVerse.text)}
-                      className="px-2 py-0.5 rounded text-[10.5px] font-black text-rose-500 hover:underline flex items-center gap-1 cursor-pointer"
-                      title="이 말씀으로 3초 릴스 제작"
-                    >
-                      <span>🎬</span> 릴스 변환
-                    </button>
-                  </div>
+                {/* 오늘의 말씀 컴팩트 카드 (릴스 버튼 삭제 완료)[cite: 20] */}
+                <div className={`p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border ${ui.border} ${ui.bgCard} shadow-xs text-center flex flex-col items-center justify-center relative`}>
+                  <span className="text-[10px] sm:text-[10.5px] font-bold text-amber-500 dark:text-amber-400 tracking-wider uppercase mb-1">
+                    오늘의 가정예배 말씀
+                  </span>
 
-                  <p className="text-[15px] font-bold leading-relaxed text-slate-900 dark:text-white break-keep max-w-xl">
+                  <p className="text-[14px] sm:text-[15px] font-bold leading-relaxed text-slate-900 dark:text-white break-keep max-w-xl">
                     "{safeFamVerse.text}"
                   </p>
-                  <span className="text-[11.5px] font-bold text-slate-400 mt-1 font-mono">
+                  <span className="text-[11px] sm:text-[11.5px] font-bold text-slate-400 mt-1 font-mono">
                     {safeFamVerse.ref}
                   </span>
                 </div>
 
-                {/* 1-Click 오토풀링 (내 QT 묵상 자동 채우기)[cite: 19] */}
-                <div className="p-3 rounded-xl border border-indigo-500/20 bg-indigo-50/40 dark:bg-indigo-950/20 flex items-center justify-between gap-2">
+                {/* 1-Click 오토풀링 (내 QT 묵상 자동 채우기)[cite: 20] */}
+                <div className="p-2.5 sm:p-3 rounded-xl border border-indigo-500/20 bg-indigo-50/50 dark:bg-indigo-950/20 flex items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5 min-w-0">
-                    <span className="text-indigo-500"><IconSparkles /></span>
-                    <span className="text-[11.5px] font-bold text-slate-700 dark:text-slate-300 truncate">
+                    <span className="text-indigo-500 shrink-0"><IconSparkles /></span>
+                    <span className="text-[11px] sm:text-[11.5px] font-bold text-slate-700 dark:text-slate-300 truncate">
                       오늘 아침 묵상한 QT 은혜를 말씀 나눔에 즉시 채웁니다
                     </span>
                   </div>
@@ -853,28 +825,28 @@ export default function FamilyScreens({
                       updateData(p => ({ ...p, wordMeditation: pulledQt }));
                       showToast("🌿 오늘의 QT 묵상이 채워졌습니다!");
                     }}
-                    className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[11px] shrink-0 cursor-pointer active:scale-95 transition-all shadow-xs"
+                    className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[10.5px] sm:text-[11px] shrink-0 cursor-pointer active:scale-95 transition-all shadow-xs"
                   >
                     QT 불러오기
                   </button>
                 </div>
 
-                {/* 참석자 및 역할 분담 입력창[cite: 19] */}
-                <div className={`p-3.5 rounded-2xl border ${ui.border} ${ui.bgCard} shadow-xs flex flex-col gap-2.5`}>
-                  <div className="flex items-center gap-2.5">
+                {/* 참석자 및 역할 분담 입력창[cite: 20] */}
+                <div className={`p-3 sm:p-3.5 rounded-xl sm:rounded-2xl border ${ui.border} ${ui.bgCard} shadow-xs flex flex-col gap-2`}>
+                  <div className="flex items-center gap-2">
                     <span className="text-slate-400 shrink-0"><IconGroup /></span>
-                    <span className="text-[12.5px] font-bold text-slate-700 dark:text-slate-300 shrink-0">예배 참석자:</span>
+                    <span className="text-[12px] sm:text-[12.5px] font-bold text-slate-700 dark:text-slate-300 shrink-0">예배 참석자:</span>
                     <input 
                       type="text" 
                       value={safeData.attendees || ''} 
                       onChange={(e) => updateData(p => ({ ...p, attendees: e.target.value }))} 
                       placeholder="예: 온 가족, 아빠, 엄마, 은우" 
-                      className={`flex-1 py-1 px-2.5 rounded-lg text-[13px] font-bold outline-none border ${ui.bgInput}`}
+                      className={`flex-1 py-1 px-2.5 rounded-lg text-[12.5px] sm:text-[13px] font-bold outline-none border ${ui.bgInput}`}
                     />
                   </div>
 
-                  <div className="flex flex-wrap gap-2 pt-1 border-t border-dashed border-slate-100 dark:border-white/5 text-[11px]">
-                    <span className="text-slate-400 font-bold self-center">예배 역할 분담:</span>
+                  <div className="flex flex-wrap gap-1.5 pt-1 border-t border-dashed border-slate-100 dark:border-white/5 text-[10.5px] sm:text-[11px]">
+                    <span className="text-slate-400 font-bold self-center">역할 분담:</span>
                     <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300">
                       인도: <b>{familyRoles.leader}</b>
                     </span>
@@ -887,27 +859,27 @@ export default function FamilyScreens({
                   </div>
                 </div>
 
-                {/* 말씀 묵상 나누기 (스페이스바 성경 구절 자동완성 적용)[cite: 19] */}
-                <div className={`p-3.5 rounded-2xl border ${ui.border} ${ui.bgCard} shadow-xs flex flex-col gap-2`}>
+                {/* 말씀 묵상 나누기 (스페이스바 성경 구절 자동완성 적용)[cite: 20] */}
+                <div className={`p-3 sm:p-3.5 rounded-xl sm:rounded-2xl border ${ui.border} ${ui.bgCard} shadow-xs flex flex-col gap-1.5 sm:gap-2`}>
                   <div className="flex justify-between items-center">
-                    <span className="text-[12.5px] font-black flex items-center gap-1.5 text-slate-900 dark:text-white">
+                    <span className="text-[12px] sm:text-[12.5px] font-black flex items-center gap-1.5 text-slate-900 dark:text-white">
                       <IconBook /> 말씀 묵상 나눔
                     </span>
-                    <span className="text-[11px] text-slate-400">구절(예: 요3:16) 입력 후 스페이스바</span>
+                    <span className="text-[10.5px] sm:text-[11px] text-slate-400">구절(예: 요3:16) 후 스페이스바</span>
                   </div>
                   <textarea 
                     value={safeData.wordMeditation || ''} 
                     onChange={(e) => updateData(p => ({ ...p, wordMeditation: e.target.value }))} 
                     onKeyDown={(e) => handleWordKeyDown(e, safeData.wordMeditation || '', (txt) => updateData(p => ({ ...p, wordMeditation: txt })))}
                     placeholder="말씀을 읽고 가족과 나눈 은혜를 기록하세요. 성경 구절(예: 창1:1, 요3:16)을 입력하고 스페이스바를 누르면 본문이 자동 입력됩니다." 
-                    rows={4} 
-                    className={`w-full p-3 rounded-xl text-[13px] font-medium resize-none outline-none border leading-relaxed ${ui.bgInput}`}
+                    rows={3} 
+                    className={`w-full p-2.5 sm:p-3 rounded-xl text-[12.5px] sm:text-[13px] font-medium resize-none outline-none border leading-relaxed ${ui.bgInput}`}
                   />
                   {safeData.wordMeditation && safeData.wordMeditation.trim() && (
-                    <div className="flex justify-end gap-1.5 pt-1">
+                    <div className="flex justify-end pt-0.5">
                       <button
                         onClick={() => handleExportToApplyTracker(safeData.wordMeditation)}
-                        className="px-2.5 py-1 rounded-lg bg-sky-500/10 text-sky-600 dark:text-sky-400 hover:bg-sky-500 hover:text-white text-[10.5px] font-bold flex items-center gap-1 transition-all cursor-pointer"
+                        className="px-2 sm:px-2.5 py-1 rounded-lg bg-sky-500/10 text-sky-600 dark:text-sky-400 hover:bg-sky-500 hover:text-white text-[10px] sm:text-[10.5px] font-bold flex items-center gap-1 transition-all cursor-pointer"
                       >
                         <IconTarget /> 삶의 실천 트래커로 이관
                       </button>
@@ -915,23 +887,23 @@ export default function FamilyScreens({
                   )}
                 </div>
 
-                {/* 가족 감사 나눔 (QnA 형태 + 보내기 버튼 탑재)[cite: 19] */}
-                <div className={`p-3.5 rounded-2xl border ${ui.border} ${ui.bgCard} shadow-xs flex flex-col gap-2.5`}>
+                {/* 가족 감사 나눔 (릴스 제거 완비)[cite: 20] */}
+                <div className={`p-3 sm:p-3.5 rounded-xl sm:rounded-2xl border ${ui.border} ${ui.bgCard} shadow-xs flex flex-col gap-2`}>
                   <div className="flex justify-between items-center">
-                    <span className="text-[12.5px] font-black flex items-center gap-1.5 text-rose-500">
+                    <span className="text-[12px] sm:text-[12.5px] font-black flex items-center gap-1.5 text-rose-500">
                       <IconHeart /> 가족 감사 나눔 ({thanksList.length})
                     </span>
                     <button 
                       onClick={() => addItem('thanks')} 
-                      className="px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white text-[11px] font-black transition-colors cursor-pointer"
+                      className="px-2 sm:px-2.5 py-0.8 sm:py-1 rounded-lg bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white text-[10.5px] sm:text-[11px] font-black transition-colors cursor-pointer"
                     >
                       + 감사 추가
                     </button>
                   </div>
 
-                  <div className="space-y-2.5">
+                  <div className="space-y-1.5 sm:space-y-2">
                     {thanksList.length === 0 ? (
-                      <div className="py-5 text-center text-slate-400 text-[12px]">
+                      <div className="py-4 text-center text-slate-400 text-[11.5px] sm:text-[12px]">
                         오늘 가족에게, 그리고 하나님께 감사했던 일들을 한 줄씩 나눠보세요.
                       </div>
                     ) : (
@@ -939,45 +911,39 @@ export default function FamilyScreens({
                         const id = typeof th === 'object' ? th.id : idx;
                         const text = typeof th === 'object' ? th.text : String(th);
                         return (
-                          <div key={id} className="flex flex-col gap-1.5 p-2.5 rounded-xl bg-slate-50/70 dark:bg-black/20 border border-slate-200/60 dark:border-white/5">
-                            <div className="flex gap-2 items-center">
-                              <span className="text-[11px] font-mono font-bold text-slate-400 w-4 text-center">{idx + 1}</span>
+                          <div key={id} className="flex flex-col gap-1 p-2 sm:p-2.5 rounded-lg sm:rounded-xl bg-slate-50/70 dark:bg-black/20 border border-slate-200/60 dark:border-white/5">
+                            <div className="flex gap-1.5 sm:gap-2 items-center">
+                              <span className="text-[10.5px] sm:text-[11px] font-mono font-bold text-slate-400 w-4 text-center">{idx + 1}</span>
                               <input 
                                 type="text" 
                                 value={text} 
                                 onChange={(e) => updateItemText('thanks', id, e.target.value)} 
                                 placeholder="오늘 감사했던 점..." 
-                                className={`flex-1 py-1.5 px-3 rounded-xl text-[12.5px] font-medium outline-none border ${ui.bgInput}`}
+                                className={`flex-1 py-1 sm:py-1.5 px-2.5 sm:px-3 rounded-lg sm:rounded-xl text-[12px] sm:text-[12.5px] font-medium outline-none border ${ui.bgInput}`}
                               />
                               <button 
                                 onClick={() => removeItem('thanks', id)} 
-                                className="text-slate-400 hover:text-rose-500 p-1.5 cursor-pointer text-xs"
+                                className="text-slate-400 hover:text-rose-500 p-1 cursor-pointer text-xs"
                                 title="삭제"
                               >
                                 ✕
                               </button>
                             </div>
 
-                            {/* 감사 다차원 분기 전송 버튼군[cite: 19] */}
+                            {/* 감사 분기 전송 버튼군 (릴스 버튼 삭제 완료)[cite: 20] */}
                             {text && text.trim() && (
-                              <div className="flex justify-end gap-1.5 pl-6 flex-wrap">
+                              <div className="flex justify-end gap-1 pl-5">
                                 <button
                                   onClick={() => handleSendThanksToDiary(text)}
-                                  className="px-2 py-0.8 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500 hover:text-white text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer"
+                                  className="px-2 py-0.8 rounded-md bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500 hover:text-white text-[9.5px] sm:text-[10px] font-bold flex items-center gap-0.5 transition-all cursor-pointer"
                                 >
                                   <IconHeart /> 감사일기로
                                 </button>
                                 <button
                                   onClick={() => handleSendThanksToCell(text)}
-                                  className="px-2 py-0.8 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500 hover:text-white text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer"
+                                  className="px-2 py-0.8 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500 hover:text-white text-[9.5px] sm:text-[10px] font-bold flex items-center gap-0.5 transition-all cursor-pointer"
                                 >
                                   <IconUsers /> 목장으로
-                                </button>
-                                <button
-                                  onClick={() => handleExportToReels(text)}
-                                  className="px-2 py-0.8 rounded-lg text-rose-500 hover:underline text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer"
-                                >
-                                  <span>🎬</span> 릴스
                                 </button>
                               </div>
                             )}
@@ -988,23 +954,23 @@ export default function FamilyScreens({
                   </div>
                 </div>
 
-                {/* 가족 기도 제목 (QnA 형태 + 보내기 버튼 탑재)[cite: 19] */}
-                <div className={`p-3.5 rounded-2xl border ${ui.border} ${ui.bgCard} shadow-xs flex flex-col gap-2.5`}>
+                {/* 가족 기도 제목[cite: 20] */}
+                <div className={`p-3 sm:p-3.5 rounded-xl sm:rounded-2xl border ${ui.border} ${ui.bgCard} shadow-xs flex flex-col gap-2`}>
                   <div className="flex justify-between items-center">
-                    <span className="text-[12.5px] font-black flex items-center gap-1.5 text-purple-500">
+                    <span className="text-[12px] sm:text-[12.5px] font-black flex items-center gap-1.5 text-purple-500">
                       <IconPray /> 가족 기도 제목 ({prayerList.length})
                     </span>
                     <button 
                       onClick={() => addItem('prayers')} 
-                      className="px-2.5 py-1 rounded-lg bg-purple-500/10 text-purple-500 hover:bg-purple-500 hover:text-white text-[11px] font-black transition-colors cursor-pointer"
+                      className="px-2 sm:px-2.5 py-0.8 sm:py-1 rounded-lg bg-purple-500/10 text-purple-500 hover:bg-purple-500 hover:text-white text-[10.5px] sm:text-[11px] font-black transition-colors cursor-pointer"
                     >
                       + 기도 추가
                     </button>
                   </div>
 
-                  <div className="space-y-2.5">
+                  <div className="space-y-1.5 sm:space-y-2">
                     {prayerList.length === 0 ? (
-                      <div className="py-5 text-center text-slate-400 text-[12px]">
+                      <div className="py-4 text-center text-slate-400 text-[11.5px] sm:text-[12px]">
                         가족을 위한 중보기도 제목과 삶의 문제를 기록하세요.
                       </div>
                     ) : (
@@ -1012,43 +978,43 @@ export default function FamilyScreens({
                         const id = typeof pr === 'object' ? pr.id : idx;
                         const text = typeof pr === 'object' ? pr.text : String(pr);
                         return (
-                          <div key={id} className="flex flex-col gap-1.5 p-2.5 rounded-xl bg-slate-50/70 dark:bg-black/20 border border-slate-200/60 dark:border-white/5">
-                            <div className="flex gap-2 items-center">
-                              <span className="text-[11px] font-mono font-bold text-slate-400 w-4 text-center">{idx + 1}</span>
+                          <div key={id} className="flex flex-col gap-1 p-2 sm:p-2.5 rounded-lg sm:rounded-xl bg-slate-50/70 dark:bg-black/20 border border-slate-200/60 dark:border-white/5">
+                            <div className="flex gap-1.5 sm:gap-2 items-center">
+                              <span className="text-[10.5px] sm:text-[11px] font-mono font-bold text-slate-400 w-4 text-center">{idx + 1}</span>
                               <input 
                                 type="text" 
                                 value={text} 
                                 onChange={(e) => updateItemText('prayers', id, e.target.value)} 
                                 placeholder="함께 손잡고 기도할 제목..." 
-                                className={`flex-1 py-1.5 px-3 rounded-xl text-[12.5px] font-medium outline-none border ${ui.bgInput}`}
+                                className={`flex-1 py-1 sm:py-1.5 px-2.5 sm:px-3 rounded-lg sm:rounded-xl text-[12px] sm:text-[12.5px] font-medium outline-none border ${ui.bgInput}`}
                               />
                               <button 
                                 onClick={() => removeItem('prayers', id)} 
-                                className="text-slate-400 hover:text-rose-500 p-1.5 cursor-pointer text-xs"
+                                className="text-slate-400 hover:text-rose-500 p-1 cursor-pointer text-xs"
                                 title="삭제"
                               >
                                 ✕
                               </button>
                             </div>
 
-                            {/* 기도 다차원 분기 전송 버튼군[cite: 19] */}
+                            {/* 기도 분기 전송 버튼군[cite: 20] */}
                             {text && text.trim() && (
-                              <div className="flex justify-end gap-1.5 pl-6 flex-wrap">
+                              <div className="flex justify-end gap-1 pl-5">
                                 <button
                                   onClick={() => handleSendPrayerToBox(text)}
-                                  className="px-2 py-0.8 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400 hover:bg-purple-500 hover:text-white text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer"
+                                  className="px-2 py-0.8 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400 hover:bg-purple-500 hover:text-white text-[9.5px] sm:text-[10px] font-bold flex items-center gap-0.5 transition-all cursor-pointer"
                                 >
                                   <IconPray /> 기도함으로
                                 </button>
                                 <button
                                   onClick={() => handleSendPrayerToCell(text)}
-                                  className="px-2 py-0.8 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500 hover:text-white text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer"
+                                  className="px-2 py-0.8 rounded-md bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500 hover:text-white text-[9.5px] sm:text-[10px] font-bold flex items-center gap-0.5 transition-all cursor-pointer"
                                 >
                                   <IconUsers /> 목장으로
                                 </button>
                                 <button
                                   onClick={() => handleExportToApplyTracker(text)}
-                                  className="px-2 py-0.8 rounded-lg bg-sky-500/10 text-sky-600 dark:text-sky-400 hover:bg-sky-500 hover:text-white text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer"
+                                  className="px-2 py-0.8 rounded-md bg-sky-500/10 text-sky-600 dark:text-sky-400 hover:bg-sky-500 hover:text-white text-[9.5px] sm:text-[10px] font-bold flex items-center gap-0.5 transition-all cursor-pointer"
                                 >
                                   <IconTarget /> 실천으로
                                 </button>
@@ -1061,24 +1027,24 @@ export default function FamilyScreens({
                   </div>
                 </div>
 
-                {/* 가족 칭찬 릴레이 (프라이빗 전용)[cite: 19] */}
+                {/* 가족 칭찬 릴레이 (프라이빗 전용)[cite: 20] */}
                 {isPriv && (
-                  <div className={`p-3.5 rounded-2xl border ${ui.border} ${ui.bgCard} shadow-xs flex flex-col gap-2.5`}>
+                  <div className={`p-3 sm:p-3.5 rounded-xl sm:rounded-2xl border ${ui.border} ${ui.bgCard} shadow-xs flex flex-col gap-2`}>
                     <div className="flex justify-between items-center">
-                      <span className="text-[12.5px] font-black flex items-center gap-1.5 text-amber-500">
+                      <span className="text-[12px] sm:text-[12.5px] font-black flex items-center gap-1.5 text-amber-500">
                         <IconSmile /> 서로 칭찬하고 축복하기
                       </span>
                       <button 
                         onClick={() => addItem('goodDeeds')} 
-                        className="px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-500 hover:bg-amber-500 hover:text-white text-[11px] font-black transition-colors cursor-pointer"
+                        className="px-2 sm:px-2.5 py-0.8 sm:py-1 rounded-lg bg-amber-500/10 text-amber-500 hover:bg-amber-500 hover:text-white text-[10.5px] sm:text-[11px] font-black transition-colors cursor-pointer"
                       >
                         + 칭찬 추가
                       </button>
                     </div>
 
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                       {deedList.length === 0 ? (
-                        <div className="py-5 text-center text-slate-400 text-[12px]">
+                        <div className="py-4 text-center text-slate-400 text-[11.5px] sm:text-[12px]">
                           가족들에게 전할 따뜻한 칭찬 한마디를 적어보세요.
                         </div>
                       ) : (
@@ -1086,17 +1052,17 @@ export default function FamilyScreens({
                           const id = typeof gd === 'object' ? gd.id : idx;
                           const text = typeof gd === 'object' ? gd.text : String(gd);
                           return (
-                            <div key={id} className="flex gap-2 items-center">
+                            <div key={id} className="flex gap-1.5 sm:gap-2 items-center">
                               <input 
                                 type="text" 
                                 value={text} 
                                 onChange={(e) => updateItemText('goodDeeds', id, e.target.value)} 
                                 placeholder="누구에게 전하는 칭찬인가요?" 
-                                className={`flex-1 py-1.5 px-3 rounded-xl text-[12.5px] font-medium outline-none border ${ui.bgInput}`}
+                                className={`flex-1 py-1 sm:py-1.5 px-2.5 sm:px-3 rounded-lg sm:rounded-xl text-[12px] sm:text-[12.5px] font-medium outline-none border ${ui.bgInput}`}
                               />
                               <button 
                                 onClick={() => removeItem('goodDeeds', id)} 
-                                className="text-slate-400 hover:text-rose-500 p-1.5 cursor-pointer text-xs"
+                                className="text-slate-400 hover:text-rose-500 p-1 cursor-pointer text-xs"
                               >
                                 ✕
                               </button>
@@ -1108,11 +1074,11 @@ export default function FamilyScreens({
                   </div>
                 )}
 
-                {/* 하단 완료 및 저장 버튼[cite: 19] */}
-                <div className="pt-2 pb-12 flex gap-2.5">
+                {/* 하단 완료 및 저장 버튼 (모바일 마진 최적화)[cite: 20] */}
+                <div className="pt-1.5 pb-6 sm:pb-12">
                   <button 
                     onClick={handleExecuteComplete} 
-                    className={`w-full py-3.5 rounded-xl font-black text-[13.5px] shadow-sm active:scale-[0.99] transition-all flex items-center justify-center gap-1.5 cursor-pointer ${ui.btnPrimary}`}
+                    className={`w-full py-3 sm:py-3.5 rounded-xl font-black text-[13px] sm:text-[13.5px] shadow-xs active:scale-[0.99] transition-all flex items-center justify-center gap-1.5 cursor-pointer ${ui.btnPrimary}`}
                   >
                     <IconCheck /> 오늘의 가정예배 완료하기
                   </button>

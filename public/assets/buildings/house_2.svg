@@ -1,12 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 84 90" width="84" height="90">
-    <ellipse cx="42" cy="85" rx="36" ry="5" fill="#361F12" opacity="0.3"/>
-    <polygon points="42,75 75,58 75,25 42,42" fill="#D4A373" stroke="#361F12" stroke-width="2"/>
-    <polygon points="9,58 42,75 42,42 9,25" fill="#F5D0A9" stroke="#361F12" stroke-width="2"/>
-    <polygon points="42,42 75,25 42,10 9,25" fill="#EAD6BD" stroke="#361F12" stroke-width="2"/>
-    <!-- 옥상 차양막 & 사다리 -->
-    <line x1="18" y1="28" x2="18" y2="12" stroke="#78350F" stroke-width="1.5"/>
-    <line x1="30" y1="34" x2="30" y2="18" stroke="#78350F" stroke-width="1.5"/>
-    <polygon points="16,13 32,20 40,15 24,8" fill="#F59E0B" stroke="#361F12" stroke-width="1"/>
-    <!-- 둥근 아치문 -->
-    <rect x="22" y="55" width="8" height="12" fill="#451A03" rx="3"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 84 100" width="84" height="100">
+    <ellipse cx="42" cy="92" rx="36" ry="6" fill="#2D1A0E" opacity="0.35"/>
+    <!-- 벽체 베이스 -->
+    <polygon points="42,82 76,64 76,28 42,46" fill="#B48256" stroke="#2D1A0E" stroke-width="2"/>
+    <polygon points="8,64 42,82 42,46 8,28" fill="#DDB288" stroke="#2D1A0E" stroke-width="2"/>
+    <!-- 돌출 평지붕 테라스 -->
+    <polygon points="42,46 79,27 42,9 5,27" fill="#EAD6BD" stroke="#2D1A0E" stroke-width="2"/>
+    <!-- 옥상 목조 그늘막 -->
+    <line x1="15" y1="32" x2="15" y2="15" stroke="#5C2E0B" stroke-width="2"/>
+    <line x1="30" y1="38" x2="30" y2="21" stroke="#5C2E0B" stroke-width="2"/>
+    <polygon points="12,16 33,23 42,17 21,10" fill="#F59E0B" stroke="#2D1A0E" stroke-width="1.5"/>
+    <!-- 아치형 목재 문 & 깊이감 -->
+    <path d="M 20,74 L 20,58 Q 25,52 30,58 L 30,74 Z" fill="#3D1E07" stroke="#2D1A0E" stroke-width="1.5"/>
+    <!-- 벽돌 조적 텍스처 줄눈 -->
+    <line x1="12" y1="42" x2="38" y2="56" stroke="#C2966C" stroke-width="1.2"/>
+    <line x1="10" y1="52" x2="40" y2="67" stroke="#C2966C" stroke-width="1.2"/>
   </svg>

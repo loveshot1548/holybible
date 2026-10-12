@@ -71,10 +71,9 @@ const IconPlay = () => <svg fill="currentColor" viewBox="0 0 24 24" className="w
 const IconPause = () => <svg fill="currentColor" viewBox="0 0 24 24" className="w-4 h-4"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" /></svg>;
 const IconSend = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={StrokeW} stroke="currentColor" className="w-4 h-4"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>;
 const IconQuote = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={StrokeW} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>;
-const IconSparkles = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={StrokeW} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" /></svg>;
 const IconUsers = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={StrokeW} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>;
 const IconBook = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={StrokeW} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" /></svg>;
-const IconFlame = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={StrokeW} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.6a8.983 8.983 0 013.361-6.867 8.21 8.21 0 003 2.48z" /></svg>;
+const IconSparkles = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={StrokeW} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" /></svg>;
 const IconTarget = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={StrokeW} stroke="currentColor" className="w-3.5 h-3.5"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>;
 
 function loadYouTubeIframeAPI() {
@@ -92,32 +91,32 @@ function loadYouTubeIframeAPI() {
 }
 
 const SectionHeader = ({ title, desc, isDark }) => (
-  <div className="flex flex-col gap-1 border-b border-slate-200/60 dark:border-white/10 pb-3 mb-4 text-left">
-    <h2 className={`text-[17px] md:text-[18.5px] font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>{title}</h2>
-    <p className="text-[12px] font-medium leading-relaxed text-slate-500 dark:text-slate-400 break-keep">{desc}</p>
+  <div className="flex flex-col gap-1 border-b border-slate-200/60 dark:border-white/10 pb-2 sm:pb-3 mb-3 sm:mb-4 text-left">
+    <h2 className={`text-[16px] sm:text-[18px] font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>{title}</h2>
+    <p className="text-[11.5px] sm:text-[12px] font-medium leading-relaxed text-slate-500 dark:text-slate-400 break-keep">{desc}</p>
   </div>
 );
 
 const ContentTitle = ({ children, isDark }) => (
-  <h3 className={`text-[13.5px] font-black mt-4 mb-1.5 flex items-center gap-1.5 text-left ${isDark ? 'text-rose-400' : 'text-rose-600'}`}>
+  <h3 className={`text-[13px] sm:text-[13.5px] font-black mt-3 sm:mt-4 mb-1.5 flex items-center gap-1.5 text-left ${isDark ? 'text-rose-400' : 'text-rose-600'}`}>
     <IconQuote/> {children}
   </h3>
 );
 
 const ContentP = ({ children, isDark }) => (
-  <p className={`text-[13px] leading-[1.75] font-medium mb-3 break-keep whitespace-pre-wrap text-left ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+  <p className={`text-[12.5px] sm:text-[13px] leading-[1.75] font-medium mb-2.5 sm:mb-3 break-keep whitespace-pre-wrap text-left ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
     {children}
   </p>
 );
 
 const InputBox = ({ id, label, placeholder, isTextarea = false, stateObj = {}, stateSetter, isDark }) => (
-  <div className="flex flex-col gap-1.5 mb-3 text-left">
-    <span className={`text-[12px] font-black ${isDark ? 'text-slate-300' : 'text-slate-800'}`}>{label}</span>
+  <div className="flex flex-col gap-1 sm:gap-1.5 mb-2.5 sm:mb-3 text-left">
+    <span className={`text-[11.5px] sm:text-[12px] font-black ${isDark ? 'text-slate-300' : 'text-slate-800'}`}>{label}</span>
     {isTextarea ? (
       <textarea 
         value={(stateObj && stateObj[id]) || ''} 
         onChange={(e) => stateSetter && stateSetter({ ...(stateObj || {}), [id]: e.target.value })}
-        className={`w-full p-3 text-[13px] font-medium leading-[1.7] rounded-xl outline-none resize-none min-h-[75px] border transition-all ${isDark ? 'bg-black/20 border-white/10 text-white focus:border-rose-400' : 'bg-white/70 border-slate-200 text-slate-900 focus:border-rose-400'}`}
+        className={`w-full p-2.5 sm:p-3 text-[12.5px] sm:text-[13px] font-medium leading-[1.7] rounded-xl outline-none resize-none min-h-[65px] sm:min-h-[75px] border transition-all ${isDark ? 'bg-black/25 border-white/10 text-white focus:border-rose-400' : 'bg-slate-50/70 border-slate-200 text-slate-900 focus:border-rose-400 focus:bg-white'}`}
         placeholder={placeholder}
       />
     ) : (
@@ -125,7 +124,7 @@ const InputBox = ({ id, label, placeholder, isTextarea = false, stateObj = {}, s
         type="text" 
         value={(stateObj && stateObj[id]) || ''} 
         onChange={(e) => stateSetter && stateSetter({ ...(stateObj || {}), [id]: e.target.value })}
-        className={`w-full px-3 py-2.5 text-[13px] font-bold rounded-xl outline-none border transition-all ${isDark ? 'bg-black/20 border-white/10 text-white focus:border-rose-400' : 'bg-white/70 border-slate-200 text-slate-900 focus:border-rose-400'}`}
+        className={`w-full px-2.5 sm:px-3 py-2 sm:py-2.5 text-[12.5px] sm:text-[13px] font-bold rounded-xl outline-none border transition-all ${isDark ? 'bg-black/25 border-white/10 text-white focus:border-rose-400' : 'bg-slate-50/70 border-slate-200 text-slate-900 focus:border-rose-400 focus:bg-white'}`}
         placeholder={placeholder}
       />
     )}
@@ -133,11 +132,11 @@ const InputBox = ({ id, label, placeholder, isTextarea = false, stateObj = {}, s
 );
 
 const CheckItem = ({ isChecked = false, onToggle, label, isDark }) => (
-  <div className={`flex items-start gap-2.5 cursor-pointer py-2 border-b transition-colors text-left ${isDark ? 'border-white/5 hover:bg-white/[0.02]' : 'border-slate-100 hover:bg-black/[0.02]'}`} onClick={onToggle}>
-    <div className={`mt-0.5 w-4 h-4 rounded-md border flex items-center justify-center shrink-0 transition-colors ${isChecked ? 'bg-rose-500 border-rose-500 text-white' : (isDark ? 'border-white/20 bg-black/20' : 'border-slate-300 bg-white')}`}>
+  <div className={`flex items-start gap-2.5 cursor-pointer py-1.5 sm:py-2 border-b transition-colors text-left ${isDark ? 'border-white/5 hover:bg-white/[0.02]' : 'border-slate-100 hover:bg-black/[0.02]'}`} onClick={onToggle}>
+    <div className={`mt-0.5 w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-md border flex items-center justify-center shrink-0 transition-colors ${isChecked ? 'bg-rose-500 border-rose-500 text-white' : (isDark ? 'border-white/20 bg-black/20' : 'border-slate-300 bg-white')}`}>
       {isChecked && <IconCheck />}
     </div>
-    <p className={`text-[12.5px] font-bold leading-snug transition-colors ${isChecked ? 'text-slate-400 dark:text-slate-500 line-through' : (isDark ? 'text-slate-200' : 'text-slate-800')}`}>{label}</p>
+    <p className={`text-[12px] sm:text-[12.5px] font-bold leading-snug transition-colors ${isChecked ? 'text-slate-400 dark:text-slate-500 line-through' : (isDark ? 'text-slate-200' : 'text-slate-800')}`}>{label}</p>
   </div>
 );
 
@@ -145,17 +144,16 @@ const StatBox = ({ title, count, onClick, isDark }) => (
   <button 
     type="button" 
     onClick={onClick} 
-    className={`flex flex-col justify-center items-start text-left p-2.5 rounded-xl border backdrop-blur-2xl transition-all w-full cursor-pointer hover:scale-[1.01] ${isDark ? 'bg-[#1C1C1E]/50 border-white/10' : 'bg-white/70 border-white/80 shadow-xs'}`}
+    className={`flex flex-col justify-center items-start text-left p-2 sm:p-2.5 rounded-xl border backdrop-blur-xl transition-all w-full cursor-pointer hover:scale-[1.01] ${isDark ? 'bg-[#181A20]/80 border-white/[0.08]' : 'bg-white border-slate-200/90 shadow-xs'}`}
   >
-    <span className="text-[10.5px] font-bold text-slate-400 mb-0.5">{title}</span>
-    <span className={`text-[15px] font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>{count}</span>
+    <span className="text-[10px] sm:text-[10.5px] font-bold text-slate-400 mb-0.5">{title}</span>
+    <span className={`text-[14px] sm:text-[15px] font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>{count}</span>
   </button>
 );
 
 export default function PrayerBox({ 
   t, isDarkMode, setActiveScreen, isSidebarOpen, setIsSidebarOpen, 
-  globalPrayers = [], globalIntercessions = [], openModal, getArr, authUser,
-  dailyData = {}, updateDay 
+  globalPrayers = [], globalIntercessions = [], openModal, getArr, authUser 
 }) {
   const [secretPrayers, setSecretPrayers] = useState([]);
   const [toastMsg, setToastMsg] = useState(null);
@@ -196,7 +194,7 @@ export default function PrayerBox({
     };
   }, []);
 
-  const isDark = t?.appBg?.includes('dark') || t?.appBg?.includes('121212') || isDarkMode;
+  const isDark = Boolean(t?.appBg?.includes('dark') || t?.appBg?.includes('121212') || isDarkMode);
   
   const safePrayers = (getArr ? getArr(globalPrayers) : Array.isArray(globalPrayers) ? globalPrayers : [])
     .filter(p => p != null);
@@ -209,7 +207,7 @@ export default function PrayerBox({
 
   const [activeTab, setActiveTab] = useState('prayerRoom'); 
 
-  // YouTube BGM 플레이어 (100% 보존)
+  // YouTube BGM 플레이어 (100% 무손실 보존)
   const [isPlayingBgm, setIsPlayingBgm] = useState(false);
   const [selectedBgmId, setSelectedBgmId] = useState('lZAo5miNkzQ');
   const ytPlayerRef = useRef(null);
@@ -348,7 +346,6 @@ export default function PrayerBox({
     if (!window.confirm("이 기도가 하나님의 은혜로 응답되었습니까? 감사 고백으로 봉헌합니다.")) return;
     
     try {
-      // 1. globalPrayers 상태 업데이트
       const curList = JSON.parse(localStorage.getItem('goodtree_global_prayers') || localStorage.getItem('globalPrayers') || '[]');
       const nextList = curList.map(item => {
         if (item.id === prayer.id || item.text === prayer.text) {
@@ -359,7 +356,6 @@ export default function PrayerBox({
       localStorage.setItem('goodtree_global_prayers', JSON.stringify(nextList));
       localStorage.setItem('globalPrayers', JSON.stringify(nextList));
 
-      // 2. 감사 일기장 자동 봉헌
       const diaries = JSON.parse(localStorage.getItem('goodtree_diary_entries') || '[]');
       diaries.push({
         id: Date.now(),
@@ -396,28 +392,7 @@ export default function PrayerBox({
     }
   };
 
-  // 🌟 [유기적 연동 3] 기도문 ➔ 3초 릴스 스튜디오 원터치 직결
-  const handleExportToReels = (prayerText, category = '기도제목') => {
-    if (!prayerText || !prayerText.trim()) return showToast("변환할 기도문 내용이 없습니다.");
-    const payload = {
-      sourceMode: 'prayer',
-      targetDate: new Date().toISOString().split('T')[0],
-      title: `[기도와 위로] ${category}`,
-      subtitle: 'PRAYER & REFUGE',
-      heroText: prayerText.slice(0, 40),
-      bodyText: prayerText,
-      actionText: ''
-    };
-
-    localStorage.setItem('reels_direct_trigger', JSON.stringify(payload));
-    showToast("🎬 기도문으로 릴스 스튜디오를 준비합니다...");
-    
-    if (typeof setActiveScreen === 'function') {
-      setActiveScreen('reels');
-    }
-  };
-
-  // 🌟 [유기적 연동 4] 목장 모임 기도제목 전송
+  // 🌟 [유기적 연동 3] 목장 모임 기도제목 전송
   const handleSendPrayerToCell = (prayerText) => {
     if (!prayerText || !prayerText.trim()) return showToast("전송할 기도제목이 없습니다.");
     try {
@@ -448,7 +423,7 @@ export default function PrayerBox({
     }
   };
 
-  // 훈련 노트 복사 및 삶의 실천 트래커 이관
+  // 훈련 노트 복사
   const copyTrainingNote = () => {
     const selectedWeek = parseInt(activeTab.replace('w', ''), 10) || 0;
     let text = `[기도 훈련소 ${selectedWeek}주차 기록]\n\n`;
@@ -534,7 +509,7 @@ export default function PrayerBox({
       <ContentP isDark={isDark}><strong>3. 회개가 곧 최고의 응답이다:</strong> 억울한 일을 당했을 때조차 자신의 죄를 보고 회개했다면 그것이 최고의 응답이라고 가르칩니다.</ContentP>
 
       <ContentTitle isDark={isDark}>PART 3. 두 가르침이 만나는 지점</ContentTitle>
-      <ul className={`list-disc pl-5 space-y-1.5 mt-1 text-[13px] font-medium text-left ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+      <ul className={`list-disc pl-5 space-y-1 mt-1 text-[12.5px] sm:text-[13px] font-medium text-left ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
         <li>기도의 출발점은 '내 뜻'이 아니라 하나님이다.</li>
         <li>회개(고백)는 기도의 부산물이 아니라 핵심 요소다.</li>
         <li>기도는 반복되는 일상 훈련이다.</li>
@@ -546,16 +521,16 @@ export default function PrayerBox({
     <div className="flex flex-col">
       <SectionHeader title={title} desc={desc} isDark={isDark} />
       <ContentTitle isDark={isDark}>거룩한 성화를 향한 순종의 궤적</ContentTitle>
-      <div className="flex flex-col mb-4">
+      <div className="flex flex-col mb-3">
         {(checkListContent[weekNum] || []).map(item => <CheckItem key={item.id} isChecked={safeChk[item.id]||false} onToggle={() => toggleChk(item.id)} label={item.text} isDark={isDark} />)}
       </div>
-      <div className="flex flex-wrap justify-between items-end border-b border-slate-200/60 dark:border-white/10 pb-2 mb-3 gap-2">
-        <h3 className={`text-[13.5px] font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>실전 훈련 노트</h3>
+      <div className="flex flex-wrap justify-between items-end border-b border-slate-200/60 dark:border-white/10 pb-1.5 mb-2.5 gap-2">
+        <h3 className={`text-[13px] sm:text-[13.5px] font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>실전 훈련 노트</h3>
         <div className="flex items-center gap-2">
-          <button type="button" onClick={handleExportTrainingToTracker} className="text-[11.5px] font-bold text-sky-500 hover:underline cursor-pointer flex items-center gap-1">
-            <IconTarget /> 삶의 실천 트래커로 이관
+          <button type="button" onClick={handleExportTrainingToTracker} className="text-[11px] sm:text-[11.5px] font-bold text-sky-500 hover:underline cursor-pointer flex items-center gap-1">
+            <IconTarget /> 실천 트래커 이관
           </button>
-          <button type="button" onClick={copyTrainingNote} className="text-[11.5px] font-bold text-rose-500 hover:underline cursor-pointer">
+          <button type="button" onClick={copyTrainingNote} className="text-[11px] sm:text-[11.5px] font-bold text-rose-500 hover:underline cursor-pointer">
             내용 복사
           </button>
         </div>
@@ -565,55 +540,53 @@ export default function PrayerBox({
   );
 
   const renderPrayerRoom = () => (
-    <div className="flex flex-col items-center justify-center min-h-[480px] w-full py-2 animate-fade-in text-left">
-      <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-500 text-[11.5px] font-black mb-3">
+    <div className="flex flex-col items-center justify-center min-h-[380px] sm:min-h-[460px] w-full py-1 sm:py-2 animate-fade-in text-left">
+      <div className="flex items-center gap-1.5 px-3 py-0.8 sm:py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-500 text-[11px] sm:text-[11.5px] font-black mb-2.5">
         <IconSparkles /> 임재의 골방
       </div>
 
       {activePrayerList.length === 0 ? (
-        <div className={`text-center my-6 py-12 px-6 rounded-[24px] border border-dashed ${isDark ? 'border-white/10 bg-[#1C1C1E]/20' : 'border-slate-300 bg-white/40'} w-full max-w-sm`}>
-           <p className="text-[13.5px] font-bold text-slate-400 mb-3">등록된 기도제목이 없습니다.</p>
+        <div className={`text-center my-4 sm:my-6 py-10 sm:py-12 px-5 sm:px-6 rounded-2xl border border-dashed ${isDark ? 'border-white/10 bg-[#1C1C1E]/30' : 'border-slate-300 bg-white/60'} w-full max-w-sm`}>
+           <p className="text-[13px] sm:text-[13.5px] font-bold text-slate-400 mb-2.5">등록된 기도제목이 없습니다.</p>
            <button 
              type="button"
              onClick={() => openModal && openModal('globalPrayer')} 
-             className="px-4 py-2 rounded-xl text-[12px] font-black text-white bg-rose-500 shadow-xs cursor-pointer"
+             className="px-4 py-2 rounded-xl text-[11.5px] sm:text-[12px] font-black text-white bg-rose-500 shadow-xs cursor-pointer"
            >
              새 기도제목 등록하기
            </button>
         </div>
       ) : (
         <div className="w-full max-w-xl">
-          <div className="w-full flex overflow-x-auto snap-x snap-mandatory gap-3 px-1 pb-4 hide-scrollbar touch-pan-x">
+          <div className="w-full flex overflow-x-auto snap-x snap-mandatory gap-2.5 sm:gap-3 px-0.5 pb-3 sm:pb-4 hide-scrollbar touch-pan-x">
             {activePrayerList.map((prayer, idx) => (
                <div 
                  key={prayer.id || idx} 
-                 className={`shrink-0 w-[94%] sm:w-[90%] snap-center rounded-[24px] border backdrop-blur-2xl p-5 sm:p-7 flex flex-col justify-between min-h-[240px] transition-all shadow-sm ${
-                   isDark ? 'bg-[#1C1C1E]/70 border-white/10 text-white' : 'bg-white/80 border-white/90 text-slate-900 shadow-[0_8px_24px_rgba(0,0,0,0.03)]'
+                 className={`shrink-0 w-[92%] sm:w-[88%] md:w-[84%] snap-center rounded-2xl sm:rounded-[24px] border backdrop-blur-xl p-4 sm:p-6 flex flex-col justify-between min-h-[200px] sm:min-h-[230px] transition-all shadow-xs ${
+                   isDark ? 'bg-[#131620]/95 border-white/[0.08] text-white' : 'bg-white border-slate-200/90 text-slate-900 shadow-[0_4px_16px_rgba(0,0,0,0.03)]'
                  }`}
                >
                   <div className="flex justify-between items-center">
-                    <span className="text-[10.5px] font-black tracking-widest uppercase text-rose-500 bg-rose-500/10 px-2.5 py-0.5 rounded-md border border-rose-400/20">
+                    <span className="text-[10px] sm:text-[10.5px] font-black tracking-widest uppercase text-rose-500 bg-rose-500/10 px-2 py-0.5 rounded-md border border-rose-400/20">
                       {prayer.category}
                     </span>
                     
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[11.5px] font-bold text-slate-400 font-mono">
-                        {idx + 1} / {activePrayerList.length}
-                      </span>
-                    </div>
+                    <span className="text-[11px] sm:text-[11.5px] font-bold text-slate-400 font-mono">
+                      {idx + 1} / {activePrayerList.length}
+                    </span>
                   </div>
 
-                  <h1 className="text-[16px] sm:text-[18.5px] font-black leading-relaxed break-keep my-auto py-2">
+                  <h1 className="text-[15px] sm:text-[17.5px] font-black leading-relaxed break-keep my-auto py-1.5 sm:py-2">
                     "{prayer.text}"
                   </h1>
 
-                  {/* 🌟 4대 파이프라인 버튼 툴바 */}
-                  <div className="flex flex-wrap gap-1.5 pt-3 border-t border-slate-200/50 dark:border-white/10 items-center justify-between">
+                  {/* 🌟 파이프라인 버튼 툴바 (릴스 제거 완비) */}
+                  <div className="flex flex-wrap gap-1 sm:gap-1.5 pt-2.5 sm:pt-3 border-t border-slate-100 dark:border-white/[0.08] items-center justify-between">
                     <div className="flex items-center gap-1 flex-wrap">
                       <button 
                         type="button"
                         onClick={() => handleMarkAsAnswered(prayer)}
-                        className="px-2.5 py-1 rounded-lg text-[10.5px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all flex items-center gap-1 cursor-pointer"
+                        className="px-2.5 py-1 rounded-lg text-[10px] sm:text-[10.5px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all flex items-center gap-1 cursor-pointer"
                         title="기도 응답 감사 확정 및 일기장 봉헌"
                       >
                         <IconCheck /> 응답 감사
@@ -622,7 +595,7 @@ export default function PrayerBox({
                       <button 
                         type="button"
                         onClick={() => handleExportToApplyTracker(prayer.text)}
-                        className="px-2.5 py-1 rounded-lg text-[10.5px] font-bold bg-sky-500/15 text-sky-600 dark:text-sky-400 hover:bg-sky-500 hover:text-white transition-all flex items-center gap-1 cursor-pointer"
+                        className="px-2.5 py-1 rounded-lg text-[10px] sm:text-[10.5px] font-bold bg-sky-500/15 text-sky-600 dark:text-sky-400 hover:bg-sky-500 hover:text-white transition-all flex items-center gap-1 cursor-pointer"
                         title="삶의 실천 트래커 과제로 즉시 이관"
                       >
                         <IconTarget /> 순종 실천
@@ -631,21 +604,12 @@ export default function PrayerBox({
                       <button 
                         type="button"
                         onClick={() => handleSendPrayerToCell(prayer.text)}
-                        className="px-2.5 py-1 rounded-lg text-[10.5px] font-bold bg-purple-500/15 text-purple-600 dark:text-purple-400 hover:bg-purple-500 hover:text-white transition-all flex items-center gap-1 cursor-pointer"
+                        className="px-2.5 py-1 rounded-lg text-[10px] sm:text-[10.5px] font-bold bg-purple-500/15 text-purple-600 dark:text-purple-400 hover:bg-purple-500 hover:text-white transition-all flex items-center gap-1 cursor-pointer"
                         title="목장 식구들과 중보 기도 나눔"
                       >
                         <IconUsers /> 목장으로
                       </button>
                     </div>
-
-                    <button 
-                      type="button"
-                      onClick={() => handleExportToReels(prayer.text, prayer.category)}
-                      className="px-2.5 py-1 rounded-lg text-[10.5px] font-bold bg-gradient-to-r from-rose-500 to-amber-500 text-white hover:opacity-90 transition-all flex items-center gap-1 cursor-pointer shadow-xs active:scale-95"
-                      title="이 기도제목으로 3초 릴스 제작"
-                    >
-                      <span>🎬</span> 릴스
-                    </button>
                   </div>
                </div>
             ))}
@@ -653,23 +617,23 @@ export default function PrayerBox({
         </div>
       )}
 
-      {/* 타이머 */}
-      <div className="flex flex-col items-center gap-0.5 mt-1 mb-4">
-         <span className="text-[9.5px] font-black tracking-widest text-slate-400">PRAYER TIMER</span>
-         <span className={`text-[34px] font-black font-mono tabular-nums leading-none ${isDark ? 'text-white' : 'text-slate-900'}`}>{formatTime(timeElapsed)}</span>
+      {/* 타이머 (모바일 마진 최적화) */}
+      <div className="flex flex-col items-center gap-0.5 mt-0.5 mb-2.5 sm:mb-3">
+         <span className="text-[9px] sm:text-[9.5px] font-black tracking-widest text-slate-400">PRAYER TIMER</span>
+         <span className={`text-[28px] sm:text-[34px] font-black font-mono tabular-nums leading-none ${isDark ? 'text-white' : 'text-slate-900'}`}>{formatTime(timeElapsed)}</span>
       </div>
 
       {/* BGM 컨트롤러 */}
-      <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full justify-center">
-         <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border backdrop-blur-xl ${isDark ? 'bg-[#1C1C1E]/50 border-white/10' : 'bg-white/60 border-white/80'}`}>
+      <div className="flex flex-col sm:flex-row items-center gap-2 w-full justify-center">
+         <div className={`flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl border backdrop-blur-xl ${isDark ? 'bg-[#181A20]/80 border-white/[0.08]' : 'bg-white/80 border-slate-200/80 shadow-xs'}`}>
             <button type="button" onClick={() => { if(isPlayingBgm) pauseBgm(); else playBgm(); }} className={`p-1 rounded-full ${isDark ? 'text-white' : 'text-slate-900'} cursor-pointer`}>
               {isPlayingBgm ? <IconPause/> : <IconPlay/>}
             </button>
-            <select value={selectedBgmId} onChange={(e) => changeBgm(e.target.value)} className={`bg-transparent outline-none text-[12px] font-bold ${isDark ? 'text-white' : 'text-slate-900'} cursor-pointer`}>
+            <select value={selectedBgmId} onChange={(e) => changeBgm(e.target.value)} className={`bg-transparent outline-none text-[11.5px] sm:text-[12px] font-bold ${isDark ? 'text-white' : 'text-slate-900'} cursor-pointer`}>
                {bgmList.map(b => <option key={b.id} value={b.id} className={isDark ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'}>{b.label}</option>)}
             </select>
          </div>
-         <button type="button" onClick={() => { clearInterval(timerRef.current); setTimeElapsed(0); setActiveTab('seminar'); showToast('기도를 마쳤습니다.'); }} className="px-4 py-2 rounded-xl font-black text-[12px] text-white bg-slate-900 dark:bg-white dark:text-slate-900 shadow-xs cursor-pointer">
+         <button type="button" onClick={() => { clearInterval(timerRef.current); setTimeElapsed(0); setActiveTab('seminar'); showToast('기도를 마쳤습니다.'); }} className="px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl font-black text-[11.5px] sm:text-[12px] text-white bg-slate-900 dark:bg-white dark:text-slate-900 shadow-xs cursor-pointer">
            기도 마치기
          </button>
       </div>
@@ -694,7 +658,7 @@ export default function PrayerBox({
       <ContentP isDark={isDark}>김포좋은나무교회는 매일 아침 6시 새벽기도와 매달 첫째 주 저녁 8시 '기적이 상식이 되는 5일의 기도' 모임을 가집니다. 이성현 목사는 CBS TV강단 159회 설교 "수고하고 무거운 짐이 쉽고 가벼워지려면"에서, 짐이 아예 없어지는 것이 아니라 예수님의 멍에를 함께 멜 때 무게가 달라진다는 마태복음 11장 본문의 논리를 전했습니다.</ContentP>
 
       <ContentTitle isDark={isDark}>5부. 성경과 두 목회자가 만나는 지점</ContentTitle>
-      <ul className={`list-disc pl-5 space-y-1 mt-1 text-[13px] font-medium text-left ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+      <ul className={`list-disc pl-5 space-y-1 mt-1 text-[12.5px] sm:text-[13px] font-medium text-left ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
         <li>위로는 짐을 없애는 것이 아니라, 짐을 지는 방식을 바꾸는 것입니다.</li>
         <li>고린도후서 1:4 원리처럼 위로받은 사람이 위로하는 사람이 됩니다.</li>
         <li>위로는 상황을 회피하지 않는 정직한 마주함과 질문에서 시작됩니다.</li>
@@ -707,7 +671,7 @@ export default function PrayerBox({
       <SectionHeader title="위로 저널 및 파이프라인" desc="나의 삶에 대입하기" isDark={isDark} />
       
       <ContentTitle isDark={isDark}>6부. 위로를 받는 우리의 자세 (체크리스트)</ContentTitle>
-      <div className="flex flex-col mb-3">
+      <div className="flex flex-col mb-2.5">
         <CheckItem isChecked={safeComfortChecks['c1'] || false} onToggle={() => toggleComfortCheck('c1')} label="내가 구하는 것이 '상황의 변화'인가, '하나님 자신'인가? (고후 1:3-4)" isDark={isDark} />
         <CheckItem isChecked={safeComfortChecks['c2'] || false} onToggle={() => toggleComfortCheck('c2')} label="지금 내 마음 상태를 하나님께 정직하게 아뢰었는가? (시 42:5)" isDark={isDark} />
         <CheckItem isChecked={safeComfortChecks['c3'] || false} onToggle={() => toggleComfortCheck('c3')} label="혼자 견디지 않고 공동체에 알려 기도를 구했는가? (약 5:14-15)" isDark={isDark} />
@@ -724,38 +688,31 @@ export default function PrayerBox({
       <InputBox id="cj4" label="4. 안전한 나눔 자리 만들기" placeholder="정직하게 힘든 이야기를 꺼내도 안전한 만남 계획을 적어보십시오." isTextarea stateObj={safeComfortForms} stateSetter={setComfortForms} isDark={isDark} />
       <InputBox id="cj5" label="5. 새벽기도·설교 자료 보완" placeholder="이성현 목사님의 '위로/쉼/회복' 관련 주간 설교 내용을 누적하십시오." isTextarea stateObj={safeComfortForms} stateSetter={setComfortForms} isDark={isDark} />
 
-      <div className="flex justify-between items-center mt-3 mb-1">
+      {/* 릴스 변환 버튼 삭제 완료 */}
+      <div className="flex justify-between items-center mt-2.5 mb-1">
         <ContentTitle isDark={isDark}>나의 고난 기록 및 기도/나눔 전송</ContentTitle>
-        <button
-          type="button"
-          onClick={() => handleExportToReels(pipelineData.application || pipelineData.pain, '위로와 회복')}
-          className="px-3 py-1 rounded-full text-[10.5px] font-black bg-gradient-to-r from-rose-500 to-indigo-600 text-white shadow-xs hover:opacity-90 active:scale-95 transition-all flex items-center gap-1 cursor-pointer"
-          title="작성된 위로와 회복 간증을 릴스로 제작"
-        >
-          <span>🎬</span> 회복 릴스 변환
-        </button>
       </div>
 
-      <div className="flex flex-col gap-2.5 mt-1 text-left">
+      <div className="flex flex-col gap-2 mt-1 text-left">
         <div className="flex flex-col gap-1">
-          <label className={`text-[12px] font-bold ${isDark ? 'text-slate-300' : 'text-slate-800'}`}>나의 고난과 아픔 (기도제목 자동 전송)</label>
+          <label className={`text-[11.5px] sm:text-[12px] font-bold ${isDark ? 'text-slate-300' : 'text-slate-800'}`}>나의 고난과 아픔 (기도제목 자동 전송)</label>
           <textarea 
             value={pipelineData.pain} 
             onChange={(e) => setPipelineData({...pipelineData, pain: e.target.value})}
             placeholder="공동체에 기도를 요청할 나의 아픔을 적어주세요."
-            className={`w-full p-2.5 text-[13px] font-medium leading-[1.7] rounded-xl outline-none resize-none min-h-[65px] border transition-all ${isDark ? 'bg-black/20 border-white/10 text-white' : 'bg-white/70 border-slate-200 text-slate-900'}`}
+            className={`w-full p-2.5 text-[12.5px] sm:text-[13px] font-medium leading-[1.7] rounded-xl outline-none resize-none min-h-[60px] sm:min-h-[65px] border transition-all ${isDark ? 'bg-black/25 border-white/10 text-white focus:border-rose-400' : 'bg-slate-50/70 border-slate-200 text-slate-900 focus:border-rose-400 focus:bg-white'}`}
           />
         </div>
         <div className="flex flex-col gap-1">
-          <label className={`text-[12px] font-bold ${isDark ? 'text-slate-300' : 'text-slate-800'}`}>나의 적용과 회복 (감사/간증 자동 전송)</label>
+          <label className={`text-[11.5px] sm:text-[12px] font-bold ${isDark ? 'text-slate-300' : 'text-slate-800'}`}>나의 적용과 회복 (감사/간증 자동 전송)</label>
           <textarea 
             value={pipelineData.application} 
             onChange={(e) => setPipelineData({...pipelineData, application: e.target.value})}
             placeholder="말씀으로 짐을 어떻게 해석했는지, 적용을 적어주세요."
-            className={`w-full p-2.5 text-[13px] font-medium leading-[1.7] rounded-xl outline-none resize-none min-h-[65px] border transition-all ${isDark ? 'bg-black/20 border-white/10 text-white' : 'bg-white/70 border-slate-200 text-slate-900'}`}
+            className={`w-full p-2.5 text-[12.5px] sm:text-[13px] font-medium leading-[1.7] rounded-xl outline-none resize-none min-h-[60px] sm:min-h-[65px] border transition-all ${isDark ? 'bg-black/25 border-white/10 text-white focus:border-rose-400' : 'bg-slate-50/70 border-slate-200 text-slate-900 focus:border-rose-400 focus:bg-white'}`}
           />
         </div>
-        <button type="button" onClick={handlePipelineSubmit} className="w-full py-2.5 mt-1 flex items-center justify-center gap-1.5 text-[12.5px] font-black rounded-xl text-white bg-rose-500 shadow-xs cursor-pointer hover:bg-rose-600 transition-colors">
+        <button type="button" onClick={handlePipelineSubmit} className="w-full py-2.5 mt-1 flex items-center justify-center gap-1.5 text-[12px] sm:text-[12.5px] font-black rounded-xl text-white bg-rose-500 shadow-xs cursor-pointer hover:bg-rose-600 transition-colors">
           <IconSend /> 위로 저널 저장 및 파이프라인 전송
         </button>
       </div>
@@ -763,81 +720,81 @@ export default function PrayerBox({
   );
 
   return (
-    <div className={`flex-1 flex flex-col h-full pointer-events-auto font-sans relative overflow-hidden select-none animate-fade-in ${isDark ? 'bg-[#0F1115]' : 'bg-[#F4F5F7]'}`}>
+    <div className={`flex-1 flex flex-col h-full pointer-events-auto font-sans relative overflow-hidden select-none animate-fade-in ${isDark ? 'bg-[#0B0D12]' : 'bg-[#F6F8FB]'}`}>
       
-      {/* 토스트 피드백 */}
+      {/* 상단 플로팅 토스트 피드백 */}
       {toastMsg && (
-        <div className="fixed top-12 left-1/2 -translate-x-1/2 z-[300] px-4 py-2 rounded-full bg-slate-900/95 text-white text-[12px] font-bold border border-white/20 shadow-xl backdrop-blur-md flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-rose-400 animate-ping" />
+        <div className="fixed top-12 left-1/2 -translate-x-1/2 z-[300] px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-full bg-slate-900/95 text-white text-[11px] sm:text-[12px] font-bold border border-white/20 shadow-xl backdrop-blur-md flex items-center gap-1.5 animate-fade-in">
+          <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-ping" />
           {toastMsg}
         </div>
       )}
 
-      {/* 3D 가속 최적화 오로라 배경 */}
-      <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden opacity-60 dark:opacity-40" style={{ transform: 'translate3d(0,0,0)' }}>
+      {/* 가속 최적화 앰비언트 글로우 배경 */}
+      <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden opacity-40 dark:opacity-25" style={{ transform: 'translate3d(0,0,0)' }}>
         <div 
-          className="absolute -top-[10%] -left-[10%] w-[800px] max-w-[90vw] h-[800px] max-h-[90vw] rounded-full" 
-          style={{ background: 'radial-gradient(circle, rgba(244, 114, 182, 0.35) 0%, transparent 70%)', filter: 'blur(75px)' }} 
+          className="absolute -top-[10%] -left-[10%] w-[600px] max-w-[80vw] h-[600px] max-h-[80vw] rounded-full" 
+          style={{ background: 'radial-gradient(circle, rgba(244, 114, 182, 0.3) 0%, transparent 70%)', filter: 'blur(75px)' }} 
         />
         <div 
-          className="absolute -bottom-[10%] -right-[10%] w-[900px] max-w-[95vw] h-[900px] max-h-[95vw] rounded-full" 
-          style={{ background: 'radial-gradient(circle, rgba(167, 139, 250, 0.35) 0%, transparent 70%)', filter: 'blur(80px)' }} 
+          className="absolute -bottom-[10%] -right-[10%] w-[700px] max-w-[85vw] h-[700px] max-h-[85vw] rounded-full" 
+          style={{ background: 'radial-gradient(circle, rgba(167, 139, 250, 0.3) 0%, transparent 70%)', filter: 'blur(80px)' }} 
         />
       </div>
 
-      {/* 상단 헤더 & 유기적 점프 통로 */}
-      <div className={`shrink-0 px-3 sm:px-5 py-2.5 flex items-center justify-between z-20 border-b relative backdrop-blur-xl ${isDark ? 'border-white/10 bg-slate-900/80' : 'border-slate-200/80 bg-white/80'}`}>
-        <div className="flex items-center gap-2">
-           <button onClick={() => setActiveScreen && setActiveScreen('home')} className={`p-1.5 rounded-full transition-colors ${isDark ? 'text-white hover:bg-white/10' : 'text-slate-900 hover:bg-black/5'} cursor-pointer`}>
+      {/* 상단 헤더 & 유기적 점프 통로 (모바일 컴팩트 마진/패딩) */}
+      <div className={`shrink-0 px-2.5 sm:px-5 py-2 sm:py-2.5 flex items-center justify-between z-20 border-b relative backdrop-blur-md ${isDark ? 'border-white/[0.08] bg-[#10131B]/95' : 'border-slate-200 bg-white/95'}`}>
+        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+           <button onClick={() => setActiveScreen && setActiveScreen('home')} className={`p-1.5 rounded-full transition-colors ${isDark ? 'text-white hover:bg-white/10' : 'text-slate-900 hover:bg-black/5'} cursor-pointer shrink-0`}>
                <IconArrowLeft />
            </button>
-           <div className="text-left">
-             <h1 className={`text-[15.5px] sm:text-[16.5px] font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'} flex items-center gap-1.5`}>
-               기도와 위로 보관함 <span className="text-rose-500 text-xs font-mono font-semibold">[Sanctuary]</span>
+           <div className="text-left min-w-0">
+             <h1 className={`text-[14.5px] sm:text-[16.5px] font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'} flex items-center gap-1.5 truncate`}>
+               기도와 위로 보관함 <span className="text-rose-500 text-[10.5px] sm:text-xs font-mono font-semibold shrink-0">[Sanctuary]</span>
              </h1>
-             <span className="text-[10px] font-mono text-slate-400 block">PRAYER, COMFORT & ACTION PIPELINE</span>
+             <span className="text-[9.5px] sm:text-[10px] font-mono text-slate-400 block truncate">PRAYER, COMFORT & ACTION PIPELINE</span>
            </div>
         </div>
 
         {/* 유기적 화면 이동 퀵 바 */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 shrink-0 ml-1.5">
           <button
             onClick={() => setActiveScreen && setActiveScreen('qt')}
-            className={`px-2 py-1 rounded-md text-[11px] font-bold border ${isDark ? 'border-slate-700 bg-slate-800 text-gray-300' : 'border-slate-200 bg-slate-100 text-slate-700'} hidden sm:flex items-center gap-1 cursor-pointer`}
+            className={`px-2 py-1 rounded-md text-[10.5px] sm:text-[11px] font-bold border ${isDark ? 'border-slate-700 bg-slate-800/80 text-gray-300' : 'border-slate-200 bg-slate-100 text-slate-700'} hidden sm:flex items-center gap-1 cursor-pointer`}
             title="매일 QT 묵상으로 이동"
           >
             <IconBook /> QT
           </button>
           <button
             onClick={() => setActiveScreen && setActiveScreen('sermon')}
-            className={`px-2 py-1 rounded-md text-[11px] font-bold border ${isDark ? 'border-slate-700 bg-slate-800 text-gray-300' : 'border-slate-200 bg-slate-100 text-slate-700'} hidden sm:flex items-center gap-1 cursor-pointer`}
+            className={`px-2 py-1 rounded-md text-[10.5px] sm:text-[11px] font-bold border ${isDark ? 'border-slate-700 bg-slate-800/80 text-gray-300' : 'border-slate-200 bg-slate-100 text-slate-700'} hidden sm:flex items-center gap-1 cursor-pointer`}
             title="설교 아카이브로 이동"
           >
             <span>🏛️</span> 설교
           </button>
           <button
             onClick={() => setActiveScreen && setActiveScreen('apply')}
-            className={`px-2 py-1 rounded-md text-[11px] font-bold border ${isDark ? 'border-slate-700 bg-slate-800 text-gray-300' : 'border-slate-200 bg-slate-100 text-slate-700'} hidden sm:flex items-center gap-1 cursor-pointer`}
+            className={`px-2 py-1 rounded-md text-[10.5px] sm:text-[11px] font-bold border ${isDark ? 'border-slate-700 bg-slate-800/80 text-gray-300' : 'border-slate-200 bg-slate-100 text-slate-700'} hidden sm:flex items-center gap-1 cursor-pointer`}
             title="삶의 실천 트래커로 이동"
           >
             <IconTarget /> 실천
           </button>
           <button
             onClick={() => setActiveScreen && setActiveScreen('diary')}
-            className={`px-2 py-1 rounded-md text-[11px] font-bold border ${isDark ? 'border-slate-700 bg-slate-800 text-gray-300' : 'border-slate-200 bg-slate-100 text-slate-700'} hidden sm:flex items-center gap-1 cursor-pointer`}
+            className={`px-2 py-1 rounded-md text-[10.5px] sm:text-[11px] font-bold border ${isDark ? 'border-slate-700 bg-slate-800/80 text-gray-300' : 'border-slate-200 bg-slate-100 text-slate-700'} hidden sm:flex items-center gap-1 cursor-pointer`}
             title="간증 일기장으로 이동"
           >
             <span>📖</span> 일기
           </button>
           <button
             onClick={() => setActiveScreen && setActiveScreen('cell')}
-            className={`px-2 py-1 rounded-md text-[11px] font-bold border ${isDark ? 'border-slate-700 bg-slate-800 text-gray-300' : 'border-slate-200 bg-slate-100 text-slate-700'} hidden sm:flex items-center gap-1 cursor-pointer`}
+            className={`px-2 py-1 rounded-md text-[10.5px] sm:text-[11px] font-bold border ${isDark ? 'border-slate-700 bg-slate-800/80 text-gray-300' : 'border-slate-200 bg-slate-100 text-slate-700'} hidden sm:flex items-center gap-1 cursor-pointer`}
             title="목장 나눔방으로 이동"
           >
             <IconUsers /> 목장
           </button>
 
-          <button onClick={() => setIsSidebarOpen && setIsSidebarOpen(!isSidebarOpen)} className={`p-1.5 rounded-full transition-colors ${isDark ? 'text-white hover:bg-white/10' : 'text-slate-900 hover:bg-black/5'} md:hidden cursor-pointer ml-1`}>
+          <button onClick={() => setIsSidebarOpen && setIsSidebarOpen(!isSidebarOpen)} className={`p-1.5 rounded-full transition-colors ${isDark ? 'text-white hover:bg-white/10' : 'text-slate-900 hover:bg-black/5'} md:hidden cursor-pointer`}>
              <IconMenu />
           </button>
         </div>
@@ -848,8 +805,8 @@ export default function PrayerBox({
         style={{ position: 'fixed', top: '-9999px', left: '-9999px', width: '1px', height: '1px', opacity: 0, pointerEvents: 'none', zIndex: -9999 }} 
       />
 
-      {/* 가로 탭 바 */}
-      <div className={`flex w-full px-2.5 overflow-x-auto hide-scrollbar border-b z-20 backdrop-blur-xl shrink-0 gap-1.5 py-1.5 ${isDark ? 'border-white/10 bg-slate-900/50' : 'border-slate-200/80 bg-white/50'}`}>
+      {/* 가로 탭 바 (모바일 스크롤 최적화) */}
+      <div className={`flex w-full px-2 sm:px-3 overflow-x-auto hide-scrollbar border-b z-20 backdrop-blur-md shrink-0 gap-1 sm:gap-1.5 py-1 sm:py-1.5 touch-pan-x ${isDark ? 'border-white/[0.08] bg-[#10131B]/95' : 'border-slate-200 bg-white/95'}`}>
          {[
            { id: 'prayerRoom', label: '✨ 몰입 기도실' },
            { id: 'seminar', label: '세미나 가이드' },
@@ -863,10 +820,10 @@ export default function PrayerBox({
             <button 
                key={tab.id}
                onClick={() => setActiveTab(tab.id)} 
-               className={`px-3 py-1.5 rounded-xl text-[11.5px] font-black transition-all whitespace-nowrap cursor-pointer ${
+               className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[11px] sm:text-[11.5px] font-black transition-all whitespace-nowrap cursor-pointer ${
                  activeTab === tab.id 
                    ? (tab.id === 'prayerRoom' ? 'bg-rose-500 text-white shadow-xs' : 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs')
-                   : (isDark ? 'text-slate-400 hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-white/60')
+                   : (isDark ? 'text-slate-400 hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100')
                }`}
             >
                {tab.label}
@@ -874,18 +831,18 @@ export default function PrayerBox({
          ))}
       </div>
 
-      {/* 본문 뷰어 */}
-      <div className="flex-1 overflow-y-auto w-full hide-scrollbar px-2.5 sm:px-5 py-3 pb-28 relative z-10">
+      {/* 본문 뷰어 (모바일 상하좌우 여백 컴팩트 축소: pb-16 sm:pb-24) */}
+      <div className="flex-1 overflow-y-auto w-full hide-scrollbar px-2 sm:px-4 md:px-6 py-2 sm:py-3.5 pb-16 sm:pb-24 relative z-10">
         {activeTab === 'prayerRoom' ? (
           renderPrayerRoom()
         ) : (
-          <div className="w-full max-w-5xl mx-auto flex flex-col lg:flex-row gap-4 animate-fade-in text-left">
+          <div className="w-full max-w-5xl mx-auto flex flex-col lg:flex-row gap-2.5 sm:gap-4 animate-fade-in text-left">
             
-            <div className="w-full lg:w-[270px] flex flex-col gap-2.5 shrink-0">
+            <div className="w-full lg:w-[270px] flex flex-col gap-2 sm:gap-2.5 shrink-0">
                {/* 4대 영적 KPI 벤토 박스 */}
-               <div className={`p-3.5 rounded-2xl border backdrop-blur-2xl flex flex-col gap-2 ${isDark ? 'bg-[#1C1C1E]/60 border-white/10' : 'bg-white/80 border-slate-200/80 shadow-xs'}`}>
-                  <span className={`text-[12px] font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>영적 거버넌스 지표</span>
-                  <div className="grid grid-cols-2 gap-1.5">
+               <div className={`p-3 sm:p-3.5 rounded-xl sm:rounded-2xl border backdrop-blur-xl flex flex-col gap-1.5 sm:gap-2 ${isDark ? 'bg-[#131620]/95 border-white/[0.08]' : 'bg-white border-slate-200/90 shadow-xs'}`}>
+                  <span className={`text-[11.5px] sm:text-[12px] font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>영적 거버넌스 지표</span>
+                  <div className="grid grid-cols-2 gap-1 sm:gap-1.5">
                     <StatBox title="나의 기도" count={`${prayingMy.length}건`} onClick={() => openModal && openModal('globalPrayer')} isDark={isDark} />
                     <StatBox title="중보 기도" count={`${prayingInter.length}건`} onClick={() => openModal && openModal('globalIntercession')} isDark={isDark} />
                     <StatBox title="응답 감사" count={`${answeredMy.length}건`} onClick={() => setActiveScreen && setActiveScreen('diary')} isDark={isDark} />
@@ -894,18 +851,18 @@ export default function PrayerBox({
                </div>
 
                {secretPrayers.length > 0 && (
-                 <div className={`p-3.5 rounded-2xl border backdrop-blur-2xl flex flex-col gap-1.5 ${isDark ? 'bg-[#1C1C1E]/60 border-white/10' : 'bg-white/80 border-slate-200/80 shadow-xs'}`}>
-                    <span className="text-[11.5px] font-black text-rose-500 flex items-center gap-1"><IconQuote/> 중보 기도의 손길</span>
-                    <div className="flex flex-col gap-1.5 pl-2 border-l-2 border-rose-500/40 max-h-[140px] overflow-y-auto hide-scrollbar">
+                 <div className={`p-3 sm:p-3.5 rounded-xl sm:rounded-2xl border backdrop-blur-xl flex flex-col gap-1 ${isDark ? 'bg-[#131620]/95 border-white/[0.08]' : 'bg-white border-slate-200/90 shadow-xs'}`}>
+                    <span className="text-[11px] sm:text-[11.5px] font-black text-rose-500 flex items-center gap-1"><IconQuote/> 중보 기도의 손길</span>
+                    <div className="flex flex-col gap-1 pl-2 border-l-2 border-rose-500/40 max-h-[120px] sm:max-h-[140px] overflow-y-auto hide-scrollbar">
                        {secretPrayers.map(sp => (
-                         <div key={sp.id} className="text-[11.5px] font-medium leading-relaxed text-slate-500 dark:text-slate-400">"{sp.content}"</div>
+                         <div key={sp.id} className="text-[11px] sm:text-[11.5px] font-medium leading-relaxed text-slate-500 dark:text-slate-400">"{sp.content}"</div>
                        ))}
                     </div>
                  </div>
                )}
             </div>
 
-            <div className={`flex-1 p-4 sm:p-6 rounded-2xl border backdrop-blur-2xl ${isDark ? 'bg-[#1C1C1E]/60 border-white/10 text-white' : 'bg-white/80 border-slate-200/80 text-slate-900 shadow-xs'}`}>
+            <div className={`flex-1 p-3.5 sm:p-6 rounded-xl sm:rounded-2xl border backdrop-blur-xl ${isDark ? 'bg-[#131620]/95 border-white/[0.08] text-white' : 'bg-white border-slate-200/90 text-slate-900 shadow-xs'}`}>
                {activeTab === 'seminar' && renderSeminar()}
                {activeTab === 'w1' && renderWeek(1, '나의 기도 습관 점검과 결단', '형식적인 기도를 멈추고, 지정된 장소와 시간에서 하나님과 독대하는 훈련을 시작합니다.', [{id:'w1CurHabit', label:'1. 나의 기존 기도 습관 분석', placeholder:'솔직하게 적어보세요.', isTextarea:true}, {id:'w1TimePlace', label:'2. 고정 기도 시간 및 장소 결단', placeholder:'예: 매일 밤 10시 30분, 내 방 책상 앞', isTextarea:false}])}
                {activeTab === 'w2' && renderWeek(2, '루터의 네 겹 묵상 기도', '내 소원을 먼저 말하기 전, 말씀에서 교훈, 감사, 회개를 먼저 끌어냅니다.', [{id:'w2Verse', label:'1. 오늘의 본문', placeholder:'묵상할 한 구절을 적으세요...', isTextarea:false}, {id:'w2Lesson', label:'2. 교훈 (가르침)', placeholder:'요구하는 것은 무엇인가?', isTextarea:true}, {id:'w2Thanks', label:'3. 감사', placeholder:'감사할 것은?', isTextarea:true}, {id:'w2Confess', label:'4. 고백 (회개)', placeholder:'회개할 것은?', isTextarea:true}, {id:'w2Request', label:'5. 간구 (기도)', placeholder:'구할 것은?', isTextarea:true}])}
