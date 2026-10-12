@@ -1,6 +1,10 @@
+// src/components/FamilyScreens.js
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 
+// =====================================================================
+// 🎨 모던 시스템 라인 아이콘 (2px stroke)
+// =====================================================================
 const StrokeWidth = "1.8";
 const IconGroup = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={StrokeWidth} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>;
 const IconLock = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={StrokeWidth} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>;
@@ -9,12 +13,17 @@ const IconHeart = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={Stroke
 const IconPray = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={StrokeWidth} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M12 20h9M16.5 14v4M7 10l3 3-2 2-3-3M3 14l3 3M14 6l3 3-2 2-3-3" /></svg>;
 const IconSmile = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={StrokeWidth} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><circle cx="12" cy="12" r="10" /><path d="M8 14s1.5 2 4 2 4-2 4-2" /><line x1="9" y1="9" x2="9.01" y2="9" /><line x1="15" y1="9" x2="15.01" y2="9" /></svg>;
 const IconCollection = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={StrokeWidth} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><polyline points="8 6 21 6 21 21 8 21 8 6" /><polyline points="8 12 21 12" /><line x1="3" y1="12" x2="3" y2="12" /><line x1="3" y1="6" x2="3" y2="6" /><line x1="3" y1="18" x2="3" y2="18" /></svg>;
-const IconCheck = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><polyline points="20 6 9 17 4 12" /></svg>;
-const IconCalendar = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>;
-const IconSparkles = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" /></svg>;
-const IconShare = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-3 h-3"><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" /></svg>;
+const IconCheck = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><polyline points="20 6 9 17 4 12" /></svg>;
+const IconCalendar = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>;
+const IconSparkles = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" /></svg>;
+const IconShare = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3 h-3"><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" /></svg>;
+const IconTarget = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={StrokeWidth} stroke="currentColor" className="w-3.5 h-3.5"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>;
+const IconUsers = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={StrokeWidth} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /></svg>;
+const IconVolume = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={StrokeWidth} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.757 3.63 8.25 4.51 8.25H6.75z" /></svg>;
 
+// =====================================================================
 // 성경 약어 매핑 사전
+// =====================================================================
 const BIBLE_ABBR_MAP = {
   "창": "Genesis", "창세기": "Genesis", "출": "Exodus", "출애굽기": "Exodus",
   "레": "Leviticus", "레위기": "Leviticus", "민": "Numbers", "민수기": "Numbers",
@@ -60,6 +69,30 @@ const BIBLE_KO_NAMES = {
   "2 John": "요한이서", "3 John": "요한삼서", "Jude": "유다서", "Revelation": "요한계시록"
 };
 
+// 사도신경 표준 전문
+const APOSTLES_CREED = `전능하사 천지를 만드신 하나님 아버지를 내가 믿사오며,
+그 외아들 우리 주 예수 그리스도를 믿사오니,
+이는 성령으로 잉태하사 동정녀 마리아에게 나시고,
+본디오 빌라도에게 고난을 받으사, 십자가에 못 박혀 죽으시고,
+장사한 지 사흘 만에 죽은 자 가운데서 다시 살아나시며,
+하늘에 오르사, 전능하신 하나님 우편에 앉아 계시다가,
+저리로서 산 자와 죽은 자를 심판하러 오시리라.
+성령을 믿사오며, 거룩한 공회와,
+성도가 서로 교통하는 것과,
+죄를 사하여 주시는 것과,
+몸이 다시 사는 것과,
+영원히 사는 것을 믿사옵나이다. 아멘.`;
+
+// 주기도문 표준 전문
+const LORDS_PRAYER = `하늘에 계신 우리 아버지여,
+이름이 거룩히 여김을 받으시오며, 나라이 임하옵시며,
+뜻이 하늘에서 이룬 것 같이 땅에서도 이루어지이다.
+오늘날 우리에게 일용할 양식을 주옵시고,
+우리가 우리에게 죄 지은 자를 사하여 준 것 같이
+우리 죄를 사하여 주옵시고,
+우리를 시험에 들게 하지 마옵시고, 다만 악에서 구하옵소서.
+대개 나라와 권세와 영광이 아버지께 영원히 있사옵나이다. 아멘.`;
+
 export default function FamilyScreens({
   activeScreen, t, isDarkMode, setActiveScreen, isSidebarOpen, setIsSidebarOpen, SubPageHeader,
   familyRoomPw, setFamilyRoomPw, currDay, updateDay, formatFamVerse,
@@ -73,6 +106,19 @@ export default function FamilyScreens({
   const isDark = isDarkMode || t?.appBg?.includes('dark') || t?.appBg?.includes('121212');
   const [actionToast, setActionToast] = useState(null);
   const safeDate = date || (currDay?.date || new Date().toISOString().split('T')[0]);
+
+  // 🌟 [핵심 모드 토글: 'form' 기록 모드 vs 'liturgy' 온 가족 7단계 실전 인도 모드]
+  const [familyMode, setFamilyMode] = useState('form');
+  const [liturgyStep, setLiturgyStep] = useState(1);
+
+  // 온 가족 역할 분담 (인도자, 기도자, 성경봉독자)
+  const [familyRoles, setFamilyRoles] = useState(() => {
+    try {
+      const saved = localStorage.getItem('family_liturgy_roles_v1');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return { leader: '아빠', prayer: '엄마', reader: '자녀', blessing: '온 가족' };
+  });
 
   const showToast = (msg) => {
     setActionToast(msg);
@@ -133,7 +179,7 @@ export default function FamilyScreens({
     });
   }, [safeDate, setFamilyPublicData]);
 
-  // 🌟 [성경 구절 스페이스바 자동완성 핸들러]
+  // 성경 구절 스페이스바 자동완성 핸들러
   const handleWordKeyDown = (e, currentText, onUpdateText) => {
     if (e.key === ' ' || e.key === 'Enter') {
       const cursorIdx = e.target.selectionStart;
@@ -156,7 +202,7 @@ export default function FamilyScreens({
 
           for (let v = vStart; v <= vEnd; v++) {
             if (chVerses[v - 1]) {
-              const cleaned = String(chVerses[v - 1]).replace(/|'|\x1B|\(가정\d*\)|\(개인\d*\)|\(개인\)/gi, '').trim();
+              const cleaned = String(chVerses[v - 1]).replace(/ |'|\x1B|\(가정\d*\)|\(개인\d*\)|\(개인\)/gi, '').trim();
               pulledText += `${v}절. ${cleaned}\n`;
               foundAny = true;
             }
@@ -175,7 +221,7 @@ export default function FamilyScreens({
     }
   };
 
-  // 🌟 [감사 연동 1: 나의 감사일기로 전송]
+  // 감사 연동 1: 나의 감사일기로 전송[cite: 19]
   const handleSendThanksToDiary = (text) => {
     if (!text || !text.trim()) return alert("전송할 감사 내용이 없습니다.");
     try {
@@ -200,7 +246,7 @@ export default function FamilyScreens({
     }
   };
 
-  // 🌟 [감사 연동 2: 목장 나눔으로 전송]
+  // 감사 연동 2: 목장 나눔으로 전송[cite: 19]
   const handleSendThanksToCell = (text) => {
     if (!text || !text.trim()) return alert("전송할 감사 내용이 없습니다.");
     try {
@@ -225,7 +271,7 @@ export default function FamilyScreens({
     }
   };
 
-  // 🌟 [기도 연동 1: 나의 기도 보관함으로 전송]
+  // 기도 연동 1: 나의 기도 보관함으로 전송[cite: 19]
   const handleSendPrayerToBox = (text) => {
     if (!text || !text.trim()) return alert("전송할 기도제목이 없습니다.");
     try {
@@ -245,7 +291,7 @@ export default function FamilyScreens({
     }
   };
 
-  // 🌟 [기도 연동 2: 목장 모임 식구 기도로 전송]
+  // 기도 연동 2: 목장 모임 식구 기도로 전송[cite: 19]
   const handleSendPrayerToCell = (text) => {
     if (!text || !text.trim()) return alert("전송할 기도제목이 없습니다.");
     try {
@@ -269,10 +315,47 @@ export default function FamilyScreens({
     }
   };
 
+  // 🌟 [실천 트래커 연동] 가정예배 결단을 ApplyTracker로 즉시 전송
+  const handleExportToApplyTracker = (text) => {
+    if (!text || !text.trim()) return;
+    try {
+      const items = JSON.parse(localStorage.getItem('apply_tracker_items') || '[]');
+      const newItem = {
+        id: Date.now(),
+        date: safeDate,
+        text: `[가정예배 순종 결단] ${text.trim()}`,
+        category: '언약가정',
+        source: 'family_worship',
+        completed: false
+      };
+      localStorage.setItem('apply_tracker_items', JSON.stringify([newItem, ...items]));
+      window.dispatchEvent(new Event('storage'));
+      showToast("⚡ [삶의 실천 트래커]에 순종 과제로 등록되었습니다!");
+    } catch {
+      showToast("실천 과제 등록 중 오류가 발생했습니다.");
+    }
+  };
+
+  // 🌟 [3초 릴스 스튜디오 연동]
+  const handleExportToReels = (text) => {
+    const payload = {
+      sourceMode: 'family',
+      targetDate: safeDate,
+      title: '[가정예배] 은혜와 축복',
+      subtitle: safeFamVerse.ref || 'COVENANT HOME',
+      heroText: (text || safeFamVerse.text).slice(0, 40),
+      bodyText: text || safeFamVerse.text,
+      actionText: '가정 안에서 서로 사랑하고 축복합니다.'
+    };
+    localStorage.setItem('reels_direct_trigger', JSON.stringify(payload));
+    showToast("🎬 가정예배 은혜로 릴스 스튜디오를 준비합니다...");
+    if (setActiveScreen) setActiveScreen('reelsStudio');
+  };
+
   switch (activeScreen) {
     case 'familySelect':
       return (
-        <div className={`flex-1 flex flex-col h-full ${ui.bgBody} animate-fade-in relative font-sans select-none overflow-hidden`}>
+        <div className={`flex-1 flex flex-col h-full ${ui.bgBody} animate-fade-in relative font-sans select-none overflow-hidden text-left`}>
           <div className={`relative z-10 border-b ${ui.border}`}>
             <SubPageHeader title="가정 예배 선택" onBack={() => setActiveScreen('fiveSetMenu')} t={t} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
           </div>
@@ -317,7 +400,7 @@ export default function FamilyScreens({
 
     case 'familyPrivateLogin':
       return (
-        <div className={`flex-1 flex flex-col h-full ${ui.bgBody} animate-fade-in relative font-sans select-none overflow-hidden`}>
+        <div className={`flex-1 flex flex-col h-full ${ui.bgBody} animate-fade-in relative font-sans select-none overflow-hidden text-left`}>
           <div className={`relative z-10 border-b ${ui.border}`}>
             <SubPageHeader title="우리 가족 예배실 입장" onBack={() => setActiveScreen('familySelect')} t={t} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
           </div>
@@ -461,8 +544,56 @@ export default function FamilyScreens({
         }
       };
 
+      // 7단계 실전 예배 순서 메타 데이터[cite: 19]
+      const LITURGY_STEPS = [
+        {
+          step: 1,
+          title: "시작 기도 & 예배로의 부름",
+          role: familyRoles.leader,
+          script: `“하나님 아버지, 오늘 우리 가족이 한자리에 모여 예배하게 하심을 감사합니다. 이 시간 우리 가정의 주인이 되어 주시고, 말씀으로 우리를 인도해 주옵소서. 예수님의 이름으로 기도합니다. 아멘.”`
+        },
+        {
+          step: 2,
+          title: "찬송 (찬송가 또는 복음성가)",
+          role: "온 가족 합창",
+          script: `“온 가족이 함께 기쁨으로 찬양합니다. (추천: 찬송가 559장 ‘사철에 봄바람 불어잇고’, 또는 가족 애창 찬양)”`
+        },
+        {
+          step: 3,
+          title: "신앙고백 (사도신경)",
+          role: "온 가족 합독",
+          script: APOSTLES_CREED
+        },
+        {
+          step: 4,
+          title: "성경 봉독 (말씀 읽기)",
+          role: familyRoles.reader,
+          script: `📖 ${safeFamVerse.ref}\n\n“${safeFamVerse.text}”`
+        },
+        {
+          step: 5,
+          title: "말씀 묵상 나눔 (은혜 나누기)",
+          role: "가족 모두",
+          script: safeData.wordMeditation || "오늘 말씀을 통해 하나님께서 우리 가정과 내게 주신 교훈을 각자 한마디씩 나눕니다."
+        },
+        {
+          step: 6,
+          title: "가족 감사 & 중보기도 (손잡고 합심기도)",
+          role: familyRoles.prayer,
+          script: thanksList.length > 0 || prayerList.length > 0 
+            ? `[오늘 나눈 감사]\n${thanksList.map((t, i) => `${i+1}.${typeof t==='object'?t.text:t}`).join('\n')}\n\n[함께 기도할 제목]\n${prayerList.map((p, i) => `${i+1}.${typeof p==='object'?p.text:p}`).join('\n')}`
+            : "서로 손을 잡고 오늘 하루 감사했던 일과 기도제목을 나누며 함께 기도합니다."
+        },
+        {
+          step: 7,
+          title: "자녀 축복기도 & 주기도문 (마침)",
+          role: familyRoles.blessing,
+          script: `“여호와는 우리 가정에 복을 주시고 우리를 지키시기를 원하며, 여호와는 그의 얼굴을 우리에게 비추사 은혜 베푸시기를 원하며, 평강 주시기를 원하노라 (민 6:24-26).”\n\n[주기도문 합독]\n${LORDS_PRAYER}`
+        }
+      ];
+
       return (
-        <div className={`flex-1 flex flex-col h-full ${ui.bgBody} animate-fade-in relative font-sans select-none overflow-hidden`}>
+        <div className={`flex-1 flex flex-col h-full ${ui.bgBody} animate-fade-in relative font-sans select-none overflow-hidden text-left`}>
           
           {actionToast && (
             <div className="absolute top-14 left-1/2 -translate-x-1/2 z-50 bg-slate-900/95 text-white text-[12px] font-bold px-4 py-2 rounded-full shadow-lg border border-white/20 animate-fade-in flex items-center gap-1.5 pointer-events-none">
@@ -470,7 +601,7 @@ export default function FamilyScreens({
             </div>
           )}
 
-          {/* 고정 상단 헤더 & 캘린더 네비게이터 */}
+          {/* 고정 상단 헤더 & 캘린더 네비게이터[cite: 19] */}
           <div className={`shrink-0 flex items-center justify-between px-3.5 py-2.5 border-b ${ui.border} bg-white/80 dark:bg-[#12141A]/80 backdrop-blur-md z-20`}>
             <div className="flex items-center gap-2">
               <button 
@@ -479,8 +610,9 @@ export default function FamilyScreens({
               >
                 ←
               </button>
-              <span className="text-[14.5px] font-black tracking-tight">
+              <span className="text-[14.5px] font-black tracking-tight flex items-center gap-1.5">
                 {isPriv ? "우리 가족 예배실" : "가정예배 나눔"}
+                <span className="text-amber-500 text-xs font-mono font-bold">[Covenant Altar]</span>
               </span>
             </div>
 
@@ -509,278 +641,487 @@ export default function FamilyScreens({
             </div>
           </div>
 
-          {/* 메인 예배 작성 캔버스 */}
-          <div className="flex-1 overflow-y-auto p-3 sm:p-4 hide-scrollbar">
-            <div className="max-w-3xl mx-auto flex flex-col gap-3">
-              
-              {/* 오늘의 말씀 컴팩트 카드 */}
-              <div className={`p-4 rounded-2xl border ${ui.border} ${ui.bgCard} shadow-xs text-center flex flex-col items-center justify-center relative overflow-hidden`}>
-                <span className="text-[10.5px] font-bold text-amber-500 dark:text-amber-400 tracking-wider uppercase mb-1">
-                  오늘의 가정예배 말씀
-                </span>
-                <p className="text-[15px] font-bold leading-relaxed text-slate-900 dark:text-white break-keep max-w-xl">
-                  "{safeFamVerse.text}"
-                </p>
-                <span className="text-[11.5px] font-bold text-slate-400 mt-1 font-mono">
-                  {safeFamVerse.ref}
-                </span>
-              </div>
+          {/* 🌟 전방위 유기적 딥링크 퀵 바 */}
+          <div className={`px-3 sm:px-6 py-1.5 border-b shrink-0 flex items-center justify-between z-10 ${
+            isDark ? 'border-white/5 bg-[#141720]/80' : 'border-slate-200/60 bg-slate-100/60'
+          }`}>
+            <div className="flex items-center gap-1 overflow-x-auto hide-scrollbar py-0.5">
+              <button
+                onClick={() => setActiveScreen && setActiveScreen('qt')}
+                className={`px-2 py-0.8 rounded text-[10.5px] font-bold border ${isDark ? 'border-slate-700 bg-slate-800 text-gray-300' : 'border-slate-200 bg-white text-slate-700'} flex items-center gap-1 cursor-pointer shrink-0`}
+              >
+                <IconBook /> QT
+              </button>
+              <button
+                onClick={() => setActiveScreen && setActiveScreen('sermon')}
+                className={`px-2 py-0.8 rounded text-[10.5px] font-bold border ${isDark ? 'border-slate-700 bg-slate-800 text-gray-300' : 'border-slate-200 bg-white text-slate-700'} flex items-center gap-1 cursor-pointer shrink-0`}
+              >
+                <span>🏛️</span> 설교
+              </button>
+              <button
+                onClick={() => setActiveScreen && setActiveScreen('apply')}
+                className={`px-2 py-0.8 rounded text-[10.5px] font-bold border ${isDark ? 'border-slate-700 bg-slate-800 text-gray-300' : 'border-slate-200 bg-white text-slate-700'} flex items-center gap-1 cursor-pointer shrink-0`}
+              >
+                <IconTarget /> 실천
+              </button>
+              <button
+                onClick={() => setActiveScreen && setActiveScreen('prayer')}
+                className={`px-2 py-0.8 rounded text-[10.5px] font-bold border ${isDark ? 'border-slate-700 bg-slate-800 text-gray-300' : 'border-slate-200 bg-white text-slate-700'} flex items-center gap-1 cursor-pointer shrink-0`}
+              >
+                <IconPray /> 기도
+              </button>
+              <button
+                onClick={() => setActiveScreen && setActiveScreen('diary')}
+                className={`px-2 py-0.8 rounded text-[10.5px] font-bold border ${isDark ? 'border-slate-700 bg-slate-800 text-gray-300' : 'border-slate-200 bg-white text-slate-700'} flex items-center gap-1 cursor-pointer shrink-0`}
+              >
+                <IconHeart /> 일기
+              </button>
+              <button
+                onClick={() => setActiveScreen && setActiveScreen('cell')}
+                className={`px-2 py-0.8 rounded text-[10.5px] font-bold border ${isDark ? 'border-slate-700 bg-slate-800 text-gray-300' : 'border-slate-200 bg-white text-slate-700'} flex items-center gap-1 cursor-pointer shrink-0`}
+              >
+                <IconUsers /> 목장
+              </button>
+            </div>
 
-              {/* 1-Click 오토풀링 (내 QT 묵상 자동 채우기) */}
-              <div className="p-3 rounded-xl border border-indigo-500/20 bg-indigo-50/40 dark:bg-indigo-950/20 flex items-center justify-between gap-2">
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <span className="text-indigo-500"><IconSparkles /></span>
-                  <span className="text-[11.5px] font-bold text-slate-700 dark:text-slate-300 truncate">
-                    오늘 아침 묵상한 QT 은혜를 말씀 나눔에 즉시 채웁니다
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    let pulledQt = '';
-                    try {
-                      const qtDaily = JSON.parse(localStorage.getItem('qt_daily') || '{}');
-                      const todayRec = qtDaily[safeDate] || {};
-                      pulledQt = todayRec.qtMeditation || todayRec.qtGraceLine || todayRec.qtApplication || '';
-                    } catch(e) {}
+            {/* 🌟 모드 전환 토글 (기록 모드 vs 7단계 실전 인도 모드)[cite: 19] */}
+            <div className="flex items-center gap-1 p-0.5 rounded-lg bg-black/5 dark:bg-white/10 shrink-0">
+              <button
+                onClick={() => setFamilyMode('form')}
+                className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+                  familyMode === 'form' 
+                    ? (isDark ? 'bg-indigo-600 text-white' : 'bg-slate-900 text-white') 
+                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                ✍️ 작성 모드
+              </button>
+              <button
+                onClick={() => setFamilyMode('liturgy')}
+                className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+                  familyMode === 'liturgy' 
+                    ? 'bg-amber-600 text-white shadow-xs font-black' 
+                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                📖 7단계 인도 가이드
+              </button>
+            </div>
+          </div>
 
-                    if (!pulledQt) {
-                      pulledQt = "오늘 하루도 주님의 말씀을 기준 삼아 가정 안에서 서로를 배려하고 사랑으로 품겠습니다.";
-                    }
-
-                    updateData(p => ({ ...p, wordMeditation: pulledQt }));
-                    showToast("🌿 오늘의 QT 묵상이 채워졌습니다!");
-                  }}
-                  className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[11px] shrink-0 cursor-pointer active:scale-95 transition-all shadow-xs"
-                >
-                  QT 불러오기
-                </button>
-              </div>
-
-              {/* 참석자 입력창 */}
-              <div className={`p-3.5 rounded-2xl border ${ui.border} ${ui.bgCard} shadow-xs flex items-center gap-2.5`}>
-                <span className="text-slate-400 shrink-0"><IconGroup /></span>
-                <span className="text-[12.5px] font-bold text-slate-700 dark:text-slate-300 shrink-0">예배 참석자:</span>
-                <input 
-                  type="text" 
-                  value={safeData.attendees || ''} 
-                  onChange={(e) => updateData(p => ({ ...p, attendees: e.target.value }))} 
-                  placeholder="예: 온 가족, 아빠, 엄마, 은우" 
-                  className={`flex-1 py-1 px-2.5 rounded-lg text-[13px] font-bold outline-none border ${ui.bgInput}`}
-                />
-              </div>
-
-              {/* 말씀 묵상 나누기 (스페이스바 성경 구절 자동완성 적용) */}
-              <div className={`p-3.5 rounded-2xl border ${ui.border} ${ui.bgCard} shadow-xs flex flex-col gap-2`}>
-                <div className="flex justify-between items-center">
-                  <span className="text-[12.5px] font-black flex items-center gap-1.5 text-slate-900 dark:text-white">
-                    <IconBook /> 말씀 묵상 나눔
-                  </span>
-                  <span className="text-[11px] text-slate-400">구절(예: 요3:16) 입력 후 스페이스바</span>
-                </div>
-                <textarea 
-                  value={safeData.wordMeditation || ''} 
-                  onChange={(e) => updateData(p => ({ ...p, wordMeditation: e.target.value }))} 
-                  onKeyDown={(e) => handleWordKeyDown(e, safeData.wordMeditation || '', (txt) => updateData(p => ({ ...p, wordMeditation: txt })))}
-                  placeholder="말씀을 읽고 가족과 나눈 은혜를 기록하세요. 성경 구절(예: 창1:1, 요3:16)을 입력하고 스페이스바를 누르면 본문이 자동 입력됩니다." 
-                  rows={4} 
-                  className={`w-full p-3 rounded-xl text-[13px] font-medium resize-none outline-none border leading-relaxed ${ui.bgInput}`}
-                />
-              </div>
-
-              {/* 가족 감사 나눔 (QnA 형태 + 보내기 버튼 탑재) */}
-              <div className={`p-3.5 rounded-2xl border ${ui.border} ${ui.bgCard} shadow-xs flex flex-col gap-2.5`}>
-                <div className="flex justify-between items-center">
-                  <span className="text-[12.5px] font-black flex items-center gap-1.5 text-rose-500">
-                    <IconHeart /> 가족 감사 나눔 ({thanksList.length})
-                  </span>
-                  <button 
-                    onClick={() => addItem('thanks')} 
-                    className="px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white text-[11px] font-black transition-colors cursor-pointer"
-                  >
-                    + 감사 추가
-                  </button>
-                </div>
-
-                <div className="space-y-2.5">
-                  {thanksList.length === 0 ? (
-                    <div className="py-5 text-center text-slate-400 text-[12px]">
-                      감사했던 일들을 한 줄씩 나눠보세요.
-                    </div>
-                  ) : (
-                    thanksList.map((th, idx) => {
-                      const id = typeof th === 'object' ? th.id : idx;
-                      const text = typeof th === 'object' ? th.text : String(th);
-                      return (
-                        <div key={id} className="flex flex-col gap-1.5 p-2 rounded-xl bg-slate-50/70 dark:bg-black/20 border border-slate-200/60 dark:border-white/5">
-                          <div className="flex gap-2 items-center">
-                            <span className="text-[11px] font-mono font-bold text-slate-400 w-4 text-center">{idx + 1}</span>
-                            <input 
-                              type="text" 
-                              value={text} 
-                              onChange={(e) => updateItemText('thanks', id, e.target.value)} 
-                              placeholder="오늘 감사했던 점..." 
-                              className={`flex-1 py-1.5 px-3 rounded-xl text-[12.5px] font-medium outline-none border ${ui.bgInput}`}
-                            />
-                            <button 
-                              onClick={() => removeItem('thanks', id)} 
-                              className="text-slate-400 hover:text-rose-500 p-1.5 cursor-pointer text-xs"
-                              title="삭제"
-                            >
-                              ✕
-                            </button>
-                          </div>
-
-                          {/* 🌟 감사 개별 보내기 버튼 */}
-                          {text && text.trim() && (
-                            <div className="flex justify-end gap-1.5 pl-6">
-                              <button
-                                onClick={() => handleSendThanksToDiary(text)}
-                                className="px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500 hover:text-white text-[10.5px] font-bold flex items-center gap-1 transition-all cursor-pointer"
-                              >
-                                <IconShare /> 감사일기로
-                              </button>
-                              <button
-                                onClick={() => handleSendThanksToCell(text)}
-                                className="px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500 hover:text-white text-[10.5px] font-bold flex items-center gap-1 transition-all cursor-pointer"
-                              >
-                                <IconShare /> 목장으로
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
-
-              {/* 가족 기도 제목 (QnA 형태 + 보내기 버튼 탑재) */}
-              <div className={`p-3.5 rounded-2xl border ${ui.border} ${ui.bgCard} shadow-xs flex flex-col gap-2.5`}>
-                <div className="flex justify-between items-center">
-                  <span className="text-[12.5px] font-black flex items-center gap-1.5 text-purple-500">
-                    <IconPray /> 가족 기도 제목 ({prayerList.length})
-                  </span>
-                  <button 
-                    onClick={() => addItem('prayers')} 
-                    className="px-2.5 py-1 rounded-lg bg-purple-500/10 text-purple-500 hover:bg-purple-500 hover:text-white text-[11px] font-black transition-colors cursor-pointer"
-                  >
-                    + 기도 추가
-                  </button>
-                </div>
-
-                <div className="space-y-2.5">
-                  {prayerList.length === 0 ? (
-                    <div className="py-5 text-center text-slate-400 text-[12px]">
-                      가족을 위한 중보기도 제목을 기록하세요.
-                    </div>
-                  ) : (
-                    prayerList.map((pr, idx) => {
-                      const id = typeof pr === 'object' ? pr.id : idx;
-                      const text = typeof pr === 'object' ? pr.text : String(pr);
-                      return (
-                        <div key={id} className="flex flex-col gap-1.5 p-2 rounded-xl bg-slate-50/70 dark:bg-black/20 border border-slate-200/60 dark:border-white/5">
-                          <div className="flex gap-2 items-center">
-                            <span className="text-[11px] font-mono font-bold text-slate-400 w-4 text-center">{idx + 1}</span>
-                            <input 
-                              type="text" 
-                              value={text} 
-                              onChange={(e) => updateItemText('prayers', id, e.target.value)} 
-                              placeholder="함께 기도할 제목..." 
-                              className={`flex-1 py-1.5 px-3 rounded-xl text-[12.5px] font-medium outline-none border ${ui.bgInput}`}
-                            />
-                            <button 
-                              onClick={() => removeItem('prayers', id)} 
-                              className="text-slate-400 hover:text-rose-500 p-1.5 cursor-pointer text-xs"
-                              title="삭제"
-                            >
-                              ✕
-                            </button>
-                          </div>
-
-                          {/* 🌟 기도 개별 보내기 버튼 */}
-                          {text && text.trim() && (
-                            <div className="flex justify-end gap-1.5 pl-6">
-                              <button
-                                onClick={() => handleSendPrayerToBox(text)}
-                                className="px-2.5 py-1 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400 hover:bg-purple-500 hover:text-white text-[10.5px] font-bold flex items-center gap-1 transition-all cursor-pointer"
-                              >
-                                <IconShare /> 기도함으로
-                              </button>
-                              <button
-                                onClick={() => handleSendPrayerToCell(text)}
-                                className="px-2.5 py-1 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500 hover:text-white text-[10.5px] font-bold flex items-center gap-1 transition-all cursor-pointer"
-                              >
-                                <IconShare /> 목장으로
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
-
-              {/* 가족 칭찬 릴레이 (프라이빗 전용) */}
-              {isPriv && (
-                <div className={`p-3.5 rounded-2xl border ${ui.border} ${ui.bgCard} shadow-xs flex flex-col gap-2.5`}>
-                  <div className="flex justify-between items-center">
-                    <span className="text-[12.5px] font-black flex items-center gap-1.5 text-amber-500">
-                      <IconSmile /> 서로 칭찬하고 축복하기
+          {/* ========================================================================= */}
+          {/* MODE A: 7단계 실전 온 가족 예배 인도 모드 (누구나 쉽게 드리는 가이드)       */}
+          {/* ========================================================================= */}
+          {familyMode === 'liturgy' ? (
+            <div className="flex-1 overflow-y-auto p-3 sm:p-5 hide-scrollbar">
+              <div className="max-w-2xl mx-auto space-y-4">
+                
+                {/* 상단 인도자 안내 바 */}
+                <div className={`p-4 rounded-2xl border ${ui.card} flex justify-between items-center bg-gradient-to-r from-amber-500/10 via-rose-500/10 to-indigo-500/10`}>
+                  <div>
+                    <span className="text-[10px] font-mono font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest block">
+                      FAMILY WORSHIP LITURGY · STEP {liturgyStep} / 7
                     </span>
-                    <button 
-                      onClick={() => addItem('goodDeeds')} 
-                      className="px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-500 hover:bg-amber-500 hover:text-white text-[11px] font-black transition-colors cursor-pointer"
+                    <h2 className="text-[15.5px] font-black text-slate-900 dark:text-white mt-0.5">
+                      {LITURGY_STEPS[liturgyStep - 1].title}
+                    </h2>
+                  </div>
+
+                  <span className="px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 font-bold text-xs">
+                    담당: {LITURGY_STEPS[liturgyStep - 1].role}
+                  </span>
+                </div>
+
+                {/* 스텝 인디케이터 바 */}
+                <div className="grid grid-cols-7 gap-1">
+                  {LITURGY_STEPS.map(s => (
+                    <button
+                      key={s.step}
+                      onClick={() => setLiturgyStep(s.step)}
+                      className={`py-1.5 rounded-lg text-center text-[10px] font-mono font-bold transition-all cursor-pointer ${
+                        liturgyStep === s.step
+                          ? 'bg-amber-500 text-white shadow-xs scale-105'
+                          : s.step < liturgyStep
+                          ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                          : 'bg-slate-100 dark:bg-white/5 text-slate-400'
+                      }`}
                     >
-                      + 칭찬 추가
+                      {s.step}단계
+                    </button>
+                  ))}
+                </div>
+
+                {/* 현재 단계 합독/인도 카드 */}
+                <div className={`p-6 rounded-3xl border shadow-sm ${ui.card} space-y-4`}>
+                  <div className="flex justify-between items-center border-b pb-2.5 border-slate-100 dark:border-white/10">
+                    <span className="text-xs font-bold text-slate-400 flex items-center gap-1.5">
+                      <IconVolume /> 인도자 안내 & 가족 함께 낭독
+                    </span>
+                    <span className="text-xs font-mono font-bold text-amber-500">
+                      Step {liturgyStep} of 7
+                    </span>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-amber-50/50 dark:bg-black/30 border border-amber-200/60 dark:border-white/10">
+                    <p className="text-[14.5px] font-serif leading-[2.1] whitespace-pre-wrap font-bold text-slate-800 dark:text-slate-100 break-keep">
+                      {LITURGY_STEPS[liturgyStep - 1].script}
+                    </p>
+                  </div>
+
+                  {/* 단계별 네비게이션 버튼 */}
+                  <div className="flex justify-between items-center pt-2">
+                    <button
+                      disabled={liturgyStep === 1}
+                      onClick={() => setLiturgyStep(p => Math.max(1, p - 1))}
+                      className="px-4 py-2 rounded-xl text-xs font-bold border border-slate-200 dark:border-white/10 text-slate-500 disabled:opacity-30 cursor-pointer"
+                    >
+                      ◀ 이전 순서
+                    </button>
+
+                    {liturgyStep < 7 ? (
+                      <button
+                        onClick={() => setLiturgyStep(p => Math.min(7, p + 1))}
+                        className="px-6 py-2.5 rounded-xl text-xs font-black bg-amber-600 hover:bg-amber-500 text-white shadow-md active:scale-95 transition-all cursor-pointer"
+                      >
+                        다음 순서로 진행 ▶
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleExecuteComplete}
+                        className="px-6 py-2.5 rounded-xl text-xs font-black bg-emerald-600 hover:bg-emerald-500 text-white shadow-md active:scale-95 transition-all cursor-pointer flex items-center gap-1.5"
+                      >
+                        <IconCheck /> 예배 완료 및 은혜 저장 🎉
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          ) : (
+            /* ========================================================================= */
+            /* MODE B: ✍️ 예배 작성 및 데이터 연동 모드                                   */
+            /* ========================================================================= */
+            <div className="flex-1 overflow-y-auto p-3 sm:p-4 hide-scrollbar">
+              <div className="max-w-3xl mx-auto flex flex-col gap-3">
+                
+                {/* 오늘의 말씀 컴팩트 카드 & 릴스 변환 버튼[cite: 19] */}
+                <div className={`p-4 rounded-2xl border ${ui.border} ${ui.bgCard} shadow-xs text-center flex flex-col items-center justify-center relative overflow-hidden`}>
+                  <div className="flex justify-between items-center w-full mb-1">
+                    <span className="text-[10.5px] font-bold text-amber-500 dark:text-amber-400 tracking-wider uppercase">
+                      오늘의 가정예배 말씀
+                    </span>
+                    <button
+                      onClick={() => handleExportToReels(safeFamVerse.text)}
+                      className="px-2 py-0.5 rounded text-[10.5px] font-black text-rose-500 hover:underline flex items-center gap-1 cursor-pointer"
+                      title="이 말씀으로 3초 릴스 제작"
+                    >
+                      <span>🎬</span> 릴스 변환
                     </button>
                   </div>
 
-                  <div className="space-y-2">
-                    {deedList.length === 0 ? (
+                  <p className="text-[15px] font-bold leading-relaxed text-slate-900 dark:text-white break-keep max-w-xl">
+                    "{safeFamVerse.text}"
+                  </p>
+                  <span className="text-[11.5px] font-bold text-slate-400 mt-1 font-mono">
+                    {safeFamVerse.ref}
+                  </span>
+                </div>
+
+                {/* 1-Click 오토풀링 (내 QT 묵상 자동 채우기)[cite: 19] */}
+                <div className="p-3 rounded-xl border border-indigo-500/20 bg-indigo-50/40 dark:bg-indigo-950/20 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="text-indigo-500"><IconSparkles /></span>
+                    <span className="text-[11.5px] font-bold text-slate-700 dark:text-slate-300 truncate">
+                      오늘 아침 묵상한 QT 은혜를 말씀 나눔에 즉시 채웁니다
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      let pulledQt = '';
+                      try {
+                        const qtDaily = JSON.parse(localStorage.getItem('qt_daily') || '{}');
+                        const todayRec = qtDaily[safeDate] || {};
+                        pulledQt = todayRec.qtMeditation || todayRec.qtGraceLine || todayRec.qtApplication || '';
+                      } catch(e) {}
+
+                      if (!pulledQt) {
+                        pulledQt = "오늘 하루도 주님의 말씀을 기준 삼아 가정 안에서 서로를 배려하고 사랑으로 품겠습니다.";
+                      }
+
+                      updateData(p => ({ ...p, wordMeditation: pulledQt }));
+                      showToast("🌿 오늘의 QT 묵상이 채워졌습니다!");
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[11px] shrink-0 cursor-pointer active:scale-95 transition-all shadow-xs"
+                  >
+                    QT 불러오기
+                  </button>
+                </div>
+
+                {/* 참석자 및 역할 분담 입력창[cite: 19] */}
+                <div className={`p-3.5 rounded-2xl border ${ui.border} ${ui.bgCard} shadow-xs flex flex-col gap-2.5`}>
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-slate-400 shrink-0"><IconGroup /></span>
+                    <span className="text-[12.5px] font-bold text-slate-700 dark:text-slate-300 shrink-0">예배 참석자:</span>
+                    <input 
+                      type="text" 
+                      value={safeData.attendees || ''} 
+                      onChange={(e) => updateData(p => ({ ...p, attendees: e.target.value }))} 
+                      placeholder="예: 온 가족, 아빠, 엄마, 은우" 
+                      className={`flex-1 py-1 px-2.5 rounded-lg text-[13px] font-bold outline-none border ${ui.bgInput}`}
+                    />
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 pt-1 border-t border-dashed border-slate-100 dark:border-white/5 text-[11px]">
+                    <span className="text-slate-400 font-bold self-center">예배 역할 분담:</span>
+                    <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300">
+                      인도: <b>{familyRoles.leader}</b>
+                    </span>
+                    <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300">
+                      기도: <b>{familyRoles.prayer}</b>
+                    </span>
+                    <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300">
+                      봉독: <b>{familyRoles.reader}</b>
+                    </span>
+                  </div>
+                </div>
+
+                {/* 말씀 묵상 나누기 (스페이스바 성경 구절 자동완성 적용)[cite: 19] */}
+                <div className={`p-3.5 rounded-2xl border ${ui.border} ${ui.bgCard} shadow-xs flex flex-col gap-2`}>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[12.5px] font-black flex items-center gap-1.5 text-slate-900 dark:text-white">
+                      <IconBook /> 말씀 묵상 나눔
+                    </span>
+                    <span className="text-[11px] text-slate-400">구절(예: 요3:16) 입력 후 스페이스바</span>
+                  </div>
+                  <textarea 
+                    value={safeData.wordMeditation || ''} 
+                    onChange={(e) => updateData(p => ({ ...p, wordMeditation: e.target.value }))} 
+                    onKeyDown={(e) => handleWordKeyDown(e, safeData.wordMeditation || '', (txt) => updateData(p => ({ ...p, wordMeditation: txt })))}
+                    placeholder="말씀을 읽고 가족과 나눈 은혜를 기록하세요. 성경 구절(예: 창1:1, 요3:16)을 입력하고 스페이스바를 누르면 본문이 자동 입력됩니다." 
+                    rows={4} 
+                    className={`w-full p-3 rounded-xl text-[13px] font-medium resize-none outline-none border leading-relaxed ${ui.bgInput}`}
+                  />
+                  {safeData.wordMeditation && safeData.wordMeditation.trim() && (
+                    <div className="flex justify-end gap-1.5 pt-1">
+                      <button
+                        onClick={() => handleExportToApplyTracker(safeData.wordMeditation)}
+                        className="px-2.5 py-1 rounded-lg bg-sky-500/10 text-sky-600 dark:text-sky-400 hover:bg-sky-500 hover:text-white text-[10.5px] font-bold flex items-center gap-1 transition-all cursor-pointer"
+                      >
+                        <IconTarget /> 삶의 실천 트래커로 이관
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* 가족 감사 나눔 (QnA 형태 + 보내기 버튼 탑재)[cite: 19] */}
+                <div className={`p-3.5 rounded-2xl border ${ui.border} ${ui.bgCard} shadow-xs flex flex-col gap-2.5`}>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[12.5px] font-black flex items-center gap-1.5 text-rose-500">
+                      <IconHeart /> 가족 감사 나눔 ({thanksList.length})
+                    </span>
+                    <button 
+                      onClick={() => addItem('thanks')} 
+                      className="px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white text-[11px] font-black transition-colors cursor-pointer"
+                    >
+                      + 감사 추가
+                    </button>
+                  </div>
+
+                  <div className="space-y-2.5">
+                    {thanksList.length === 0 ? (
                       <div className="py-5 text-center text-slate-400 text-[12px]">
-                        가족들에게 전할 따뜻한 칭찬 한마디를 적어보세요.
+                        오늘 가족에게, 그리고 하나님께 감사했던 일들을 한 줄씩 나눠보세요.
                       </div>
                     ) : (
-                      deedList.map((gd, idx) => {
-                        const id = typeof gd === 'object' ? gd.id : idx;
-                        const text = typeof gd === 'object' ? gd.text : String(gd);
+                      thanksList.map((th, idx) => {
+                        const id = typeof th === 'object' ? th.id : idx;
+                        const text = typeof th === 'object' ? th.text : String(th);
                         return (
-                          <div key={id} className="flex gap-2 items-center">
-                            <input 
-                              type="text" 
-                              value={text} 
-                              onChange={(e) => updateItemText('goodDeeds', id, e.target.value)} 
-                              placeholder="누구에게 전하는 칭찬인가요?" 
-                              className={`flex-1 py-1.5 px-3 rounded-xl text-[12.5px] font-medium outline-none border ${ui.bgInput}`}
-                            />
-                            <button 
-                              onClick={() => removeItem('goodDeeds', id)} 
-                              className="text-slate-400 hover:text-rose-500 p-1.5 cursor-pointer text-xs"
-                            >
-                              ✕
-                            </button>
+                          <div key={id} className="flex flex-col gap-1.5 p-2.5 rounded-xl bg-slate-50/70 dark:bg-black/20 border border-slate-200/60 dark:border-white/5">
+                            <div className="flex gap-2 items-center">
+                              <span className="text-[11px] font-mono font-bold text-slate-400 w-4 text-center">{idx + 1}</span>
+                              <input 
+                                type="text" 
+                                value={text} 
+                                onChange={(e) => updateItemText('thanks', id, e.target.value)} 
+                                placeholder="오늘 감사했던 점..." 
+                                className={`flex-1 py-1.5 px-3 rounded-xl text-[12.5px] font-medium outline-none border ${ui.bgInput}`}
+                              />
+                              <button 
+                                onClick={() => removeItem('thanks', id)} 
+                                className="text-slate-400 hover:text-rose-500 p-1.5 cursor-pointer text-xs"
+                                title="삭제"
+                              >
+                                ✕
+                              </button>
+                            </div>
+
+                            {/* 감사 다차원 분기 전송 버튼군[cite: 19] */}
+                            {text && text.trim() && (
+                              <div className="flex justify-end gap-1.5 pl-6 flex-wrap">
+                                <button
+                                  onClick={() => handleSendThanksToDiary(text)}
+                                  className="px-2 py-0.8 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500 hover:text-white text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer"
+                                >
+                                  <IconHeart /> 감사일기로
+                                </button>
+                                <button
+                                  onClick={() => handleSendThanksToCell(text)}
+                                  className="px-2 py-0.8 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500 hover:text-white text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer"
+                                >
+                                  <IconUsers /> 목장으로
+                                </button>
+                                <button
+                                  onClick={() => handleExportToReels(text)}
+                                  className="px-2 py-0.8 rounded-lg text-rose-500 hover:underline text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer"
+                                >
+                                  <span>🎬</span> 릴스
+                                </button>
+                              </div>
+                            )}
                           </div>
                         );
                       })
                     )}
                   </div>
                 </div>
-              )}
 
-              {/* 하단 완료 및 저장 버튼 */}
-              <div className="pt-2 pb-12 flex gap-2.5">
-                <button 
-                  onClick={handleExecuteComplete} 
-                  className={`w-full py-3.5 rounded-xl font-black text-[13.5px] shadow-sm active:scale-[0.99] transition-all flex items-center justify-center gap-1.5 cursor-pointer ${ui.btnPrimary}`}
-                >
-                  <IconCheck /> 오늘의 가정예배 완료하기
-                </button>
+                {/* 가족 기도 제목 (QnA 형태 + 보내기 버튼 탑재)[cite: 19] */}
+                <div className={`p-3.5 rounded-2xl border ${ui.border} ${ui.bgCard} shadow-xs flex flex-col gap-2.5`}>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[12.5px] font-black flex items-center gap-1.5 text-purple-500">
+                      <IconPray /> 가족 기도 제목 ({prayerList.length})
+                    </span>
+                    <button 
+                      onClick={() => addItem('prayers')} 
+                      className="px-2.5 py-1 rounded-lg bg-purple-500/10 text-purple-500 hover:bg-purple-500 hover:text-white text-[11px] font-black transition-colors cursor-pointer"
+                    >
+                      + 기도 추가
+                    </button>
+                  </div>
+
+                  <div className="space-y-2.5">
+                    {prayerList.length === 0 ? (
+                      <div className="py-5 text-center text-slate-400 text-[12px]">
+                        가족을 위한 중보기도 제목과 삶의 문제를 기록하세요.
+                      </div>
+                    ) : (
+                      prayerList.map((pr, idx) => {
+                        const id = typeof pr === 'object' ? pr.id : idx;
+                        const text = typeof pr === 'object' ? pr.text : String(pr);
+                        return (
+                          <div key={id} className="flex flex-col gap-1.5 p-2.5 rounded-xl bg-slate-50/70 dark:bg-black/20 border border-slate-200/60 dark:border-white/5">
+                            <div className="flex gap-2 items-center">
+                              <span className="text-[11px] font-mono font-bold text-slate-400 w-4 text-center">{idx + 1}</span>
+                              <input 
+                                type="text" 
+                                value={text} 
+                                onChange={(e) => updateItemText('prayers', id, e.target.value)} 
+                                placeholder="함께 손잡고 기도할 제목..." 
+                                className={`flex-1 py-1.5 px-3 rounded-xl text-[12.5px] font-medium outline-none border ${ui.bgInput}`}
+                              />
+                              <button 
+                                onClick={() => removeItem('prayers', id)} 
+                                className="text-slate-400 hover:text-rose-500 p-1.5 cursor-pointer text-xs"
+                                title="삭제"
+                              >
+                                ✕
+                              </button>
+                            </div>
+
+                            {/* 기도 다차원 분기 전송 버튼군[cite: 19] */}
+                            {text && text.trim() && (
+                              <div className="flex justify-end gap-1.5 pl-6 flex-wrap">
+                                <button
+                                  onClick={() => handleSendPrayerToBox(text)}
+                                  className="px-2 py-0.8 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400 hover:bg-purple-500 hover:text-white text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer"
+                                >
+                                  <IconPray /> 기도함으로
+                                </button>
+                                <button
+                                  onClick={() => handleSendPrayerToCell(text)}
+                                  className="px-2 py-0.8 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500 hover:text-white text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer"
+                                >
+                                  <IconUsers /> 목장으로
+                                </button>
+                                <button
+                                  onClick={() => handleExportToApplyTracker(text)}
+                                  className="px-2 py-0.8 rounded-lg bg-sky-500/10 text-sky-600 dark:text-sky-400 hover:bg-sky-500 hover:text-white text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer"
+                                >
+                                  <IconTarget /> 실천으로
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+
+                {/* 가족 칭찬 릴레이 (프라이빗 전용)[cite: 19] */}
+                {isPriv && (
+                  <div className={`p-3.5 rounded-2xl border ${ui.border} ${ui.bgCard} shadow-xs flex flex-col gap-2.5`}>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[12.5px] font-black flex items-center gap-1.5 text-amber-500">
+                        <IconSmile /> 서로 칭찬하고 축복하기
+                      </span>
+                      <button 
+                        onClick={() => addItem('goodDeeds')} 
+                        className="px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-500 hover:bg-amber-500 hover:text-white text-[11px] font-black transition-colors cursor-pointer"
+                      >
+                        + 칭찬 추가
+                      </button>
+                    </div>
+
+                    <div className="space-y-2">
+                      {deedList.length === 0 ? (
+                        <div className="py-5 text-center text-slate-400 text-[12px]">
+                          가족들에게 전할 따뜻한 칭찬 한마디를 적어보세요.
+                        </div>
+                      ) : (
+                        deedList.map((gd, idx) => {
+                          const id = typeof gd === 'object' ? gd.id : idx;
+                          const text = typeof gd === 'object' ? gd.text : String(gd);
+                          return (
+                            <div key={id} className="flex gap-2 items-center">
+                              <input 
+                                type="text" 
+                                value={text} 
+                                onChange={(e) => updateItemText('goodDeeds', id, e.target.value)} 
+                                placeholder="누구에게 전하는 칭찬인가요?" 
+                                className={`flex-1 py-1.5 px-3 rounded-xl text-[12.5px] font-medium outline-none border ${ui.bgInput}`}
+                              />
+                              <button 
+                                onClick={() => removeItem('goodDeeds', id)} 
+                                className="text-slate-400 hover:text-rose-500 p-1.5 cursor-pointer text-xs"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* 하단 완료 및 저장 버튼[cite: 19] */}
+                <div className="pt-2 pb-12 flex gap-2.5">
+                  <button 
+                    onClick={handleExecuteComplete} 
+                    className={`w-full py-3.5 rounded-xl font-black text-[13.5px] shadow-sm active:scale-[0.99] transition-all flex items-center justify-center gap-1.5 cursor-pointer ${ui.btnPrimary}`}
+                  >
+                    <IconCheck /> 오늘의 가정예배 완료하기
+                  </button>
+                </div>
+
               </div>
-
             </div>
-          </div>
+          )}
+
         </div>
       );
     }
