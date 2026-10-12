@@ -33,7 +33,7 @@ const BIBLE_BOOKS_ORDER = Array.from(new Set(Object.values(BIBLE_ABBREV_MAP)));
 const BIBLE_KEYS = Object.keys(BIBLE_ABBREV_MAP).sort((a, b) => b.length - a.length).join('|');
 const BIBLE_VERSE_SINGLE_REGEX = new RegExp(`(?:^|[^가-힣])(${BIBLE_KEYS})\\s*(\\d+)\\s*(?:장|편|:)\\s*(\\d+)?(?:\\s*(?:-|~)\\s*(\\d+))?(?:절)?`);
 
-// 성경 7대 문맥 분류군 (Canonical Groups)
+// 성경 7대 문맥 분류군
 const BIBLE_CANON_GROUPS = {
   "모세오경": ["창세기", "출애굽기", "레위기", "민수기", "신명기"],
   "역사서": ["여호수아", "사사기", "룻기", "사무엘상", "사무엘하", "열왕기상", "열왕기하", "역대상", "역대하", "에스라", "느헤미야", "에스더"],
@@ -57,6 +57,55 @@ const getCanonGroup = (bookName) => {
   }
   return "기타";
 };
+
+// 💡 [핵심] 8자리 연속 날짜(20261004) 및 정규 날짜 완벽 추출기
+function extractStandardDate(rec, title, raw) {
+  if (rec.date && /^\d{4}-\d{2}-\d{2}$/.test(rec.date)) return rec.date;
+
+  const targetStr = `${title || ''} ${rec.filename || ''} ${rec.date || ''} ${raw ? raw.slice(0, 300) : ''}`;
+  
+  // 1) 20261004 (8자리 연속)
+  const compactMatch = targetStr.match(/20\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])/);
+  if (compactMatch) {
+    const s = compactMatch[0];
+    return `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}`;
+  }
+
+  // 2) 2026-10-04, 2026.10.04, 2026_10_04, 2026/10/04
+  const sepMatch = targetStr.match(/(20\d{2})[-._/](\d{1,2})[-._/](\d{1,2})/);
+  if (sepMatch) {
+    return `${sepMatch[1]}-${sepMatch[2].padStart(2, '0')}-${sepMatch[3].padStart(2, '0')}`;
+  }
+
+  // 3) 2026년 10월 4일
+  const korMatch = targetStr.match(/(20\d{2})\s*년\s*(\d{1,2})\s*월\s*(\d{1,2})\s*일?/);
+  if (korMatch) {
+    return `${korMatch[1]}-${korMatch[2].padStart(2, '0')}-${korMatch[3].padStart(2, '0')}`;
+  }
+
+  return rec.date || "2026-01-01";
+}
+
+// 💡 날짜 문자열로부터 연간 주차(1~52주) 수학적 정밀 산출
+function getWeekNumber(dateStr) {
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return null;
+  const startOfYear = new Date(d.getFullYear(), 0, 1);
+  const diffDays = Math.floor((d - startOfYear) / 86400000);
+  const week = Math.floor((diffDays + startOfYear.getDay()) / 7) + 1;
+  return Math.min(52, Math.max(1, week));
+}
+
+// 주차 번호에 해당하는 시작일~종료일 텍스트 반환
+function getWeekDateRange(year, weekNum) {
+  const jan1 = new Date(year, 0, 1);
+  const startDayOffset = jan1.getDay();
+  const firstWeekStart = new Date(year, 0, 1 - startDayOffset);
+  const weekStart = new Date(firstWeekStart.getTime() + (weekNum - 1) * 7 * 86400000);
+  const weekEnd = new Date(weekStart.getTime() + 6 * 86400000);
+  const fmt = (d) => `${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+  return `${fmt(weekStart)}~${fmt(weekEnd)}`;
+}
 
 function parseBibleReference(text) {
   if (!text) return null;
@@ -116,7 +165,7 @@ function decodeHtmlEntities(str) {
     .replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(parseInt(dec, 10)));
 }
 
-// 모던 미니멀 벡터 아이콘
+// 아이콘 콤포넌트
 const StrokeW = "1.8";
 const IconArrowLeft = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>;
 const IconCheck = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>;
@@ -131,7 +180,6 @@ const IconSearch = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2.2} 
 const IconShare = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={StrokeW} stroke="currentColor" className="w-3.5 h-3.5"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>;
 const IconVolume = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.757 3.63 8.25 4.51 8.25H6.75z" /></svg>;
 
-// 제자훈련 12주차 마스터 코스
 const DISCIPLESHIP_12WEEKS_CURRICULUM = {
   1: {
     title: "구원론 (Soteriology): 칭의와 전가된 의",
@@ -328,7 +376,7 @@ const SermonContentParser = ({ text, searchTerm, isDark, onVerseClick, onOpenInt
               if (onOpenInterlinear) onOpenInterlinear(baseBook, activeChapter, vNum);
             }}
             className="px-2 py-0.8 rounded-md text-[10.5px] font-semibold border bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 shrink-0 flex items-center gap-1 cursor-pointer shadow-2xs active:scale-95 transition-all"
-            title="원어 분해 및 10대 학술 사료 팝업 열기"
+            title="원어 분해 팝업 열기"
           >
             <span>📖</span> 원어
           </button>
@@ -384,7 +432,6 @@ const SermonCard = ({ record, searchTerm, onNavigateVerse, setSelectedTag, onVer
 
   return (
     <div className={`p-4 sm:p-5 rounded-2xl border text-left transition-all overflow-hidden break-words ${isDark ? 'bg-[#111827] border-[#1f2937] shadow-xs' : 'bg-white border-slate-200/80 shadow-xs'}`}>
-      
       <div className="flex justify-between items-center pb-2.5 border-b border-dashed border-slate-200 dark:border-white/10 gap-2">
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="px-2 py-0.5 rounded-md text-[10.5px] font-mono font-bold bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-stone-400">
@@ -403,7 +450,7 @@ const SermonCard = ({ record, searchTerm, onNavigateVerse, setSelectedTag, onVer
             type="button"
             onClick={() => onOpenInterlinear && onOpenInterlinear(activeReference.book, activeReference.chapter, activeReference.verse)}
             className="px-2 py-1 rounded-md text-[10.5px] font-bold border flex items-center gap-1 transition-all cursor-pointer bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 shadow-2xs"
-            title="원어 분해 및 10대 학술 사료 팝업 열기"
+            title="원어 분해 팝업 열기"
           >
             <span>🔬</span> 원어 연동
           </button>
@@ -472,9 +519,7 @@ const SermonCard = ({ record, searchTerm, onNavigateVerse, setSelectedTag, onVer
   );
 };
 
-// =====================================================================
 // 원어 성경 인라인 연동 팝업 모달
-// =====================================================================
 const InterlinearQuickModal = ({ target, onClose, onJumpStudio, getBibleText, isDark }) => {
   const [words, setWords] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -504,10 +549,7 @@ const InterlinearQuickModal = ({ target, onClose, onJumpStudio, getBibleText, is
 
     const fetchWords = async () => {
       try {
-        if (!supabase) {
-          throw new Error("Supabase 연결 객체를 찾을 수 없습니다.");
-        }
-
+        if (!supabase) throw new Error("Supabase 연결 객체를 찾을 수 없습니다.");
         const { data, error } = await supabase
           .from('interlinear_bible')
           .select('*')
@@ -527,7 +569,6 @@ const InterlinearQuickModal = ({ target, onClose, onJumpStudio, getBibleText, is
         }
       } catch (err) {
         if (isMounted) {
-          console.error("원어 팝업 로드 오류:", err);
           setErrorMsg(err.message || "원어 데이터를 불러오지 못했습니다.");
           setLoading(false);
         }
@@ -545,7 +586,6 @@ const InterlinearQuickModal = ({ target, onClose, onJumpStudio, getBibleText, is
       <div className={`w-full max-w-2xl rounded-2xl border shadow-2xl flex flex-col max-h-[85vh] overflow-hidden ${
         isDark ? 'bg-[#0F141F] border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
       }`}>
-        
         <div className="px-4 py-3 border-b flex justify-between items-center shrink-0 border-slate-200 dark:border-slate-800">
           <div className="flex items-center gap-2 text-left">
             <span className="text-[12px] font-mono px-2 py-0.5 rounded font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
@@ -670,7 +710,6 @@ const InterlinearQuickModal = ({ target, onClose, onJumpStudio, getBibleText, is
             <span>🔬</span> 원어 연구실 전체 화면 이동 ➔
           </button>
         </div>
-
       </div>
     </div>
   );
@@ -685,6 +724,9 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
   const [selectedTag, setSelectedTag] = useState("all");
   const [filterMonth, setFilterMonth] = useState(""); 
   
+  // 🌟 연도 선택 상태 (기본 2026)
+  const [selectedYear, setSelectedYear] = useState("2026");
+  
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedWeek, setSelectedWeek] = useState(1);
   const [isSecretMode, setIsSecretMode] = useState(false);
@@ -693,6 +735,9 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
   const [popupVerse, setPopupVerse] = useState(null);
   const [popupVerseText, setPopupVerseText] = useState("");
   const [interlinearTarget, setInterlinearTarget] = useState(null);
+
+  // 주차 클릭 상세 팝업 상태 { weekNum, dateRange, sermons }
+  const [weekDetailModal, setWeekDetailModal] = useState(null);
 
   const [reportData, setReportData] = useState(() => {
     try {
@@ -803,7 +848,7 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
     }
   }, [popupVerse, getBibleTextLocal]);
 
-  // 설교 레코드 정밀 매핑
+  // 💡 [핵심] 설교 데이터 날짜 정밀 정규화 및 주차 인덱싱
   const enrichedSermonRecords = useMemo(() => {
     if (!sermonData) return [];
     let rawList = [];
@@ -811,7 +856,7 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
     else if (sermonData.sermons && Array.isArray(sermonData.sermons)) rawList = sermonData.sermons;
     else if (sermonData.index) Object.keys(sermonData.index).forEach(verse => (sermonData.index[verse] || []).forEach(rec => rawList.push(rec)));
 
-    const parsedJsonRecords = rawList.map((rec, index) => {
+    const parsed = rawList.map((rec, index) => {
       const raw = (rec.raw_text || (rec.paragraphs ? rec.paragraphs.join("\n") : "") || JSON.stringify(rec)).replace(/#말씀묵상/g, '');
       const title = rec.title || rec.filename || `설교 ${index + 1}`;
 
@@ -823,15 +868,11 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
 
       let tags = (rec.tags && rec.tags.length > 0 ? rec.tags : ["말씀묵상"]).filter(t => t !== '말씀묵상');
 
-      let dateMatch = raw.match(/20\d{2}[년.\s]+\d{1,2}[월.\s]+\d{1,2}[일]?/) || title.match(/20\d{2}[_.-]?\d{1,2}[_.-]?\d{1,2}/);
-      let date = rec.date || (dateMatch ? dateMatch[0] : "2026-01-01");
-      
-      date = date.replace(/[년월일]/g, '-').replace(/\s+/g, '').replace(/-$/, '').replace(/--/g, '-');
-      const parts = date.split('-');
-      if (parts.length === 3) {
-        date = `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
-      }
+      // 날짜 정밀 추출
+      const date = extractStandardDate(rec, title, raw);
       const timestamp = new Date(date).getTime() || 0;
+      const year = date.split('-')[0] || "2026";
+      const weekNum = getWeekNumber(date) || 1;
 
       const dayData = (dailyData && dailyData[date]) || {};
       const userQuestions = dayData.applyQuestions || [];
@@ -845,6 +886,8 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
         ...rec, 
         title, 
         date, 
+        year,
+        weekNum,
         preacher: rec.preacher || "담임목사",
         mappedVerse: rec.mappedVerse || detectedBook, 
         detectedBook, 
@@ -860,10 +903,88 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
       };
     });
 
-    return parsedJsonRecords.sort((a, b) => b.timestamp - a.timestamp);
+    return parsed.sort((a, b) => b.timestamp - a.timestamp);
   }, [sermonData, dailyData]);
 
-  // 고도화된 연간 분석 지표 집계 엔진
+  // 가용 연도 목록 추출
+  const availableYears = useMemo(() => {
+    const years = new Set(enrichedSermonRecords.map(r => r.year).filter(y => y && y.length === 4));
+    if (years.size === 0) years.add("2026");
+    return Array.from(years).sort().reverse();
+  }, [enrichedSermonRecords]);
+
+  // 선택된 연도의 설교만 필터
+  const yearFilteredRecords = useMemo(() => {
+    return enrichedSermonRecords.filter(r => r.year === selectedYear);
+  }, [enrichedSermonRecords, selectedYear]);
+
+  // 💡 [대변혁] 52주 연간 텔레메트리 주차별 실측 매트릭스 엔진
+  const { weekMatrix, quarterlyAnalytics } = useMemo(() => {
+    const sermonsByWeek = new Map();
+    yearFilteredRecords.forEach(s => {
+      const w = s.weekNum;
+      if (!sermonsByWeek.has(w)) sermonsByWeek.set(w, []);
+      sermonsByWeek.get(w).push(s);
+    });
+
+    // 1~52주 매트릭스 타일 배열
+    const matrix = Array.from({ length: 52 }, (_, i) => {
+      const weekNum = i + 1;
+      const dateRange = getWeekDateRange(selectedYear, weekNum);
+      const sermons = sermonsByWeek.get(weekNum) || [];
+      const quarter = Math.ceil(weekNum / 13);
+      return {
+        weekNum,
+        quarter,
+        dateRange,
+        sermons,
+        hasSermon: sermons.length > 0,
+        count: sermons.length,
+        primaryBook: sermons[0]?.detectedBook || null
+      };
+    });
+
+    // 분기별(Q1~Q4) 디테일 분리 분석
+    const quarters = [1, 2, 3, 4].map(q => {
+      const qWeeks = matrix.filter(w => w.quarter === q);
+      const qSermons = qWeeks.flatMap(w => w.sermons);
+      const qBooks = new Map();
+      const qThemes = new Map();
+      let qOT = 0, qNT = 0;
+
+      qSermons.forEach(s => {
+        qBooks.set(s.detectedBook, (qBooks.get(s.detectedBook) || 0) + 1);
+        if (isOTBook(s.detectedBook)) qOT++; else qNT++;
+        (s.theoTags || []).forEach(t => qThemes.set(t, (qThemes.get(t) || 0) + 1));
+      });
+
+      const topBooks = Array.from(qBooks.entries()).sort((a, b) => b[1] - a[1]);
+      const topThemes = Array.from(qThemes.entries()).sort((a, b) => b[1] - a[1]);
+      const totalS = qSermons.length;
+      const activeWeeks = qWeeks.filter(w => w.hasSermon).length;
+
+      return {
+        quarter: q,
+        name: `${q}분기 (${(q - 1) * 3 + 1}월 ~ ${q * 3}월)`,
+        weeksLabel: `${(q - 1) * 13 + 1}W ~ ${q * 13}W`,
+        totalSermons: totalS,
+        activeWeeks,
+        occupancyRate: Math.round((activeWeeks / 13) * 100),
+        otCount: qOT,
+        ntCount: qNT,
+        otRate: totalS > 0 ? Math.round((qOT / totalS) * 100) : 0,
+        ntRate: totalS > 0 ? Math.round((qNT / totalS) * 100) : 0,
+        topBook: topBooks[0]?.[0] || '미정',
+        topBookCount: topBooks[0]?.[1] || 0,
+        topTheme: topThemes[0]?.[0] || '미정',
+        topBooksList: topBooks.slice(0, 3)
+      };
+    });
+
+    return { weekMatrix: matrix, quarterlyAnalytics: quarters };
+  }, [yearFilteredRecords, selectedYear]);
+
+  // 연간 종합 통계 엔진 (선택 연도 기준)
   const { 
     bookList, tagList, citedVerseStats, stats, 
     trainingStats, aggregateHub, theologicalStats, 
@@ -872,11 +993,8 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
   } = useMemo(() => {
     const books = new Set(), tags = new Set(), citedVerses = new Map();
     let otCount = 0, ntCount = 0;
-    const currentYear = new Date().getFullYear().toString();
-    
     let word = 0, prayer = 0, fellowship = 0, ministry = 0, worship = 0;
     let totalQ = 0, completedQ = 0;
-    let qtCount = 0, thanksCount = 0, prayerCount = 0;
 
     const canonGroupCounts = {
       "모세오경": 0, "역사서": 0, "시가서": 0, "예언서": 0,
@@ -890,66 +1008,14 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
       totalLength: 0
     }));
 
-    try {
-      ['qt_daily', 'days_data', 'bible_progress', 'goodtree_qt_records'].forEach(k => {
-        const val = localStorage.getItem(k);
-        if (val) {
-          const parsed = JSON.parse(val);
-          if (Array.isArray(parsed)) qtCount += parsed.length;
-          else if (parsed && typeof parsed === 'object') {
-            Object.values(parsed).forEach(dayObj => {
-              if (dayObj && (dayObj.qt || dayObj.qtTitle || dayObj.qtMeditation || dayObj.checks?.QT || dayObj.checks?.QTin)) qtCount++;
-            });
-          }
-        }
-      });
-
-      ['goodtree_diary_entries', 'thanks_records'].forEach(k => {
-        const val = localStorage.getItem(k);
-        if (val) {
-          const parsed = JSON.parse(val);
-          if (Array.isArray(parsed)) thanksCount += parsed.length;
-          else if (parsed && typeof parsed === 'object') {
-            Object.values(parsed).forEach(dayObj => {
-              if (dayObj && (dayObj.thanksText || dayObj.thanks || dayObj.diary || dayObj.checks?.감사)) thanksCount++;
-            });
-          }
-        }
-      });
-
-      ['pb_global_prayers_v1', 'goodtree_global_prayers', 'prayer_records'].forEach(k => {
-        const val = localStorage.getItem(k);
-        if (val) {
-          const parsed = JSON.parse(val);
-          if (Array.isArray(parsed)) prayerCount += parsed.length;
-          else if (parsed && typeof parsed === 'object') {
-            Object.values(parsed).forEach(dayObj => {
-              if (dayObj && (dayObj.prayerReq || dayObj.prayers || dayObj.checks?.기도)) prayerCount++;
-            });
-          }
-        }
-      });
-    } catch(e) {}
-
-    if (dailyData) {
-      Object.values(dailyData).forEach(day => {
-        if (!day) return;
-        if (day.qt || day.qtText || day.qtData || day.qtTitle || day.qtMeditation || day.checks?.QT || day.checks?.QTin) qtCount++;
-        if (day.thanks?.length > 0 || day.diary || day.thanksText || day.checks?.감사) thanksCount++;
-        if (day.prayers?.length > 0 || day.prayerText || day.prayerReq || day.checks?.기도) prayerCount++;
-      });
-    }
-
     const themeCounts = {};
 
-    enrichedSermonRecords.forEach(rec => {
+    yearFilteredRecords.forEach(rec => {
       const book = rec.detectedBook || "기타";
       if (book !== '기타 말씀') {
         books.add(book);
         const grp = getCanonGroup(book);
-        if (canonGroupCounts[grp] !== undefined) {
-          canonGroupCounts[grp]++;
-        }
+        if (canonGroupCounts[grp] !== undefined) canonGroupCounts[grp]++;
       }
       if (Array.isArray(rec.tags)) rec.tags.forEach(t => { if (t !== '말씀묵상') tags.add(t); });
       if (Array.isArray(rec.citedVerses)) rec.citedVerses.forEach(v => citedVerses.set(v, (citedVerses.get(v) || 0) + 1));
@@ -957,16 +1023,13 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
         rec.theoTags.forEach(t => { themeCounts[t] = (themeCounts[t] || 0) + 1; });
       }
 
-      if (isOTBook(book)) otCount++;
-      else ntCount++;
+      if (isOTBook(book)) otCount++; else ntCount++;
 
-      if (rec.date && rec.date.startsWith(currentYear)) {
-         const m = parseInt(rec.date.split('-')[1], 10);
-         if (m >= 1 && m <= 12) {
-           monthlyPulse[m - 1].sermonCount++;
-           monthlyPulse[m - 1].verseCitations += (rec.citedVerses?.length || 0);
-           monthlyPulse[m - 1].totalLength += (rec.raw_text?.length || 0);
-         }
+      const m = parseInt(rec.date.split('-')[1], 10);
+      if (m >= 1 && m <= 12) {
+        monthlyPulse[m - 1].sermonCount++;
+        monthlyPulse[m - 1].verseCitations += (rec.citedVerses?.length || 0);
+        monthlyPulse[m - 1].totalLength += (rec.raw_text?.length || 0);
       }
 
       const qCount = rec.applyQuestions.length;
@@ -1002,7 +1065,6 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
       pct: Math.round((count / canonTotal) * 100)
     })).sort((a, b) => b.count - a.count);
 
-    // 💡 [TDZ 방어] 로컬 변수로 안전하게 사전 선언
     const sortedBooks = Array.from(books).sort();
     const sortedTags = Array.from(tags).sort();
 
@@ -1018,7 +1080,7 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
         completionRate: actionRate,
         currentWeek
       },
-      aggregateHub: { qtCount, thanksCount, prayerCount, sermonCount: enrichedSermonRecords.length },
+      aggregateHub: { sermonCount: yearFilteredRecords.length },
       theologicalStats: sortedThemes,
       canonCoverage,
       canonGroupStats,
@@ -1030,7 +1092,7 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
         topTheme: sortedThemes[0]?.[0] || '구원론'
       }
     };
-  }, [enrichedSermonRecords, dailyData]);
+  }, [yearFilteredRecords]);
 
   const currentWeekCurriculum = DISCIPLESHIP_12WEEKS_CURRICULUM[selectedWeek] || DISCIPLESHIP_12WEEKS_CURRICULUM[1];
   
@@ -1063,10 +1125,7 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
       return { 
         ...r, 
         relevanceScore: score, 
-        matchedKws: matchedKws.slice(0, 3),
-        applyQuestions: r.applyQuestions || [],
-        completedActions: r.completedActions || [],
-        actionMemos: r.actionMemos || {}
+        matchedKws: matchedKws.slice(0, 3)
       }; 
     });
 
@@ -1077,16 +1136,14 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
   }, [enrichedSermonRecords, currentWeekCurriculum]);
 
   const filteredRecords = useMemo(() => {
-    let results = enrichedSermonRecords.filter(rec => {
+    return enrichedSermonRecords.filter(rec => {
       const term = searchTerm.toLowerCase();
       const matchesSearch = !term || rec.title?.toLowerCase().includes(term) || rec.preacher?.toLowerCase().includes(term) || rec.date?.includes(term) || rec.detectedBook?.toLowerCase().includes(term) || rec.raw_text?.toLowerCase().includes(term);
       const matchesBook = selectedBook === 'all' || rec.detectedBook === selectedBook;
       const matchesTag = selectedTag === 'all' || (Array.isArray(rec.tags) && rec.tags.includes(selectedTag));
       const matchesDate = !filterMonth || rec.date.startsWith(filterMonth);
       return matchesSearch && matchesBook && matchesTag && matchesDate;
-    });
-
-    return results.sort((a, b) => b.timestamp - a.timestamp); 
+    }).sort((a, b) => b.timestamp - a.timestamp); 
   }, [enrichedSermonRecords, searchTerm, selectedBook, selectedTag, filterMonth]);
 
   if (loading) {
@@ -1153,11 +1210,34 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
       <main className="flex-1 overflow-y-auto hide-scrollbar px-3 sm:px-6 py-4 pb-28 w-full max-w-7xl mx-auto space-y-4">
         
         {/* ========================================================================= */}
-        {/* TAB 1: 연간 분석 대시보드 (관제센터 메인 스타일 초고도화)                  */}
+        {/* TAB 1: 연간 분석 대시보드 (관제센터 메인 스타일 고도화)                   */}
         {/* ========================================================================= */}
         {activeTab === 'dashboard' && (
           <div className="space-y-4 animate-fade-in w-full text-left">
             
+            {/* 0. 연도 셀렉터 컨트롤 바 */}
+            <div className={`p-3 rounded-xl border flex justify-between items-center ${isDark ? 'bg-[#111827] border-[#1f2937]' : 'bg-white border-slate-200/90 shadow-2xs'}`}>
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span className="text-xs font-bold text-slate-700 dark:text-gray-200">연간 분석 기준 연도</span>
+              </div>
+              <div className="flex gap-1">
+                {availableYears.map(y => (
+                  <button
+                    key={y}
+                    onClick={() => setSelectedYear(y)}
+                    className={`px-3 py-1 rounded-md text-xs font-mono font-bold transition-all cursor-pointer ${
+                      selectedYear === y 
+                        ? (isDark ? 'bg-blue-600 text-white' : 'bg-slate-900 text-white')
+                        : (isDark ? 'bg-slate-800 text-gray-400 hover:text-white' : 'bg-slate-100 text-slate-600 hover:text-slate-900')
+                    }`}
+                  >
+                    {y}년도
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* 1. 관제 벤토 인디케이터 그리드 (4대 핵심 KPI) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
               
@@ -1191,7 +1271,7 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
                     <span className="text-[10px] font-mono text-slate-400 dark:text-gray-400 uppercase tracking-widest">CANON DENSITY</span>
                     <span className="text-[10.5px] font-mono text-sky-600 dark:text-sky-400 font-bold">{bookList.length} / 66 Books</span>
                   </div>
-                  <h3 className="text-[13.5px] font-bold text-slate-700 dark:text-gray-300 mt-1">성경 66권 강해 커버리지</h3>
+                  <h3 className="text-[13.5px] font-bold text-slate-700 dark:text-gray-300 mt-1">{selectedYear} 강해 커버리지</h3>
                   <div className="flex items-baseline gap-1 mt-2">
                     <span className="text-[32px] font-mono font-black text-sky-600 dark:text-sky-400">{canonCoverage}</span>
                     <span className="text-[13px] font-bold text-slate-400 dark:text-gray-500 font-mono">%</span>
@@ -1228,7 +1308,7 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
                   </div>
                   <div className="mt-2 text-[11px] text-slate-500 dark:text-gray-400 flex justify-between items-center">
                     <span>언약의 연속성 대조</span>
-                    <span className="font-mono text-purple-600 dark:text-purple-300 font-bold">신약 복음 중심</span>
+                    <span className="font-mono text-purple-600 dark:text-purple-300 font-bold">복음 중심 밸런스</span>
                   </div>
                 </div>
               </div>
@@ -1259,15 +1339,15 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
 
             </div>
 
-            {/* 2. 52주 연간 설교 텔레메트리 히트맵 매트릭스 (13열 고정 인라인 그리드 적용) */}
+            {/* 2. 💡 [핵심] 실제 날짜 기반 52주 연간 설교 텔레메트리 히트맵 매트릭스 */}
             <div className={`p-4 sm:p-5 rounded-xl border ${isDark ? 'bg-[#111827] border-[#1f2937]' : 'bg-white border-slate-200/90 shadow-xs'}`}>
               <div className="flex flex-wrap justify-between items-center pb-3 border-b border-slate-200 dark:border-slate-800 gap-2">
                 <div>
                   <h3 className="text-[14.5px] font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-sky-500"></span> 52주 연간 설교 텔레메트리 히트맵 매트릭스
+                    <span className="w-2 h-2 rounded-full bg-sky-500"></span> {selectedYear}년 52주 연간 설교 텔레메트리 히트맵 매트릭스
                   </h3>
                   <p className="text-[11px] text-slate-500 dark:text-gray-400 mt-0.5">
-                    1년 52주 강해 본문 배치 밀도 및 분기별(Q1~Q4) 담론 연속성 매트릭스 (클릭 시 해당 설교 본문 즉시 필터링)
+                    실제 선포 일자 기준 1~52주 배치 밀도 및 분기별(Q1~Q4) 담론 연속성 (주차 타일 클릭 시 해당 주간 설교 전문 팝업)
                   </p>
                 </div>
                 
@@ -1278,18 +1358,17 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
                 </div>
               </div>
 
-              {/* 52주 분기별 그리드 (13칸 균등 인라인 그리드 완벽 고정) */}
+              {/* 52주 분기별 그리드 (13열 인라인 고정) */}
               <div className="pt-3.5 space-y-3">
                 {[
-                  { quarter: "Q1", range: [1, 13], label: "1분기 (1W ~ 13W)" },
-                  { quarter: "Q2", range: [14, 26], label: "2분기 (14W ~ 26W)" },
-                  { quarter: "Q3", range: [27, 39], label: "3분기 (27W ~ 39W)" },
-                  { quarter: "Q4", range: [40, 52], label: "4분기 (40W ~ 52W)" }
+                  { quarter: 1, range: [1, 13], label: "1분기 (1W ~ 13W)" },
+                  { quarter: 2, range: [14, 26], label: "2분기 (14W ~ 26W)" },
+                  { quarter: 3, range: [27, 39], label: "3분기 (27W ~ 39W)" },
+                  { quarter: 4, range: [40, 52], label: "4분기 (40W ~ 52W)" }
                 ].map(({ quarter, range, label }) => (
                   <div key={quarter} className="flex flex-col sm:flex-row sm:items-center gap-2">
                     <span className="text-[11px] font-mono font-bold text-sky-600 dark:text-sky-400 w-28 shrink-0">{label}</span>
                     
-                    {/* 💡 13열 완벽 고정 그리드 */}
                     <div 
                       className="flex-1 w-full"
                       style={{ 
@@ -1300,33 +1379,34 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
                     >
                       {Array.from({ length: 13 }, (_, idx) => {
                         const weekNum = range[0] + idx;
-                        const matchingSermon = enrichedSermonRecords[(weekNum - 1) % (enrichedSermonRecords.length || 1)];
-                        const hasSermon = !!matchingSermon;
+                        const tileData = weekMatrix[weekNum - 1];
+                        const hasSermon = tileData && tileData.hasSermon;
 
                         return (
                           <button
                             key={weekNum}
                             type="button"
                             onClick={() => {
-                              if (matchingSermon) {
-                                setSearchTerm(matchingSermon.date);
-                                setActiveTab('list');
+                              if (hasSermon) {
+                                setWeekDetailModal(tileData);
                               }
                             }}
                             className={`p-1 sm:p-1.5 rounded-lg border text-center transition-all cursor-pointer flex flex-col items-center justify-between min-h-[46px] select-none ${
                               hasSermon
                                 ? (isDark
-                                    ? 'bg-slate-800/90 hover:bg-sky-950/60 border-slate-700 hover:border-sky-400 text-sky-300'
-                                    : 'bg-white hover:bg-sky-50/80 border-slate-200 hover:border-sky-400 text-sky-700 shadow-2xs')
+                                    ? 'bg-sky-950/40 hover:bg-sky-900/60 border-sky-800 hover:border-sky-400 text-sky-300'
+                                    : 'bg-sky-50/80 hover:bg-sky-100 border-sky-200 hover:border-sky-400 text-sky-800 shadow-2xs')
                                 : (isDark
                                     ? 'bg-slate-900/40 border-slate-800/60 opacity-30 text-gray-600'
                                     : 'bg-slate-100 border-slate-200/60 opacity-40 text-slate-400')
                             }`}
-                            title={matchingSermon ? `${weekNum}주차 [${matchingSermon.date}]: ${matchingSermon.title}` : `${weekNum}주차`}
+                            title={hasSermon 
+                              ? `${weekNum}주차 [${tileData.dateRange}]: ${tileData.sermons.map(s => s.title).join(', ')}`
+                              : `${weekNum}주차 [${tileData?.dateRange}]: 대기 주간`}
                           >
                             <span className="text-[9px] font-mono font-bold opacity-60">{weekNum}W</span>
                             <span className="text-[10.5px] font-bold truncate max-w-full">
-                              {matchingSermon ? matchingSermon.detectedBook.slice(0, 2) : '-'}
+                              {hasSermon ? (tileData.primaryBook.slice(0, 2) + (tileData.count > 1 ? `(${tileData.count})` : '')) : '-'}
                             </span>
                             <span className={`w-1.5 h-1.5 rounded-full ${hasSermon ? 'bg-sky-500' : 'bg-slate-300 dark:bg-slate-700'}`}></span>
                           </button>
@@ -1338,10 +1418,71 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
               </div>
             </div>
 
-            {/* 3. 2열 정밀 분석: 성경 7대 문맥 스펙트럼 & 12개월 월별 펄스 */}
+            {/* 3. 💡 [신규 고도화] 분기별(Q1~Q4) 디테일 분리 분석 벤토 패널 */}
+            <div className={`p-4 sm:p-5 rounded-xl border ${isDark ? 'bg-[#111827] border-[#1f2937]' : 'bg-white border-slate-200/90 shadow-xs'}`}>
+              <div className="pb-3 border-b border-slate-200 dark:border-slate-800">
+                <h3 className="text-[14.5px] font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-amber-500"></span> {selectedYear}년 분기별(Q1~Q4) 디테일 분류 및 분리 분석
+                </h3>
+                <p className="text-[11px] text-slate-500 dark:text-gray-400 mt-0.5">
+                  각 분기별 선포 강도, 주간 강해 가동률, 주력 강해 성경 및 신구약 선포 비율 분리 비교
+                </p>
+              </div>
+
+              <div className="pt-3.5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {quarterlyAnalytics.map(q => (
+                  <div 
+                    key={q.quarter}
+                    className={`p-3.5 rounded-xl border flex flex-col justify-between ${
+                      isDark ? 'bg-slate-900/60 border-slate-800' : 'bg-slate-50 border-slate-200'
+                    }`}
+                  >
+                    <div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[11px] font-mono font-bold text-sky-600 dark:text-sky-400">{q.weeksLabel}</span>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono font-bold ${
+                          q.totalSermons > 0 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-slate-200 dark:bg-slate-800 text-slate-400'
+                        }`}>
+                          {q.activeWeeks}주 가동
+                        </span>
+                      </div>
+                      
+                      <h4 className="text-[14px] font-bold text-slate-900 dark:text-white mt-1">{q.name}</h4>
+
+                      <div className="mt-2.5 space-y-1.5 text-xs">
+                        <div className="flex justify-between">
+                          <span className="text-slate-500 dark:text-gray-400">선포 설교 수:</span>
+                          <span className="font-mono font-bold text-slate-800 dark:text-gray-200">{q.totalSermons}편</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-500 dark:text-gray-400">주력 강해 성경:</span>
+                          <span className="font-bold text-sky-600 dark:text-sky-400">{q.topBook} ({q.topBookCount}회)</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-500 dark:text-gray-400">핵심 신학 테마:</span>
+                          <span className="font-bold text-purple-600 dark:text-purple-400">#{q.topTheme}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 pt-2 border-t border-slate-200 dark:border-slate-800">
+                      <div className="flex justify-between text-[10.5px] font-mono font-medium mb-1">
+                        <span className="text-amber-600">구약 {q.otRate}%</span>
+                        <span className="text-purple-600">신약 {q.ntRate}%</span>
+                      </div>
+                      <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden flex">
+                        <div className="bg-amber-500 h-full" style={{ width: `${q.otRate}%` }}></div>
+                        <div className="bg-purple-500 h-full" style={{ width: `${q.ntRate}%` }}></div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 4. 2열 정밀 분석: 성경 7대 문맥 스펙트럼 & 12개월 월별 펄스 */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
               
-              {/* 좌측: 성경 7대 문맥 분류군 스펙트럼 */}
               <div className={`p-4 rounded-xl border flex flex-col justify-between ${isDark ? 'bg-[#111827] border-[#1f2937]' : 'bg-white border-slate-200/90 shadow-xs'}`}>
                 <div>
                   <div className="flex justify-between items-center pb-2 border-b border-slate-200 dark:border-slate-800">
@@ -1377,12 +1518,11 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
                 </div>
               </div>
 
-              {/* 우측: 12개월 월별 설교 & 인용 펄스 추이 */}
               <div className={`p-4 rounded-xl border flex flex-col justify-between ${isDark ? 'bg-[#111827] border-[#1f2937]' : 'bg-white border-slate-200/90 shadow-xs'}`}>
                 <div>
                   <div className="flex justify-between items-center pb-2 border-b border-slate-200 dark:border-slate-800">
                     <h3 className="text-[13.5px] font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-amber-500"></span> 월별 선포 펄스 추이 (Monthly Pulse)
+                      <span className="w-2 h-2 rounded-full bg-amber-500"></span> {selectedYear}년 월별 선포 펄스 추이
                     </h3>
                     <span className="text-[10px] font-mono text-slate-400 dark:text-gray-400">1월 ~ 12월 텔레메트리</span>
                   </div>
@@ -1419,10 +1559,8 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
 
             </div>
 
-            {/* 4. 하단 2열: 핵심 신학 테마 분포 & 최다 인용 구절 클라우드 */}
+            {/* 5. 하단 2열: 핵심 신학 테마 분포 & 최다 인용 구절 클라우드 */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
-              
-              {/* 테마 분포 */}
               <div className={`p-4 rounded-xl border ${isDark ? 'bg-[#111827] border-[#1f2937]' : 'bg-white border-slate-200/90 shadow-xs'}`}>
                 <div className="flex justify-between items-center pb-2 border-b border-slate-200 dark:border-slate-800">
                   <h3 className="text-[13.5px] font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -1451,7 +1589,6 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
                 </div>
               </div>
 
-              {/* 최다 인용 구절 클라우드 */}
               <div className={`p-4 rounded-xl border ${isDark ? 'bg-[#111827] border-[#1f2937]' : 'bg-white border-slate-200/90 shadow-xs'}`}>
                 <div className="flex justify-between items-center pb-2 border-b border-slate-200 dark:border-slate-800">
                   <h3 className="text-[13.5px] font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -1477,29 +1614,14 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
                   ))}
                 </div>
               </div>
-
-            </div>
-
-            {/* 5. 강해 설교 구속사 패턴 종합 진단 패널 */}
-            <div className={`p-4 rounded-xl border ${isDark ? 'bg-[#0f172a] border-[#1e293b]' : 'bg-slate-900 text-white shadow-md'}`}>
-              <div className="flex items-center gap-2 text-sky-400 font-bold text-[12.5px] mb-1.5">
-                <span>ℹ️</span> 2026 연간 설교 패턴 및 신학적 강해 방향 종합 진단 소견
-              </div>
-              <p className="text-[12px] leading-relaxed text-slate-300 break-keep">
-                본 아카이브는 <strong>{annualDiscourseTelemetry.topBook}</strong> 중심의 강해를 토대로 <strong>#{annualDiscourseTelemetry.topTheme}</strong>과 신약 복음 선포 비중({stats.ntPercent}%)을 견고하게 유지하고 있습니다. 구약 선포 비중({stats.otPercent}%)과의 조화를 통해 구속사적 연속성을 확보하고 있으며, 도출된 {trainingStats.totalQ}개의 삶의 적용 질문 중 {trainingStats.completionRate}%가 실제 순종으로 전환되어 지식에 머물지 않는 능동적 제자도의 선순환 궤적을 실측 지표로 증명하고 있습니다.
-              </p>
             </div>
 
           </div>
         )}
 
-        {/* ========================================================================= */}
-        {/* TAB 2: 제자 양육 훈련소                                                  */}
-        {/* ========================================================================= */}
+        {/* TAB 2: 제자 양육 훈련소 */}
         {activeTab === 'training' && (
           <div className="flex flex-col lg:flex-row gap-3 w-full">
-            
-            {/* 좌측: 훈련 지표 및 주차 선택 패널 */}
             <div className={`w-full lg:w-72 xl:w-80 p-3.5 sm:p-4 rounded-xl border flex flex-col gap-4 shrink-0 text-left ${isDark ? 'bg-[#111827] border-[#1f2937]' : 'bg-white border-slate-200/90 shadow-xs'}`}>
               <div className="flex justify-between items-center pb-2 border-b border-slate-200 dark:border-slate-800">
                 <span className="text-[13px] font-bold text-slate-900 dark:text-white">제자훈련 지표</span>
@@ -1513,7 +1635,6 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
                 </button>
               </div>
 
-              {/* 12주차 커리큘럼 그리드 */}
               <div className="space-y-1.5">
                 <div className="flex justify-between items-center text-[11px] font-bold text-slate-500 dark:text-gray-400">
                   <span>12주차 마스터 코스</span>
@@ -1536,30 +1657,6 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
                 </div>
               </div>
 
-              {/* 영적 아카이브 누적 */}
-              <div className="space-y-1.5 pt-1">
-                <span className="text-[11px] font-bold text-slate-500 dark:text-gray-400 block">영적 아카이브 누적</span>
-                <div className="grid grid-cols-2 gap-1.5 text-center">
-                  <div className={`p-2 rounded-lg border ${isDark ? 'bg-slate-800/60 border-slate-700/60' : 'bg-slate-50 border-slate-200/80'}`}>
-                    <span className="text-[9.5px] font-mono text-slate-400 dark:text-gray-400 block">매일 큐티</span>
-                    <span className="text-[14px] font-mono font-bold text-sky-600 dark:text-sky-400">{aggregateHub.qtCount}회</span>
-                  </div>
-                  <div className={`p-2 rounded-lg border ${isDark ? 'bg-slate-800/60 border-slate-700/60' : 'bg-slate-50 border-slate-200/80'}`}>
-                    <span className="text-[9.5px] font-mono text-slate-400 dark:text-gray-400 block">감사 일기</span>
-                    <span className="text-[14px] font-mono font-bold text-amber-600 dark:text-amber-400">{aggregateHub.thanksCount}회</span>
-                  </div>
-                  <div className={`p-2 rounded-lg border ${isDark ? 'bg-slate-800/60 border-slate-700/60' : 'bg-slate-50 border-slate-200/80'}`}>
-                    <span className="text-[9.5px] font-mono text-slate-400 dark:text-gray-400 block">골방 기도</span>
-                    <span className="text-[14px] font-mono font-bold text-emerald-600 dark:text-emerald-400">{aggregateHub.prayerCount}회</span>
-                  </div>
-                  <div className={`p-2 rounded-lg border ${isDark ? 'bg-slate-800/60 border-slate-700/60' : 'bg-slate-50 border-slate-200/80'}`}>
-                    <span className="text-[9.5px] font-mono text-slate-400 dark:text-gray-400 block">설교 분석</span>
-                    <span className="text-[14px] font-mono font-bold text-purple-600 dark:text-purple-400">{aggregateHub.sermonCount}편</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* 영적 5대 밸런스 프로그레스 바 */}
               <div className="space-y-2 pt-2 border-t border-dashed border-slate-200 dark:border-slate-800">
                 <span className="text-[11px] font-bold text-slate-500 dark:text-gray-400 block">영적 성장 5대 밸런스</span>
                 <div className="space-y-1.5">
@@ -1582,12 +1679,9 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
                   ))}
                 </div>
               </div>
-
             </div>
 
-            {/* 우측: 주차별 심층 강의 및 설교 말씀 매핑 실천 일지 */}
             <div className={`flex-1 p-3.5 sm:p-5 rounded-xl border flex flex-col gap-4 text-left ${isDark ? 'bg-[#111827] border-[#1f2937]' : 'bg-white border-slate-200/90 shadow-xs'}`}>
-              
               <div className="space-y-1.5 pb-3 border-b border-slate-200 dark:border-slate-800">
                 <span className="text-[10.5px] font-mono font-bold uppercase tracking-widest text-sky-600 dark:text-sky-400">
                   DISCIPLESHIP WEEK {selectedWeek} · #{currentWeekCurriculum.themeKey}
@@ -1608,20 +1702,6 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
                 <div className={`p-3 rounded-lg border space-y-1 ${isDark ? 'bg-slate-800/60 border-slate-700/60' : 'bg-slate-50 border-slate-200/80'}`}>
                   <span className="text-[10px] font-mono font-bold text-slate-400 uppercase">PRACTICE PRINCIPLE</span>
                   <p className="text-[12px] font-bold leading-relaxed text-slate-800 dark:text-gray-200">{currentWeekCurriculum.principle}</p>
-                </div>
-              </div>
-
-              <div className="space-y-1.5 pt-1">
-                <span className="text-[11.5px] font-bold text-slate-500 dark:text-gray-400 block">제자도 핵심 점검 질문</span>
-                <div className="space-y-1">
-                  {currentWeekCurriculum.coreQuestions.map((q, qIdx) => (
-                    <div key={qIdx} className={`p-2.5 rounded-lg border flex items-start gap-2 ${isDark ? 'border-slate-700/60 bg-slate-900/40' : 'border-slate-200/80 bg-slate-50/50'}`}>
-                      <span className={`w-4 h-4 rounded text-[10px] font-mono font-bold flex items-center justify-center shrink-0 mt-0.5 ${isDark ? 'bg-slate-800 text-sky-400' : 'bg-slate-200 text-slate-700'}`}>
-                        {qIdx + 1}
-                      </span>
-                      <p className="text-[12.5px] font-medium leading-relaxed text-slate-800 dark:text-gray-200">{q}</p>
-                    </div>
-                  ))}
                 </div>
               </div>
 
@@ -1712,15 +1792,11 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
                   </div>
                 )}
               </div>
-
             </div>
-
           </div>
         )}
 
-        {/* ========================================================================= */}
-        {/* TAB 3: 설교 검색                                                         */}
-        {/* ========================================================================= */}
+        {/* TAB 3: 설교 검색 */}
         {activeTab === 'list' && (
           <div className="space-y-3 animate-fade-in w-full text-left">
             <div className={`p-3 rounded-xl border space-y-2 ${isDark ? 'bg-[#111827] border-[#1f2937]' : 'bg-white border-slate-200/90 shadow-xs'}`}>
@@ -1800,9 +1876,52 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
 
       </main>
 
-      {/* 3. 설교 원문 전문 팝업 모달 */}
+      {/* 3. 💡 [신규] 52주 주차 타일 클릭 시 해당 주간 설교 모음 팝업 모달 */}
+      {weekDetailModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[1050] flex items-center justify-center p-3 select-none">
+          <div className={`w-full max-w-lg rounded-2xl border shadow-2xl flex flex-col max-h-[80vh] overflow-hidden ${isDark ? 'bg-[#111827] border-[#1f2937] text-gray-100' : 'bg-white border-slate-200 text-slate-900'}`}>
+            <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center shrink-0">
+              <div className="text-left">
+                <span className="text-[10.5px] font-mono text-sky-600 dark:text-sky-400 font-bold">{selectedYear}년 {weekDetailModal.weekNum}주차 ({weekDetailModal.dateRange})</span>
+                <h3 className="font-bold text-[14.5px] text-slate-900 dark:text-white mt-0.5">선포된 강해 설교 ({weekDetailModal.sermons.length}편)</h3>
+              </div>
+              <button onClick={() => setWeekDetailModal(null)} className="p-1 text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer">
+                <IconX />
+              </button>
+            </div>
+
+            <div className="p-4 overflow-y-auto space-y-2.5 text-left">
+              {weekDetailModal.sermons.map((s, idx) => (
+                <div key={idx} className={`p-3 rounded-xl border space-y-2 ${isDark ? 'bg-slate-900/60 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <span className="text-[10px] font-mono text-slate-400">{s.date} 선포</span>
+                      <h4 className="text-[13.5px] font-bold text-slate-900 dark:text-white">{s.title}</h4>
+                      <span className="text-[11px] font-semibold text-sky-600 dark:text-sky-400">📖 {s.detectedBook} 본문</span>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setSermonPopup(s);
+                        setWeekDetailModal(null);
+                      }}
+                      className="px-2.5 py-1 rounded-md text-[11px] font-bold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer shrink-0"
+                    >
+                      전문 보기
+                    </button>
+                  </div>
+                  <p className="text-[11.5px] text-slate-600 dark:text-gray-300 line-clamp-2 leading-relaxed">
+                    {decodeHtmlEntities(s.raw_text?.replace(/<[^>]*>?/gm, ''))}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 4. 설교 원문 전문 팝업 모달 */}
       {sermonPopup && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-xs z-[1000] flex items-center justify-center p-3 select-none">
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-xs z-[1100] flex items-center justify-center p-3 select-none">
           <div className={`w-full max-w-2xl rounded-2xl border shadow-2xl flex flex-col max-h-[85vh] overflow-hidden ${isDark ? 'bg-[#111827] border-[#1f2937] text-gray-100' : 'bg-white border-slate-200 text-slate-900'}`}>
             <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center shrink-0">
               <div className="text-left">
@@ -1857,9 +1976,9 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
         </div>
       )}
 
-      {/* 4. 성경 구절 인라인 팝업 모달 */}
+      {/* 5. 성경 구절 인라인 팝업 모달 */}
       {popupVerse && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-xs z-[1100] flex items-center justify-center p-3 select-none">
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-xs z-[1150] flex items-center justify-center p-3 select-none">
           <div className={`w-full max-w-md rounded-2xl border shadow-2xl flex flex-col max-h-[75vh] overflow-hidden ${isDark ? 'bg-[#111827] border-[#1f2937] text-gray-100' : 'bg-white border-slate-200 text-slate-900'}`}>
             <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center shrink-0">
               <h3 className="font-bold text-[14.5px] text-left">📖 {popupVerse}</h3>
@@ -1892,7 +2011,7 @@ export default function SermonArchiveAnalytics({ onBack, onNavigateVerse, bibles
         </div>
       )}
 
-      {/* 5. 원어 성경 연동 팝업 모달 */}
+      {/* 6. 원어 성경 연동 팝업 모달 */}
       {interlinearTarget && (
         <InterlinearQuickModal
           target={interlinearTarget}

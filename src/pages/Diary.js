@@ -1,5 +1,5 @@
 // src/components/Diary.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import CryptoJS from 'crypto-js';
 
@@ -46,31 +46,58 @@ const decryptField = (cipherText) => {
   return cipherText;
 };
 
-const StrokeW = "1.5";
-const IconArrowLeft = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-5 h-5"><polyline points="15 18 9 12 15 6" /></svg>;
+const StrokeW = "1.8";
+const IconArrowLeft = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-5 h-5"><polyline points="15 18 9 12 15 6" /></svg>;
 const IconMenu = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-5 h-5"><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="18" x2="21" y2="18" /></svg>;
-const IconHeart = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={StrokeW} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" /></svg>;
-const IconBook = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={StrokeW} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" /></svg>;
+const IconHeart = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={StrokeW} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" /></svg>;
+const IconBook = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={StrokeW} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" /></svg>;
 const IconCheck = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-4 h-4"><polyline points="20 6 9 17 4 12" /></svg>;
 const IconChevronRight = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-4 h-4"><polyline points="9 18 15 12 9 6" /></svg>;
 const IconEdit = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={StrokeW} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>;
 const IconSend = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg>;
 const IconClose = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>;
 const IconSparkles = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" /></svg>;
+const IconTarget = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={StrokeW} stroke="currentColor" className="w-4 h-4"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>;
+const IconPray = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={StrokeW} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9 9 0 100-18 9 9 0 000 18z" /><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3" /></svg>;
+const IconFlame = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={StrokeW} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.6a8.983 8.983 0 013.361-6.867 8.21 8.21 0 003 2.48z" /></svg>;
 
 const TESTIMONY_TEMPLATE = `1. 제목 (한 문장으로) : \n\n2. 오늘 받은 말씀 : \n\n3. 사건 (무슨 일이 있었는가?) : \n\n4. 내 죄와 우상 (왜 그렇게 반응했는가?) : \n\n5. 말씀으로 받은 깨달음 : \n\n6. 적용 (구체적으로 무엇을 순종할 일인가?) : \n\n7. 하나님이 주신 열매 : \n\n8. 감사 : `;
 
 const getLocal = (key, fallback) => { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch { return fallback; } };
 const setLocal = (key, val) => { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} };
 
-export default function Diary({ t, isDarkMode, setActiveScreen, isSidebarOpen, setIsSidebarOpen, openModal, currDay = {}, bibleNotes = [], getArr = (a)=>a||[], authUser }) {
+export default function Diary({ 
+  t, 
+  isDarkMode, 
+  setActiveScreen, 
+  isSidebarOpen, 
+  setIsSidebarOpen, 
+  openModal, 
+  currDay = {}, 
+  bibleNotes = [], 
+  getArr = (a) => a || [], 
+  authUser,
+  dailyData = {},
+  updateDay
+}) {
 
   const [secretThanks, setSecretThanks] = useState([]);
   const [showSendModal, setShowSendModal] = useState(false);
   const [selectedThanksItem, setSelectedThanksItem] = useState('');
+  const [toastMsg, setToastMsg] = useState(null);
 
-  // 🌟 [모바일 UX 최적화] 10분 훈련표 점진적 스텝퍼 상태 (0: 관찰과 감정, 1: 말씀과 해석, 2: 회개와 순종)
+  // 10분 훈련표 스텝퍼 (0: 사건/감정, 1: 말씀/해석, 2: 회개/순종)
   const [trainingStep, setTrainingStep] = useState(0);
+
+  const showToast = useCallback((msg) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(null), 2400);
+  }, []);
+
+  const getLocalToday = () => {
+    const o = new Date().getTimezoneOffset() * 60000;
+    return new Date(Date.now() - o).toISOString().split('T')[0];
+  };
 
   useEffect(() => {
     if (!supabase) return;
@@ -115,11 +142,13 @@ export default function Diary({ t, isDarkMode, setActiveScreen, isSidebarOpen, s
     textSub: isDark ? 'text-[#A1A1AA]' : 'text-[#78716C]', 
     accent: isDark ? 'text-[#D4D4D8]' : 'text-[#44403C]',
     btn: isDark ? 'bg-sky-600 hover:bg-sky-700 text-white' : 'bg-sky-500 hover:bg-sky-600 text-white',
+    btnGhost: isDark ? 'bg-white/5 hover:bg-white/10 text-slate-300 border-white/10' : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
   };
 
   const [activeTab, setActiveTab] = useState('dashboard');
 
   const [daily10Min, setDaily10Min] = useState(() => getLocal('diary_10min', { word:'', event:'', emotion:'', desire:'', found:'', apply:'', repent:'', thanks:'', obey:'', share:'' }));
+  const [daily10MinHistory, setDaily10MinHistory] = useState(() => getLocal('diary_10min_history', []));
   const [theologyNotes, setTheologyNotes] = useState(() => getLocal('diary_theo_notes', { q1:'', q2:'' }));
   const [qtPractice, setQtPractice] = useState(() => getLocal('diary_qt_practice', { fact: '', emotion: [], desire: '', interpretation: '', word: '', myself: '', repent: '', thanks: '', action: '', prayer: '' }));
   const [sufferingPractice, setSufferingPractice] = useState(() => getLocal('diary_suffer_practice', { event:'', emotion:'', interpretation:'', word:'', myself:'', repent:'', action:'', community:'' }));
@@ -128,6 +157,7 @@ export default function Diary({ t, isDarkMode, setActiveScreen, isSidebarOpen, s
   const [curriculumNotes, setCurriculumNotes] = useState(() => getLocal('diary_curriculum_notes', {}));
 
   useEffect(() => setLocal('diary_10min', daily10Min), [daily10Min]);
+  useEffect(() => setLocal('diary_10min_history', daily10MinHistory), [daily10MinHistory]);
   useEffect(() => setLocal('diary_theo_notes', theologyNotes), [theologyNotes]);
   useEffect(() => setLocal('diary_qt_practice', qtPractice), [qtPractice]);
   useEffect(() => setLocal('diary_suffer_practice', sufferingPractice), [sufferingPractice]);
@@ -143,18 +173,25 @@ export default function Diary({ t, isDarkMode, setActiveScreen, isSidebarOpen, s
 
   const totalThanksScore = Object.values(thanksChecklist || {}).reduce((a, b) => a + Number(b || 0), 0);
 
-  const parsedThanksList = (currDay.thanksText || '')
-    .split('\n')
-    .map(line => line.replace(/^\d+\.\s*/, '').trim())
-    .filter(Boolean);
+  // 고난 해석 8단계 완수율
+  const sufferingCompletedCount = useMemo(() => {
+    return Object.values(sufferingPractice || {}).filter(v => v && v.trim && v.trim().length > 0).length;
+  }, [sufferingPractice]);
 
-  // ERP 연동 로직
+  const parsedThanksList = useMemo(() => {
+    return (currDay.thanksText || '')
+      .split('\n')
+      .map(line => line.replace(/^\d+\.\s*/, '').trim())
+      .filter(Boolean);
+  }, [currDay.thanksText]);
+
+  // ERP 출석 연동 로직
   const syncThanksToERP = () => {
     if (supabase && (authUser?.name || authUser)) {
       const uName = typeof authUser === 'object' ? authUser?.name : authUser;
       if (uName) {
         supabase.from('attendance_records').upsert({
-          date: new Date().toISOString().split('T')[0],
+          date: getLocalToday(),
           user_name: uName,
           cell_name: authUser?.cell_name || '내 목장',
           type: '감사',
@@ -164,12 +201,91 @@ export default function Diary({ t, isDarkMode, setActiveScreen, isSidebarOpen, s
     }
   };
 
-  // 🌟 [핵심 신규 기능] 제자훈련 은혜/간증 ➔ 블록버스터 릴스 원터치 직결
+  // 10분 훈련표 영구 아카이브 저장
+  const handleArchive10Min = () => {
+    const today = getLocalToday();
+    const entry = {
+      id: Date.now(),
+      date: today,
+      data: { ...daily10Min }
+    };
+    const nextHistory = [entry, ...daily10MinHistory.filter(h => h.date !== today)];
+    setDaily10MinHistory(nextHistory);
+    showToast(`오늘의 10분 훈련 일지가 아카이브에 영구 저장되었습니다!`);
+  };
+
+  // 🌟 [유기적 파이프라인 1] 10분 훈련의 순종(obey)을 삶의 실천 트래커로 원터치 이관
+  const handleExportObeyToApplyTracker = () => {
+    const obeyText = daily10Min.obey?.trim();
+    if (!obeyText) return showToast("등록할 '오늘의 순종 실천' 내용이 비어있습니다.");
+
+    try {
+      const saved = JSON.parse(localStorage.getItem('apply_tracker_items') || '[]');
+      const newItem = {
+        id: Date.now(),
+        date: getLocalToday(),
+        text: `[10분 훈련 순종] ${obeyText}`,
+        category: '개인 영성',
+        source: 'diary_obey',
+        completed: false
+      };
+      localStorage.setItem('apply_tracker_items', JSON.stringify([newItem, ...saved]));
+      window.dispatchEvent(new Event('storage'));
+      showToast("⚡ 삶의 실천 트래커에 순종 과제로 등록되었습니다!");
+    } catch {
+      showToast("등록 중 오류가 발생했습니다.");
+    }
+  };
+
+  // 🌟 [유기적 파이프라인 2] 고난 해석 8단계의 적용(action)을 실천 트래커로 이관
+  const handleExportSufferToApplyTracker = () => {
+    const actionText = sufferingPractice.action?.trim();
+    if (!actionText) return showToast("등록할 '7단계 적용 행동' 내용이 비어있습니다.");
+
+    try {
+      const saved = JSON.parse(localStorage.getItem('apply_tracker_items') || '[]');
+      const newItem = {
+        id: Date.now(),
+        date: getLocalToday(),
+        text: `[고난 해석 실천] ${actionText}`,
+        category: '고난의 신비',
+        source: 'suffering_action',
+        completed: false
+      };
+      localStorage.setItem('apply_tracker_items', JSON.stringify([newItem, ...saved]));
+      window.dispatchEvent(new Event('storage'));
+      showToast("⚡ 삶의 실천 트래커에 고난 극복 순종으로 등록되었습니다!");
+    } catch {
+      showToast("등록 중 오류가 발생했습니다.");
+    }
+  };
+
+  // 🌟 [유기적 파이프라인 3] 회개 및 고난을 기도 보관함으로 전송
+  const handleExportToPrayerBox = (text, category = '회개와 간구') => {
+    if (!text || !text.trim()) return showToast("전송할 내용이 없습니다.");
+    try {
+      const prayers = JSON.parse(localStorage.getItem('goodtree_global_prayers') || localStorage.getItem('globalPrayers') || '[]');
+      prayers.push({
+        id: Date.now(),
+        text: encryptField(text.trim()),
+        status: 'praying',
+        date: getLocalToday()
+      });
+      localStorage.setItem('goodtree_global_prayers', JSON.stringify(prayers));
+      localStorage.setItem('globalPrayers', JSON.stringify(prayers));
+      window.dispatchEvent(new Event('storage'));
+      showToast(`🙏 [${category}] 제목이 골방 기도함으로 전송되었습니다!`);
+    } catch {
+      showToast("기도함 전송 중 오류가 발생했습니다.");
+    }
+  };
+
+  // 릴스 원터치 직결
   const handleExportToReels = (textToShare = '', category = '감사') => {
     const targetText = textToShare || daily10Min.share || daily10Min.thanks || parsedThanksList[0] || '말씀으로 해석된 은혜의 고백';
     const payload = {
       sourceMode: 'diary',
-      targetDate: currDay?.date || new Date().toISOString().split('T')[0],
+      targetDate: currDay?.date || getLocalToday(),
       title: `[제자훈련] ${category} 고백`,
       subtitle: daily10Min.word || 'DISCIPLESHIP',
       heroText: targetText.slice(0, 40),
@@ -178,7 +294,7 @@ export default function Diary({ t, isDarkMode, setActiveScreen, isSidebarOpen, s
     };
 
     localStorage.setItem('reels_direct_trigger', JSON.stringify(payload));
-    alert("🎬 제자훈련 은혜 고백으로 릴스 스튜디오를 준비합니다...");
+    showToast("🎬 제자훈련 은혜 고백으로 릴스 스튜디오를 준비합니다...");
     
     if (typeof setActiveScreen === 'function') {
       setActiveScreen('reels');
@@ -186,23 +302,22 @@ export default function Diary({ t, isDarkMode, setActiveScreen, isSidebarOpen, s
   };
 
   const handleSendAllToCell = () => {
-    if (parsedThanksList.length === 0) return alert('전송할 감사 리스트가 비어있습니다.');
+    if (parsedThanksList.length === 0) return showToast('전송할 감사 리스트가 비어있습니다.');
     try {
       const existing = JSON.parse(localStorage.getItem('cell_shared_thanks') || '[]');
       const allTextFormatted = parsedThanksList.map((item, idx) => `${idx + 1}. ${item}`).join('\n');
       existing.push({
         id: Date.now(),
-        date: new Date().toISOString().split('T')[0],
+        date: getLocalToday(),
         source: 'diary_thanks_all',
         text: encryptField(allTextFormatted)
       });
       localStorage.setItem('cell_shared_thanks', JSON.stringify(existing));
       
       syncThanksToERP();
-
-      alert(`오늘의 감사 ${parsedThanksList.length}건이 목장 모임 [감사나눔]으로 일괄 전송되었습니다!`);
+      showToast(`오늘의 감사 ${parsedThanksList.length}건이 목장 모임으로 일괄 전송되었습니다!`);
     } catch (e) {
-      alert("일괄 전송 중 오류가 발생했습니다.");
+      showToast("일괄 전송 중 오류가 발생했습니다.");
     }
   };
 
@@ -212,25 +327,24 @@ export default function Diary({ t, isDarkMode, setActiveScreen, isSidebarOpen, s
       const existing = JSON.parse(localStorage.getItem('cell_shared_thanks') || '[]');
       existing.push({
         id: Date.now(),
-        date: new Date().toISOString().split('T')[0],
+        date: getLocalToday(),
         source: 'diary_thanks',
         text: encryptField(text.trim())
       });
       localStorage.setItem('cell_shared_thanks', JSON.stringify(existing));
 
       syncThanksToERP();
-
-      alert("목장 모임 [감사나눔]으로 전송되었습니다!");
+      showToast("목장 모임 [감사나눔]으로 전송되었습니다!");
       setShowSendModal(false);
     } catch (e) {
-      alert("전송 중 오류가 발생했습니다.");
+      showToast("전송 중 오류가 발생했습니다.");
     }
   };
 
   const handleSendToSermon = (text) => {
     if (!text || !text.trim()) return;
     try {
-      const todayKey = new Date().toISOString().split('T')[0];
+      const todayKey = getLocalToday();
       const allDaily = JSON.parse(localStorage.getItem('qt_daily') || '{}');
       const todayData = allDaily[todayKey] || {};
       const currentDeclarations = Array.isArray(todayData.thanksDeclarations) ? [...todayData.thanksDeclarations] : ['', ''];
@@ -243,11 +357,10 @@ export default function Diary({ t, isDarkMode, setActiveScreen, isSidebarOpen, s
       localStorage.setItem('qt_daily', JSON.stringify(allDaily));
 
       syncThanksToERP();
-
-      alert("예배노트 [나의 감사선포]로 전송되었습니다!");
+      showToast("예배노트 [나의 감사선포]로 전송되었습니다!");
       setShowSendModal(false);
     } catch (e) {
-      alert("전송 중 오류가 발생했습니다.");
+      showToast("전송 중 오류가 발생했습니다.");
     }
   };
 
@@ -259,7 +372,6 @@ export default function Diary({ t, isDarkMode, setActiveScreen, isSidebarOpen, s
     { id: 'curriculum', label: '12주 훈련 커리큘럼' }
   ];
 
-  // 10분 훈련표 3단계 스텝 데이터 구성
   const trainingStepGroups = [
     {
       title: '1단계: 사건과 감정 직면',
@@ -292,15 +404,68 @@ export default function Diary({ t, isDarkMode, setActiveScreen, isSidebarOpen, s
   ];
 
   return (
-    <div className={`flex-1 flex flex-col h-full relative overflow-hidden font-sans ${ui.bgBody}`}>
+    <div className={`flex-1 flex flex-col h-full relative overflow-hidden font-sans ${ui.bgBody} select-none text-left`}>
       
-      {/* 헤더 */}
-      <div className={`px-4 py-3 flex items-center justify-between border-b ${ui.border} ${ui.bgPanel} shrink-0`}>
-        <div className="flex items-center gap-3">
-           <button onClick={() => setActiveScreen('home')} className={`p-1 -ml-1 transition-colors ${ui.textSub} hover:${ui.textMain} cursor-pointer`}><IconArrowLeft /></button>
-           <h1 className={`text-[16px] font-black tracking-tight ${ui.textMain}`}>말씀으로 삶을 해석하는 제자훈련</h1>
+      {/* 토스트 피드백 */}
+      {toastMsg && (
+        <div className="fixed top-12 left-1/2 -translate-x-1/2 z-[300] px-4 py-2 rounded-full bg-slate-900/95 text-white text-[12px] font-bold border border-white/20 shadow-xl backdrop-blur-md flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-sky-400 animate-ping" />
+          {toastMsg}
         </div>
-        <button onClick={() => setIsSidebarOpen && setIsSidebarOpen(!isSidebarOpen)} className={`p-1 transition-colors ${ui.textSub} hover:${ui.textMain} cursor-pointer`}><IconMenu /></button>
+      )}
+
+      {/* 헤더 & 유기적 점프 통로 */}
+      <div className={`px-4 py-3 flex items-center justify-between border-b ${ui.border} ${ui.bgPanel} shrink-0 z-20`}>
+        <div className="flex items-center gap-3">
+           <button onClick={() => setActiveScreen ? setActiveScreen('home') : null} className={`p-1 -ml-1 transition-colors ${ui.textSub} hover:${ui.textMain} cursor-pointer`}><IconArrowLeft /></button>
+           <div>
+             <h1 className={`text-[15.5px] sm:text-[16px] font-black tracking-tight ${ui.textMain} flex items-center gap-2`}>
+               말씀으로 삶을 해석하는 제자훈련 <span className="text-sky-500 text-xs font-mono font-semibold">[Hermeneutics Diary]</span>
+             </h1>
+             <span className={`text-[10px] font-mono font-bold ${ui.textSub} block`}>THANKS, SUFFERING & APPLIED DISCIPLESHIP STUDIO</span>
+           </div>
+        </div>
+
+        {/* 유기적 화면 이동 퀵 바 */}
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setActiveScreen ? setActiveScreen('qt') : null}
+            className={`px-2 py-1 rounded-md text-[11px] font-bold border ${ui.btnGhost} hidden sm:flex items-center gap-1 cursor-pointer`}
+            title="매일 QT 묵상으로 이동"
+          >
+            <IconBook /> QT
+          </button>
+          <button
+            onClick={() => setActiveScreen ? setActiveScreen('sermon') : null}
+            className={`px-2 py-1 rounded-md text-[11px] font-bold border ${ui.btnGhost} hidden sm:flex items-center gap-1 cursor-pointer`}
+            title="설교 아카이브로 이동"
+          >
+            <span>🏛️</span> 설교
+          </button>
+          <button
+            onClick={() => setActiveScreen ? setActiveScreen('apply') : null}
+            className={`px-2 py-1 rounded-md text-[11px] font-bold border ${ui.btnGhost} hidden sm:flex items-center gap-1 cursor-pointer`}
+            title="삶의 실천 트래커로 이동"
+          >
+            <IconTarget /> 실천
+          </button>
+          <button
+            onClick={() => setActiveScreen ? setActiveScreen('prayer') : null}
+            className={`px-2 py-1 rounded-md text-[11px] font-bold border ${ui.btnGhost} hidden sm:flex items-center gap-1 cursor-pointer`}
+            title="기도 보관함으로 이동"
+          >
+            <IconPray /> 기도
+          </button>
+          <button
+            onClick={() => setActiveScreen ? setActiveScreen('cell') : null}
+            className={`px-2 py-1 rounded-md text-[11px] font-bold border ${ui.btnGhost} hidden sm:flex items-center gap-1 cursor-pointer`}
+            title="목장 나눔방으로 이동"
+          >
+            <span>💬</span> 목장
+          </button>
+
+          <button onClick={() => setIsSidebarOpen && setIsSidebarOpen(!isSidebarOpen)} className={`p-1.5 transition-colors ${ui.textSub} hover:${ui.textMain} md:hidden cursor-pointer ml-1`}><IconMenu /></button>
+        </div>
       </div>
 
       {/* 가로 탭 바 */}
@@ -322,207 +487,288 @@ export default function Diary({ t, isDarkMode, setActiveScreen, isSidebarOpen, s
 
           {/* TAB 1: 감사 대시보드 */}
           {activeTab === 'dashboard' && (
-            <div className="p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-5 max-w-[1600px] mx-auto pb-32">
+            <div className="p-4 md:p-6 flex flex-col gap-5 max-w-[1600px] mx-auto pb-32">
                
-               <div className="lg:col-span-5 flex flex-col gap-4">
-                  {secretThanks.length > 0 && (
-                    <div className="p-5 border border-amber-200 dark:border-amber-900/30 bg-amber-50/50 dark:bg-amber-900/10 flex flex-col gap-3 rounded-2xl shadow-xs">
-                       <h3 className="text-[14px] font-black text-amber-600 dark:text-amber-400 flex items-center gap-2">
-                         💌 당신의 삶에 심겨진 익명의 감사
-                       </h3>
-                       <div className="flex flex-col gap-2">
-                          {secretThanks.map(st => (
-                            <div key={st.id} className="p-3 bg-white/80 dark:bg-black/30 backdrop-blur-sm text-[13.5px] font-bold text-gray-800 dark:text-gray-200 rounded-xl shadow-xs">
-                              "{st.content}"
-                            </div>
-                          ))}
-                       </div>
-                    </div>
-                  )}
-
-                  {/* 오늘의 감사 리스트 카드 + 릴스 변환 버튼 */}
-                  <div className={`${ui.bgPanel} p-5 border ${ui.border} flex flex-col gap-3 rounded-2xl`}>
+               {/* 4대 영적 거버넌스 벤토 KPI 카드군 */}
+               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                  <div className={`p-3.5 rounded-2xl border ${ui.bgPanel} flex flex-col justify-between`}>
                      <div className="flex justify-between items-center">
-                        <h3 className={`text-[15px] font-black ${ui.textMain} flex items-center gap-2`}><IconHeart/> 오늘의 감사 리스트</h3>
-                        
-                        <div className="flex items-center gap-2">
-                           {parsedThanksList.length > 0 && (
-                             <>
-                               <button
-                                 onClick={() => handleExportToReels(parsedThanksList[0], '오늘의 감사')}
-                                 className="px-2.5 py-1 text-[11px] font-black bg-gradient-to-r from-amber-500 to-rose-500 hover:opacity-90 text-white rounded-lg shadow-xs transition-transform active:scale-95 flex items-center gap-1 cursor-pointer"
-                                 title="첫 번째 감사를 3초 시네마틱 릴스로 즉시 제작"
-                               >
-                                 <span>🎬</span> 릴스 변환
-                               </button>
-
-                               <button
-                                 onClick={handleSendAllToCell}
-                                 className="px-2.5 py-1 text-[11px] font-black bg-sky-500 hover:bg-sky-600 text-white rounded-lg shadow-xs transition-transform active:scale-95 flex items-center gap-1 cursor-pointer"
-                                 title="전체 감사 리스트를 목장 모임으로 한 번에 보냅니다"
-                               >
-                                 <IconSend /> 일괄 전송
-                               </button>
-                             </>
-                           )}
-                           <span onClick={() => openModal && openModal('thanks')} className={`text-[12px] font-bold ${ui.textSub} flex items-center cursor-pointer hover:${ui.textMain}`}>전체 편집 <IconChevronRight/></span>
-                        </div>
+                        <span className="text-[10px] font-mono text-slate-400 font-bold uppercase">TODAY'S THANKS</span>
+                        <IconHeart />
                      </div>
-                     
-                     {parsedThanksList.length === 0 ? (
-                       <p className={`text-[13px] font-medium ${ui.textSub} py-1`}>
-                         오늘의 감사를 기록하세요.
-                       </p>
-                     ) : (
-                       <div className="flex flex-col gap-1.5 pt-1">
-                         {parsedThanksList.map((item, idx) => (
-                           <div key={idx} className={`p-2.5 border rounded-xl flex items-center justify-between gap-2 ${isDark ? 'bg-black/20 border-white/10' : 'bg-stone-50 border-stone-200'}`}>
-                             <div className="flex items-start gap-2 min-w-0">
-                               <span className="text-[11.5px] font-bold text-amber-500 shrink-0 mt-0.5">{idx + 1}.</span>
-                               <span className={`text-[13px] font-medium leading-snug truncate ${ui.textMain}`}>{item}</span>
-                             </div>
-                             
-                             <div className="flex items-center gap-1 shrink-0">
-                               <button
-                                 onClick={() => handleExportToReels(item, `감사 ${idx + 1}`)}
-                                 className="px-2 py-1 text-[10.5px] font-black text-rose-500 hover:underline cursor-pointer"
-                                 title="이 감사 항목으로 릴스 제작"
-                               >
-                                 🎬 릴스
-                               </button>
-                               <button
-                                 onClick={() => {
-                                   setSelectedThanksItem(item);
-                                   setShowSendModal(true);
-                                 }}
-                                 className="px-2.5 py-1 text-[11px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500 hover:text-white rounded-md transition-all flex items-center gap-1 cursor-pointer"
-                               >
-                                 <IconSend /> 전송
-                               </button>
-                             </div>
-                           </div>
-                         ))}
-                       </div>
-                     )}
-                  </div>
-
-                  {/* 말씀 묵상 노트 */}
-                  <div className={`${ui.bgPanel} p-5 border ${ui.border} flex flex-col gap-3 rounded-2xl`}>
-                     <div className="flex justify-between items-center border-b border-dashed pb-2 mb-1 border-current opacity-20">
-                        <h3 className={`text-[15px] font-black ${ui.textMain} flex items-center gap-2`}><IconBook/> 말씀 묵상 노트</h3>
-                        <span className={`text-[11px] font-bold ${ui.textSub}`}>총 {getArr(bibleNotes).length}개</span>
-                     </div>
-                     <div className="flex flex-col gap-0">
-                        {getArr(bibleNotes).length === 0 ? (
-                           <p className={`text-[13px] font-medium ${ui.textSub} py-2`}>저장된 노트가 없습니다.</p>
-                        ) : (
-                           getArr(bibleNotes).slice(0, 3).map(n => (
-                              <div key={n.id} onClick={() => openModal && openModal('bibleNoteList', n)} className={`py-3 border-b last:border-0 border-dashed ${ui.borderDash} cursor-pointer`}>
-                                 <p className={`text-[13px] font-bold ${ui.textMain} truncate`}>{n.verses?.[0]?.ref || '말씀'} : <span className="font-medium text-slate-500">{n.note ? n.note.replace(/<[^>]*>?/gm, '') : '내용 없음'}</span></p>
-                              </div>
-                           ))
-                        )}
+                     <div className="flex items-baseline gap-1 mt-2">
+                        <span className="text-2xl font-black font-mono text-amber-500">{parsedThanksList.length}</span>
+                        <span className="text-xs font-bold text-slate-400">건 기록됨</span>
                      </div>
                   </div>
 
-                  {/* 나의 묵상 간증 */}
-                  <div onClick={() => openModal && openModal('testimony')} className={`${ui.bgPanel} p-5 border ${ui.border} rounded-2xl cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors flex flex-col gap-2`}>
+                  <div className={`p-3.5 rounded-2xl border ${ui.bgPanel} flex flex-col justify-between`}>
                      <div className="flex justify-between items-center">
-                        <h3 className={`text-[15px] font-black ${ui.textMain} flex items-center gap-2`}><IconEdit/> 나의 묵상 간증</h3>
-                        <span className={`text-[12px] font-bold ${ui.textSub} flex items-center`}>작성 <IconChevronRight/></span>
+                        <span className="text-[10px] font-mono text-slate-400 font-bold uppercase">TRAINING STREAK</span>
+                        <IconFlame />
                      </div>
-                     <p className={`text-[13px] font-medium ${ui.textSub} line-clamp-2`}>
-                        {currDay.testimony && currDay.testimony !== TESTIMONY_TEMPLATE ? '간증문이 작성되어 있습니다.' : '오늘의 묵상과 간증을 기록하세요.'}
-                     </p>
+                     <div className="flex items-baseline gap-1 mt-2">
+                        <span className="text-2xl font-black font-mono text-sky-500">{daily10MinHistory.length + (daily10Min.event ? 1 : 0)}</span>
+                        <span className="text-xs font-bold text-slate-400">일 누적</span>
+                     </div>
+                  </div>
+
+                  <div className={`p-3.5 rounded-2xl border ${ui.bgPanel} flex flex-col justify-between`}>
+                     <div className="flex justify-between items-center">
+                        <span className="text-[10px] font-mono text-slate-400 font-bold uppercase">THANKS INDEX</span>
+                        <IconTarget />
+                     </div>
+                     <div className="flex items-baseline gap-1 mt-2">
+                        <span className="text-2xl font-black font-mono text-emerald-500">{totalThanksScore}</span>
+                        <span className="text-xs font-bold text-slate-400 font-mono">/ 20 점</span>
+                     </div>
+                  </div>
+
+                  <div className={`p-3.5 rounded-2xl border ${ui.bgPanel} flex flex-col justify-between`}>
+                     <div className="flex justify-between items-center">
+                        <span className="text-[10px] font-mono text-slate-400 font-bold uppercase">SUFFERING HEALING</span>
+                        <IconSparkles />
+                     </div>
+                     <div className="flex items-baseline gap-1 mt-2">
+                        <span className="text-2xl font-black font-mono text-purple-500">{sufferingCompletedCount}</span>
+                        <span className="text-xs font-bold text-slate-400 font-mono">/ 8 단계</span>
+                     </div>
                   </div>
                </div>
 
-               {/* 우측: 10분 훈련표 (3단계 점진적 스텝퍼 UX 적용) */}
-               <div className="lg:col-span-7 flex flex-col">
-                  <div className={`${ui.bgPanel} border ${ui.border} rounded-2xl h-full flex flex-col overflow-hidden`}>
-                     
-                     <div className={`p-4 sm:p-5 border-b ${ui.border} flex flex-col gap-2`}>
-                        <div className="flex justify-between items-center">
-                          <h3 className={`text-[16px] font-black ${ui.textMain}`}>매일 사용하는 10분 훈련표</h3>
-                          
-                          {/* 🌟 한 문장 나눔 릴스 변환 버튼 */}
-                          <button
-                            onClick={() => handleExportToReels(daily10Min.share, '10분 훈련 한문장')}
-                            className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:opacity-90 text-white font-black text-[11px] shadow-xs active:scale-95 transition-all flex items-center gap-1 cursor-pointer"
-                            title="공동체 나눌 한 문장을 릴스로 즉시 제작"
-                          >
-                            <IconSparkles /> 릴스 제작
-                          </button>
-                        </div>
-
-                        {/* 스텝퍼 세그먼트 버튼 */}
-                        <div className="grid grid-cols-3 gap-1.5 p-1 rounded-xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 mt-1">
-                          {trainingStepGroups.map((grp, idx) => (
-                            <button
-                              key={idx}
-                              onClick={() => setTrainingStep(idx)}
-                              className={`py-1.5 px-2 rounded-lg text-[11.5px] font-bold transition-all cursor-pointer truncate ${
-                                trainingStep === idx
-                                  ? 'bg-white dark:bg-zinc-800 text-sky-600 dark:text-sky-400 shadow-xs font-black'
-                                  : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'
-                              }`}
-                            >
-                              {idx + 1}단계
-                            </button>
-                          ))}
-                        </div>
-                     </div>
-
-                     {/* 현재 스텝 입력 폼 */}
-                     <div className="flex-1 p-4 sm:p-5 flex flex-col justify-between">
-                        <div className="space-y-3.5 animate-fade-in">
-                          <div className="border-b border-dashed border-zinc-200 dark:border-zinc-800 pb-2 mb-3">
-                            <span className="text-[12px] font-black text-sky-600 dark:text-sky-400 block">
-                              {trainingStepGroups[trainingStep].title}
-                            </span>
-                            <span className="text-[11px] text-zinc-500 font-medium">
-                              {trainingStepGroups[trainingStep].desc}
-                            </span>
+               <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                  <div className="lg:col-span-5 flex flex-col gap-4">
+                     {secretThanks.length > 0 && (
+                       <div className="p-5 border border-amber-200 dark:border-amber-900/30 bg-amber-50/50 dark:bg-amber-900/10 flex flex-col gap-3 rounded-2xl shadow-xs">
+                          <h3 className="text-[14px] font-black text-amber-600 dark:text-amber-400 flex items-center gap-2">
+                            💌 당신의 삶에 심겨진 익명의 감사
+                          </h3>
+                          <div className="flex flex-col gap-2">
+                             {secretThanks.map(st => (
+                               <div key={st.id} className="p-3 bg-white/80 dark:bg-black/30 backdrop-blur-sm text-[13.5px] font-bold text-gray-800 dark:text-gray-200 rounded-xl shadow-xs">
+                                 "{st.content}"
+                               </div>
+                             ))}
                           </div>
+                       </div>
+                     )}
 
-                          {trainingStepGroups[trainingStep].fields.map(f => (
-                            <div key={f.id} className="flex flex-col gap-1.5">
-                              <label className={`text-[12px] font-bold ${ui.textMain}`}>{f.label}</label>
-                              <input 
-                                type="text"
-                                value={daily10Min[f.id] || ''}
-                                onChange={e => handle10Min(f.id, e.target.value)}
-                                placeholder={f.ph || "기록하십시오..."}
-                                className={`w-full px-3 py-2.5 text-[13px] font-medium rounded-xl outline-none transition-colors border ${ui.bgInput}`}
-                              />
-                            </div>
-                          ))}
+                     {/* 오늘의 감사 리스트 카드 */}
+                     <div className={`${ui.bgPanel} p-5 border ${ui.border} flex flex-col gap-3 rounded-2xl`}>
+                        <div className="flex justify-between items-center">
+                           <h3 className={`text-[15px] font-black ${ui.textMain} flex items-center gap-2`}><IconHeart/> 오늘의 감사 리스트</h3>
+                           
+                           <div className="flex items-center gap-2">
+                              {parsedThanksList.length > 0 && (
+                                <>
+                                  <button
+                                    onClick={() => handleExportToReels(parsedThanksList[0], '오늘의 감사')}
+                                    className="px-2.5 py-1 text-[11px] font-black bg-gradient-to-r from-amber-500 to-rose-500 hover:opacity-90 text-white rounded-lg shadow-xs transition-transform active:scale-95 flex items-center gap-1 cursor-pointer"
+                                    title="첫 번째 감사를 3초 시네마틱 릴스로 즉시 제작"
+                                  >
+                                    <span>🎬</span> 릴스 변환
+                                  </button>
+
+                                  <button
+                                    onClick={handleSendAllToCell}
+                                    className="px-2.5 py-1 text-[11px] font-black bg-sky-500 hover:bg-sky-600 text-white rounded-lg shadow-xs transition-transform active:scale-95 flex items-center gap-1 cursor-pointer"
+                                    title="전체 감사 리스트를 목장 모임으로 한 번에 보냅니다"
+                                  >
+                                    <IconSend /> 일괄 전송
+                                  </button>
+                                </>
+                              )}
+                              <span onClick={() => openModal && openModal('thanks')} className={`text-[12px] font-bold ${ui.textSub} flex items-center cursor-pointer hover:${ui.textMain}`}>전체 편집 <IconChevronRight/></span>
+                           </div>
                         </div>
+                        
+                        {parsedThanksList.length === 0 ? (
+                          <p className={`text-[13px] font-medium ${ui.textSub} py-1`}>
+                            오늘의 감사를 기록하세요.
+                          </p>
+                        ) : (
+                          <div className="flex flex-col gap-1.5 pt-1">
+                            {parsedThanksList.map((item, idx) => (
+                              <div key={idx} className={`p-2.5 border rounded-xl flex items-center justify-between gap-2 ${isDark ? 'bg-black/20 border-white/10' : 'bg-stone-50 border-stone-200'}`}>
+                                <div className="flex items-start gap-2 min-w-0">
+                                  <span className="text-[11.5px] font-bold text-amber-500 shrink-0 mt-0.5">{idx + 1}.</span>
+                                  <span className={`text-[13px] font-medium leading-snug truncate ${ui.textMain}`}>{item}</span>
+                                </div>
+                                
+                                <div className="flex items-center gap-1 shrink-0">
+                                  <button
+                                    onClick={() => handleExportToReels(item, `감사 ${idx + 1}`)}
+                                    className="px-2 py-1 text-[10.5px] font-black text-rose-500 hover:underline cursor-pointer"
+                                    title="이 감사 항목으로 릴스 제작"
+                                  >
+                                    🎬 릴스
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setSelectedThanksItem(item);
+                                      setShowSendModal(true);
+                                    }}
+                                    className="px-2.5 py-1 text-[11px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500 hover:text-white rounded-md transition-all flex items-center gap-1 cursor-pointer"
+                                  >
+                                    <IconSend /> 전송
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                     </div>
 
-                        {/* 스텝 네비게이션 버튼 */}
-                        <div className="flex justify-between items-center gap-2 pt-4 mt-4 border-t border-zinc-200 dark:border-zinc-800">
-                          <button
-                            disabled={trainingStep === 0}
-                            onClick={() => setTrainingStep(p => Math.max(0, p - 1))}
-                            className="px-4 py-2 rounded-xl text-xs font-bold border border-zinc-200 dark:border-zinc-800 text-zinc-500 disabled:opacity-30 cursor-pointer"
-                          >
-                            ◀ 이전 단계
-                          </button>
-                          
-                          <span className="text-[11px] font-mono font-bold text-zinc-400">
-                            {trainingStep + 1} / 3 STEP
-                          </span>
-
-                          <button
-                            disabled={trainingStep === 2}
-                            onClick={() => setTrainingStep(p => Math.min(2, p + 1))}
-                            className="px-4 py-2 rounded-xl text-xs font-bold bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 disabled:opacity-30 cursor-pointer shadow-xs"
-                          >
-                            다음 단계 ▶
-                          </button>
+                     {/* 말씀 묵상 노트 */}
+                     <div className={`${ui.bgPanel} p-5 border ${ui.border} flex flex-col gap-3 rounded-2xl`}>
+                        <div className="flex justify-between items-center border-b border-dashed pb-2 mb-1 border-current opacity-20">
+                           <h3 className={`text-[15px] font-black ${ui.textMain} flex items-center gap-2`}><IconBook/> 말씀 묵상 노트</h3>
+                           <span className={`text-[11px] font-bold ${ui.textSub}`}>총 {getArr(bibleNotes).length}개</span>
+                        </div>
+                        <div className="flex flex-col gap-0">
+                           {getArr(bibleNotes).length === 0 ? (
+                              <p className={`text-[13px] font-medium ${ui.textSub} py-2`}>저장된 노트가 없습니다.</p>
+                           ) : (
+                              getArr(bibleNotes).slice(0, 3).map(n => (
+                                 <div key={n.id} onClick={() => openModal && openModal('bibleNoteList', n)} className={`py-3 border-b last:border-0 border-dashed ${ui.borderDash} cursor-pointer`}>
+                                    <p className={`text-[13px] font-bold ${ui.textMain} truncate`}>{n.verses?.[0]?.ref || '말씀'} : <span className="font-medium text-slate-500">{n.note ? n.note.replace(/<[^>]*>?/gm, '') : '내용 없음'}</span></p>
+                                 </div>
+                              ))
+                           )}
                         </div>
                      </div>
 
+                     {/* 나의 묵상 간증 */}
+                     <div onClick={() => openModal && openModal('testimony')} className={`${ui.bgPanel} p-5 border ${ui.border} rounded-2xl cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors flex flex-col gap-2`}>
+                        <div className="flex justify-between items-center">
+                           <h3 className={`text-[15px] font-black ${ui.textMain} flex items-center gap-2`}><IconEdit/> 나의 묵상 간증</h3>
+                           <span className={`text-[12px] font-bold ${ui.textSub} flex items-center`}>작성 <IconChevronRight/></span>
+                        </div>
+                        <p className={`text-[13px] font-medium ${ui.textSub} line-clamp-2`}>
+                           {currDay.testimony && currDay.testimony !== TESTIMONY_TEMPLATE ? '간증문이 작성되어 있습니다.' : '오늘의 묵상과 간증을 기록하세요.'}
+                        </p>
+                     </div>
+                  </div>
+
+                  {/* 우측: 10분 훈련표 (3단계 점진적 스텝퍼 UX & 영구 아카이빙) */}
+                  <div className="lg:col-span-7 flex flex-col">
+                     <div className={`${ui.bgPanel} border ${ui.border} rounded-2xl h-full flex flex-col overflow-hidden`}>
+                        
+                        <div className={`p-4 sm:p-5 border-b ${ui.border} flex flex-col gap-2`}>
+                           <div className="flex justify-between items-center">
+                             <h3 className={`text-[16px] font-black ${ui.textMain}`}>매일 사용하는 10분 훈련표</h3>
+                             
+                             <div className="flex items-center gap-1.5">
+                               <button
+                                 onClick={handleArchive10Min}
+                                 className="px-2.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-[11px] shadow-xs active:scale-95 transition-all flex items-center gap-1 cursor-pointer"
+                                 title="오늘의 10분 훈련 기록을 영구 보존합니다"
+                               >
+                                 <IconCheck /> 일지 저장
+                               </button>
+
+                               <button
+                                 onClick={() => handleExportToReels(daily10Min.share, '10분 훈련 한문장')}
+                                 className="px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:opacity-90 text-white font-black text-[11px] shadow-xs active:scale-95 transition-all flex items-center gap-1 cursor-pointer"
+                                 title="공동체 나눌 한 문장을 릴스로 즉시 제작"
+                               >
+                                 <IconSparkles /> 릴스 제작
+                               </button>
+                             </div>
+                           </div>
+
+                           {/* 스텝퍼 세그먼트 버튼 */}
+                           <div className="grid grid-cols-3 gap-1.5 p-1 rounded-xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 mt-1">
+                             {trainingStepGroups.map((grp, idx) => (
+                               <button
+                                 key={idx}
+                                 onClick={() => setTrainingStep(idx)}
+                                 className={`py-1.5 px-2 rounded-lg text-[11.5px] font-bold transition-all cursor-pointer truncate ${
+                                   trainingStep === idx
+                                     ? 'bg-white dark:bg-zinc-800 text-sky-600 dark:text-sky-400 shadow-xs font-black'
+                                     : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'
+                                 }`}
+                               >
+                                 {idx + 1}단계
+                               </button>
+                             ))}
+                           </div>
+                        </div>
+
+                        {/* 현재 스텝 입력 폼 */}
+                        <div className="flex-1 p-4 sm:p-5 flex flex-col justify-between">
+                           <div className="space-y-3.5 animate-fade-in">
+                             <div className="border-b border-dashed border-zinc-200 dark:border-zinc-800 pb-2 mb-3">
+                               <span className="text-[12px] font-black text-sky-600 dark:text-sky-400 block">
+                                 {trainingStepGroups[trainingStep].title}
+                               </span>
+                               <span className="text-[11px] text-zinc-500 font-medium">
+                                 {trainingStepGroups[trainingStep].desc}
+                               </span>
+                             </div>
+
+                             {trainingStepGroups[trainingStep].fields.map(f => (
+                               <div key={f.id} className="flex flex-col gap-1.5">
+                                 <div className="flex justify-between items-center">
+                                   <label className={`text-[12px] font-bold ${ui.textMain}`}>{f.label}</label>
+                                   
+                                   {/* 필드별 즉시 파이프라인 버튼 */}
+                                   {f.id === 'obey' && daily10Min.obey && (
+                                     <button
+                                       type="button"
+                                       onClick={handleExportObeyToApplyTracker}
+                                       className="text-[10.5px] font-bold text-sky-500 hover:underline flex items-center gap-1 cursor-pointer"
+                                     >
+                                       <IconTarget /> 실천 트래커로 이관 ➔
+                                     </button>
+                                   )}
+                                   {f.id === 'repent' && daily10Min.repent && (
+                                     <button
+                                       type="button"
+                                       onClick={() => handleExportToPrayerBox(daily10Min.repent, '회개의 기도')}
+                                       className="text-[10.5px] font-bold text-rose-500 hover:underline flex items-center gap-1 cursor-pointer"
+                                     >
+                                       <IconPray /> 기도함 전송 ➔
+                                     </button>
+                                   )}
+                                 </div>
+
+                                 <input 
+                                   type="text"
+                                   value={daily10Min[f.id] || ''}
+                                   onChange={e => handle10Min(f.id, e.target.value)}
+                                   placeholder={f.ph || "기록하십시오..."}
+                                   className={`w-full px-3 py-2.5 text-[13px] font-medium rounded-xl outline-none transition-colors border ${ui.bgInput}`}
+                                 />
+                               </div>
+                             ))}
+                           </div>
+
+                           {/* 스텝 네비게이션 버튼 */}
+                           <div className="flex justify-between items-center gap-2 pt-4 mt-4 border-t border-zinc-200 dark:border-zinc-800">
+                             <button
+                               disabled={trainingStep === 0}
+                               onClick={() => setTrainingStep(p => Math.max(0, p - 1))}
+                               className="px-4 py-2 rounded-xl text-xs font-bold border border-zinc-200 dark:border-zinc-800 text-zinc-500 disabled:opacity-30 cursor-pointer"
+                             >
+                               ◀ 이전 단계
+                             </button>
+                             
+                             <span className="text-[11px] font-mono font-bold text-zinc-400">
+                               {trainingStep + 1} / 3 STEP
+                             </span>
+
+                             <button
+                               disabled={trainingStep === 2}
+                               onClick={() => setTrainingStep(p => Math.min(2, p + 1))}
+                               className="px-4 py-2 rounded-xl text-xs font-bold bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 disabled:opacity-30 cursor-pointer shadow-xs"
+                             >
+                               다음 단계 ▶
+                             </button>
+                           </div>
+                        </div>
+
+                     </div>
                   </div>
                </div>
 
@@ -750,7 +996,7 @@ export default function Diary({ t, isDarkMode, setActiveScreen, isSidebarOpen, s
             </div>
           )}
 
-          {/* TAB 4: 고난 해석 8단계 & 실습 + 릴스 변환 */}
+          {/* TAB 4: 고난 해석 8단계 & 실습 */}
           {activeTab === 'suffering' && (
             <div className="p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 max-w-[1600px] mx-auto pb-32">
                <div className="lg:col-span-5 flex flex-col gap-6">
@@ -811,14 +1057,25 @@ export default function Diary({ t, isDarkMode, setActiveScreen, isSidebarOpen, s
                           <h2 className={`text-[18px] font-black ${ui.textMain}`}>고난 해석 8단계 (실습지)</h2>
                         </div>
 
-                        {/* 고난 해석 릴스 변환 버튼 */}
-                        <button
-                          onClick={() => handleExportToReels(sufferingPractice.interpretation || sufferingPractice.action, '고난 해석')}
-                          className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-rose-500 to-indigo-600 hover:opacity-90 text-white font-black text-[11px] shadow-xs active:scale-95 transition-all flex items-center gap-1 cursor-pointer"
-                          title="작성된 고난 해석과 적용을 릴스로 제작"
-                        >
-                          <IconSparkles /> 릴스 변환
-                        </button>
+                        <div className="flex items-center gap-1.5">
+                          {sufferingPractice.action && (
+                            <button
+                              onClick={handleExportSufferToApplyTracker}
+                              className="px-2.5 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-[11px] shadow-xs active:scale-95 transition-all flex items-center gap-1 cursor-pointer"
+                              title="7단계 적용을 삶의 실천 트래커로 즉시 등록"
+                            >
+                              <IconTarget /> 실천 이관
+                            </button>
+                          )}
+
+                          <button
+                            onClick={() => handleExportToReels(sufferingPractice.interpretation || sufferingPractice.action, '고난 해석')}
+                            className="px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-rose-500 to-indigo-600 hover:opacity-90 text-white font-black text-[11px] shadow-xs active:scale-95 transition-all flex items-center gap-1 cursor-pointer"
+                            title="작성된 고난 해석과 적용을 릴스로 제작"
+                          >
+                            <IconSparkles /> 릴스 변환
+                          </button>
+                        </div>
                      </div>
                      
                      <div className="flex-1 flex flex-col gap-4">
