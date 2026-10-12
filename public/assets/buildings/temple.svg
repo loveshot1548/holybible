@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 252 220" width="252" height="220">
+    <ellipse cx="126" cy="205" rx="100" ry="14" fill="#361F12" opacity="0.3"/>
+    <!-- 1단 대리석 기단 -->
+    <polygon points="126,160 230,120 126,80 22,120" fill="#FFF9EE" stroke="#361F12" stroke-width="2.5"/>
+    <polygon points="22,120 126,160 126,175 22,135" fill="#EAD6BD" stroke="#361F12" stroke-width="2.5"/>
+    <polygon points="126,160 230,120 230,135 126,175" fill="#D4BC98" stroke="#361F12" stroke-width="2.5"/>
+    <!-- 2단 열주 안뜰 테라스 -->
+    <polygon points="126,130 205,98 126,65 47,98" fill="#FFF8EB" stroke="#361F12" stroke-width="2"/>
+    <polygon points="47,98 126,130 126,145 47,113" fill="#EAD6BD" stroke="#361F12" stroke-width="2"/>
+    <polygon points="126,130 205,98 205,113 126,145" fill="#D4BC98" stroke="#361F12" stroke-width="2"/>
+    <!-- 대리석 열주 회랑 기둥 7개 -->
+    
+      <rect x="62" y="85" width="6" height="35" fill="#FFFFFF" stroke="#361F12" stroke-width="1.2"/>
+      <rect x="61" y="82" width="8" height="4" fill="#FBBF24" stroke="#361F12" stroke-width="1"/>
+    
+      <rect x="82" y="85" width="6" height="35" fill="#FFFFFF" stroke="#361F12" stroke-width="1.2"/>
+      <rect x="81" y="82" width="8" height="4" fill="#FBBF24" stroke="#361F12" stroke-width="1"/>
+    
+      <rect x="102" y="85" width="6" height="35" fill="#FFFFFF" stroke="#361F12" stroke-width="1.2"/>
+      <rect x="101" y="82" width="8" height="4" fill="#FBBF24" stroke="#361F12" stroke-width="1"/>
+    
+      <rect x="123" y="85" width="6" height="35" fill="#FFFFFF" stroke="#361F12" stroke-width="1.2"/>
+      <rect x="122" y="82" width="8" height="4" fill="#FBBF24" stroke="#361F12" stroke-width="1"/>
+    
+      <rect x="144" y="85" width="6" height="35" fill="#FFFFFF" stroke="#361F12" stroke-width="1.2"/>
+      <rect x="143" y="82" width="8" height="4" fill="#FBBF24" stroke="#361F12" stroke-width="1"/>
+    
+      <rect x="164" y="85" width="6" height="35" fill="#FFFFFF" stroke="#361F12" stroke-width="1.2"/>
+      <rect x="163" y="82" width="8" height="4" fill="#FBBF24" stroke="#361F12" stroke-width="1"/>
+    
+      <rect x="184" y="85" width="6" height="35" fill="#FFFFFF" stroke="#361F12" stroke-width="1.2"/>
+      <rect x="183" y="82" width="8" height="4" fill="#FBBF24" stroke="#361F12" stroke-width="1"/>
+    
+    <!-- 3단 지성소 헤이칼 본관 -->
+    <polygon points="80,110 172,75 172,25 80,60" fill="#D4BC98" stroke="#361F12" stroke-width="2.5"/>
+    <polygon points="80,110 80,60 126,42 126,92" fill="#FFF9EE" stroke="#361F12" stroke-width="2.5"/>
+    <!-- 황금 코니스 & 파사드 -->
+    <polygon points="80,60 126,42 172,25 126,15" fill="#FBBF24" stroke="#361F12" stroke-width="2.5"/>
+    <polygon points="80,60 126,42 126,49 80,67" fill="#F59E0B" stroke="#361F12" stroke-width="2"/>
+    <polygon points="126,42 172,25 172,32 126,49" fill="#D97706" stroke="#361F12" stroke-width="2"/>
+    <!-- 니카노르 청동 대문 -->
+    <rect x="98" y="70" width="14" height="22" fill="#78350F" stroke="#361F12" stroke-width="1.5" rx="3"/>
+    <circle x="103" y="82" r="1.5" fill="#FBBF24"/>
+    <!-- 번제단 & 불꽃 -->
+    <rect x="145" y="112" width="18" height="15" fill="#5C381E" stroke="#361F12" stroke-width="1.5"/>
+    <circle cx="154" cy="110" r="5" fill="#EF4444"/>
+    <circle cx="154" cy="108" r="3" fill="#FBBF24"/>
+  </svg>

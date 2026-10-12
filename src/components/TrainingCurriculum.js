@@ -625,14 +625,14 @@ export default function TrainingCurriculum({ t, isDarkMode, setActiveScreen }) {
                   CANONICAL FOUNDATION • § Ⅰ
                 </span>
                 <h2 className={`text-[17px] sm:text-[19px] font-bold tracking-tight mt-0.5 ${textHead}`} style={fontSerif}>
-                  제자훈련 신학개관 및 15대 핵심 발견 규정[cite: 19, 23]
+                  제자훈련 신학개관 및 15대 핵심 발견 규정
                 </h2>
               </div>
 
               {/* 15대 신규 핵심 발견 카드 그리드 */}
               <div className={`p-3 border ${cardBox}`}>
                 <span className={`text-[11.5px] font-bold block mb-2 ${textHead}`} style={fontSans}>
-                  0. 이번 2판에서 새롭게 확인한 핵심 (15대 규정)[cite: 19, 23]
+                  0. 이번 2판에서 새롭게 확인한 핵심 (15대 규정)
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                   {[
@@ -654,7 +654,7 @@ export default function TrainingCurriculum({ t, isDarkMode, setActiveScreen }) {
                   ].map((r, i) => (
                     <div key={i} className={`p-2 border ${subBox} flex items-start gap-1.5`}>
                       <span className="font-mono text-[10px] font-bold text-[#7A2E26] dark:text-[#F87171] shrink-0 mt-0.5">[{String(i+1).padStart(2,'0')}]</span>
-                      <p className={`text-[12px] leading-relaxed ${textBody} break-keep`} style={fontSerif}>{r.slice(r.indexOf('.') + 2)}[cite: 19, 23]</p>
+                      <p className={`text-[12px] leading-relaxed ${textBody} break-keep`} style={fontSerif}>{r.slice(r.indexOf('.') + 2)}</p>
                     </div>
                   ))}
                 </div>
@@ -663,19 +663,19 @@ export default function TrainingCurriculum({ t, isDarkMode, setActiveScreen }) {
               {/* 연구자료 등급 & 양육 시스템 구조표 */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div className={`p-3 border ${subBox}`}>
-                  <span className={`text-[9.5px] font-mono font-bold uppercase tracking-wider block mb-1 text-[#7A2E26] dark:text-[#F87171]`} style={fontSans}>1. 연구자료 등급 (A~D)[cite: 19, 23]</span>
+                  <span className={`text-[9.5px] font-mono font-bold uppercase tracking-wider block mb-1 text-[#7A2E26] dark:text-[#F87171]`} style={fontSans}>1. 연구자료 등급 (A~D)</span>
                   <div className="space-y-1 text-[11.5px]" style={fontSans}>
-                    <p><strong>A:</strong> 공식 홈페이지, T스쿨, QTM 교재, 공식 유튜브[cite: 19, 23]</p>
-                    <p><strong>B:</strong> 공식기관 안내 외부자료, 세미나/인터뷰 안내[cite: 19, 23]</p>
-                    <p><strong>C:</strong> 웨스트민스터 신앙고백, 장로교 신학문헌[cite: 19, 23]</p>
-                    <p><strong>D:</strong> 연구자 재구성 교육모델 (본 문서 모델/프로토콜)[cite: 19, 23]</p>
+                    <p><strong>A:</strong> 공식 홈페이지, T스쿨, QTM 교재, 공식 유튜브</p>
+                    <p><strong>B:</strong> 공식기관 안내 외부자료, 세미나/인터뷰 안내</p>
+                    <p><strong>C:</strong> 웨스트민스터 신앙고백, 장로교 신학문헌</p>
+                    <p><strong>D:</strong> 연구자 재구성 교육모델 (본 문서 모델/프로토콜)</p>
                   </div>
                 </div>
                 <div className={`p-3 border ${subBox}`}>
-                  <span className={`text-[9.5px] font-mono font-bold uppercase tracking-wider block mb-1 text-[#1B365D] dark:text-[#93C5FD]`} style={fontSans}>2. 양육 시스템 로드맵 & 핵심원리[cite: 19, 23]</span>
+                  <span className={`text-[9.5px] font-mono font-bold uppercase tracking-wider block mb-1 text-[#1B365D] dark:text-[#93C5FD]`} style={fontSans}>2. 양육 시스템 로드맵 & 핵심원리</span>
                   <div className="space-y-1 text-[11.5px]" style={fontSerif}>
-                    <p><strong>기초양육(무엇을 믿는가?):</strong> 하나님 → 구속 → 믿음 → 예배 → 말씀/기도 → 공동체[cite: 19, 23]</p>
-                    <p><strong>THINK양육(어떻게 사는가?):</strong> 고백 → 시간 → 큐티 → 기도 → 성령 → 거듭남 → 사명[cite: 19, 23]</p>
+                    <p><strong>기초양육(무엇을 믿는가?):</strong> 하나님 → 구속 → 믿음 → 예배 → 말씀/기도 → 공동체</p>
+                    <p><strong>THINK양육(어떻게 사는가?):</strong> 고백 → 시간 → 큐티 → 기도 → 성령 → 거듭남 → 사명</p>
                   </div>
                 </div>
               </div>
@@ -683,7 +683,7 @@ export default function TrainingCurriculum({ t, isDarkMode, setActiveScreen }) {
               {/* 수료자 15대 제자도 자격 검증표 */}
               <div className={`p-3 border ${cardBox}`}>
                 <span className={`text-[11.5px] font-bold block mb-2 ${textHead}`} style={fontSans}>
-                  48. 최종 제자도 자격 검증표 (클릭하여 체크)[cite: 19, 23]
+                  48. 최종 제자도 자격 검증표 (클릭하여 체크)
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
                   {[
@@ -708,7 +708,7 @@ export default function TrainingCurriculum({ t, isDarkMode, setActiveScreen }) {
                         <div className={`w-3.5 h-3.5 border shrink-0 flex items-center justify-center ${isChecked ? 'bg-[#7A2E26] border-[#7A2E26] text-white' : 'border-slate-400'}`}>
                           {isChecked && <IconCheck />}
                         </div>
-                        <span className={`text-[12px] ${isChecked ? `${textHead} font-bold` : textBody}`} style={fontSerif}>{c.t}[cite: 19, 23]</span>
+                        <span className={`text-[12px] ${isChecked ? `${textHead} font-bold` : textBody}`} style={fontSerif}>{c.t}</span>
                       </div>
                     );
                   })}
@@ -717,7 +717,7 @@ export default function TrainingCurriculum({ t, isDarkMode, setActiveScreen }) {
 
               {/* 49. 지도자 선언 */}
               <div className={`p-3 border-l-2 border-[#7A2E26] ${subBox} text-[12.5px] leading-relaxed italic ${textBody}`} style={fontSerif}>
-                "나는 성도에게 내 답을 주는 사람이 아니라 성도가 말씀 앞에서 하나님을 만나도록 돕는 사람이다[cite: 19, 23]. 나는 성도의 고난을 함부로 해석하지 않는다[cite: 19, 23]. 나는 성도의 죄를 이용하지 않는다[cite: 19, 23]. 나는 성도의 고백을 안전하게 다룬다[cite: 19, 23]. 나는 말씀을 삶에 연결하며 적용을 구체화한다[cite: 19, 23]."
+                "나는 성도에게 내 답을 주는 사람이 아니라 성도가 말씀 앞에서 하나님을 만나도록 돕는 사람이다. 나는 성도의 고난을 함부로 해석하지 않는다. 나는 성도의 죄를 이용하지 않는다. 나는 성도의 고백을 안전하게 다룬다. 나는 말씀을 삶에 연결하며 적용을 구체화한다."
               </div>
             </div>
           )}
@@ -730,14 +730,14 @@ export default function TrainingCurriculum({ t, isDarkMode, setActiveScreen }) {
                   HERMENEUTICS & PROTOCOL • § Ⅱ
                 </span>
                 <h2 className={`text-[17px] sm:text-[19px] font-bold tracking-tight mt-0.5 ${textHead}`} style={fontSerif}>
-                  고난 해석 12단계 및 감사의 5단계 프로토콜[cite: 20, 23]
+                  고난 해석 12단계 및 감사의 5단계 프로토콜
                 </h2>
               </div>
 
               {/* 16. 고난 해석 12단계 순서도 */}
               <div className={`p-3 border ${cardBox}`}>
                 <span className={`text-[11.5px] font-bold block mb-2 ${textHead}`} style={fontSans}>
-                  16. 고난 해석 12단계 프로토콜 (Protocol 16)[cite: 20, 23]
+                  16. 고난 해석 12단계 프로토콜 (Protocol 16)
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
                   {[
@@ -756,10 +756,10 @@ export default function TrainingCurriculum({ t, isDarkMode, setActiveScreen }) {
                   ].map(item => (
                     <div key={item.s} className={`p-2 border ${subBox}`}>
                       <div className="flex items-center justify-between mb-0.5">
-                        <span className="font-mono text-[9.5px] font-bold text-[#7A2E26] dark:text-[#F87171]">STEP {item.s}[cite: 20, 23]</span>
-                        <strong className={`text-[12px] ${textHead}`} style={fontSans}>{item.t}[cite: 20, 23]</strong>
+                        <span className="font-mono text-[9.5px] font-bold text-[#7A2E26] dark:text-[#F87171]">STEP {item.s}</span>
+                        <strong className={`text-[12px] ${textHead}`} style={fontSans}>{item.t}</strong>
                       </div>
-                      <p className={`text-[11.5px] ${textMuted}`} style={fontSerif}>{item.d}[cite: 20, 23]</p>
+                      <p className={`text-[11.5px] ${textMuted}`} style={fontSerif}>{item.d}</p>
                     </div>
                   ))}
                 </div>
@@ -799,7 +799,7 @@ export default function TrainingCurriculum({ t, isDarkMode, setActiveScreen }) {
               {/* 17. 고난 왜곡 방지 8대 필터 */}
               <div className={`p-3 border ${cardBox}`}>
                 <span className={`text-[11.5px] font-bold block mb-2 text-[#B91C1C] dark:text-[#F87171]`} style={fontSans}>
-                  17. 고난 왜곡 방지 8대 필터 점검표[cite: 20, 23]
+                  17. 고난 왜곡 방지 8대 필터 점검표
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
                   {[
@@ -825,7 +825,7 @@ export default function TrainingCurriculum({ t, isDarkMode, setActiveScreen }) {
                         {checks[f.k] && <IconCheck />}
                       </div>
                       <span className={`text-[11.5px] break-keep ${checks[f.k] ? 'text-[#B91C1C] dark:text-[#F87171] font-bold' : textBody}`} style={fontSerif}>
-                        {f.t}[cite: 20, 23]
+                        {f.t}
                       </span>
                     </div>
                   ))}
@@ -842,14 +842,14 @@ export default function TrainingCurriculum({ t, isDarkMode, setActiveScreen }) {
                   PRACTICAL ASSIGNMENT • § Ⅲ
                 </span>
                 <h2 className={`text-[17px] sm:text-[19px] font-bold tracking-tight mt-0.5 ${textHead}`} style={fontSerif}>
-                  주차별 실천 과제 및 루브릭 평가[cite: 21, 23]
+                  주차별 실천 과제 및 루브릭 평가
                 </h2>
               </div>
 
               {/* 19. 4주 집중과정 요람 */}
               <div className={`p-3 border ${cardBox}`}>
                 <span className={`text-[11.5px] font-bold block mb-2 ${textHead}`} style={fontSans}>
-                  19. 4주 집중과정 교과 요람[cite: 21, 23]
+                  19. 4주 집중과정 교과 요람
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {[
@@ -859,11 +859,11 @@ export default function TrainingCurriculum({ t, isDarkMode, setActiveScreen }) {
                     { w: 4, t: '공동체·섬김·영혼구원', k: '교회, 섬김, 영혼구원, 제자화', p: '한 사람 돌봄, 실제 봉사, 제자화', a: '30일 중보기도, 섬김 1회, 90일 계획' }
                   ].map(item => (
                     <div key={item.w} className={`p-2.5 border ${subBox}`}>
-                      <strong className={`text-[13px] text-[#7A2E26] dark:text-[#F87171] block mb-1`} style={fontSans}>WEEK {item.w}. {item.t}[cite: 21, 23]</strong>
+                      <strong className={`text-[13px] text-[#7A2E26] dark:text-[#F87171] block mb-1`} style={fontSans}>WEEK {item.w}. {item.t}</strong>
                       <div className="space-y-0.5 text-[12px]" style={fontSerif}>
-                        <p><strong className={textMuted}>핵심:</strong> {item.k}[cite: 21, 23]</p>
-                        <p><strong className={textMuted}>실습:</strong> {item.p}[cite: 21, 23]</p>
-                        <p><strong className={textHead}>과제:</strong> {item.a}[cite: 21, 23]</p>
+                        <p><strong className={textMuted}>핵심:</strong> {item.k}</p>
+                        <p><strong className={textMuted}>실습:</strong> {item.p}</p>
+                        <p><strong className={textHead}>과제:</strong> {item.a}</p>
                       </div>
                     </div>
                   ))}
@@ -873,7 +873,7 @@ export default function TrainingCurriculum({ t, isDarkMode, setActiveScreen }) {
               {/* 33. 주간 8대 영적 규율 실천표 */}
               <div className={`p-3 border ${cardBox}`}>
                 <span className={`text-[11.5px] font-bold block mb-2 ${textHead}`} style={fontSans}>
-                  33. 주간 8대 영적 규율 실천 점검표 (월~일)[cite: 21, 23]
+                  33. 주간 8대 영적 규율 실천 점검표 (월~일)
                 </span>
                 <div className="overflow-x-auto hide-scrollbar border border-inherit">
                   <table className="w-full text-center text-[12px] min-w-[440px]" style={fontSans}>
@@ -886,7 +886,7 @@ export default function TrainingCurriculum({ t, isDarkMode, setActiveScreen }) {
                     <tbody className="divide-y divide-inherit">
                       {['QT', '기도', '감사', '회개', '적용', '섬김', '관계회복', '복음'].map(item => (
                         <tr key={item}>
-                          <td className={`p-1 font-bold border-r ${borderRule} ${textHead}`}>{item}[cite: 21, 23]</td>
+                          <td className={`p-1 font-bold border-r ${borderRule} ${textHead}`}>{item}</td>
                           {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(day => {
                             const key = `w_${item}_${day}`;
                             const isChecked = Boolean(weeklyCheck[key]);
@@ -915,14 +915,14 @@ export default function TrainingCurriculum({ t, isDarkMode, setActiveScreen }) {
                   }`}
                   style={fontSans}
                 >
-                  <IconSend /> 위 체크 내역을 오늘의 '영적 5종 세트'에 즉시 동기화[cite: 21, 23]
+                  <IconSend /> 위 체크 내역을 오늘의 '영적 5종 세트'에 즉시 동기화
                 </button>
               </div>
 
               {/* 35. 지도자 평가 루브릭 */}
               <div className={`p-3 border ${cardBox}`}>
                 <span className={`text-[11.5px] font-bold block mb-2 ${textHead}`} style={fontSans}>
-                  35. 지도자 평가 루브릭 5영역 (직접 평가)[cite: 21, 23]
+                  35. 지도자 평가 루브릭 5영역 (직접 평가)
                 </span>
                 <div className="space-y-1.5">
                   {[
@@ -933,9 +933,9 @@ export default function TrainingCurriculum({ t, isDarkMode, setActiveScreen }) {
                     { id: 'reproduce', label: '재생산 (훈련만 받음 ~ 다른 사람 제자화)' }
                   ].map(r => (
                     <div key={r.id} className={`p-2 border flex items-center justify-between gap-2 ${subBox}`}>
-                      <span className={`text-[12px] font-bold ${textHead}`} style={fontSans}>{r.label}[cite: 21, 23]</span>
+                      <span className={`text-[12px] font-bold ${textHead}`} style={fontSans}>{r.label}</span>
                       <div className="flex items-center gap-1.5 shrink-0">
-                        <span className="font-mono text-[12px] font-bold text-[#7A2E26] dark:text-[#F87171]">{rubrics[r.id]}점[cite: 21, 23]</span>
+                        <span className="font-mono text-[12px] font-bold text-[#7A2E26] dark:text-[#F87171]">{rubrics[r.id]}점</span>
                         <input 
                           type="range" min="1" max="5" step="1" 
                           value={rubrics[r.id]||3} 
@@ -958,14 +958,14 @@ export default function TrainingCurriculum({ t, isDarkMode, setActiveScreen }) {
                   HOMILETIC CORPUS • § Ⅳ
                 </span>
                 <h2 className={`text-[17px] sm:text-[19px] font-bold tracking-tight mt-0.5 ${textHead}`} style={fontSerif}>
-                  79편 설교 코퍼스 심층 분석 & 이성현 목사 목회신학[cite: 22, 23]
+                  79편 설교 코퍼스 심층 분석 & 이성현 목사 목회신학
                 </h2>
               </div>
 
               {/* 비교 연구 매트릭스 */}
               <div className={`p-3 border ${cardBox}`}>
                 <span className={`text-[11.5px] font-bold block mb-2 ${textHead}`} style={fontSans}>
-                  60. 김양재 목사(우리들) vs 이성현 목사(김포) 비교 연구 (Thesis 60)[cite: 22, 23]
+                  60. 김양재 목사(우리들) vs 이성현 목사(김포) 비교 연구 (Thesis 60)
                 </span>
                 <div className="w-full overflow-x-auto hide-scrollbar border border-inherit mb-2">
                   <table className="w-full text-left text-[11.5px] min-w-[500px]" style={fontSans}>
@@ -979,18 +979,18 @@ export default function TrainingCurriculum({ t, isDarkMode, setActiveScreen }) {
                     <tbody className="divide-y divide-inherit">
                       <tr>
                         <td className={`p-1.5 font-bold ${textHead} border-r ${borderRule}`}>교육공학</td>
-                        <td className={`p-1.5 border-r ${borderRule} ${textBody}`} style={fontSerif}>절차화된 프로토콜 (5단계 감사 / 12단계 고난)[cite: 22, 23]</td>
-                        <td className={`p-1.5 ${textBody}`} style={fontSerif}>정경적 서사 연결 (Lectio Continua 연속 강해)[cite: 22, 23]</td>
+                        <td className={`p-1.5 border-r ${borderRule} ${textBody}`} style={fontSerif}>절차화된 프로토콜 (5단계 감사 / 12단계 고난)</td>
+                        <td className={`p-1.5 ${textBody}`} style={fontSerif}>정경적 서사 연결 (Lectio Continua 연속 강해)</td>
                       </tr>
                       <tr>
                         <td className={`p-1.5 font-bold ${textHead} border-r ${borderRule}`}>훈련 리듬</td>
-                        <td className={`p-1.5 border-r ${borderRule} ${textBody}`} style={fontSerif}>10주 기수제 양육학교 (T스쿨)[cite: 22, 23]</td>
-                        <td className={`p-1.5 ${textBody}`} style={fontSerif}>월례 5일 집중 기상오기 (특새 집중 훈련)[cite: 22, 23]</td>
+                        <td className={`p-1.5 border-r ${borderRule} ${textBody}`} style={fontSerif}>10주 기수제 양육학교 (T스쿨)</td>
+                        <td className={`p-1.5 ${textBody}`} style={fontSerif}>월례 5일 집중 기상오기 (특새 집중 훈련)</td>
                       </tr>
                       <tr>
                         <td className={`p-1.5 font-bold ${textHead} border-r ${borderRule}`}>신학 언어</td>
-                        <td className={`p-1.5 border-r ${borderRule} ${textBody}`} style={fontSerif}>실존적·관계적 언어 ("내 죄 보기")[cite: 22, 23]</td>
-                        <td className={`p-1.5 ${textBody}`} style={fontSerif}>조직신학적 언어 (원죄/형사죄, 정죄/징계 구분)[cite: 22, 23]</td>
+                        <td className={`p-1.5 border-r ${borderRule} ${textBody}`} style={fontSerif}>실존적·관계적 언어 ("내 죄 보기")</td>
+                        <td className={`p-1.5 ${textBody}`} style={fontSerif}>조직신학적 언어 (원죄/형사죄, 정죄/징계 구분)</td>
                       </tr>
                     </tbody>
                   </table>

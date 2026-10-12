@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 168 120" width="168" height="120">
+    <ellipse cx="84" cy="110" rx="70" ry="8" fill="#361F12" opacity="0.3"/>
+    <polygon points="84,100 150,68 150,30 84,62" fill="#64748B" stroke="#361F12" stroke-width="2"/>
+    <polygon points="18,68 84,100 84,62 18,30" fill="#94A3B8" stroke="#361F12" stroke-width="2"/>
+    <polygon points="84,62 150,30 84,15 18,30" fill="#CBD5E1" stroke="#361F12" stroke-width="2"/>
+    <!-- 아치 철문 -->
+    <path d="M 72,95 L 72,70 Q 84,55 96,70 L 96,95 Z" fill="#3E2723" stroke="#361F12" stroke-width="2"/>
+    <!-- 깃발 -->
+    <line x1="84" y1="15" x2="84" y2="0" stroke="#361F12" stroke-width="2"/>
+    <polygon points="84,0 100,5 84,10" fill="#EF4444"/>
+  </svg>

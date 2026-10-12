@@ -89,7 +89,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
     }
   ];
 
-  // 상황별 처방 데이터 (100% 완전 보존)[cite: 37]
+  // 상황별 처방 데이터 (100% 완전 보존)
   const contextCurations = [
     {
       situation: '오늘 본문 말씀이 잘 해석되지 않고 궁금한 점이 생길 때',
@@ -157,7 +157,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
     }
   ];
 
-  // 스마트 팁 데이터 (100% 완전 보존)[cite: 37]
+  // 스마트 팁 데이터 (100% 완전 보존)
   const smartTips = [
     { title: '원어 묵상 1-클릭 QT & 설교 삽입', desc: '단어 카드 모달 하단의 [🌿 QT 묵상에 삽입] 또는 [📖 설교노트에 삽입]을 누르면 원어 표제어, Strongs 번호, 형태론, 구속사 문법 주석이 오늘 묵상 일지에 자동 기록됩니다.', icon: <IconAcademic /> },
     { title: '성경 본문 스페이스바 자동완성', desc: 'QT 질문란이나 말씀 노트에서 [신명기 22:13]처럼 장:절을 적고 스페이스바를 누르면 성경 말씀 본문이 그 자리에 자동으로 쏙 들어옵니다.', icon: <IconActivity /> },
@@ -689,7 +689,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
           )}
 
           {/* ========================================================================= */}
-          {/* 🎬 [탭 2] 릴스 스튜디오 Pro 완벽 바이블 (100% 완전 보존)[cite: 37]                   */}
+          {/* 🎬 [탭 2] 릴스 스튜디오 Pro 완벽 바이블 (100% 완전 보존)                   */}
           {/* ========================================================================= */}
           {activeTab === 'reelsStudioGuide' && (
             <div className="flex flex-col gap-5 sm:gap-6">
@@ -718,7 +718,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
                 </button>
               </div>
 
-              {/* 타임라인 V/T/A 구조[cite: 37] */}
+              {/* 타임라인 V/T/A 구조 */}
               <div className={`p-5 sm:p-6 rounded-3xl border ${ui.cardBg} flex flex-col gap-4 shadow-sm`}>
                 <div className="flex items-center gap-3 border-b pb-4 border-stone-200/80 dark:border-white/10">
                   <div className="w-10 h-10 rounded-xl bg-sky-100 text-sky-700 dark:bg-sky-500/10 dark:text-sky-400 flex items-center justify-center text-xl font-black shrink-0">🎞️</div>
@@ -785,7 +785,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
                 </div>
               </div>
 
-              {/* 스마트 오디오 더킹[cite: 37] */}
+              {/* 스마트 오디오 더킹 */}
               <div className={`p-5 sm:p-6 rounded-3xl border ${ui.cardBg} flex flex-col gap-4 shadow-sm`}>
                 <div className="flex items-center gap-3 border-b pb-4 border-stone-200/80 dark:border-white/10">
                   <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 flex items-center justify-center text-xl font-black shrink-0">🎛️</div>
@@ -827,7 +827,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
                 </div>
               </div>
 
-              {/* 비디오월 & 3-Way 컬러휠[cite: 37] */}
+              {/* 비디오월 & 3-Way 컬러휠 */}
               <div className={`p-5 sm:p-6 rounded-3xl border ${ui.cardBg} flex flex-col gap-4 shadow-sm`}>
                 <div className="flex items-center gap-3 border-b pb-4 border-stone-200/80 dark:border-white/10">
                   <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 dark:bg-purple-500/10 dark:text-purple-400 flex items-center justify-center text-xl font-black shrink-0">🎨</div>
@@ -880,7 +880,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
                 </div>
               </div>
 
-              {/* 키네틱 타이포 & 프롬프터 & 매직 마스크[cite: 37] */}
+              {/* 키네틱 타이포 & 프롬프터 & 매직 마스크 */}
               <div className={`p-5 sm:p-6 rounded-3xl border ${ui.cardBg} flex flex-col gap-4 shadow-sm`}>
                 <div className="flex items-center gap-3 border-b pb-4 border-stone-200/80 dark:border-white/10">
                   <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400 flex items-center justify-center text-xl font-black shrink-0">✨</div>
@@ -921,7 +921,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
                 </div>
               </div>
 
-              {/* 원클릭 마스터 액션 배너[cite: 37] */}
+              {/* 원클릭 마스터 액션 배너 */}
               <div className={`p-4 sm:p-5 rounded-2xl border ${ui.cardBg} flex flex-col sm:flex-row justify-between sm:items-center gap-3.5 shadow-xs bg-gradient-to-r from-amber-50/70 to-stone-50/90 dark:from-stone-900/60 dark:to-black/80 border-amber-200/80 dark:border-white/10`}>
                 <div className="flex flex-col gap-1 min-w-0 flex-1">
                   <span className="text-xs font-black text-amber-700 dark:text-[#00E5FF] font-mono">ONE-CLICK AI MASTER</span>
@@ -942,7 +942,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
           )}
 
           {/* ========================================================================= */}
-          {/* 🚀 [탭 3] 원스트림(One-Stream) 연동 가이드 (100% 완전 보존)[cite: 37]                 */}
+          {/* 🚀 [탭 3] 원스트림(One-Stream) 연동 가이드 (100% 완전 보존)                 */}
           {/* ========================================================================= */}
           {activeTab === 'oneStream' && (
             <div className="flex flex-col gap-4">
@@ -967,7 +967,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
                 </button>
               </div>
 
-              {/* 기능 1[cite: 37] */}
+              {/* 기능 1 */}
               <div className={`p-4 sm:p-5 rounded-2xl border ${ui.cardBg} flex flex-col gap-3`}>
                 <div className="flex items-center justify-between border-b pb-2.5 border-dashed border-stone-200 dark:border-white/10">
                   <div className="flex items-center gap-2">
@@ -1009,7 +1009,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
                 </div>
               </div>
 
-              {/* 기능 2[cite: 37] */}
+              {/* 기능 2 */}
               <div className={`p-4 sm:p-5 rounded-2xl border ${ui.cardBg} flex flex-col gap-3`}>
                 <div className="flex items-center justify-between border-b pb-2.5 border-dashed border-stone-200 dark:border-white/10">
                   <div className="flex items-center gap-2">
@@ -1024,7 +1024,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
                 </p>
               </div>
 
-              {/* 기능 3[cite: 37] */}
+              {/* 기능 3 */}
               <div className={`p-4 sm:p-5 rounded-2xl border ${ui.cardBg} flex flex-col gap-3`}>
                 <div className="flex items-center justify-between border-b pb-2.5 border-dashed border-stone-200 dark:border-white/10">
                   <div className="flex items-center gap-2">
@@ -1039,7 +1039,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
                 </p>
               </div>
 
-              {/* 기능 4[cite: 37] */}
+              {/* 기능 4 */}
               <div className={`p-4 sm:p-5 rounded-2xl border ${ui.cardBg} flex flex-col gap-3`}>
                 <div className="flex items-center justify-between border-b pb-2.5 border-dashed border-stone-200 dark:border-white/10">
                   <div className="flex items-center gap-2">
@@ -1057,7 +1057,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
           )}
 
           {/* ========================================================================= */}
-          {/* 🏛️ [탭 4] 교회 행정·재정 거버넌스 4종 ERP 센터 (100% 완전 보존)[cite: 37]           */}
+          {/* 🏛️ [탭 4] 교회 행정·재정 거버넌스 4종 ERP 센터 (100% 완전 보존)           */}
           {/* ========================================================================= */}
           {activeTab === 'erpSuite' && (
             <div className="flex flex-col gap-5 sm:gap-6">
@@ -1083,7 +1083,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
                 </button>
               </div>
 
-              {/* 1. 재무·예산 원장[cite: 37] */}
+              {/* 1. 재무·예산 원장 */}
               <div className={`p-5 sm:p-6 rounded-3xl border ${ui.cardBg} flex flex-col gap-4 shadow-sm relative overflow-hidden`}>
                 <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-[80px] rounded-full pointer-events-none" />
                 
@@ -1128,7 +1128,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
                 </div>
               </div>
 
-              {/* 2. 사역 공정 관제[cite: 37] */}
+              {/* 2. 사역 공정 관제 */}
               <div className={`p-5 sm:p-6 rounded-3xl border ${ui.cardBg} flex flex-col gap-4 shadow-sm relative overflow-hidden`}>
                 <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 blur-[80px] rounded-full pointer-events-none" />
                 
@@ -1167,7 +1167,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
                 </div>
               </div>
 
-              {/* 3. 회의록 아카이브[cite: 37] */}
+              {/* 3. 회의록 아카이브 */}
               <div className={`p-5 sm:p-6 rounded-3xl border ${ui.cardBg} flex flex-col gap-4 shadow-sm relative overflow-hidden`}>
                 <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 blur-[80px] rounded-full pointer-events-none" />
                 
@@ -1206,7 +1206,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
                 </div>
               </div>
 
-              {/* 4. 목회 기도·감사 요약[cite: 37] */}
+              {/* 4. 목회 기도·감사 요약 */}
               <div className={`p-4 sm:p-5 rounded-2xl border ${ui.cardBg} flex flex-col sm:flex-row justify-between sm:items-center gap-3.5 shadow-xs`}>
                 <div className="flex flex-col gap-1.5 min-w-0">
                   <div className="flex items-center gap-2">
@@ -1223,7 +1223,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
           )}
 
           {/* ========================================================================= */}
-          {/* 📖 [탭 5] 공동체 QT & 목사님 나눔 상세 바이블 (100% 완전 보존)[cite: 37]             */}
+          {/* 📖 [탭 5] 공동체 QT & 목사님 나눔 상세 바이블 (100% 완전 보존)             */}
           {/* ========================================================================= */}
           {activeTab === 'qtCommunity' && (
             <div className="flex flex-col gap-4">
@@ -1249,7 +1249,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
                 </button>
               </div>
 
-              {/* 기능 1[cite: 37] */}
+              {/* 기능 1 */}
               <div className={`p-4 sm:p-5 rounded-2xl border ${ui.cardBg} flex flex-col gap-3`}>
                 <div className="flex items-center justify-between border-b pb-2.5 border-dashed border-stone-200 dark:border-white/10">
                   <div className="flex items-center gap-2">
@@ -1272,7 +1272,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
                 </div>
               </div>
 
-              {/* 기능 2[cite: 37] */}
+              {/* 기능 2 */}
               <div className={`p-4 sm:p-5 rounded-2xl border ${ui.cardBg} flex flex-col gap-3`}>
                 <div className="flex items-center justify-between border-b pb-2.5 border-dashed border-stone-200 dark:border-white/10">
                   <div className="flex items-center gap-2">
@@ -1287,7 +1287,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
                 </p>
               </div>
 
-              {/* 기능 3[cite: 37] */}
+              {/* 기능 3 */}
               <div className={`p-4 sm:p-5 rounded-2xl border ${ui.cardBg} flex flex-col gap-3`}>
                 <div className="flex items-center justify-between border-b pb-2.5 border-dashed border-stone-200 dark:border-white/10">
                   <div className="flex items-center gap-2">
@@ -1306,7 +1306,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
           )}
 
           {/* ========================================================================= */}
-          {/* 🕊️ [탭 6] 오늘의 묵상 여정 5단계 리터지 예배 (100% 완전 보존)[cite: 37]             */}
+          {/* 🕊️ [탭 6] 오늘의 묵상 여정 5단계 리터지 예배 (100% 완전 보존)             */}
           {/* ========================================================================= */}
           {activeTab === 'pilgrimage' && (
             <div className="flex flex-col gap-4">
@@ -1332,7 +1332,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
                 </button>
               </div>
 
-              {/* 5단계 순서 도식화[cite: 37] */}
+              {/* 5단계 순서 도식화 */}
               <div className="grid grid-cols-1 sm:grid-cols-5 gap-2 text-center">
                 {[
                   { num: '01', title: '침묵과 정돈', desc: '60초 호흡 침묵' },
@@ -1362,7 +1362,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
           )}
 
           {/* ========================================================================= */}
-          {/* 👥 [탭 7] 목장 모임 & Today-7일 오토풀링(Auto-Pulling) (100% 완전 보존)[cite: 37]       */}
+          {/* 👥 [탭 7] 목장 모임 & Today-7일 오토풀링(Auto-Pulling) (100% 완전 보존)       */}
           {/* ========================================================================= */}
           {activeTab === 'cellManual' && (
             <div className="flex flex-col gap-4">
@@ -1388,7 +1388,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
                 </button>
               </div>
 
-              {/* 7일 오토풀링 핵심 원리[cite: 37] */}
+              {/* 7일 오토풀링 핵심 원리 */}
               <div className={`p-4 rounded-2xl border border-stone-200 dark:border-white/10 bg-stone-50/80 dark:bg-black/20 flex flex-col gap-2`}>
                 <div className="flex justify-between items-center">
                   <span className="text-[12px] font-bold text-stone-800 dark:text-stone-200">
@@ -1401,7 +1401,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
                 </p>
               </div>
 
-              {/* 역할별 제출 체계 도식[cite: 37] */}
+              {/* 역할별 제출 체계 도식 */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className={`p-4 rounded-2xl border flex flex-col gap-1.5 ${ui.cardBg}`}>
                   <span className="text-[10.5px] font-bold px-2 py-0.5 rounded-md bg-stone-100 dark:bg-white/10 text-stone-800 dark:text-stone-200 w-max">일반 성도 (목원)</span>
@@ -1424,7 +1424,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
           )}
 
           {/* ========================================================================= */}
-          {/* 🌱 [탭 8] 영적 성장 파이프라인 (100% 완전 보존)[cite: 37]                             */}
+          {/* 🌱 [탭 8] 영적 성장 파이프라인 (100% 완전 보존)                             */}
           {/* ========================================================================= */}
           {activeTab === 'roadmap' && (
             <div className="flex flex-col gap-4">
@@ -1513,7 +1513,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
           )}
 
           {/* ========================================================================= */}
-          {/* 🎯 [탭 9] 상황별 성도 맞춤 처방 솔루션 (100% 완전 보존)[cite: 37]                     */}
+          {/* 🎯 [탭 9] 상황별 성도 맞춤 처방 솔루션 (100% 완전 보존)                     */}
           {/* ========================================================================= */}
           {activeTab === 'context' && (
             <div className="flex flex-col gap-3">
@@ -1586,7 +1586,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
           )}
 
           {/* ========================================================================= */}
-          {/* 🏢 [탭 10] 컨트롤허브(Admin) 사용법 (100% 완전 보존)[cite: 37]                       */}
+          {/* 🏢 [탭 10] 컨트롤허브(Admin) 사용법 (100% 완전 보존)                       */}
           {/* ========================================================================= */}
           {activeTab === 'controlHub' && (
             <div className="flex flex-col gap-4">
@@ -1604,7 +1604,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
                 </p>
               </div>
 
-              {/* 기능 1[cite: 37] */}
+              {/* 기능 1 */}
               <div className={`p-4 sm:p-5 rounded-2xl border ${ui.cardBg} flex flex-col gap-3`}>
                 <div className="flex items-center justify-between border-b pb-2 border-dashed border-stone-200 dark:border-white/10">
                   <div className="flex items-center gap-2">
@@ -1619,7 +1619,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
                 </p>
               </div>
 
-              {/* 기능 2[cite: 37] */}
+              {/* 기능 2 */}
               <div className={`p-4 sm:p-5 rounded-2xl border ${ui.cardBg} flex flex-col gap-3`}>
                 <div className="flex items-center justify-between border-b pb-2 border-dashed border-stone-200 dark:border-white/10">
                   <div className="flex items-center gap-2">
@@ -1634,7 +1634,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
                 </p>
               </div>
 
-              {/* 기능 3[cite: 37] */}
+              {/* 기능 3 */}
               <div className={`p-4 sm:p-5 rounded-2xl border ${ui.cardBg} flex flex-col gap-3`}>
                 <div className="flex items-center justify-between border-b pb-2 border-dashed border-stone-200 dark:border-white/10">
                   <div className="flex items-center gap-2">
@@ -1649,7 +1649,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
                 </p>
               </div>
 
-              {/* 기능 4[cite: 37] */}
+              {/* 기능 4 */}
               <div className={`p-4 sm:p-5 rounded-2xl border ${ui.cardBg} flex flex-col gap-3`}>
                 <div className="flex items-center justify-between border-b pb-2 border-dashed border-stone-200 dark:border-white/10">
                   <div className="flex items-center gap-2">
@@ -1668,7 +1668,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
           )}
 
           {/* ========================================================================= */}
-          {/* 💡 [탭 11] 스마트 꿀팁 (100% 완전 보존)[cite: 37]                                   */}
+          {/* 💡 [탭 11] 스마트 꿀팁 (100% 완전 보존)                                   */}
           {/* ========================================================================= */}
           {activeTab === 'tips' && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">

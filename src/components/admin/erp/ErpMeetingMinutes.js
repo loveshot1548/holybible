@@ -431,7 +431,7 @@ export default function ErpMeetingMinutes() {
                   )}
                 </div>
                 <p className="text-[11px] text-zinc-500 mt-1 font-medium">
-                  의안 번호가 공식 채번되며, 정족수 검증 및 결의 주문이 영구 아카이빙됩니다[cite: 37].
+                  의안 번호가 공식 채번되며, 정족수 검증 및 결의 주문이 영구 아카이빙됩니다.
                 </p>
               </div>
 
@@ -756,7 +756,7 @@ export default function ErpMeetingMinutes() {
         <div className="flex-1 w-full overflow-y-auto px-6 py-5 bg-zinc-100/40 space-y-4">
           <div className="w-full bg-white border border-zinc-200 rounded-xl p-5 shadow-2xs space-y-1">
             <h4 className="font-black text-zinc-900 text-[14.5px]">회의체별 의결 안건 분석 매트릭스 (Resolution Matrix)</h4>
-            <p className="text-[11.5px] text-zinc-500 font-medium">당회 및 위원회별 의안 가결률, 부결률, 보류 추이를 공공 감사 기준으로 대사합니다[cite: 37].</p>
+            <p className="text-[11.5px] text-zinc-500 font-medium">당회 및 위원회별 의안 가결률, 부결률, 보류 추이를 공공 감사 기준으로 대사합니다.</p>
           </div>
 
           <div className="w-full grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -804,7 +804,7 @@ export default function ErpMeetingMinutes() {
         <div className="flex-1 w-full overflow-y-auto px-6 py-5 bg-zinc-100/40 space-y-4">
           <div className="w-full bg-white border border-zinc-200 rounded-xl p-5 shadow-2xs space-y-1">
             <h4 className="font-black text-zinc-900 text-[14.5px]">전사 회의 후속 실행 과제 마스터 트래커 (Action Items)</h4>
-            <p className="text-[11.5px] text-zinc-500 font-medium">의안에서 도출된 실무 과제의 이행 여부와 기한 초과(Overdue) 리스크를 실시간 관리합니다[cite: 37].</p>
+            <p className="text-[11.5px] text-zinc-500 font-medium">의안에서 도출된 실무 과제의 이행 여부와 기한 초과(Overdue) 리스크를 실시간 관리합니다.</p>
           </div>
 
           <div className="w-full space-y-2.5">
@@ -873,7 +873,7 @@ export default function ErpMeetingMinutes() {
             <div className="flex justify-between items-center border-b border-zinc-200 pb-4">
               <div>
                 <h4 className="font-black text-zinc-900 text-[16px] tracking-tight">공식 의사록 총괄 제본 편철 (Official Docket)</h4>
-                <p className="text-[11.5px] text-zinc-500 mt-1 font-medium">교단 총회 감사 및 당회 영구 보존용 공문서 규격입니다[cite: 37].</p>
+                <p className="text-[11.5px] text-zinc-500 mt-1 font-medium">교단 총회 감사 및 당회 영구 보존용 공문서 규격입니다.</p>
               </div>
               <button 
                 onClick={() => window.print()} 

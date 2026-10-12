@@ -89,7 +89,7 @@ export default function CinemaCanvas() {
     };
   }, [isPlaying, animate, setPlayhead]);
 
-  // 모든 비주얼 클립 추출[cite: 21]
+  // 모든 비주얼 클립 추출
   const allVisualClips = useMemo(() => {
     if (!entities?.tracks || !entities?.clips) return [];
     return Object.values(entities.tracks).flatMap(track => {
@@ -100,7 +100,7 @@ export default function CinemaCanvas() {
     });
   }, [entities]);
 
-  // 모든 오디오 클립 추출[cite: 21]
+  // 모든 오디오 클립 추출
   const allAudioClips = useMemo(() => {
     if (!entities?.tracks || !entities?.clips) return [];
     return Object.values(entities.tracks).flatMap(track => {
@@ -111,7 +111,7 @@ export default function CinemaCanvas() {
     });
   }, [entities]);
 
-  // 현재 활성화된 클립 목록[cite: 21]
+  // 현재 활성화된 클립 목록
   const activeClips = useMemo(() => {
     return allVisualClips.filter(clip => {
       const start = clip.start || 0;
@@ -125,7 +125,7 @@ export default function CinemaCanvas() {
     return OpenCapReelsEngine.calculateDynamicPunchZoom(playhead, projectDuration);
   }, [playhead, projectDuration]);
 
-  // AudioDSP 48kHz 시그널 체인 연동[cite: 21]
+  // AudioDSP 48kHz 시그널 체인 연동
   useEffect(() => {
     allAudioClips.forEach(clip => {
       const aRef = audioRefs.current[clip.id];
@@ -166,7 +166,7 @@ export default function CinemaCanvas() {
   const selectedClip = selectedClipId ? entities?.clips?.[selectedClipId] : null;
   const isSelectedClipActive = activeClips.some(c => c.id === selectedClipId);
 
-  // 🌟 기즈모 직접 조작 핸들러 (영상/사진은 물론 '자막'까지 캔버스에서 직접 이동/크기 조절)[cite: 21]
+  // 🌟 기즈모 직접 조작 핸들러 (영상/사진은 물론 '자막'까지 캔버스에서 직접 이동/크기 조절)
   const startGizmoAction = (e, mode, handleType = null) => {
     e.stopPropagation();
     if (!selectedClip || !viewportRef.current) return;
@@ -281,13 +281,13 @@ export default function CinemaCanvas() {
     return false;
   }, []);
 
-  // 시네마틱 3막 몽타주 & 미디어 렌더러[cite: 21]
+  // 시네마틱 3막 몽타주 & 미디어 렌더러
   const renderMediaElement = useCallback((clip, sourceUrl, extraClass = '') => {
     const grid = clip.gridConfig || { mode: 'single' };
     const resolvedUrl = resolveClipUrl(clip) || sourceUrl;
     const isVideo = isVideoSource(clip, resolvedUrl);
 
-    // 클라이맥스 멀티 프레임 (메인 1 + 서브 2 시네마틱 몽타주)[cite: 21]
+    // 클라이맥스 멀티 프레임 (메인 1 + 서브 2 시네마틱 몽타주)
     if (grid.mode === 'matrix' && (grid.rows > 1 || grid.cols > 1)) {
       const cellMedia = grid.cellMedia || {};
       const urls = [
@@ -371,7 +371,7 @@ export default function CinemaCanvas() {
     const isHeroTitle = clip.trackId === 'T2';
     const isHormozi = style.preset === 'hormozi' || !style.preset;
 
-    // [A] T2 트랙: 상단 3초 바이럴 킬러 훅 타이틀[cite: 21]
+    // [A] T2 트랙: 상단 3초 바이럴 킬러 훅 타이틀
     if (isHeroTitle) {
       return (
         <div className="flex flex-col items-center justify-center text-center px-4 pointer-events-none select-none animate-fade-in">
@@ -407,7 +407,7 @@ export default function CinemaCanvas() {
     }
     const tokens = clip._wordTokens || [];
 
-    // [B] T1 트랙: 넷플릭스 숏폼 규격 딥 다크 아크릴 글래스 + 키네틱 단어 팝업[cite: 21]
+    // [B] T1 트랙: 넷플릭스 숏폼 규격 딥 다크 아크릴 글래스 + 키네틱 단어 팝업
     if (isBadgePreset) {
       return (
         <div 
@@ -506,7 +506,7 @@ export default function CinemaCanvas() {
       );
     }
 
-    // [D] 표준 자막[cite: 21]
+    // [D] 표준 자막
     return (
       <div className="px-4 py-1.5 rounded-lg bg-black/60 backdrop-blur-md text-center pointer-events-none select-none">
         <span
@@ -536,7 +536,7 @@ export default function CinemaCanvas() {
       className="relative w-full h-full flex items-center justify-center p-2 select-none overflow-hidden"
       onClick={() => selectClip(null)}
     >
-      {/* 백그라운드 오디오 트랙[cite: 21] */}
+      {/* 백그라운드 오디오 트랙 */}
       <div className="hidden">
         {allAudioClips.map(clip => (
           <audio
@@ -548,7 +548,7 @@ export default function CinemaCanvas() {
         ))}
       </div>
 
-      {/* SVG 하드웨어 가속 필름 그레인 & 톤매핑 정의[cite: 21] */}
+      {/* SVG 하드웨어 가속 필름 그레인 & 톤매핑 정의 */}
       <svg className="absolute w-0 h-0 pointer-events-none">
         <filter id="cinematic-film-grain" x="0%" y="0%" width="100%" height="100%">
           <feTurbulence type="fractalNoise" baseFrequency="0.82" numOctaves="3" seed={grainSeed} result="noise" />
@@ -557,7 +557,7 @@ export default function CinemaCanvas() {
         </filter>
       </svg>
 
-      {/* 9:16 모니터 뷰포트[cite: 21] */}
+      {/* 9:16 모니터 뷰포트 */}
       <div 
         ref={viewportRef}
         data-cinema-viewport="true"
@@ -579,7 +579,7 @@ export default function CinemaCanvas() {
           </div>
         )}
 
-        {/* 스마트 센터 스냅 십자 가이드라인[cite: 21] */}
+        {/* 스마트 센터 스냅 십자 가이드라인 */}
         {snapGuideX && (
           <div className="absolute top-0 bottom-0 left-1/2 w-px -translate-x-1/2 bg-[#00E5FF] shadow-[0_0_8px_#00E5FF] pointer-events-none z-40" />
         )}
@@ -614,7 +614,7 @@ export default function CinemaCanvas() {
               const currentClipUrl = resolveClipUrl(clip);
               const isVideo = isVideoSource(clip, currentClipUrl);
 
-              // 비디오 하드웨어 싱크[cite: 21]
+              // 비디오 하드웨어 싱크
               if (isVideo && mediaRefs.current[clip.id]) {
                 const vRef = mediaRefs.current[clip.id];
                 const targetTime = Math.max(0, inPoint + (timeFromStart * (clip.speed || 1.0)));
@@ -646,7 +646,7 @@ export default function CinemaCanvas() {
                 vRef.playbackRate = clip.speed || 1.0;
               }
 
-              // 트랜지션 연산[cite: 21]
+              // 트랜지션 연산
               let transTransform = '';
               let transOpacity = (clip.opacity ?? tf.opacity ?? 100) / 100;
               let transFilter = '';
@@ -665,7 +665,7 @@ export default function CinemaCanvas() {
                 }
               }
 
-              // 인-모션 연산[cite: 21]
+              // 인-모션 연산
               const motionTransform = typeof computeClipMotion === 'function'
                 ? computeClipMotion(clip.animation, timeFromStart, duration)
                 : '';
@@ -700,14 +700,14 @@ export default function CinemaCanvas() {
                     zIndex: clip.trackId === 'T2' ? 65 : clip.trackId === 'T1' ? 50 : clip.trackId === 'V4' ? 40 : clip.trackId === 'V3' ? 30 : clip.trackId === 'V2' ? 20 : 10
                   }}
                 >
-                  {/* 1. 에셋 렌더러[cite: 21] */}
+                  {/* 1. 에셋 렌더러 */}
                   {clip.type === 'text' ? (
                     renderTextClip(clip)
                   ) : (
                     renderMediaElement(clip, currentClipUrl, objectFitClass)
                   )}
 
-                  {/* 2. 2.39:1 시네마 오프닝 레터박스 커튼[cite: 21] */}
+                  {/* 2. 2.39:1 시네마 오프닝 레터박스 커튼 */}
                   {fx.letterbox && timeFromStart <= 2.0 && (
                     <div className="absolute inset-0 pointer-events-none z-30 flex flex-col justify-between overflow-hidden">
                       <div 
@@ -727,7 +727,7 @@ export default function CinemaCanvas() {
                     </div>
                   )}
 
-                  {/* 3. 35mm 필름 헐레이션[cite: 21] */}
+                  {/* 3. 35mm 필름 헐레이션 */}
                   {fx.halation && clip.type !== 'text' && (
                     <div 
                       className="absolute inset-0 pointer-events-none z-24 mix-blend-screen opacity-40 overflow-hidden"
@@ -738,7 +738,7 @@ export default function CinemaCanvas() {
                     />
                   )}
 
-                  {/* 4. 부드러운 코너 라이트 리크[cite: 21] */}
+                  {/* 4. 부드러운 코너 라이트 리크 */}
                   {timeFromStart <= 1.4 && clip.type !== 'text' && (
                     <div 
                       className="absolute inset-0 pointer-events-none z-28 mix-blend-screen transition-opacity duration-300"
@@ -750,7 +750,7 @@ export default function CinemaCanvas() {
                     />
                   )}
 
-                  {/* 5. 은은한 필름 비네팅[cite: 21] */}
+                  {/* 5. 은은한 필름 비네팅 */}
                   {clip.type !== 'text' && (
                     <div 
                       className="absolute inset-0 pointer-events-none z-22"
@@ -764,7 +764,7 @@ export default function CinemaCanvas() {
             })}
         </div>
 
-        {/* 🌟 선택 클립 통합 기즈모 박스 (미디어 및 '자막'까지 온스크린 직접 조작 지원)[cite: 21] */}
+        {/* 🌟 선택 클립 통합 기즈모 박스 (미디어 및 '자막'까지 온스크린 직접 조작 지원) */}
         {selectedClip && isSelectedClipActive && (
           <div
             className="absolute inset-0 z-[70] pointer-events-none border-2 border-[#00E5FF] shadow-[0_0_15px_rgba(0,229,255,0.6)]"

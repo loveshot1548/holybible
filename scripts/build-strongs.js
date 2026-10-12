@@ -131,7 +131,7 @@ function formatPron(raw) {
   return `[${raw.replace(/[[\]]/g, '')}]`;
 }
 
-// 💡 어원 노이즈((little, a son (as builder...) 정제기[cite: 14, 17]
+// 💡 어원 노이즈((little, a son (as builder...) 정제기
 function extractCleanMeaning(desc) {
   if (!desc) return '';
   
@@ -139,7 +139,7 @@ function extractCleanMeaning(desc) {
   const meaningMatch = desc.match(/\[원어 의미\]\s*([^;\n\r]+)/);
   let raw = meaningMatch && meaningMatch[1] ? meaningMatch[1].trim() : desc.slice(0, 80);
 
-  // 2. 괄호로 시작하는 어원 설명 제거 e.g. "(little); Paul" -> "Paul"[cite: 14]
+  // 2. 괄호로 시작하는 어원 설명 제거 e.g. "(little); Paul" -> "Paul"
   raw = raw.replace(/^\([^)]*\)[,;\s]*/, '');
   raw = raw.replace(/^from\s+[HG0-9]+[^;]*;\s*/i, '');
   raw = raw.replace(/\([^)]*\)/g, ''); // 내부 보조 괄호 제거

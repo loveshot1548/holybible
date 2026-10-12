@@ -51,7 +51,7 @@ export default function SermonArchiveAdvanced({
   const [activeView, setActiveView] = useState('write');
   const [activeCategoryFilter, setActiveCategoryFilter] = useState('ALL');
 
-  // 카테고리 상태[cite: 34]
+  // 카테고리 상태
   const [lifeCategories, setLifeCategories] = useState(() => {
     try {
       const saved = localStorage.getItem('custom_life_cats_v3');
@@ -62,7 +62,7 @@ export default function SermonArchiveAdvanced({
   const [isAddingCat, setIsAddingCat] = useState(false);
   const [newCatInput, setNewCatInput] = useState('');
 
-  // 예배 일기 로그[cite: 34]
+  // 예배 일기 로그
   const [lifeWorshipLogs, setLifeWorshipLogs] = useState(() => {
     try {
       const saved = localStorage.getItem('life_worship_logs_v2');
@@ -71,7 +71,7 @@ export default function SermonArchiveAdvanced({
     return [];
   });
 
-  // 시즌 키워드 태그[cite: 34]
+  // 시즌 키워드 태그
   const [seasonKeywords, setSeasonKeywords] = useState(() => {
     try {
       const saved = localStorage.getItem('spiritual_season_kws_v2');
@@ -81,7 +81,7 @@ export default function SermonArchiveAdvanced({
   });
   const [newKeyword, setNewKeyword] = useState('');
 
-  // 폼 입력 상태[cite: 34]
+  // 폼 입력 상태
   const [formCategory, setFormCategory] = useState(lifeCategories[0] || '기타 일상');
   const [formEvent, setFormEvent] = useState('');
   const [formInterpretation, setFormInterpretation] = useState('');
@@ -91,7 +91,7 @@ export default function SermonArchiveAdvanced({
   // 토스트 메시지 상태
   const [toastMsg, setToastMsg] = useState(null);
 
-  // 모달 상태[cite: 34]
+  // 모달 상태
   const [exportModal, setExportModal] = useState({
     isOpen: false,
     type: '',
@@ -138,7 +138,7 @@ export default function SermonArchiveAdvanced({
     return new Date(Date.now() - o).toISOString().split('T')[0];
   };
 
-  // 미해결 질문 큐 산출[cite: 34]
+  // 미해결 질문 큐 산출
   const pendingQuestions = useMemo(() => {
     let list = [];
     Object.entries(dailyData || {}).forEach(([date, dayVal]) => {
@@ -155,7 +155,7 @@ export default function SermonArchiveAdvanced({
     return list.sort((a, b) => new Date(b.date) - new Date(a.date));
   }, [dailyData, getArr]);
 
-  // 통계 산출[cite: 34]
+  // 통계 산출
   const stats = useMemo(() => {
     const archiveList = [];
     Object.entries(dailyData || {}).forEach(([dKey, dVal]) => {
@@ -248,7 +248,7 @@ export default function SermonArchiveAdvanced({
     setNewKeyword('');
   };
 
-  // 미해결 질문을 현재 폼에 즉시 바인딩(인젝션)[cite: 34]
+  // 미해결 질문을 현재 폼에 즉시 바인딩(인젝션)
   const handleInjectQuestion = (q, targetField = 'interpretation') => {
     const isAlready = linkedQuestions.some(l => l.qIdx === q.qIdx && l.date === q.date);
     if (!isAlready) {
@@ -264,7 +264,7 @@ export default function SermonArchiveAdvanced({
     setActiveView('write');
   };
 
-  // 실천 로그 등록[cite: 34]
+  // 실천 로그 등록
   const handleAddLifeLog = () => {
     if (!formEvent.trim() && !formInterpretation.trim() && !formAction.trim()) {
       showToast('사건, 해석, 결단 중 최소 하나를 입력해주세요');
@@ -305,7 +305,7 @@ export default function SermonArchiveAdvanced({
     showToast('기록이 삭제되었습니다');
   };
 
-  // 간증문 / 목장 나눔 내보내기 템플릿 생성[cite: 34]
+  // 간증문 / 목장 나눔 내보내기 템플릿 생성
   const openExportModal = (arc, type) => {
     const qtData = dailyData[arc.date] || {};
     const bibleWord = qtData.sermonReference || qtData.qtReference || (arc.linked?.length > 0 ? arc.linked.map(l => l.source).join(', ') : '해당일 묵상 본문');
@@ -348,7 +348,7 @@ ${insightText ? `• 말씀 해석: ${insightText}\n` : ''}• 결단과 순종:
     setExportModal({ isOpen: true, type, data: arc, previewText: template });
   };
 
-  // 내보내기 실행 (암호화 동기화)[cite: 34]
+  // 내보내기 실행 (암호화 동기화)
   const executeExport = () => {
     if (exportModal.type === 'testimony') {
       const diaries = JSON.parse(localStorage.getItem('goodtree_diary_entries') || '[]');

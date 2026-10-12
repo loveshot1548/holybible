@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 168 150" width="168" height="150">
+    <ellipse cx="84" cy="138" rx="72" ry="10" fill="#361F12" opacity="0.3"/>
+    <!-- 거친 암반 절벽 1단 -->
+    <polygon points="84,130 155,100 135,70 84,85 25,65 10,95" fill="#57534E" stroke="#361F12" stroke-width="2.5"/>
+    <!-- 상부 암반 2단 -->
+    <polygon points="84,85 140,60 84,40 28,65" fill="#78716C" stroke="#361F12" stroke-width="2"/>
+    <polygon points="28,65 84,85 84,95 28,75" fill="#44403C" stroke="#361F12" stroke-width="2"/>
+    <polygon points="84,85 140,60 140,70 84,95" fill="#292524" stroke="#361F12" stroke-width="2"/>
+    <!-- 바위 크랙 텍스처 -->
+    <path d="M 60,70 L 72,82 L 80,78 M 100,65 L 115,75" stroke="#292524" stroke-width="1.5" fill="none"/>
+    <!-- 중앙 그리스도 십자가 -->
+    <rect x="81" y="5" width="6" height="52" fill="#78350F" stroke="#361F12" stroke-width="1.5"/>
+    <rect x="67" y="16" width="34" height="6" fill="#78350F" stroke="#361F12" stroke-width="1.5"/>
+    <rect x="79" y="8" width="10" height="5" fill="#FDF2E9" stroke="#361F12" stroke-width="1"/>
+    <!-- 좌측 강도 십자가 -->
+    <rect x="52" y="25" width="5" height="36" fill="#5C381E" stroke="#361F12" stroke-width="1.2"/>
+    <rect x="42" y="32" width="24" height="5" fill="#5C381E" stroke="#361F12" stroke-width="1.2"/>
+    <!-- 우측 강도 십자가 -->
+    <rect x="110" y="25" width="5" height="36" fill="#5C381E" stroke="#361F12" stroke-width="1.2"/>
+    <rect x="100" y="32" width="24" height="5" fill="#5C381E" stroke="#361F12" stroke-width="1.2"/>
+  </svg>

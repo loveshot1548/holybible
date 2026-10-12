@@ -46,24 +46,24 @@ export default function AudioInspector({ clip }) {
 
   if (!clip) return null;
 
-  // 1. 오디오 기본 파라미터 무결성 보장[cite: 28]
-  const volume = clip.volume ?? 100;       // 0 ~ 200%[cite: 28]
-  const pan = clip.pan ?? 0;               // -100(L) ~ +100(R)[cite: 28]
-  const fadeIn = clip.fadeIn ?? 0;         // 0 ~ 5s[cite: 28]
-  const fadeOut = clip.fadeOut ?? 0;       // 0 ~ 5s[cite: 28]
-  const pitchShift = clip.pitchShift ?? 0; // -12 ~ +12 semitones[cite: 28]
+  // 1. 오디오 기본 파라미터 무결성 보장
+  const volume = clip.volume ?? 100;       // 0 ~ 200%
+  const pan = clip.pan ?? 0;               // -100(L) ~ +100(R)
+  const fadeIn = clip.fadeIn ?? 0;         // 0 ~ 5s
+  const fadeOut = clip.fadeOut ?? 0;       // 0 ~ 5s
+  const pitchShift = clip.pitchShift ?? 0; // -12 ~ +12 semitones
   const voiceChanger = clip.voiceChanger || 'none';
   const vocalIsolate = clip.vocalIsolate ?? false;
 
-  // 2. 스마트 오디오 더킹 객체[cite: 28]
+  // 2. 스마트 오디오 더킹 객체
   const ducking = {
     enabled: clip.autoDucking ?? false,
     reductionDb: clip.duckingAmount ?? -18,
     attackMs: clip.duckingAttack ?? 120,
     releaseMs: clip.duckingRelease ?? 350
-  }; //[cite: 28]
+  }; //
 
-  // 3. 다이내믹스 & 노이즈 객체[cite: 28]
+  // 3. 다이내믹스 & 노이즈 객체
   const denoiseAmount = clip.denoiseAmount || 0;
   const limiterThreshold = clip.limiterThreshold ?? -2;
   const deEsser = clip.deEsser || 0;
@@ -71,35 +71,35 @@ export default function AudioInspector({ clip }) {
   const compressor = clip.compressor || {
     threshold: -16,
     ratio: 3.5
-  }; //[cite: 28]
+  }; //
 
-  // 4. 4-Band Parametric EQ 객체[cite: 28]
+  // 4. 4-Band Parametric EQ 객체
   const eq = {
-    lowCut: 0,   // 0 ~ 12 dB cut[cite: 28]
-    low: 0,      // -15 ~ +15 dB[cite: 28]
-    mid: 0,      // -15 ~ +15 dB[cite: 28]
-    high: 0,     // -15 ~ +15 dB[cite: 28]
-    air: 0,      // -15 ~ +15 dB (10kHz)[cite: 28]
+    lowCut: 0,   // 0 ~ 12 dB cut
+    low: 0,      // -15 ~ +15 dB
+    mid: 0,      // -15 ~ +15 dB
+    high: 0,     // -15 ~ +15 dB
+    air: 0,      // -15 ~ +15 dB (10kHz)
     ...(clip.eq || {})
-  }; //[cite: 28]
+  }; //
 
-  // 5. 스튜디오 리버브 객체[cite: 28]
+  // 5. 스튜디오 리버브 객체
   const reverb = clip.reverb || {
     enabled: false,
-    type: 'studio', // 'studio' | 'cathedral' | 'hall' | 'plate'[cite: 28]
-    wet: 25         // 0 ~ 100%[cite: 28]
-  }; //[cite: 28]
+    type: 'studio', // 'studio' | 'cathedral' | 'hall' | 'plate'
+    wet: 25         // 0 ~ 100%
+  }; //
 
-  // 핸들러 함수군[cite: 28]
+  // 핸들러 함수군
   const handleChange = (key, value) => {
     updateClip(clip.id, { [key]: value });
-  }; //[cite: 28]
+  }; //
 
   const handleEqChange = (band, value) => {
     updateClip(clip.id, {
       eq: { ...eq, [band]: Number(value) }
     });
-  }; //[cite: 28]
+  }; //
 
   const handleDuckingChange = (key, value) => {
     updateClip(clip.id, {
@@ -108,24 +108,24 @@ export default function AudioInspector({ clip }) {
       duckingAttack: key === 'attackMs' ? Number(value) : ducking.attackMs,
       duckingRelease: key === 'releaseMs' ? Number(value) : ducking.releaseMs
     });
-  }; //[cite: 28]
+  }; //
 
   const handleReverbChange = (key, value) => {
     updateClip(clip.id, {
       reverb: { ...reverb, [key]: value }
     });
-  }; //[cite: 28]
+  }; //
 
-  // 리셋 핸들러[cite: 28]
+  // 리셋 핸들러
   const resetVolumeAndPan = () => {
     updateClip(clip.id, { volume: 100, pan: 0, fadeIn: 0, fadeOut: 0 });
-  }; //[cite: 28]
+  }; //
 
   const resetEq = () => {
     updateClip(clip.id, {
       eq: { lowCut: 0, low: 0, mid: 0, high: 0, air: 0 }
     });
-  }; //[cite: 28]
+  }; //
 
   const resetDynamics = () => {
     updateClip(clip.id, {
@@ -135,7 +135,7 @@ export default function AudioInspector({ clip }) {
       noiseGate: -45,
       compressor: { threshold: -16, ratio: 3.5 }
     });
-  }; //[cite: 28]
+  }; //
 
   // 🌟 [SVG 인터랙티브 EQ 커브 계산]
   const eqSvgPath = useMemo(() => {

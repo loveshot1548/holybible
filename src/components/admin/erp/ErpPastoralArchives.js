@@ -567,7 +567,7 @@ export default function ErpPastoralArchives() {
             <div className="border-b border-zinc-200 pb-3.5 flex justify-between items-end sticky top-0 bg-white/90 backdrop-blur-xs pt-1 z-10 px-2">
               <div>
                 <h4 className="font-black text-[17px] text-zinc-900 tracking-tight">{selectedUserName || '성도를 선택해주세요'}</h4>
-                <p className="text-[11.5px] text-zinc-500 font-medium mt-0.5">과거부터 누적된 기도제목, 감사, 심방 이력을 시간순으로 조망합니다[cite: 38].</p>
+                <p className="text-[11.5px] text-zinc-500 font-medium mt-0.5">과거부터 누적된 기도제목, 감사, 심방 이력을 시간순으로 조망합니다.</p>
               </div>
               {selectedUserName && (
                 <button 
@@ -642,7 +642,7 @@ export default function ErpPastoralArchives() {
         <div className="flex-1 w-full overflow-y-auto px-6 py-5 bg-zinc-100/40 space-y-4">
           <div className="w-full bg-white border border-zinc-200 rounded-xl p-5 shadow-2xs space-y-1">
             <h4 className="font-black text-zinc-900 text-[14.5px]">긴급 환우/위기 가정 & 후속 심방 요망 집중 관제</h4>
-            <p className="text-[11.5px] text-zinc-500 font-medium">수술, 장례, 가정 위기 등 즉각적인 목회적 돌봄이 필요한 성도를 최우선 통제합니다[cite: 38].</p>
+            <p className="text-[11.5px] text-zinc-500 font-medium">수술, 장례, 가정 위기 등 즉각적인 목회적 돌봄이 필요한 성도를 최우선 통제합니다.</p>
           </div>
 
           <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -727,7 +727,7 @@ export default function ErpPastoralArchives() {
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-white p-4 border border-zinc-200 rounded-xl shrink-0 shadow-2xs">
             <div>
               <h4 className="font-black text-zinc-900 text-[14px]">목회 아카이브 일괄 작성 스프레드시트</h4>
-              <p className="text-[11px] font-medium text-zinc-500 mt-0.5">다수 성도의 기도제목이나 심방 메모를 연속으로 입력하고 데이터베이스에 일괄 적재합니다[cite: 38].</p>
+              <p className="text-[11px] font-medium text-zinc-500 mt-0.5">다수 성도의 기도제목이나 심방 메모를 연속으로 입력하고 데이터베이스에 일괄 적재합니다.</p>
             </div>
             <div className="flex items-center gap-2">
               <button 
@@ -816,7 +816,7 @@ export default function ErpPastoralArchives() {
             <div className="flex justify-between items-center border-b border-zinc-200 pb-4">
               <div>
                 <h4 className="font-black text-zinc-900 text-[16px] tracking-tight">주간 목회 심방 및 중보기도 총괄 편철</h4>
-                <p className="text-[11.5px] text-zinc-500 mt-0.5 font-medium">담임목사 주간 목회 브리핑 및 교역자 회의 공식 제출용 서식입니다[cite: 38].</p>
+                <p className="text-[11.5px] text-zinc-500 mt-0.5 font-medium">담임목사 주간 목회 브리핑 및 교역자 회의 공식 제출용 서식입니다.</p>
               </div>
               <button 
                 onClick={() => window.print()} 
@@ -832,7 +832,7 @@ export default function ErpPastoralArchives() {
                   주 간 목 회 심 방 및 중 보 기 도 총 람
                 </h2>
                 <div className="text-[11.5px] text-zinc-500 font-mono font-bold">
-                  출력일자: {new Date().toLocaleDateString()} | 총 수록 건수: {archives.length}건 (응답완료: {metrics.answeredCount}건)[cite: 38]
+                  출력일자: {new Date().toLocaleDateString()} | 총 수록 건수: {archives.length}건 (응답완료: {metrics.answeredCount}건)
                 </div>
               </div>
 

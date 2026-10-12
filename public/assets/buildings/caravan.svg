@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 168 140" width="168" height="140">
+    <ellipse cx="84" cy="130" rx="65" ry="8" fill="#361F12" opacity="0.3"/>
+    <!-- 후면 석조 공방 -->
+    <polygon points="35,70 84,95 84,55 35,30" fill="#FFF8EB" stroke="#361F12" stroke-width="2"/>
+    <polygon points="84,95 133,70 133,30 84,55" fill="#D4BC98" stroke="#361F12" stroke-width="2"/>
+    <!-- 공방 평지붕 -->
+    <polygon points="84,55 133,30 84,10 35,30" fill="#EAD6BD" stroke="#361F12" stroke-width="2"/>
+    <!-- 전면 오픈 목조 가판대 -->
+    <polygon points="84,115 145,85 96,62 35,92" fill="#854D0E" stroke="#361F12" stroke-width="1.5"/>
+    <polygon points="35,92 84,115 84,124 35,101" fill="#5C381E" stroke="#361F12" stroke-width="1.5"/>
+    <polygon points="84,115 145,85 145,94 84,124" fill="#451A03" stroke="#361F12" stroke-width="1.5"/>
+    <!-- 목재 기둥 -->
+    <line x1="45" y1="95" x2="45" y2="60" stroke="#78350F" stroke-width="2.5"/>
+    <line x1="84" y1="115" x2="84" y2="78" stroke="#78350F" stroke-width="2.5"/>
+    <line x1="135" y1="90" x2="135" y2="58" stroke="#78350F" stroke-width="2.5"/>
+    <!-- 주황빛 물결 차양막 -->
+    <polygon points="35,45 84,68 145,40 96,20" fill="#F59E0B" stroke="#361F12" stroke-width="2"/>
+    <polygon points="45,50 84,68 95,62 55,45" fill="#FBBF24"/>
+    <!-- 빵 바구니와 황금 보리떡 -->
+    <circle cx="70" cy="100" r="5" fill="#D97706" stroke="#361F12" stroke-width="1"/>
+    <circle cx="68" cy="98" r="2.5" fill="#FDE68A"/>
+    <circle cx="73" cy="99" r="2.5" fill="#FDE68A"/>
+    <!-- 타분 점토 화덕 -->
+    <ellipse cx="115" cy="85" rx="7" ry="5" fill="#78716C" stroke="#361F12" stroke-width="1.2"/>
+    <circle cx="115" cy="83" r="2.5" fill="#EF4444"/>
+  </svg>

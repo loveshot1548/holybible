@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 84 80" width="84" height="80">
+    <ellipse cx="42" cy="74" rx="36" ry="5" fill="#361F12" opacity="0.3"/>
+    <!-- 거친 염소털 텐트 삼각뿔 -->
+    <polygon points="10,65 42,20 74,65" fill="#5C381E" stroke="#361F12" stroke-width="2"/>
+    <polygon points="42,20 74,65 52,70 42,20" fill="#452310" stroke="#361F12" stroke-width="1.5"/>
+    <!-- 목재 말뚝 밧줄 -->
+    <line x1="42" y1="20" x2="8" y2="68" stroke="#361F12" stroke-width="1.5"/>
+    <line x1="42" y1="20" x2="76" y2="68" stroke="#361F12" stroke-width="1.5"/>
+    <!-- 텐트 입구 & 모닥불 -->
+    <polygon points="36,65 42,35 48,65" fill="#29180C"/>
+    <circle cx="28" cy="68" r="3" fill="#EF4444"/>
+    <circle cx="28" cy="67" r="1.5" fill="#FBBF24"/>
+  </svg>

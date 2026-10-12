@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 168 130" width="168" height="130">
+    <ellipse cx="84" cy="120" rx="65" ry="8" fill="#361F12" opacity="0.3"/>
+    <polygon points="84,110 145,80 84,52 23,80" fill="#C9B090" stroke="#361F12" stroke-width="2"/>
+    <polygon points="23,80 84,110 84,118 23,88" fill="#9C8265" stroke="#361F12" stroke-width="2"/>
+    <polygon points="84,110 145,80 145,88 84,118" fill="#78654B" stroke="#361F12" stroke-width="2"/>
+    <!-- 포도 지주대 4개 & 보랏빛 포도 -->
+    
+      <line x1="45" y1="85" x2="45" y2="68" stroke="#78350F" stroke-width="2.5"/>
+      <circle cx="45" cy="66" r="5" fill="#84CC16"/>
+      <circle cx="43" cy="72" r="3.5" fill="#7E22CE"/>
+      <circle cx="48" cy="73" r="3.5" fill="#9333EA"/>
+    
+      <line x1="70" y1="81" x2="70" y2="64" stroke="#78350F" stroke-width="2.5"/>
+      <circle cx="70" cy="62" r="5" fill="#84CC16"/>
+      <circle cx="68" cy="68" r="3.5" fill="#7E22CE"/>
+      <circle cx="73" cy="69" r="3.5" fill="#9333EA"/>
+    
+      <line x1="95" y1="77" x2="95" y2="60" stroke="#78350F" stroke-width="2.5"/>
+      <circle cx="95" cy="58" r="5" fill="#84CC16"/>
+      <circle cx="93" cy="64" r="3.5" fill="#7E22CE"/>
+      <circle cx="98" cy="65" r="3.5" fill="#9333EA"/>
+    
+      <line x1="120" y1="73" x2="120" y2="56" stroke="#78350F" stroke-width="2.5"/>
+      <circle cx="120" cy="54" r="5" fill="#84CC16"/>
+      <circle cx="118" cy="60" r="3.5" fill="#7E22CE"/>
+      <circle cx="123" cy="61" r="3.5" fill="#9333EA"/>
+    
+  </svg>

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 168 130" width="168" height="130">
+    <ellipse cx="84" cy="120" rx="65" ry="8" fill="#361F12" opacity="0.3"/>
+    <polygon points="84,110 145,80 84,52 23,80" fill="#F3E7CF" stroke="#361F12" stroke-width="2"/>
+    <!-- 원형 맷돌 기름틀 -->
+    <ellipse cx="84" cy="85" rx="16" ry="8" fill="#94A3B8" stroke="#361F12" stroke-width="2"/>
+    <ellipse cx="84" cy="85" rx="10" ry="5" fill="#84CC16"/>
+    <!-- 올리브 고목 2그루 -->
+    <circle cx="50" cy="65" r="14" fill="#4D7C0F" stroke="#361F12" stroke-width="2"/>
+    <circle cx="52" cy="62" r="11" fill="#84CC16"/>
+    <circle cx="120" cy="65" r="15" fill="#4D7C0F" stroke="#361F12" stroke-width="2"/>
+    <circle cx="122" cy="62" r="12" fill="#84CC16"/>
+  </svg>

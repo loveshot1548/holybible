@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 84 90" width="84" height="90">
+    <ellipse cx="42" cy="85" rx="36" ry="5" fill="#361F12" opacity="0.3"/>
+    <polygon points="42,75 75,58 75,25 42,42" fill="#D4A373" stroke="#361F12" stroke-width="2"/>
+    <polygon points="9,58 42,75 42,42 9,25" fill="#F5D0A9" stroke="#361F12" stroke-width="2"/>
+    <polygon points="42,42 75,25 42,10 9,25" fill="#EAD6BD" stroke="#361F12" stroke-width="2"/>
+    <!-- 옥상 차양막 & 사다리 -->
+    <line x1="18" y1="28" x2="18" y2="12" stroke="#78350F" stroke-width="1.5"/>
+    <line x1="30" y1="34" x2="30" y2="18" stroke="#78350F" stroke-width="1.5"/>
+    <polygon points="16,13 32,20 40,15 24,8" fill="#F59E0B" stroke="#361F12" stroke-width="1"/>
+    <!-- 둥근 아치문 -->
+    <rect x="22" y="55" width="8" height="12" fill="#451A03" rx="3"/>
+  </svg>

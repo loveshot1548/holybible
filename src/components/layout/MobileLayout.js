@@ -28,7 +28,7 @@ const IconRewind = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2.5} 
 const IconFullscreen = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" /></svg>;
 const IconExitFullscreen = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" /></svg>;
 
-// 🌟 src 폴더 연동 서체 목록[cite: 15]
+// 🌟 src 폴더 연동 서체 목록
 const FONT_OPTIONS = [
   { id: 'sans-serif', name: '기본 고딕' },
   { id: 'MaruBuri', name: '마루부리 명조' },
@@ -92,7 +92,7 @@ export default function MobileLayout({
   const trimState = useRef(null);
   const rafRef = useRef(null);
 
-  // 모바일 AudioDSP 터치 언락[cite: 15]
+  // 모바일 AudioDSP 터치 언락
   useEffect(() => {
     const unlockAudio = () => {
       if (typeof audioDSP?.init === 'function') audioDSP.init();
@@ -102,7 +102,7 @@ export default function MobileLayout({
     return () => window.removeEventListener('touchstart', unlockAudio);
   }, []);
 
-  // 브라우저 기본 제스처 차단[cite: 15]
+  // 브라우저 기본 제스처 차단
   useEffect(() => {
     const preventDefaultTouch = (e) => {
       if (e.touches && e.touches.length > 1) {
@@ -113,7 +113,7 @@ export default function MobileLayout({
     return () => document.removeEventListener('touchmove', preventDefaultTouch);
   }, []);
 
-  // 풀스크린 토글[cite: 15]
+  // 풀스크린 토글
   const toggleFullscreen = useCallback(() => {
     if (!document.fullscreenElement) {
       const targetEl = containerRef.current || document.documentElement;
@@ -199,7 +199,7 @@ export default function MobileLayout({
     }
   };
 
-  // 타임라인 재생헤드 스크러빙 탐색기[cite: 15]
+  // 타임라인 재생헤드 스크러빙 탐색기
   const handleScrubTimeline = useCallback((clientX) => {
     if (trimState.current || !timelineTrackRef.current) return;
     const rect = timelineTrackRef.current.getBoundingClientRect();
@@ -225,7 +225,7 @@ export default function MobileLayout({
   };
 
   const onTimelineTouchMove = (e) => {
-    // 1. 트리밍 핸들 조작[cite: 15]
+    // 1. 트리밍 핸들 조작
     if (trimState.current && e.touches.length === 1) {
       if (rafRef.current) return;
       const touchX = e.touches[0].clientX;
@@ -260,7 +260,7 @@ export default function MobileLayout({
       return;
     }
 
-    // 2. 핀치 줌[cite: 15]
+    // 2. 핀치 줌
     if (touchState.current.isPinching && e.touches.length === 2) {
       const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
       const scale = dist / touchState.current.initialDist;
@@ -269,7 +269,7 @@ export default function MobileLayout({
       return;
     }
 
-    // 3. 타임라인 재생헤드 스크러빙[cite: 15]
+    // 3. 타임라인 재생헤드 스크러빙
     if (touchState.current.isScrubbing && e.touches.length === 1) {
       handleScrubTimeline(e.touches[0].clientX);
     }
@@ -285,7 +285,7 @@ export default function MobileLayout({
     }
   };
 
-  // 자동 재생헤드 추적 스크롤[cite: 15]
+  // 자동 재생헤드 추적 스크롤
   useEffect(() => {
     if (isPlaying && timelineScrollRef.current && !touchState.current.isScrubbing && !trimState.current) {
       const currentNeedleX = playhead * pxPerSec;
@@ -390,7 +390,7 @@ export default function MobileLayout({
       style={{ touchAction: 'none', overscrollBehavior: 'none' }}
       className="fixed inset-0 w-full h-[100dvh] max-h-[100dvh] flex flex-col overflow-hidden bg-[#000000] text-zinc-100 font-sans select-none z-50 overscroll-none touch-none pb-[env(safe-area-inset-bottom,0px)] pt-[env(safe-area-inset-top,0px)]"
     >
-      {/* 1. 상단 프로 헤더[cite: 15] */}
+      {/* 1. 상단 프로 헤더 */}
       <header className="h-11 px-3 bg-[#111317] border-b border-white/10 flex items-center justify-between shrink-0 z-30 touch-none">
         <div className="flex items-center gap-1.5">
           <button 
@@ -442,7 +442,7 @@ export default function MobileLayout({
         </div>
       </header>
 
-      {/* 2. 뷰어 영역[cite: 15] */}
+      {/* 2. 뷰어 영역 */}
       <div 
         onClick={() => { 
           if (activeBottomNav === 'none') {
@@ -455,7 +455,7 @@ export default function MobileLayout({
         <div className="relative aspect-[9/16] h-full max-h-full sm:max-w-[420px] overflow-hidden bg-black flex items-center justify-center rounded-lg shadow-2xl">
           <CinemaCanvas/>
 
-          {/* 인스타그램 세이프존 가이드[cite: 15] */}
+          {/* 인스타그램 세이프존 가이드 */}
           {showSafeZone && (
             <div className="absolute inset-0 pointer-events-none z-30 select-none animate-fade-in flex flex-col justify-between p-2.5 overflow-hidden">
               <div className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-black/80 backdrop-blur-md border border-rose-500/40 shadow-lg shrink-0">
@@ -497,7 +497,7 @@ export default function MobileLayout({
           )}
         </div>
 
-        {/* 뷰어 좌측 하단 전체화면 재생 버튼[cite: 15] */}
+        {/* 뷰어 좌측 하단 전체화면 재생 버튼 */}
         <button
           onClick={(e) => { e.stopPropagation(); triggerHaptic(15); setIsFullscreenPreview(true); }}
           className="absolute left-4 bottom-3 z-30 p-2 rounded-lg bg-black/75 backdrop-blur-md border border-white/20 text-white shadow-lg active:scale-90 cursor-pointer"
@@ -507,7 +507,7 @@ export default function MobileLayout({
         </button>
       </div>
 
-      {/* 3. 정밀 셔틀 컨트롤러[cite: 15] */}
+      {/* 3. 정밀 셔틀 컨트롤러 */}
       <div className="h-10 px-3 bg-[#111317] border-y border-white/10 flex items-center justify-between shrink-0 text-xs shadow-md z-10 touch-none">
         <div 
           onClick={executeRewind}
@@ -533,7 +533,7 @@ export default function MobileLayout({
         </button>
       </div>
 
-      {/* 4. 타임라인[cite: 15] */}
+      {/* 4. 타임라인 */}
       <div 
         ref={timelineScrollRef}
         style={{ overscrollBehavior: 'none' }}
@@ -548,7 +548,7 @@ export default function MobileLayout({
           style={{ width: `${timelineTotalWidth}px`, touchAction: 'pan-x' }}
           className="relative h-full flex flex-col justify-start pt-1.5 cursor-pointer pl-4"
         >
-          {/* 상단 눈금자[cite: 15] */}
+          {/* 상단 눈금자 */}
           <div className="h-4 w-full relative pointer-events-none select-none">
             {Array.from({ length: Math.ceil(totalDuration) + 2 }).map((_, sec) => (
               <div 
@@ -562,7 +562,7 @@ export default function MobileLayout({
             ))}
           </div>
 
-          {/* 화이트 플레이헤드 바늘[cite: 15] */}
+          {/* 화이트 플레이헤드 바늘 */}
           <div 
             style={{ transform: `translate3d(${playhead * pxPerSec}px, 0, 0)` }}
             className="absolute top-0 bottom-0 left-4 w-[2px] bg-white z-30 pointer-events-none shadow-[0_0_8px_rgba(255,255,255,0.9)] will-change-transform"
@@ -570,7 +570,7 @@ export default function MobileLayout({
             <div className="w-2.5 h-3 bg-white rounded-xs -translate-x-[4px] -translate-y-0.5 shadow-md" />
           </div>
 
-          {/* 트랙 1: 비디오/이미지 트랙[cite: 15] */}
+          {/* 트랙 1: 비디오/이미지 트랙 */}
           <div className="h-12 flex items-center relative z-10 mt-1">
             {videoTrackClips.length === 0 ? (
               <label onClick={(e) => e.stopPropagation()} className="h-10 w-48 border border-dashed border-white/20 rounded-lg flex items-center justify-center gap-1.5 cursor-pointer bg-white/[0.02] active:scale-98">
@@ -605,7 +605,7 @@ export default function MobileLayout({
                           : 'border-white/10 bg-[#161820] hover:border-zinc-500 z-10'
                       }`}
                     >
-                      {/* 좌측 와이드 트리밍 핸들러[cite: 15] */}
+                      {/* 좌측 와이드 트리밍 핸들러 */}
                       <div
                         onTouchStart={(e) => {
                           e.stopPropagation();
@@ -633,7 +633,7 @@ export default function MobileLayout({
                         </span>
                       </div>
 
-                      {/* 우측 와이드 트리밍 핸들러[cite: 15] */}
+                      {/* 우측 와이드 트리밍 핸들러 */}
                       <div
                         onTouchStart={(e) => {
                           e.stopPropagation();
@@ -651,7 +651,7 @@ export default function MobileLayout({
             )}
           </div>
 
-          {/* 트랙 2: 오디오 트랙[cite: 15] */}
+          {/* 트랙 2: 오디오 트랙 */}
           <div className="h-6 relative z-10 mt-1">
             {audioTrackClips.map(a => {
               const startPx = (a.start || 0) * pxPerSec;
@@ -679,7 +679,7 @@ export default function MobileLayout({
             })}
           </div>
 
-          {/* 트랙 3: 자막 텍스트 트랙[cite: 15] */}
+          {/* 트랙 3: 자막 텍스트 트랙 */}
           <div className="h-6 relative z-10 mt-0.5">
             {textTrackClips.map(t => {
               const startPx = (t.start || 0) * pxPerSec;
@@ -711,11 +711,11 @@ export default function MobileLayout({
         </div>
       </div>
 
-      {/* 5. 캡컷 프로 툴 독[cite: 15] */}
+      {/* 5. 캡컷 프로 툴 독 */}
       <div className="h-16 px-1.5 bg-[#111317] border-t border-white/10 flex items-center gap-1.5 overflow-x-auto hide-scrollbar shrink-0 z-30 pb-[env(safe-area-inset-bottom,4px)] touch-pan-x">
         {selectedClip ? (
           selectedClip.type === 'text' ? (
-            // 자막 클립 전용 액션 독[cite: 15]
+            // 자막 클립 전용 액션 독
             <>
               <button onClick={() => { triggerHaptic(15); setActiveBottomNav(activeBottomNav === 'text-edit' ? 'none' : 'text-edit'); }} className={`min-w-[54px] py-1.5 flex flex-col items-center justify-center gap-1 cursor-pointer ${activeBottomNav === 'text-edit' ? 'text-[#00E5FF] font-black' : 'text-zinc-300'}`}><IconText /><span className="text-[9px] font-bold">텍스트</span></button>
               <button onClick={() => { triggerHaptic(15); setActiveBottomNav(activeBottomNav === 'text-badge' ? 'none' : 'text-badge'); }} className={`min-w-[54px] py-1.5 flex flex-col items-center justify-center gap-1 cursor-pointer ${activeBottomNav === 'text-badge' ? 'text-[#00E5FF] font-black' : 'text-zinc-300'}`}><span className="text-sm">🏷️</span><span className="text-[9px] font-bold">뱃지 폼</span></button>
@@ -726,7 +726,7 @@ export default function MobileLayout({
               <button onClick={() => { triggerHaptic(10); useNLEStore.setState({ selectedClipId: null }); setActiveBottomNav('none'); }} className="min-w-[48px] py-1.5 flex flex-col items-center justify-center gap-1 text-zinc-500 cursor-pointer"><span className="text-sm font-bold">✕</span><span className="text-[8.5px]">완료</span></button>
             </>
           ) : (
-            // 비디오/이미지/오디오 클립 전용 액션 독[cite: 15]
+            // 비디오/이미지/오디오 클립 전용 액션 독
             <>
               <button onClick={() => { triggerHaptic(30); splitClip(); }} className="min-w-[52px] py-1.5 flex flex-col items-center justify-center gap-1 text-white active:scale-90 cursor-pointer"><IconSplit/><span className="text-[9px] font-bold">분할</span></button>
               <button onClick={() => { triggerHaptic(15); setActiveBottomNav(activeBottomNav === 'transform' ? 'none' : 'transform'); }} className={`min-w-[52px] py-1.5 flex flex-col items-center justify-center gap-1 cursor-pointer ${activeBottomNav === 'transform' ? 'text-[#00E5FF] font-black' : 'text-zinc-300'}`}><IconTransform/><span className="text-[9px] font-bold">변형</span></button>
@@ -755,7 +755,7 @@ export default function MobileLayout({
         )}
       </div>
 
-      {/* 6. 바텀 시트 인스펙터 패널[cite: 15] */}
+      {/* 6. 바텀 시트 인스펙터 패널 */}
       {activeBottomNav !== 'none' && (
         <>
           <div 
@@ -790,7 +790,7 @@ export default function MobileLayout({
 
             <div className="flex-1 overflow-y-auto p-4 space-y-4 hide-scrollbar touch-pan-y overscroll-contain">
               
-              {/* 텍스트 내용 즉시 수정 패널[cite: 15] */}
+              {/* 텍스트 내용 즉시 수정 패널 */}
               {activeBottomNav === 'text-edit' && selectedClip && (
                 <div className="space-y-3 text-xs">
                   <span className="text-zinc-300 font-bold block">표시할 자막 텍스트 내용</span>
@@ -816,7 +816,7 @@ export default function MobileLayout({
                 </div>
               )}
 
-              {/* 설교 적용질문 뱃지 폼[cite: 15] */}
+              {/* 설교 적용질문 뱃지 폼 */}
               {activeBottomNav === 'text-badge' && selectedClip && (
                 <div className="space-y-3 text-xs">
                   <span className="text-zinc-300 font-bold block">자막 폼 프리셋 선택</span>
@@ -855,7 +855,7 @@ export default function MobileLayout({
                 </div>
               )}
 
-              {/* src 폴더 연동 서체 폰트 선택기[cite: 15] */}
+              {/* src 폴더 연동 서체 폰트 선택기 */}
               {activeBottomNav === 'text-font' && selectedClip && (
                 <div className="space-y-2 text-xs">
                   <span className="text-zinc-300 font-bold block">서체 (Font Family)</span>
@@ -878,7 +878,7 @@ export default function MobileLayout({
                 </div>
               )}
 
-              {/* 변형 패널[cite: 15] */}
+              {/* 변형 패널 */}
               {activeBottomNav === 'transform' && selectedClip && (
                 <div className="space-y-4 text-xs">
                   <div className="space-y-1.5">
@@ -963,12 +963,12 @@ export default function MobileLayout({
                 </div>
               )}
 
-              {/* 그리드 패널[cite: 15] */}
+              {/* 그리드 패널 */}
               {activeBottomNav === 'grid' && selectedClip && (
                 <GridSettings clip={selectedClip} />
               )}
 
-              {/* 속도 패널[cite: 15] */}
+              {/* 속도 패널 */}
               {activeBottomNav === 'speed' && selectedClip && (
                 <div className="space-y-4 text-xs">
                   <div className="flex justify-between items-center">
@@ -997,7 +997,7 @@ export default function MobileLayout({
                 </div>
               )}
 
-              {/* 음량 패널[cite: 15] */}
+              {/* 음량 패널 */}
               {activeBottomNav === 'volume' && selectedClip && (
                 <div className="space-y-4 text-xs">
                   <div className="flex justify-between items-center">
@@ -1018,7 +1018,7 @@ export default function MobileLayout({
                 </div>
               )}
 
-              {/* 트랙 이동 패널[cite: 15] */}
+              {/* 트랙 이동 패널 */}
               {activeBottomNav === 'track' && selectedClip && (
                 <div className="space-y-3 text-xs">
                   <span className="text-zinc-400 font-bold block mb-2">
@@ -1042,12 +1042,12 @@ export default function MobileLayout({
                 </div>
               )}
 
-              {/* 색보정 패널[cite: 15] */}
+              {/* 색보정 패널 */}
               {activeBottomNav === 'color' && selectedClip && (
                 <ColorWheels clip={selectedClip} />
               )}
 
-              {/* 자막 애니메이션 패널[cite: 15] */}
+              {/* 자막 애니메이션 패널 */}
               {activeBottomNav === 'text' && (
                 <div className="space-y-4">
                   <CaptionManager />
@@ -1055,7 +1055,7 @@ export default function MobileLayout({
                 </div>
               )}
 
-              {/* 오디오 설정 패널[cite: 15] */}
+              {/* 오디오 설정 패널 */}
               {activeBottomNav === 'audio' && (
                 selectedClip?.type === 'audio' ? (
                   <AudioInspector clip={selectedClip} />
@@ -1064,7 +1064,7 @@ export default function MobileLayout({
                 )
               )}
 
-              {/* 효과 패널[cite: 15] */}
+              {/* 효과 패널 */}
               {activeBottomNav === 'effects' && selectedClip && (
                 <EffectsInspector clip={selectedClip} />
               )}
@@ -1073,12 +1073,12 @@ export default function MobileLayout({
         </>
       )}
 
-      {/* 스마트 마스크 펜툴 오버레이[cite: 15] */}
+      {/* 스마트 마스크 펜툴 오버레이 */}
       {showMaskEditor && selectedClipId && (
         <DrawMaskOverlay clipId={selectedClipId} onClose={() => setShowMaskEditor(false)} />
       )}
 
-      {/* 캡컷 규격 풀스크린 전체화면 재생 모달[cite: 15] */}
+      {/* 캡컷 규격 풀스크린 전체화면 재생 모달 */}
       {isFullscreenPreview && (
         <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center animate-fade-in select-none">
           <div className="relative aspect-[9/16] h-full max-h-[92vh] w-auto overflow-hidden">
