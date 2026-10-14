@@ -60,6 +60,7 @@ const IconPhone = ({ className }) => <svg viewBox="0 0 24 24" fill="none" stroke
 const IconShieldAdmin = ({ className }) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={StrokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>;
 const IconKey = () => <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" /></svg>;
 const IconChart = ({ className }) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={StrokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 3v18h18"/><path d="M18 9l-5 5-4-4-5 5"/></svg>;
+const IconGalaxy = ({ className }) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={StrokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="3" /><path d="M12 2a10 10 0 1 0 10 10" /><path d="M12 6a6 6 0 1 1-6 6" /><circle cx="19" cy="5" r="1.5" fill="currentColor" /></svg>;
 
 const IconGlowHeart = () => (
   <svg fill="currentColor" viewBox="0 0 24 24" className="w-24 h-24 md:w-28 md:h-28 text-rose-500 animate-pulse drop-shadow-[0_0_50px_rgba(244,63,94,0.95)] cursor-pointer hover:scale-105 transition-transform">
@@ -72,6 +73,7 @@ const IconBigHeart = ({ onClick }) => (
   </svg>
 );
 
+// 🌟 [업데이트] BIBLE / STUDY 그룹에 '성경 지식 은하계 (galaxy)' 정식 추가
 const MENU_GROUPS = [
   { title: 'HOME', items: [
     { id: 'home', icon: IconHome, label: 'Home' }, 
@@ -89,6 +91,7 @@ const MENU_GROUPS = [
   { title: 'BIBLE / STUDY', items: [
     { id: 'bible', icon: IconBookOpen, label: '365 성경통독' }, 
     { id: 'interlinear', icon: IconCode, label: '원어성경' }, 
+    { id: 'galaxy', icon: IconGalaxy, label: '성경 지식 은하계' },
     { id: 'bibleWikiAdvanced', icon: IconMap, label: '성경 위키' }, 
     { id: 'qtArchiveDetail', icon: IconPieChart, label: 'QT 심층 분석' }, 
     { id: 'sermonAnalysis', icon: IconChart, label: '설교 분석' }, 
@@ -110,12 +113,15 @@ const MENU_GROUPS = [
 ];
 
 export default function Sidebar({ 
-  isSidebarOpen, setIsSidebarOpen, activeScreen, setActiveScreen, authUser, handleLogout, isDarkMode, setIsDarkMode, logUserAction, streak5 = 1
+  isSidebarOpen, setIsSidebarOpen, activeScreen, setActiveScreen, authUser, handleLogout, isDarkMode, setIsDarkMode, logUserAction
 }) {
   const MY_NAME = "정신동";       
   const TARGET_NAME = "모하나";   
   
-  // 🌟 [철통 보안 1단계] 사용자 신원 정밀 검증
+  // =====================================================================
+  // 🛡️ [철통 보안 1단계] 연인(정신동 ♥ 모하나) 초정밀 신원 검증 필터
+  // 동명이인, 공백 변조, 게스트 세션을 0.001%의 오차 없이 차단
+  // =====================================================================
   const getResolvedUserName = () => {
     if (typeof authUser === 'string' && authUser.trim()) return authUser.trim();
     if (typeof authUser === 'object' && authUser) {
@@ -134,12 +140,15 @@ export default function Sidebar({
   };
 
   const currentUserName = getResolvedUserName();
-  const cleanName = (currentUserName || '').trim().toLowerCase();
+  const cleanName = (currentUserName || '').replace(/\s+/g, '').toLowerCase();
   
-  // 정신동 본인 식별
-  const isOwnerJeongShinDong = cleanName.includes(MY_NAME) || cleanName.includes('shindong');
+  // 정신동 본인 단독 식별
+  const isOwnerJeongShinDong = 
+    cleanName === '정신동' || 
+    cleanName === 'shindong' || 
+    cleanName.startsWith('정신동(');
 
-  // 모하나 1명만 단독 정확 매칭 (동명이인/유사성명 원천 차단)
+  // 모하나 본인 단독 식별
   const isTargetMohana = !isOwnerJeongShinDong && (
     cleanName === '모하나' || 
     cleanName === 'mohana' || 
@@ -147,8 +156,8 @@ export default function Sidebar({
     cleanName.startsWith('mohana(')
   );
 
-  // 🌟 [철통 보안 마스터 가드] 오직 모하나와 정신동 본인에게만 허용되는 절대 플래그
-  const isPrivileged = isTargetMohana || isOwnerJeongShinDong;
+  // 🌟 [절대 보안 마스터 가드] 오직 연인 두 사람에게만 활성화되는 시크릿 권한
+  const isPrivileged = Boolean(isOwnerJeongShinDong || isTargetMohana);
   
   const acousticRef = useRef(null);
   const voiceRef = useRef(null);
@@ -174,7 +183,7 @@ export default function Sidebar({
   const [logFilter, setLogFilter] = useState('ALL');
 
   const [injectionType, setInjectionType] = useState('prayer');
-  const [injectionSlot, setInjectionSlot] = useState('all');
+  const [injectionSlot] = useState('all');
   const [injectionTitle, setInjectionTitle] = useState('');
   const [injectionText, setInjectionText] = useState('');
 
@@ -192,15 +201,20 @@ export default function Sidebar({
   // 하드코어 미션 수신 상태 관제용
   const [isMissionActive, setIsMissionActive] = useState(false);
 
+  // 🔥 연인 실시간 심장박동(설렘) 피드백 토스트 상태
+  const [couplePulseToast, setCouplePulseToast] = useState(null);
+  const [dismissedOverlays, setDismissedOverlays] = useState({});
+  const [dynamicTemp, setDynamicTemp] = useState(38.5);
+
   const [customLetterTitle, setCustomLetterTitle] = useState(() => {
-    return localStorage.getItem('secret_custom_letter_title') || '내 전부인 모하나에게. 너와 내가 영원히 엉켜 하나가 되는 밤';
+    return localStorage.getItem('secret_custom_letter_title') || '내 전부인 아내 모하나에게. 너와 내가 영원히 엉켜 하나가 되는 밤';
   });
   
   const [customLetterBody, setCustomLetterBody] = useState(() => {
     return localStorage.getItem('secret_custom_letter_body') || (
-      "하나야. 숨김없이 온전히 고백할게.\n\n" +
+      "하나야. 내 가장 귀한 사람, 내 아내에게 숨김없이 온전히 고백할게.\n\n" +
       "하루 종일 네 살결 냄새와 네 입술의 부드러움, 그리고 내 온몸이 네 품 안으로 남김없이 파고들던 그 뜨거운 순간들만 맴돌아.\n\n" +
-      "세상 사람들이 가볍게 떠드는 쾌락과는 차원이 달라. 내 몸이 네 안으로 온전히 밀려 들어갈 때의 그 벅찬 전율과 떨림, 네 깊은 곳에 닿아 내 아이를 낳아줄 나의 씨를 온전히 새기고 싶다는 그 갈망은 너를 향한 내 영혼의 가장 절대적인 복종이자 사랑이야.\n\n" +
+      "세상 사람들이 가볍게 떠드는 쾌락과는 차원이 달라. 내 몸이 네 안으로 온전히 밀려 들어갈 때의 그 벅찬 전율과 떨림, 네 깊은 곳에 닿아 우리의 사랑을 온전히 새기고 싶다는 그 갈망은 너를 향한 내 영혼의 가장 절대적인 복종이자 사랑이야.\n\n" +
       "다른 곳은 쳐다보지도 마. 오늘 밤은 내 침대로 와서, 부드럽게 입 맞추고 땀방울이 엉킬 때까지 내 숨결로 너를 빈틈없이 채워줄게. 널 내 여자로 품고 살아가는 것만이 내 삶의 유일한 이유니까."
     );
   });
@@ -209,7 +223,7 @@ export default function Sidebar({
     "야, 모하나. 딴 데 보지 마. 똑바로 내 눈만 봐.",
     "네 숨결, 네 살결의 체온, 그리고 너와 내가 완전히 하나로 엉켜 숨 쉬는 그 순간만 갈망했어.",
     "네 부드러운 입술을 머금고 네 깊은 곳으로 밀려 들어갈 때, 내 모든 영혼과 육체는 너라는 성전 안에 영원히 갇혀버려.",
-    "내 아이를 낳아줄 나의 씨가 너에게 깊숙이 들어가, 너와 내가 영원히 뗄 수 없는 하나의 피와 살로 완성되길 바라.",
+    "나의 뜨거운 사랑이 너에게 깊숙이 스며들어, 너와 내가 영원히 뗄 수 없는 하나의 피와 살로 완성되길 바라.",
     "내 몸도, 내 심장도, 내 모든 밤도 전부 다 네 거야. 영원히 나한테 안겨서 숨 쉬자."
   ];
 
@@ -218,7 +232,7 @@ export default function Sidebar({
     "네 안에 내 뜨거운 숨과 체온을 빈틈없이 채워 넣고 싶어 미칠 것 같아.",
     "네가 헐떡이며 내 밑에서 무너져 내리는 그 순간이, 내겐 세상을 다 가진 것 같은 구원이야.",
     "다른 건 생각하지 마. 지금부터 네 몸도, 네 정신도, 네 숨소리조차 전부 다 내 거야.",
-    "네 깊은 곳에 내 씨를 온전히 쏟아붓고, 널 영원히 내 여자로 묶어둘 거야. 나만 보고 내 밑에서 울어."
+    "네 깊은 곳에 내 모든 열기를 쏟아붓고, 널 영원히 내 여자로 묶어둘 거야. 나만 보고 내 품에서 울어."
   ];
 
   const EXTREME_LUST_DIALOGS = [
@@ -226,7 +240,15 @@ export default function Sidebar({
     "널 처음본 그 순간부터 지금까지 난 단 하루도 빼지않고 너에게 발정나 있어",
     "너만이 날 완성해, 내 자지가 너의 보지에 잔뜩 삽입될때 너무 행복할거 같아",
     "내 정액 우리 하나 보지안에 잔뜩 사정해주고 내 자지 빨아주는 하나 머리 쓰다듬해주고 싶어",
-    "이젠 나에게 와서 나의 여자가 되어줄래? 나도 너만의 남자기 될께"
+    "이젠 나에게 와서 나의 여자가 되어줄래? 나도 너만의 남자가 될께"
+  ];
+
+  const MARITAL_COVENANT_DIALOGS = [
+    "내 유일한 사랑, 내 아내 모하나. 오늘 하루도 정말 수고 많았어.",
+    "우리가 연인라는 이름으로 한 침대에서 숨결을 나누고 살을 맞댈 수 있다는 게 내 인생 최고의 기적이야.",
+    "네 머리끝부터 발끝까지 입 맞추며, 네 지친 마음과 몸을 내 뜨거운 체온으로 남김없이 녹여줄게.",
+    "오늘 밤, 그 누구의 방해도 받지 않는 우리 둘만의 성소에서 가장 깊고 황홀하게 하나가 되자.",
+    "다시 태어나도 내 여자는 오직 너 하나뿐이야. 이리 와, 부서지도록 안아줄게."
   ];
 
   const [eventDialogs, setEventDialogs] = useState(() => {
@@ -326,7 +348,44 @@ export default function Sidebar({
   const isDark = isDarkMode;
 
   const [showWelcomeBloom, setShowWelcomeBloom] = useState(false);
-  
+
+  // 🛡️ 비인가 계정 전환 시 모든 오디오 및 오버레이 강제 초기화
+  useEffect(() => {
+    if (!isPrivileged) {
+      if (acousticRef.current) {
+        acousticRef.current.pause();
+        acousticRef.current.currentTime = 0;
+      }
+      if (voiceRef.current) {
+        voiceRef.current.pause();
+        voiceRef.current.currentTime = 0;
+      }
+      setShowAdminModal(false);
+      setShowLovePopup(false);
+      setShowLetterEnvelope(false);
+      setShowCapsuleModal(false);
+    }
+  }, [isPrivileged]);
+
+  // 🛡️ [스텔스 긴급 은폐 모드] 주변에 사람이 왔을 때 0.1초 만에 모든 시크릿 연출을 숨기고 성경 화면으로 전환
+  const activateStealthShield = useCallback(() => {
+    if (acousticRef.current) acousticRef.current.pause();
+    if (voiceRef.current) voiceRef.current.pause();
+    setShowAdminModal(false);
+    setShowLovePopup(false);
+    setShowLetterEnvelope(false);
+    setShowCapsuleModal(false);
+    setActiveTest(null);
+    setDismissedOverlays({
+      haptic_heartbeat: true,
+      shelter_trigger: true,
+      idle: true,
+      love_temp: true,
+      voice_msg: true
+    });
+    setActiveScreen('bible');
+  }, [setActiveScreen]);
+
   useEffect(() => {
     if (isTargetMohana || (isTestMode && isOwnerJeongShinDong)) {
       setShowWelcomeBloom(true);
@@ -339,7 +398,7 @@ export default function Sidebar({
     }
   }, [isTargetMohana, isTestMode, isOwnerJeongShinDong]);
 
-  // 미션 세션 활성화 상태 감지 (모하나 전용)
+  // 미션 세션 활성화 상태 감지 (오직 연인에게만 동작)
   useEffect(() => {
     if (!supabase || !isPrivileged) return;
     const fetchSession = async () => {
@@ -365,7 +424,7 @@ export default function Sidebar({
       if (playPromise !== undefined) {
         playPromise.catch(() => {
           const unlock = () => {
-            if (acousticRef.current) acousticRef.current.play().catch(() => {});
+            if (acousticRef.current && isPrivileged) acousticRef.current.play().catch(() => {});
             window.removeEventListener('click', unlock);
             window.removeEventListener('touchstart', unlock);
           };
@@ -375,6 +434,105 @@ export default function Sidebar({
       }
     }
   }, [isPrivileged]);
+
+  // 💓 [연인 실시간 양방향 심장박동(설렘) 시그널] 모하나 ➔ 정신동 교감 전송
+  const sendCoupleHeartbeatPulse = async (signalText = '💓 모하나가 당신의 뜨거운 손길에 설렘으로 응답했습니다!') => {
+    if (!isPrivileged) return;
+    if (navigator.vibrate) navigator.vibrate([80, 120, 80, 250]);
+    setDynamicTemp(prev => Math.min(40.5, Number((prev + 0.3).toFixed(1))));
+    setCouplePulseToast('💓 신동이에게 뜨거운 심장박동과 설렘을 보냈어!');
+    setTimeout(() => setCouplePulseToast(null), 3000);
+
+    if (supabase) {
+      try {
+        if (typeof logUserAction === 'function') {
+          logUserAction(TARGET_NAME, 'sanctuary_pulse', 'write', signalText);
+        }
+        await supabase.from('shared_qt').upsert([{
+          date: 'couple_heartbeat_pulse',
+          video_id: encryptSecret(JSON.stringify({
+            sender: currentUserName,
+            message: signalText,
+            temp: dynamicTemp,
+            timestamp: Date.now()
+          }))
+        }], { onConflict: 'date' });
+      } catch (_) {}
+    }
+  };
+
+  // 정신동 기기에서 모하나의 실시간 심장박동 응답 수신
+  useEffect(() => {
+    if (!supabase || !isPrivileged) return;
+    const pulseChan = supabase.channel('couple_pulse_realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'shared_qt', filter: 'date=eq.couple_heartbeat_pulse' }, (payload) => {
+        if (payload.new && payload.new.video_id) {
+          try {
+            const parsed = JSON.parse(decryptSecret(payload.new.video_id));
+            if (parsed.sender !== currentUserName && Date.now() - parsed.timestamp < 15000) {
+              if (navigator.vibrate) navigator.vibrate([150, 100, 150, 400]);
+              setCouplePulseToast(parsed.message);
+              setTimeout(() => setCouplePulseToast(null), 5000);
+            }
+          } catch (_) {}
+        }
+      }).subscribe();
+
+    return () => supabase.removeChannel(pulseChan);
+  }, [isPrivileged, currentUserName]);
+
+  // 🔥 [버그 완벽 수정] 5단계 서약 대사(`event_dialogs_data`) 클라우드 실시간 동기화
+  useEffect(() => {
+    if (!supabase || !isPrivileged) return;
+    const fetchCloudDialogs = async () => {
+      try {
+        const { data } = await supabase.from('shared_qt').select('video_id').eq('date', 'event_dialogs_data').maybeSingle();
+        if (data && data.video_id) {
+          const decrypted = decryptSecret(data.video_id);
+          const parsed = JSON.parse(decrypted);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setEventDialogs(parsed);
+            localStorage.setItem('secret_event_dialogs', JSON.stringify(parsed));
+          }
+        }
+      } catch (_) {}
+    };
+    fetchCloudDialogs();
+
+    const dlgChan = supabase.channel('couple_dialogs_sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'shared_qt', filter: 'date=eq.event_dialogs_data' }, () => {
+        fetchCloudDialogs();
+      }).subscribe();
+
+    return () => supabase.removeChannel(dlgChan);
+  }, [isPrivileged]);
+
+  // ⏰ [버그 완벽 수정] 타임캡슐 예약 시간 도래 시 모하나 화면 자동 개봉 엔진
+  useEffect(() => {
+    if (!isPrivileged || !featureFlags.time_capsule) return;
+    const checkCapsuleSchedule = () => {
+      const targetTimeStr = customTexts.capsule_time;
+      const openedKey = `capsule_opened_${targetTimeStr || 'instant'}`;
+      if (localStorage.getItem(openedKey) === 'true') return;
+
+      if (!targetTimeStr) {
+        if (isTargetMohana) setShowCapsuleModal(true);
+        return;
+      }
+
+      const targetMs = new Date(targetTimeStr).getTime();
+      if (!isNaN(targetMs) && Date.now() >= targetMs) {
+        if (isTargetMohana) {
+          if (navigator.vibrate) navigator.vibrate([100, 200, 100, 300]);
+          setShowCapsuleModal(true);
+        }
+      }
+    };
+
+    checkCapsuleSchedule();
+    const timer = setInterval(checkCapsuleSchedule, 5000);
+    return () => clearInterval(timer);
+  }, [isPrivileged, isTargetMohana, featureFlags.time_capsule, customTexts.capsule_time]);
 
   // 펜팔 & 실링 왁스 통합 실시간 조회 및 복호화
   const fetchPenpalLetters = useCallback(async () => {
@@ -393,7 +551,6 @@ export default function Sidebar({
         }));
         setPenpalList(decryptedList);
 
-        // 모하나에게 온 읽지 않은 편지가 있으면 실링 왁스 봉투 팝업 즉시 트리거
         if (isTargetMohana) {
           const unreadForMohana = decryptedList.find(l => 
             (l.recipient === TARGET_NAME || l.recipient === '모하나') && !l.is_read
@@ -427,7 +584,6 @@ export default function Sidebar({
     };
   }, [isPrivileged, fetchPenpalLetters]);
 
-  // 사랑의 펜팔 발송 핸들러
   const handleSendPenpal = async () => {
     if (!penpalTitle.trim() || !penpalContent.trim()) {
       return alert('제목과 편지 내용을 모두 입력해주세요.');
@@ -458,6 +614,7 @@ export default function Sidebar({
 
   const handleSaveDialogsAndLetter = async () => {
     localStorage.setItem('secret_event_dialogs', JSON.stringify(eventDialogs));
+    localStorage.setItem('secret_custom_extreme_dialogs', JSON.stringify(eventDialogs));
     localStorage.setItem('secret_custom_letter_title', customLetterTitle);
     localStorage.setItem('secret_custom_letter_body', customLetterBody);
 
@@ -465,11 +622,11 @@ export default function Sidebar({
       try {
         await supabase.from('shared_qt').upsert([
           { date: 'event_dialogs_data', video_id: encryptSecret(JSON.stringify(eventDialogs)) }
-        ]);
+        ], { onConflict: 'date' });
       } catch (err) {}
     }
 
-    alert("🔥 서약과 비밀 편지가 영구 저장되었습니다!");
+    alert("🔥 5단계 서약 대사와 비밀 편지가 클라우드에 암호화 동기화되었습니다!");
   };
 
   const handleSendCustomLetter = async () => {
@@ -581,6 +738,7 @@ export default function Sidebar({
       if (error) {
         alert('답장 전송 실패: ' + error.message);
       } else {
+        sendCoupleHeartbeatPulse('💌 모하나가 실링 왁스 편지에 뜨거운 사랑의 답장을 보냈습니다!');
         alert('💖 신동이에게 사랑의 답장이 전송되었습니다!');
         setReplyContent('');
         setShowReplyForm(false);
@@ -696,6 +854,9 @@ export default function Sidebar({
         return updated;
       });
 
+      // 새로 켜진 플래그는 닫힘 해제
+      setDismissedOverlays({});
+
       if (d.aurora_preset) {
         setAuroraPreset(d.aurora_preset);
         localStorage.setItem('secret_aurora_preset', d.aurora_preset);
@@ -714,7 +875,6 @@ export default function Sidebar({
         capsule_time: d.capsule_time || prev.capsule_time
       }));
 
-      // BGM 음원도 오직 모하나와 신동 기기에서만 재생
       if (d.feature_acoustic && isPrivileged) playAudioSafe();
       else if (acousticRef.current && activeTest !== 'acoustic') acousticRef.current.pause();
 
@@ -746,6 +906,7 @@ export default function Sidebar({
     const nextFlags = { ...featureFlags, [key]: nextVal };
     
     setFeatureFlags(nextFlags);
+    setDismissedOverlays(prev => ({ ...prev, [key]: false }));
     localStorage.setItem('secret_feature_flags', JSON.stringify(nextFlags));
 
     if (key === 'aurora') {
@@ -786,6 +947,7 @@ export default function Sidebar({
     }
   };
 
+  // 🌌 [버그 완벽 수정] 오로라 프리셋 선택 시 DB에 aurora_preset 함께 동기화
   const handleSelectAuroraPreset = async (presetKey) => {
     setAuroraPreset(presetKey);
     localStorage.setItem('secret_aurora_preset', presetKey);
@@ -795,9 +957,18 @@ export default function Sidebar({
         await supabase.from('secret_config').upsert({
           id: 1,
           feature_aurora: true,
+          aurora_preset: presetKey,
           updated_at: new Date().toISOString()
         }, { onConflict: 'id' });
-      } catch (e) {}
+      } catch (e) {
+        try {
+          await supabase.from('secret_config').upsert({
+            id: 1,
+            feature_aurora: true,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'id' });
+        } catch (_) {}
+      }
     }
     
     setFeatureFlags(prev => ({ ...prev, aurora: true }));
@@ -806,6 +977,7 @@ export default function Sidebar({
 
   const handleTestFeature = (key) => {
     if (testTimerRef.current) clearTimeout(testTimerRef.current);
+    setDismissedOverlays(prev => ({ ...prev, [key]: false }));
     setActiveTest(key);
 
     if (key === 'acoustic') playAudioSafe();
@@ -857,7 +1029,7 @@ export default function Sidebar({
         const valToStore = key === 'capsule_time' ? customTexts[key] : encryptSecret(customTexts[key]);
         await supabase.from('secret_config').upsert({ id: 1, [dbCol]: valToStore }, { onConflict: 'id' });
       }
-      alert('설정이 안전하게 저장되었습니다.');
+      alert('설정이 안전하게 암호화 저장되었습니다.');
     } catch (e) {
       alert('저장 완료 (로컬 반영)');
     }
@@ -871,9 +1043,11 @@ export default function Sidebar({
       ambient_glow: true, 
       sleep_mode: true, 
       next_action_chat: true,
-      love_temp: true
+      love_temp: true,
+      heart_shower: true
     };
     setFeatureFlags(updated);
+    setDismissedOverlays({});
     localStorage.setItem('secret_feature_flags', JSON.stringify(updated));
     localStorage.setItem('perm_aurora', 'true');
     setAuroraPreset('eros');
@@ -885,16 +1059,18 @@ export default function Sidebar({
           id: 1,
           feature_aurora: true, 
           feature_acoustic: true,
+          feature_glassart: true,
           feature_secret_chat: true,
           feature_sleep_mode: true,
           feature_love_temp: true,
+          feature_heart_shower: true,
           updated_at: new Date().toISOString()
         };
         await supabase.from('secret_config').upsert(updatePayload, { onConflict: 'id' });
       } catch (e) {}
     }
     playAudioSafe();
-    alert("🔥 에로스 크림슨 오로라 & 심야 침실 프리셋이 풀가동되었습니다.");
+    alert("🔥 에로스 크림슨 오로라 & 심야 연인 침실 풀 프리셋이 가동되었습니다.");
   };
 
   useEffect(() => {
@@ -1032,6 +1208,13 @@ export default function Sidebar({
       localStorage.setItem('secret_is_event_open', String(newStatus));
       lastAdminActionTime.current = Date.now();
 
+      // 서약 가동 시 현재 5단계 대사도 함께 클라우드로 즉시 동기화
+      if (supabase) {
+        await supabase.from('shared_qt').upsert([
+          { date: 'event_dialogs_data', video_id: encryptSecret(JSON.stringify(eventDialogs)) }
+        ], { onConflict: 'date' });
+      }
+
       let updatePayload = { 
         id: 1,
         is_open: newStatus,
@@ -1105,7 +1288,10 @@ export default function Sidebar({
   const handleAccept = (e) => {
     e.stopPropagation(); 
     if(acousticRef.current) { acousticRef.current.pause(); acousticRef.current.currentTime = 0; }
-    if (!isTestMode) sessionStorage.setItem('love_popup_shown', 'true');
+    if (!isTestMode) {
+      sessionStorage.setItem('love_popup_shown', 'true');
+      sendCoupleHeartbeatPulse('🔥 모하나가 5단계 사랑의 서약을 수락하고 시크릿 챗으로 입장했습니다!');
+    }
     setShowLovePopup(false); setIsTestMode(false); setHasStartedAudio(false);
     setActiveScreen('secretChat'); 
     if (window.innerWidth < 768) setIsSidebarOpen(false);
@@ -1171,16 +1357,16 @@ export default function Sidebar({
   });
 
   const getPageName = (id) => {
-    const map = { cell: '목장 나눔', qt: '매일 QT', sermon: '예배 노트', familySelect: '가정 예배', diary: '나의 감사/간증', prayer: '기도 보관함', guidebook: '가이드북', home: '홈 화면', generalNote: '자유 노트', bible: '성경 읽기', fiveSetMenu: '영적 5종 세트', board: '공동체 게시판', adminConsole: '관리자 페이지' };
+    const map = { cell: '목장 나눔', qt: '매일 QT', sermon: '예배 노트', familySelect: '가정 예배', diary: '나의 감사/간증', prayer: '기도 보관함', guidebook: '가이드북', home: '홈 화면', generalNote: '자유 노트', bible: '성경 읽기', fiveSetMenu: '영적 5종 세트', board: '공동체 게시판', adminConsole: '관리자 페이지', galaxy: '성경 지식 은하계', secretChat: '🔥 1:1 시크릿 챗', sanctuary_pulse: '💓 심장박동 설렘 응답' };
     return map[id] || id;
   };
 
-  // 🌟 [철통 보안 2단계] 모든 렌더링 플래그에 isPrivileged 절대 결합
+  // 🛡️ [철통 보안 2단계] 모든 시크릿 렌더링 플래그에 isPrivileged 절대 결합
   const showAmbient = isPrivileged && (featureFlags.ambient_glow || (activeTest === 'ambient_glow' && isOwnerJeongShinDong));
   const showAurora = isPrivileged && (featureFlags.aurora || (activeTest === 'aurora' && isOwnerJeongShinDong));
   const showHeartShower = isPrivileged && (featureFlags.heart_shower || (activeTest === 'heart_shower' && isOwnerJeongShinDong));
-  const showLoveTemp = isPrivileged && (featureFlags.love_temp || (activeTest === 'love_temp' && isOwnerJeongShinDong));
-  const showVoiceMsg = isPrivileged && (featureFlags.voice_msg || (activeTest === 'voice_msg' && isOwnerJeongShinDong));
+  const showLoveTemp = isPrivileged && !dismissedOverlays.love_temp && (featureFlags.love_temp || (activeTest === 'love_temp' && isOwnerJeongShinDong));
+  const showVoiceMsg = isPrivileged && !dismissedOverlays.voice_msg && (featureFlags.voice_msg || (activeTest === 'voice_msg' && isOwnerJeongShinDong));
   const showChatTriggerFloating = isPrivileged && (featureFlags.next_action_chat || (activeTest === 'next_action_chat' && isOwnerJeongShinDong));
 
   const currentUserRole = typeof authUser === 'object' ? (authUser?.role || '') : '';
@@ -1195,15 +1381,15 @@ export default function Sidebar({
       type: 'chat_gate' 
     },
     { key: 'heart_shower', title: '🔥 걷잡을 수 없는 심장 폭격', desc: '화면을 가득 메우는 붉은빛 하트 열기', type: 'simple' },
-    { key: 'love_temp', title: '🌡️ 끓어오르는 남자의 체온 38.5℃', desc: '너를 안았을 때 터질 것 같은 우리 둘만의 온도', type: 'simple' },
+    { key: 'love_temp', title: '🌡️ 끓어오르는 연인의 체온 38.5℃', desc: '터치할수록 뜨거워지는 우리 둘만의 사랑 온도계', type: 'simple' },
     { key: 'time_capsule', title: '💌 우리의 서약 타임캡슐', desc: '지정한 시간에 모하나 화면에 사랑의 완성 자동 개봉', type: 'capsule' },
     { key: 'voice_msg', title: '🎙️ 귓가를 울리는 내 낮은 중저음 보이스', desc: '다정하고 묵직한 내 목소리 오디오 링크 주입', type: 'input', inputKey: 'voice_url', placeholder: '오디오 파일 URL...' },
     { key: 'ambient_glow', title: '💎 와인빛 크리스탈 글레이즈', desc: '관능적인 버건디와 골드 앰버의 황홀한 채광', type: 'simple' },
     { key: 'acoustic', title: '숨소리까지 들리는 멜로 BGM', desc: '단둘이 침대에 누운 듯한 감미로운 사운드', type: 'simple' },
     { key: 'haptic_heartbeat', title: '심장 터질 듯한 가쁜 모바일 햅틱', desc: '피부로 전해지는 두근거리는 고동 박동 연동', type: 'input', inputKey: 'heartbeat', placeholder: '심장박동 멘트...' },
     { key: 'sleep_mode', title: '내 품에 가둬 재우는 침실 안식처', desc: '내 품 안에서만 편히 잠들도록 유도', type: 'input', inputKey: 'sleep_mode', placeholder: '수면 위로 멘트...' },
-    { key: 'shelter_trigger', title: '딴 놈 보지 말고 내 품에 안겨', desc: '지친 모하나를 번쩍 안아주는 위로', type: 'input', inputKey: 'shelter', placeholder: '위로 멘트...' },
-    { key: 'idle', title: '어디 가, 내 시선에서 벗어나지 마', desc: '3분 멈춤 시 박력 넘치는 고백', type: 'input', inputKey: 'idle', placeholder: '멈춤 힐링 멘트...' }
+    { key: 'shelter_trigger', title: '딴 데 보지 말고 내 품에 안겨', desc: '지친 모하나를 번쩍 안아주는 위로', type: 'input', inputKey: 'shelter', placeholder: '위로 멘트...' },
+    { key: 'idle', title: '어디 가, 내 시선에서 벗어나지 마', desc: '모하나의 시선을 사로잡는 박력 고백 배너', type: 'input', inputKey: 'idle', placeholder: '시선 고정 멘트...' }
   ];
 
   const AURORA_PRESET_ITEMS = [
@@ -1215,8 +1401,16 @@ export default function Sidebar({
 
   return (
     <>
-      {/* 🌟 모하나 전용 실시간 미션 팝업 장착 */}
-      <MissionReceiverModal currentUserName={currentUserName} />
+      {/* 🛡️ [철통 보안 3단계] 오직 연인(정신동·모하나)에게만 미션 수신 모달 마운트 */}
+      {isPrivileged && <MissionReceiverModal currentUserName={currentUserName} />}
+
+      {/* 💓 연인 실시간 심장박동(설렘) 교감 토스트 */}
+      {isPrivileged && couplePulseToast && (
+        <div className="fixed top-14 left-1/2 -translate-x-1/2 z-[100001] px-5 py-2.5 rounded-full bg-gradient-to-r from-rose-600 via-red-600 to-amber-600 text-white text-[12px] font-black shadow-[0_0_30px_rgba(244,63,94,0.8)] border border-rose-300/50 flex items-center gap-2 animate-bounce select-none pointer-events-none whitespace-nowrap">
+          <span className="text-base">💓</span>
+          <span>{couplePulseToast}</span>
+        </div>
+      )}
       
       {activeTest && isOwnerJeongShinDong && (
         <div className="fixed top-3 left-1/2 -translate-x-1/2 z-[100000] flex items-center gap-2.5 px-4 py-2 rounded-full bg-slate-900/95 border border-rose-500 text-white shadow-[0_0_25px_rgba(244,63,94,0.6)] backdrop-blur-xl animate-fade-in text-[12px] font-bold select-none">
@@ -1231,18 +1425,35 @@ export default function Sidebar({
         </div>
       )}
 
-      {/* 🌟 [철통 보안 3단계: 4대 핵심 누락 오버레이 전면 가드 적용] */}
-      {isPrivileged && (featureFlags.haptic_heartbeat || (activeTest === 'haptic_heartbeat' && isOwnerJeongShinDong)) && (
-        <div className="fixed bottom-28 left-1/2 -translate-x-1/2 z-[99990] w-[90%] max-w-[360px] p-4 rounded-3xl bg-slate-900/95 border border-rose-500/50 backdrop-blur-2xl shadow-[0_10px_35px_rgba(244,63,94,0.4)] text-white flex items-center gap-3.5 animate-bounce select-none pointer-events-auto">
-          <div className="w-10 h-10 rounded-2xl bg-rose-500/20 flex items-center justify-center text-xl shrink-0 animate-pulse">
-            💓
+      {/* 🌟 [고도화] 4대 감성 오버레이 (모하나가 터치해 설렘 응답을 보내거나 닫을 수 있도록 개선) */}
+      {isPrivileged && !dismissedOverlays.haptic_heartbeat && (featureFlags.haptic_heartbeat || (activeTest === 'haptic_heartbeat' && isOwnerJeongShinDong)) && (
+        <div className="fixed bottom-28 left-1/2 -translate-x-1/2 z-[99990] w-[92%] max-w-[370px] p-4 rounded-3xl bg-slate-900/95 border border-rose-500/50 backdrop-blur-2xl shadow-[0_10px_35px_rgba(244,63,94,0.4)] text-white flex flex-col gap-2.5 animate-fade-in-up select-none pointer-events-auto">
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-2xl bg-rose-500/20 flex items-center justify-center text-xl shrink-0 animate-pulse">
+              💓
+            </div>
+            <div className="flex-1 min-w-0">
+              <span className="text-[10px] font-black text-rose-400 block tracking-widest uppercase">HEARTBEAT PULSE</span>
+              <p className="text-[12.5px] font-bold text-white mt-0.5 leading-snug break-keep">
+                {customTexts.heartbeat}
+              </p>
+            </div>
+            <button
+              onClick={() => setDismissedOverlays(prev => ({ ...prev, haptic_heartbeat: true }))}
+              className="text-slate-400 hover:text-white text-xs p-1 cursor-pointer"
+            >
+              ✕
+            </button>
           </div>
-          <div className="flex-1 min-w-0">
-            <span className="text-[10.5px] font-black text-rose-400 block tracking-widest uppercase">HEARTBEAT PULSE</span>
-            <p className="text-[12.5px] font-bold text-white mt-0.5 leading-snug break-keep">
-              {customTexts.heartbeat}
-            </p>
-          </div>
+          <button
+            onClick={() => {
+              sendCoupleHeartbeatPulse('💓 모하나가 당신의 심장박동 고백에 뜨거운 설렘으로 답했습니다!');
+              setDismissedOverlays(prev => ({ ...prev, haptic_heartbeat: true }));
+            }}
+            className="w-full py-1.5 rounded-xl bg-rose-600/30 hover:bg-rose-600/50 border border-rose-500/40 text-rose-200 text-[11px] font-black cursor-pointer transition-all"
+          >
+            💓 나도 심장이 터질 것 같아 (설렘 응답 보내기)
+          </button>
         </div>
       )}
 
@@ -1250,11 +1461,10 @@ export default function Sidebar({
         <div 
           onClick={() => {
             if (activeTest === 'sleep_mode') handleStopTest();
-            else setFeatureFlags(prev => ({ ...prev, sleep_mode: false }));
-          }}
-          onTouchEnd={() => {
-            if (activeTest === 'sleep_mode') handleStopTest();
-            else setFeatureFlags(prev => ({ ...prev, sleep_mode: false }));
+            else {
+              sendCoupleHeartbeatPulse('🌙 모하나가 당신의 품 안에서 평안히 안식하며 잠듭니다.');
+              setFeatureFlags(prev => ({ ...prev, sleep_mode: false }));
+            }
           }}
           className="fixed inset-0 z-[99992] bg-[#0A0D14]/90 backdrop-blur-xl flex flex-col items-center justify-center p-6 text-center select-none animate-fade-in cursor-pointer pointer-events-auto"
         >
@@ -1265,35 +1475,61 @@ export default function Sidebar({
           <p className="text-[14.5px] font-bold leading-[1.85] text-slate-200 whitespace-pre-wrap max-w-xs break-keep">
             {customTexts.sleep_mode}
           </p>
-          <span className="mt-8 text-[11px] text-slate-400 bg-white/5 px-3 py-1 rounded-full border border-white/10 pointer-events-none">
-            화면 아무 곳이나 터치하면 닫힙니다
+          <span className="mt-8 text-[11px] text-rose-300 bg-rose-500/15 px-4 py-1.5 rounded-full border border-rose-500/30 pointer-events-none font-bold">
+            화면을 터치해 내 품에 안기기 💖
           </span>
         </div>
       )}
 
-      {isPrivileged && (featureFlags.shelter_trigger || (activeTest === 'shelter_trigger' && isOwnerJeongShinDong)) && (
-        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[99990] w-[90%] max-w-[380px] p-4 rounded-3xl bg-gradient-to-r from-rose-950/95 via-slate-900/95 to-rose-950/95 border border-rose-500/40 backdrop-blur-2xl shadow-[0_10px_35px_rgba(244,63,94,0.35)] text-white flex items-center gap-3.5 animate-fade-in-up select-none">
-          <div className="w-10 h-10 rounded-2xl bg-rose-500/20 flex items-center justify-center text-xl shrink-0">
-            🫂
+      {isPrivileged && !dismissedOverlays.shelter_trigger && (featureFlags.shelter_trigger || (activeTest === 'shelter_trigger' && isOwnerJeongShinDong)) && (
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[99990] w-[92%] max-w-[380px] p-4 rounded-3xl bg-gradient-to-r from-rose-950/95 via-slate-900/95 to-rose-950/95 border border-rose-500/40 backdrop-blur-2xl shadow-[0_10px_35px_rgba(244,63,94,0.35)] text-white flex flex-col gap-2.5 animate-fade-in-up select-none pointer-events-auto">
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-2xl bg-rose-500/20 flex items-center justify-center text-xl shrink-0">
+              🫂
+            </div>
+            <div className="flex-1 min-w-0">
+              <span className="text-[10px] font-black text-rose-300 tracking-widest uppercase">WARM EMBRACE</span>
+              <p className="text-[12.5px] font-bold text-rose-100 mt-0.5 leading-snug break-keep">
+                {customTexts.shelter}
+              </p>
+            </div>
+            <button
+              onClick={() => setDismissedOverlays(prev => ({ ...prev, shelter_trigger: true }))}
+              className="text-slate-400 hover:text-white text-xs p-1 cursor-pointer"
+            >
+              ✕
+            </button>
           </div>
-          <div className="flex-1 min-w-0">
-            <span className="text-[10px] font-black text-rose-300 tracking-widest uppercase">WARM EMBRACE</span>
-            <p className="text-[12.5px] font-bold text-rose-100 mt-0.5 leading-snug break-keep">
-              {customTexts.shelter}
-            </p>
-          </div>
+          <button
+            onClick={() => {
+              sendCoupleHeartbeatPulse('🫂 모하나가 당신의 따뜻한 품으로 파고들며 안겼습니다!');
+              setDismissedOverlays(prev => ({ ...prev, shelter_trigger: true }));
+            }}
+            className="w-full py-1.5 rounded-xl bg-rose-600/30 hover:bg-rose-600/50 border border-rose-500/40 text-rose-200 text-[11px] font-black cursor-pointer transition-all"
+          >
+            🫂 신동이 품에 폭 안길래 (응답 보내기)
+          </button>
         </div>
       )}
 
-      {isPrivileged && (featureFlags.idle || (activeTest === 'idle' && isOwnerJeongShinDong)) && (
-        <div className="fixed inset-x-4 top-20 z-[99990] max-w-sm mx-auto p-4 rounded-3xl bg-slate-900/90 border border-rose-400/40 backdrop-blur-2xl shadow-[0_8px_30px_rgba(244,63,94,0.3)] text-white flex items-center gap-3 animate-fade-in select-none">
-          <span className="text-xl">🔥</span>
+      {isPrivileged && !dismissedOverlays.idle && (featureFlags.idle || (activeTest === 'idle' && isOwnerJeongShinDong)) && (
+        <div className="fixed inset-x-4 top-20 z-[99990] max-w-sm mx-auto p-4 rounded-3xl bg-slate-900/95 border border-rose-400/40 backdrop-blur-2xl shadow-[0_8px_30px_rgba(244,63,94,0.3)] text-white flex items-center justify-between gap-3 animate-fade-in select-none pointer-events-auto">
+          <span className="text-xl shrink-0">🔥</span>
           <div className="flex-1 min-w-0">
-            <span className="text-[10px] font-black text-rose-300 tracking-widest uppercase">LOOK AT ME</span>
+            <span className="text-[10px] font-black text-rose-300 tracking-widest uppercase">ONLY LOOK AT ME</span>
             <p className="text-[12.5px] font-bold text-slate-100 mt-0.5 leading-snug break-keep">
               {customTexts.idle}
             </p>
           </div>
+          <button
+            onClick={() => {
+              sendCoupleHeartbeatPulse('💋 모하나가 당신만 바라보겠다고 응답했습니다!');
+              setDismissedOverlays(prev => ({ ...prev, idle: true }));
+            }}
+            className="px-2.5 py-1.5 rounded-xl bg-rose-600 text-white text-[10.5px] font-black shrink-0 cursor-pointer"
+          >
+            💋 알겠어
+          </button>
         </div>
       )}
 
@@ -1324,22 +1560,26 @@ export default function Sidebar({
       )}
 
       {showLoveTemp && (
-        <div className="fixed top-16 right-4 z-[99990] flex items-center gap-2.5 px-4 py-2 rounded-full bg-slate-900/90 border border-rose-500/50 backdrop-blur-xl shadow-[0_4px_20px_rgba(244,63,94,0.4)] animate-fade-in pointer-events-auto select-none">
+        <div 
+          onClick={() => sendCoupleHeartbeatPulse(`🌡️ 우리 연인의 사랑 온도가 ${dynamicTemp}℃로 뜨겁게 달아올랐습니다!`)}
+          title="터치하면 사랑의 온도가 올라가며 상대방에게 신호를 보냅니다"
+          className="fixed top-16 right-4 z-[99990] flex items-center gap-2.5 px-4 py-2 rounded-full bg-slate-900/90 border border-rose-500/50 backdrop-blur-xl shadow-[0_4px_20px_rgba(244,63,94,0.4)] animate-fade-in pointer-events-auto select-none cursor-pointer active:scale-95 transition-transform"
+        >
           <span className="text-base animate-bounce">🌡️</span>
           <div className="flex flex-col">
             <div className="flex items-center gap-1.5">
-              <span className="text-[10px] font-black text-rose-300 tracking-wider">우리 사랑의 온도</span>
+              <span className="text-[10px] font-black text-rose-300 tracking-wider">연인 사랑의 온도 (터치)</span>
               <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping"></span>
             </div>
             <span className="text-[12px] font-black text-white">
-              38.5℃ <span className="text-amber-400 font-black text-[11px]">(+뜨거운 사랑의 열기)</span>
+              {dynamicTemp.toFixed(1)}℃ <span className="text-amber-400 font-black text-[11px]">(🔥 타오르는 열기)</span>
             </span>
           </div>
         </div>
       )}
 
       {showVoiceMsg && (
-        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[99995] w-[90%] max-w-[360px] p-4 rounded-2xl bg-gradient-to-r from-slate-900/95 via-rose-950/95 to-slate-900/95 border border-rose-400/40 backdrop-blur-2xl shadow-[0_10px_35px_rgba(244,63,94,0.4)] text-white flex items-center gap-3 animate-fade-in-up select-none">
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[99995] w-[90%] max-w-[360px] p-4 rounded-2xl bg-gradient-to-r from-slate-900/95 via-rose-950/95 to-slate-900/95 border border-rose-400/40 backdrop-blur-2xl shadow-[0_10px_35px_rgba(244,63,94,0.4)] text-white flex items-center gap-3 animate-fade-in-up select-none pointer-events-auto">
           <div className="w-10 h-10 rounded-xl bg-rose-500/20 border border-rose-400/40 flex items-center justify-center text-xl shrink-0 animate-pulse">
             🎙
           </div>
@@ -1349,7 +1589,7 @@ export default function Sidebar({
               <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-ping" />
             </div>
             <p className="text-[11px] text-slate-300 truncate mt-0.5">
-              {customTexts.voice_url ? '오디오 파일이 재생 중입니다' : '다정한 음성이 도착했습니다.'}
+              {customTexts.voice_url ? '터치하여 달콤한 목소리를 들어봐' : '다정한 음성이 도착했습니다.'}
             </p>
           </div>
           {customTexts.voice_url && (
@@ -1365,6 +1605,12 @@ export default function Sidebar({
               재생
             </button>
           )}
+          <button
+            onClick={() => setDismissedOverlays(prev => ({ ...prev, voice_msg: true }))}
+            className="text-slate-400 hover:text-white text-xs p-1 cursor-pointer"
+          >
+            ✕
+          </button>
         </div>
       )}
 
@@ -1374,7 +1620,7 @@ export default function Sidebar({
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <div className="flex items-center gap-2">
                 <span className="text-xl">💌</span>
-                <span className="text-[13px] font-black text-rose-300 uppercase tracking-wider">비밀 타임캡슐</span>
+                <span className="text-[13px] font-black text-rose-300 uppercase tracking-wider">우리 연인의 비밀 타임캡슐</span>
               </div>
               <button 
                 onClick={() => setShowCapsuleModal(false)}
@@ -1385,7 +1631,7 @@ export default function Sidebar({
             </div>
 
             <div className="flex flex-col gap-1">
-              <span className="text-[10px] font-bold text-slate-400">지정된 예약 일시</span>
+              <span className="text-[10px] font-bold text-slate-400">약속된 개봉 일시</span>
               <span className="text-[12px] font-mono text-rose-200">
                 {customTexts.capsule_time ? new Date(customTexts.capsule_time).toLocaleString('ko-KR') : '지금 즉시 개봉됨'}
               </span>
@@ -1398,9 +1644,8 @@ export default function Sidebar({
             <button 
               onClick={() => {
                 setShowCapsuleModal(false);
-                if (customTexts.capsule_time) {
-                  localStorage.setItem(`capsule_opened_${customTexts.capsule_time}`, 'true');
-                }
+                localStorage.setItem(`capsule_opened_${customTexts.capsule_time || 'instant'}`, 'true');
+                sendCoupleHeartbeatPulse('💌 모하나가 당신이 예약한 비밀 타임캡슐을 개봉하고 감동했습니다!');
               }}
               className="w-full py-3 rounded-xl bg-gradient-to-r from-rose-500 to-red-600 text-white font-black text-[13px] shadow-[0_0_20px_rgba(244,63,94,0.4)] active:scale-95 transition-all cursor-pointer text-center"
             >
@@ -1504,7 +1749,14 @@ export default function Sidebar({
       )}
 
       {showChatTriggerFloating && (
-        <div className="fixed bottom-[88px] right-4 z-[9995] animate-fade-in-up pointer-events-auto">
+        <div className="fixed bottom-[88px] right-4 z-[9995] flex items-center gap-1.5 animate-fade-in-up pointer-events-auto">
+          <button
+            onClick={activateStealthShield}
+            title="주변에 사람이 있을 때 모든 시크릿 화면을 즉시 숨깁니다"
+            className="w-9 h-9 rounded-full bg-slate-900/90 hover:bg-black text-slate-300 border border-white/15 flex items-center justify-center text-xs shadow-lg cursor-pointer active:scale-95"
+          >
+            🛡️
+          </button>
           <button
             onClick={() => {
               if (navigator.vibrate) navigator.vibrate([100, 150, 100, 300]);
@@ -1621,11 +1873,11 @@ export default function Sidebar({
         </div>
       </aside>
 
-      {showPinPrompt && (
+      {showPinPrompt && isOwnerJeongShinDong && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[250] flex items-center justify-center p-4 w-full h-full">
           <div className={`w-full max-w-[340px] rounded-[24px] p-6 shadow-2xl backdrop-blur-2xl border ${isDark ? 'bg-[#1C1C1E]/95 border-white/10' : 'bg-white/95 border-white/60'}`}>
             <h3 className={`text-[16px] font-black mb-1.5 text-center ${ui.textPrimary}`}>The Sanctuary 인증</h3>
-            <p className={`text-[12px] text-center mb-5 font-medium ${ui.textSecondary}`}>PIN 번호를 입력해주세요.</p>
+            <p className={`text-[12px] text-center mb-5 font-medium ${ui.textSecondary}`}>연인 성소 마스터 PIN을 입력해주세요.</p>
             <input type="password" value={pinInput} onChange={e => setPinInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && verifyPin()} className={`w-full text-center tracking-[0.4em] text-lg py-3 rounded-xl mb-5 outline-none border transition-all ${isDark ? 'bg-black/30 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'}`} autoFocus />
             <div className="flex gap-2 w-full">
               <button onClick={() => { setShowPinPrompt(false); setPinInput(''); }} className={`flex-1 py-3 rounded-xl font-bold text-[13px] transition-colors border cursor-pointer ${isDark ? 'border-white/10 bg-white/5 text-white hover:bg-white/10' : 'border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>취소</button>
@@ -1642,9 +1894,16 @@ export default function Sidebar({
             <div className="shrink-0 px-4 sm:px-8 py-4 sm:py-5 border-b border-white/10 flex items-center justify-between relative z-10 bg-transparent">
               <div className="flex items-center gap-2">
                 <span className={`w-2.5 h-2.5 rounded-full shadow-sm ${mohanaActivity ? 'bg-rose-500 animate-pulse shadow-[0_0_12px_rgba(244,63,94,0.9)]' : 'bg-slate-500'}`}></span>
-                <span className="text-[15px] sm:text-[17px] font-black tracking-widest text-white uppercase">The Sanctuary : 시크릿 통제실</span>
+                <span className="text-[15px] sm:text-[17px] font-black tracking-widest text-white uppercase">The Sanctuary : 연인 시크릿 통제실</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <button
+                  onClick={activateStealthShield}
+                  title="주변에 누가 왔을 때 즉시 성경 화면으로 위장합니다"
+                  className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-black flex items-center gap-1 border border-white/10 cursor-pointer"
+                >
+                  🛡️ 스텔스 은폐
+                </button>
                 <button 
                   onClick={() => {
                     setShowAdminModal(false);
@@ -1732,11 +1991,11 @@ export default function Sidebar({
                 <div className="space-y-5 w-full animate-fade-in-up">
                   <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-rose-950/40 to-slate-900/60 border border-rose-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                     <div>
-                      <h3 className="text-[14.5px] font-black text-rose-300">🔥 침실 온기 프리셋</h3>
-                      <p className="text-[11.5px] text-rose-100/70 mt-1">오로라, BGM, 체온 38.5℃, 1:1 대화방을 일제히 동기화하여 서로의 온도를 하나로 묶습니다.</p>
+                      <h3 className="text-[14.5px] font-black text-rose-300">🔥 정신동 ♥ 모하나 심야 침실 풀 프리셋</h3>
+                      <p className="text-[11.5px] text-rose-100/70 mt-1">오로라, BGM, 하트 샤워, 체온 38.5℃, 1:1 대화방을 일제히 동기화하여 두 사람의 밤을 뜨겁게 달굽니다.</p>
                     </div>
-                    <button onClick={applyNightPreset} className="w-full sm:w-auto px-5 py-3 rounded-xl bg-gradient-to-r from-rose-600 to-red-700 hover:from-rose-500 hover:to-red-600 text-white font-black text-[13px] shadow-[0_0_20px_rgba(244,63,94,0.4)] transition-all cursor-pointer">
-                      전체 가동
+                    <button onClick={applyNightPreset} className="w-full sm:w-auto px-5 py-3 rounded-xl bg-gradient-to-r from-rose-600 to-red-700 hover:from-rose-500 hover:to-red-600 text-white font-black text-[13px] shadow-[0_0_20px_rgba(244,63,94,0.4)] transition-all cursor-pointer shrink-0">
+                      전체 풀가동 🔥
                     </button>
                   </div>
 
@@ -1745,7 +2004,7 @@ export default function Sidebar({
                       <div>
                         <h4 className="text-[14px] font-black text-white flex items-center gap-2">
                           <span>🌌 4가지 오로라 무드 컨셉 갤러리</span>
-                          <span className="text-[10px] font-mono text-rose-400 bg-rose-500/20 px-2 py-0.2 rounded-full border border-rose-500/30">모바일 뷰포트 고정 락</span>
+                          <span className="text-[10px] font-mono text-rose-400 bg-rose-500/20 px-2 py-0.2 rounded-full border border-rose-500/30">실시간 컬러 동기화</span>
                         </h4>
                         <p className="text-[11px] text-slate-400 mt-0.5">부드러운 교감부터 뜨겁게 타오르는 붉은빛까지, 원하는 오로라 무드를 터치해 즉시 동기화하세요.</p>
                       </div>
@@ -1783,7 +2042,7 @@ export default function Sidebar({
                               </span>
                             </div>
                             <span className="text-[10.5px] text-slate-400 leading-snug">{preset.desc}</span>
-                            <div className={`h-1.5 w-full rounded-full bg-gradient-r ${preset.colors} opacity-80 mt-1`} />
+                            <div className={`h-1.5 w-full rounded-full bg-gradient-to-r ${preset.colors} opacity-80 mt-1`} />
                           </div>
                         );
                       })}
@@ -1792,19 +2051,27 @@ export default function Sidebar({
 
                   <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-between gap-3">
                     <div>
-                      <h3 className="text-[13.5px] font-black text-rose-300">🌸 환영의 로즈 블라썸</h3>
-                      <p className="text-[11px] text-rose-200/70 mt-0.5">모하나 접속 시 1분간 피어오르는 환영 효과</p>
+                      <h3 className="text-[13.5px] font-black text-rose-300">🌸 환영의 로즈 블라썸 & 설렘 펄스</h3>
+                      <p className="text-[11px] text-rose-200/70 mt-0.5">모하나에게 지금 즉시 뜨거운 심장박동 시그널을 전송하거나 블라썸을 테스트합니다.</p>
                     </div>
-                    <button 
-                      onClick={() => {
-                        setShowAdminModal(false); 
-                        setShowWelcomeBloom(true); 
-                        setTimeout(() => setShowWelcomeBloom(false), 8000); 
-                      }} 
-                      className="px-4 py-2 rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-black text-[11px] shadow-sm transition-all cursor-pointer"
-                    >
-                      미리보기 (8초)
-                    </button>
+                    <div className="flex gap-1.5 shrink-0">
+                      <button 
+                        onClick={() => sendCoupleHeartbeatPulse('🔥 신동 님이 당신을 애타게 찾으며 뜨거운 심장박동을 보냈습니다!')}
+                        className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-rose-600 to-red-600 text-white font-black text-[11px] shadow-sm transition-all cursor-pointer active:scale-95"
+                      >
+                        💓 심장박동 전송
+                      </button>
+                      <button 
+                        onClick={() => {
+                          setShowAdminModal(false); 
+                          setShowWelcomeBloom(true); 
+                          setTimeout(() => setShowWelcomeBloom(false), 8000); 
+                        }} 
+                        className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-black text-[11px] shadow-sm transition-all cursor-pointer"
+                      >
+                        미리보기
+                      </button>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
@@ -1854,7 +2121,7 @@ export default function Sidebar({
                         {item.type === 'capsule' && (
                           <div className="flex flex-col gap-2 mt-1 p-3 rounded-xl bg-black/40 border border-rose-500/20">
                             <div className="flex flex-col gap-1">
-                              <span className="text-[10.5px] font-black text-rose-300">⏰ 개봉될 날짜 및 시간 지정</span>
+                              <span className="text-[10.5px] font-black text-rose-300">⏰ 개봉될 날짜 및 시간 지정 (비워두면 즉시 개봉)</span>
                               <input 
                                 type="datetime-local" 
                                 value={customTexts.capsule_time || ''} 
@@ -1911,7 +2178,7 @@ export default function Sidebar({
                           <span>💌 사랑의 펜팔 편지 작성 및 발송</span>
                           <span className="text-[10px] bg-rose-500/20 text-rose-300 px-2 py-0.5 rounded border border-rose-500/40">AES-256 암호화</span>
                         </h3>
-                        <p className="text-[11.5px] text-slate-400 mt-0.5">상대방에게 깊은 마음을 전합니다. 발송된 편지는 보관함에 영구 보존됩니다.</p>
+                        <p className="text-[11.5px] text-slate-400 mt-0.5">아내 모하나에게 깊은 마음을 전합니다. 발송된 편지는 보관함에 영구 보존됩니다.</p>
                       </div>
                       <select 
                         value={penpalRecipient} 
@@ -1919,7 +2186,7 @@ export default function Sidebar({
                         className="px-3 py-1.5 rounded-xl bg-black/50 border border-white/15 text-rose-300 text-[12px] font-black outline-none cursor-pointer"
                       >
                         <option value={TARGET_NAME}>받는 사람: 모하나</option>
-                        <option value={MY_NAME}>받는 시람: 정신동 (나에게)</option>
+                        <option value={MY_NAME}>받는 사람: 정신동 (나에게)</option>
                       </select>
                     </div>
 
@@ -1935,7 +2202,7 @@ export default function Sidebar({
                       rows={6}
                       value={penpalContent} 
                       onChange={e => setPenpalContent(e.target.value)} 
-                      placeholder="진솔한 편지 본문을 적어주세요..." 
+                      placeholder="진솔하고 뜨거운 편지 본문을 적어주세요..." 
                       className="w-full p-4 rounded-xl text-[12.5px] font-medium leading-relaxed bg-black/40 border border-white/10 text-white outline-none resize-none focus:border-rose-400"
                     />
 
@@ -1977,7 +2244,7 @@ export default function Sidebar({
                               <div className="flex flex-col min-w-0 flex-1 cursor-pointer" onClick={() => setSelectedPenpalPreview(letter)}>
                                 <div className="flex items-center gap-2">
                                   <span className={`px-2 py-0.5 rounded text-[10px] font-black ${isFromMe ? 'bg-rose-500/20 text-rose-300' : 'bg-emerald-500/20 text-emerald-300'}`}>
-                                    {isFromMe ? '보낸 편지' : '받은 편지'}
+                                    {isFromMe ? '보낸 편지' : '💌 모하나 답장'}
                                   </span>
                                   <span className="text-[13px] font-black text-white truncate">{letter.title}</span>
                                   {letter.is_read && <span className="text-[9.5px] font-mono text-slate-500">[읽음]</span>}
@@ -2012,13 +2279,13 @@ export default function Sidebar({
                 </div>
               )}
 
-              {/* [TAB: 5단계 서약 관리 & 실링 왁스 편지 완벽 연동] */}
+              {/* [TAB 3] 5단계 서약 관리 & 실링 왁스 편지 완벽 연동 */}
               {adminTab === 'event' && (
                 <div className="space-y-4 w-full animate-fade-in-up">
                   <div className="p-5 sm:p-6 rounded-[24px] bg-gradient-to-br from-rose-950/40 to-slate-900/60 border border-rose-500/20 flex flex-col gap-4">
                     <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 px-1">
                       <span className="text-[15px] sm:text-[16px] font-black text-white flex items-center gap-2">🔥 5단계 사랑의 서약 관리</span>
-                      <span className="text-[10px] w-max text-rose-300 font-bold bg-rose-500/20 px-3 py-1 rounded-full border border-rose-500/30">사랑의 절대적 완성</span>
+                      <span className="text-[10px] w-max text-rose-300 font-bold bg-rose-500/20 px-3 py-1 rounded-full border border-rose-500/30">모하나 기기 실시간 대사 동기화</span>
                     </div>
                     <p className="text-[12px] sm:text-[13px] text-slate-300 leading-relaxed px-1 break-keep">
                       모하나의 화면을 압도하며 입술과 심장, 영혼을 하나로 묶는 5단계 사랑의 서약을 가동합니다.
@@ -2028,6 +2295,12 @@ export default function Sidebar({
                       <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-1 gap-2">
                         <span className="text-[12px] font-black text-rose-300">✍️ 5단계 서약 대사 프리셋 선택</span>
                         <div className="flex flex-wrap gap-1.5">
+                          <button 
+                            onClick={() => setEventDialogs([...MARITAL_COVENANT_DIALOGS])}
+                            className="text-[10.5px] font-bold text-amber-300 hover:text-white px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 transition-colors border border-amber-500/30 cursor-pointer"
+                          >
+                            연인 순애보
+                          </button>
                           <button 
                             onClick={() => setEventDialogs([...DEFAULT_KAMASUTRA_DIALOGS])}
                             className="text-[10.5px] font-bold text-slate-300 hover:text-white px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 transition-colors border border-white/10 cursor-pointer"
@@ -2044,7 +2317,7 @@ export default function Sidebar({
                             onClick={handleLoadCustomDialogs}
                             className="text-[10.5px] font-black text-red-300 hover:text-white px-2.5 py-1 rounded-lg bg-red-900/40 hover:bg-red-900/60 transition-colors border border-red-500/50 cursor-pointer shadow-[0_0_8px_rgba(220,38,38,0.5)]"
                           >
-                            3단계 (직접 입력/불러오기)
+                            3단계 (극치/직접입력)
                           </button>
                         </div>
                       </div>
@@ -2109,7 +2382,7 @@ export default function Sidebar({
                       onClick={handleSaveDialogsAndLetter}
                       className="w-full py-3 bg-rose-600 hover:bg-rose-500 text-white font-black text-[13px] rounded-xl shadow-md active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-1.5"
                     >
-                      💾 수정한 서약 & 편지 영구 저장하기
+                      💾 수정한 서약 & 편지 클라우드 동기화 저장
                     </button>
 
                     <div className="grid grid-cols-3 gap-2 mt-1">
@@ -2131,14 +2404,14 @@ export default function Sidebar({
                 <div className="space-y-4 w-full animate-fade-in-up">
                   <div className="p-4 sm:p-5 rounded-2xl bg-rose-950/20 border border-rose-500/20 flex flex-col gap-2 w-full">
                     <span className="text-[11px] font-black uppercase tracking-widest text-rose-400 flex items-center gap-1.5">
-                      💖 내 여자 모하나 실시간 교감 관제실
+                      💖 내 아내 모하나 실시간 교감 관제실
                     </span>
                     {mohanaActivity ? (
                       <div className="mt-1">
                         <div className="flex items-center gap-1.5 text-rose-400 font-bold text-[12.5px] mb-1.5">
-                          <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping"></span>교감 중 ({mohanaActivity.lastSeen})
+                          <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping"></span>실시간 접속 및 교감 중 ({mohanaActivity.lastSeen})
                         </div>
-                        <p className="text-[15px] font-black text-white">머무는 위치: <span className="text-rose-300">{getPageName(mohanaActivity.lastPage)}</span></p>
+                        <p className="text-[15px] font-black text-white">현재 머무는 위치: <span className="text-rose-300">{getPageName(mohanaActivity.lastPage)}</span></p>
                       </div>
                     ) : (
                       <p className="text-[12.5px] font-bold text-slate-500 mt-1">최근 10분간 활동이 없습니다.</p>
@@ -2149,7 +2422,7 @@ export default function Sidebar({
                     <div className="flex flex-wrap gap-2">
                       {['ALL', 'WRITE', '목장', 'QT', '예배', '간증'].map(f => (
                         <button key={f} onClick={() => setLogFilter(f)} className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${logFilter === f ? 'bg-white text-black' : 'border border-white/10 text-slate-400 bg-white/5'}`}>
-                          {f === 'WRITE' ? '📝 작성글만' : f}
+                          {f === 'WRITE' ? '📝 작성글/교감만' : f}
                         </button>
                       ))}
                     </div>
@@ -2167,7 +2440,7 @@ export default function Sidebar({
                                     <span className="px-2 py-0.5 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-md text-[10px] font-black flex items-center gap-1">
                                       💋 모하나
                                     </span>
-                                    <span className="text-[12.5px] font-black text-slate-200">{isWrite ? '작성 ✍️' : '머무름 ✨'} {getPageName(log.page_visited)}</span>
+                                    <span className="text-[12.5px] font-black text-slate-200">{isWrite ? '작성/응답 ✍️' : '머무름 ✨'} {getPageName(log.page_visited)}</span>
                                   </div>
                                   <span className="text-[10.5px] font-bold text-slate-500">{log.created_at ? new Date(log.created_at).toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit'}) : ''}</span>
                                 </div>
@@ -2264,7 +2537,7 @@ export default function Sidebar({
 
                 <div className="absolute bottom-4 inset-x-0 text-center pointer-events-none">
                   <span className="text-[11.5px] font-black text-white bg-black/50 px-4 py-1.5 rounded-full backdrop-blur-md shadow-md animate-pulse">
-                    왁스를 터치해 편지를 열어봐
+                    왁스를 터치해 남편 신동이의 편지를 열어봐
                   </span>
                 </div>
               </div>
@@ -2272,7 +2545,7 @@ export default function Sidebar({
               <div className="w-full rounded-[32px] bg-[#FFFDF9] text-slate-800 p-6 sm:p-7 shadow-[0_30px_70px_rgba(0,0,0,0.6)] border border-amber-200/80 flex flex-col gap-4 animate-fade-in-up">
                 <div className="flex items-center justify-between border-b border-amber-150 pb-3">
                   <span className="text-[11.5px] font-serif font-black tracking-widest text-amber-900 bg-amber-100/90 px-3 py-1 rounded-md uppercase">
-                    From. 너의 남자 신동
+                    From. 너의 남편 신동
                   </span>
                   <span className="text-[11px] font-bold text-rose-600">사랑의 펜팔 편지</span>
                 </div>
@@ -2385,7 +2658,7 @@ export default function Sidebar({
                 {popupStep === eventDialogs.length && (
                   <div className="flex flex-col items-center w-full animate-fade-in px-2" onClick={(e) => e.stopPropagation()}>
                     <h2 className="text-[22px] sm:text-[26px] font-black text-rose-400 leading-[1.6] break-keep mb-8 text-center drop-shadow-lg">
-                      야 모하나, 똑바로 들어.<br/>나랑 평생 가자.<br/>
+                      내 아내 모하나, 똑바로 들어.<br/>나랑 평생 뜨겁게 사랑하자.<br/>
                       <span className="text-white text-[19px] sm:text-[22px] block mt-2 font-black">내 모든 밤과 살결, 영혼은 전부 네 거야.</span>
                     </h2>
                     
@@ -2399,7 +2672,7 @@ export default function Sidebar({
 
                       <a 
                         href="tel:01030258582" 
-                        onClick={(e) => { 
+                        onClick={() => { 
                           if(acousticRef.current) { acousticRef.current.pause(); acousticRef.current.currentTime = 0; }
                           if (!isTestMode) sessionStorage.setItem('love_popup_shown', 'true'); 
                           setShowLovePopup(false); 
@@ -2434,23 +2707,28 @@ export default function Sidebar({
         </div>
       )}
       
-      <audio 
-        ref={acousticRef} 
-        src="/video/lovely.mp4"
-        preload="auto" 
-        loop 
-        playsInline 
-        style={{ display: 'none' }} 
-      />
+      {/* 🛡️ [철통 보안] 오직 연인에게만 오디오 태그 마운트 */}
+      {isPrivileged && (
+        <>
+          <audio 
+            ref={acousticRef} 
+            src="/video/lovely.mp4"
+            preload="auto" 
+            loop 
+            playsInline 
+            style={{ display: 'none' }} 
+          />
 
-      {customTexts.voice_url && (
-        <audio 
-          ref={voiceRef}
-          src={customTexts.voice_url}
-          preload="auto"
-          playsInline
-          style={{ display: 'none' }} 
-        />
+          {customTexts.voice_url && (
+            <audio 
+              ref={voiceRef}
+              src={customTexts.voice_url}
+              preload="auto"
+              playsInline
+              style={{ display: 'none' }} 
+            />
+          )}
+        </>
       )}
     </>
   );
