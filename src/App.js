@@ -44,6 +44,7 @@ import AdminConsole from './components/AdminConsole';
 import ReelsStudio from './components/layout/ReelsStudio';
 import InterlinearKids from './pages/InterlinearKids';
 import JerusalemTycoon from './pages/JerusalemTycoon';
+import BibleKnowledgeGalaxy from './pages/BibleKnowledgeGalaxy';
 
 // 🛡️ 앱 크래시 방어선 (Error Boundary)
 class AppErrorBoundary extends React.Component {
@@ -274,6 +275,7 @@ export function Home({
 
   const defaultMenus = [
     { id: 'sermonArchiveAdvanced', icon: <IconChurch className="w-4 h-4"/>, color: 'text-[#007AFF]', bg: 'bg-[#007AFF]/10', title: '삶의 적용과 실천', desc: '적용과 실천' },
+    { id: 'galaxy', icon: <span className="text-base">🌌</span>, color: 'text-[#38BDF8]', bg: 'bg-[#38BDF8]/10', title: '지식 은하계', desc: '세컨드 브레인' },
     { id: 'qtArchiveDetail', icon: <IconFlame className="w-4 h-4"/>, color: 'text-[#FF2D55]', bg: 'bg-[#FF2D55]/10', title: 'QT 심층 분석', desc: 'QT 배경 및 적용' },
     { id: 'sermonAnalysis', icon: <IconAnalytics className="w-4 h-4"/>, color: 'text-[#FF9500]', bg: 'bg-[#FF9500]/10', title: '설교 분석', desc: '전체 설교 DB' },
     { id: 'applyTracker', icon: <IconSmile className="w-4 h-4"/>, color: 'text-[#AF52DE]', bg: 'bg-[#AF52DE]/10', title: '적용 트래커', desc: '신앙 결단 모아보기' },
@@ -1604,6 +1606,10 @@ export default function CompleteQtApp() {
         case 'jerusalemTycoon':
           return <JerusalemTycoon setActiveScreen={setActiveScreen} />;
 
+          case 'galaxy':
+      case 'bibleKnowledgeGalaxy':
+        return <BibleKnowledgeGalaxy setActiveScreen={setActiveScreen} />;
+
       case 'sermonAnalytics':
       case 'sermonAnalysis':
         return (
@@ -1967,7 +1973,7 @@ export default function CompleteQtApp() {
             <div className="flex-1 overflow-hidden relative z-10 w-full h-full pointer-events-auto">{renderScreen()}</div>
 
             {/* 하단 모바일 도크 바 */}
-            {!['login', 'adminConsole', 'cell', 'cellAttendance', 'JerichoWalk', 'jerichowalk','jericho', 'qtArchiveDetail', 'jerusalem_tycoon', 'Jerusalem_Tycoon', 'trainingCurriculum', 'trainingSubPages', 'QTArchiveDetail', 'Jerusalem_Tycoon', 'trainingCurriculum', 'trainingSubPages', 'interlinear_kids', 'secretChat', 'meditationPilgrimage', 'bible', 'reelsStudio', 'interlinear', 'mcheyne'].includes(activeScreen) && (
+            {!['login', 'adminConsole', 'cell', 'cellAttendance', 'galaxy', 'JerichoWalk', 'jerichowalk','jericho', 'qtArchiveDetail', 'jerusalem_tycoon', 'Jerusalem_Tycoon', 'trainingCurriculum', 'trainingSubPages', 'QTArchiveDetail', 'Jerusalem_Tycoon', 'trainingCurriculum', 'trainingSubPages', 'interlinear_kids', 'secretChat', 'meditationPilgrimage', 'bible', 'reelsStudio', 'interlinear', 'mcheyne'].includes(activeScreen) && (
               <div className={`md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-[390px] h-[64px] z-[90] pointer-events-auto rounded-full backdrop-blur-2xl shadow-[0_12px_36px_rgba(0,0,0,0.25)] border transition-all ${
                 isDarkMode 
                   ? 'bg-[#1C1C1E]/90 border-white/10' 

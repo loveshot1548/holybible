@@ -39,6 +39,7 @@ const IconBook = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={StrokeW
 const IconTarget = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={StrokeW} stroke="currentColor" className="w-3.5 h-3.5"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>;
 const IconSearch = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>;
 const IconUsers = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={StrokeW} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>;
+const IconSend = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" /></svg>;
 
 export default function Board({
   t,
@@ -59,31 +60,93 @@ export default function Board({
   fetchPosts,
   getArr
 }) {
+  // 🌟 [핵심 해결] 외부 props가 전달되지 않아도 100% 입력되도록 자가 완결형 상태 구축
+  const [internalPostText, setInternalPostText] = useState('');
+  const [isAnonymous, setIsAnonymous] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingPostId, setEditingPostId] = useState(null);
+  const [editingText, setEditingText] = useState('');
+
   const [searchTerm, setSearchTerm] = useState('');
   const [toastMsg, setToastMsg] = useState(null);
+
+  // 현재 텍스트 값 동기화
+  const currentInputText = newPostText !== undefined ? newPostText : internalPostText;
+  const handleInputChange = (val) => {
+    setInternalPostText(val);
+    if (setNewPostText) setNewPostText(val);
+  };
 
   const showToast = useCallback((msg) => {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(null), 2400);
   }, []);
 
-  if (!SubPageHeader) return <div className="p-4 font-bold text-[#F87171] text-sm">App.js에서 SubPageHeader가 넘어오지 않았습니다!</div>;
-
-  const currentBoardTab = mLocal?.boardTab || 'thanks';
-  const setBoardTab = (tab) => setMLocal && setMLocal({ ...mLocal, boardTab: tab });
+  // 탭 상태 자체 관리 fallback
+  const [internalTab, setInternalTab] = useState('thanks');
+  const currentBoardTab = mLocal?.boardTab || internalTab;
+  const setBoardTab = (tab) => {
+    setInternalTab(tab);
+    if (setMLocal) setMLocal({ ...mLocal, boardTab: tab });
+  };
 
   const parsePostData = useCallback((content) => {
     try {
       const dec = decryptField(content);
       return JSON.parse(dec);
-    } catch (e) {
+    } catch {
       try { 
         return JSON.parse(content); 
-      } catch (err) { 
+      } catch { 
         return { text: content, author: '익명', likes: 0, status: 'praying' }; 
       }
     }
   }, []);
+
+  // 빠른 입력 칩(태그)
+  const quickChips = useMemo(() => {
+    return currentBoardTab === 'thanks'
+      ? ['#오늘의감사', '#구원의은혜', '#가족', '#일터', '#치유회복', '#말씀동행']
+      : ['#건강회복', '#가족구원', '#마음평안', '#진로지혜', '#영적성장', '#사역과목장'];
+  }, [currentBoardTab]);
+
+  const handleAddChip = (chip) => {
+    const space = currentInputText && !currentInputText.endsWith(' ') ? ' ' : '';
+    handleInputChange(`${currentInputText}${space}${chip} `);
+  };
+
+  // 새 글 등록
+  const handleSubmitPost = async () => {
+    const textToSubmit = currentInputText.trim();
+    if (!textToSubmit) return alert("내용을 입력해주세요.");
+    if (!supabase) return alert("Supabase 연결 설정이 필요합니다.");
+
+    setIsSubmitting(true);
+    try {
+      const currentUserName = authUser?.name || '성도';
+      const authorName = isAnonymous ? '익명의 지체' : currentUserName;
+
+      const rawPayload = JSON.stringify({
+        type: currentBoardTab,
+        text: textToSubmit,
+        likes: 0,
+        author: authorName,
+        status: 'praying',
+        isAnonymous: isAnonymous
+      });
+
+      const { error } = await supabase.from('test_board').insert([{ content: encryptField(rawPayload) }]);
+      if (error) throw error;
+
+      handleInputChange('');
+      if (fetchPosts) fetchPosts();
+      showToast(currentBoardTab === 'thanks' ? "✨ 감사의 고백이 공동체에 등록되었습니다!" : "🕊️ 기도제목이 공동체에 올려졌습니다!");
+    } catch (err) {
+      alert("오류 발생: " + err.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleAction = async (post, actionType, newText = '') => {
     try {
@@ -101,7 +164,7 @@ export default function Board({
       if (actionType === 'amen') {
         showToast(parsed.type === 'thanks' ? "할렐루야! 감사의 고백에 동참했습니다." : "아멘! 지체를 위해 함께 기도했습니다.");
       }
-    } catch (e) {
+    } catch {
       showToast("처리 중 오류가 발생했습니다.");
     }
   };
@@ -115,6 +178,15 @@ export default function Board({
         showToast("게시글이 삭제되었습니다.");
       }
     }
+  };
+
+  // 인라인 수정 완료
+  const handleSaveEdit = async (post) => {
+    if (!editingText.trim()) return alert("수정할 내용을 입력해주세요.");
+    await handleAction(post, 'edit', editingText.trim());
+    setEditingPostId(null);
+    setEditingText('');
+    showToast("게시글이 수정되었습니다.");
   };
 
   // 🌟 [유기적 연동 1] 게시글의 기도를 내 골방 기도함(PrayerBox)으로 담아가기
@@ -241,7 +313,6 @@ export default function Board({
     });
   }, [filteredPosts, parsePostData]);
 
-  // 🌟 구문 오류 해결: 복잡한 JSX 삼항 연산자를 JS 계층에서 명확히 분기
   const displayPosts = useMemo(() => {
     return currentBoardTab === 'thanks' ? filteredPosts : activePrayers;
   }, [currentBoardTab, filteredPosts, activePrayers]);
@@ -252,25 +323,22 @@ export default function Board({
   const textSub = isDark ? 'text-[#94A3B8]' : 'text-[#64748B]';
   
   const glassCard = isDark 
-    ? 'bg-[#131620]/90 border border-white/[0.08] shadow-[0_4px_20px_rgba(0,0,0,0.3)] backdrop-blur-xl' 
+    ? 'bg-[#131620]/95 border border-white/[0.08] shadow-[0_4px_20px_rgba(0,0,0,0.3)] backdrop-blur-xl' 
     : 'bg-white border border-slate-200/80 shadow-[0_2px_12px_rgba(15,23,42,0.04)] backdrop-blur-xl';
-  const inputBg = isDark 
-    ? 'bg-black/35 border-white/10 text-[#F8FAFC] focus:border-[#38BDF8] outline-none placeholder:text-[#475569]' 
-    : 'bg-slate-50/70 border-slate-200 text-[#0F172A] focus:border-[#0284C7] focus:bg-white outline-none placeholder:text-[#94A3B8]';
 
   return (
-    <div className={`flex-1 flex flex-col h-full ${bgBody} animate-fade-in-up relative font-sans overflow-hidden select-none text-left`}>
+    <div className={`flex-1 flex flex-col h-full ${bgBody} animate-fade-in-up relative font-sans overflow-hidden text-left`}>
       
-      {/* 상단 플로팅 토스트 피드백 */}
+      {/* 상단 플로팅 토스트 */}
       {toastMsg && (
-        <div className="fixed top-12 left-1/2 -translate-x-1/2 z-[300] px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-full bg-slate-900/95 text-white text-[11px] sm:text-[12px] font-bold border border-white/20 shadow-xl backdrop-blur-md flex items-center gap-1.5 animate-fade-in">
+        <div className="fixed top-12 left-1/2 -translate-x-1/2 z-[300] px-4 py-2 rounded-full bg-slate-900/95 text-white text-[12px] font-bold border border-white/20 shadow-xl backdrop-blur-md flex items-center gap-1.5 animate-fade-in pointer-events-none">
           <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-ping" />
           {toastMsg}
         </div>
       )}
 
       {/* S-Curve 레이어 배경 */}
-      <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden opacity-30">
+      <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden opacity-30 select-none">
           <svg className="absolute top-0 left-0 w-full h-full" preserveAspectRatio="none" viewBox="0 0 100 100">
             <path d="M0,0 L100,0 L100,35 C75,55 25,15 0,40 Z" className={`transition-colors duration-700 ${isDarkMode ? 'fill-[#17223B]' : 'fill-[#EBF3F8]'}`} />
             <path d="M0,40 C25,15 75,55 100,35 L100,65 C60,85 30,45 0,70 Z" className={`transition-colors duration-700 ${isDarkMode ? 'fill-[#101828]' : 'fill-[#F0F6F9]'}`} />
@@ -280,15 +348,17 @@ export default function Board({
 
       {/* 상단 서브 헤더 */}
       <div className="relative z-10 shrink-0">
-        <SubPageHeader 
-          title="함께하는 감사/기도" 
-          onBack={() => setActiveScreen ? setActiveScreen('home') : null} 
-          t={t} 
-          toggleSidebar={() => setIsSidebarOpen && setIsSidebarOpen(!isSidebarOpen)} 
-        />
+        {SubPageHeader && (
+          <SubPageHeader 
+            title="함께하는 감사/기도" 
+            onBack={() => setActiveScreen ? setActiveScreen('home') : null} 
+            t={t} 
+            toggleSidebar={() => setIsSidebarOpen && setIsSidebarOpen(!isSidebarOpen)} 
+          />
+        )}
       </div>
 
-      {/* 전방위 유기적 점프 통로 바 (모바일 가로 마진 및 패딩 컴팩트 조율) */}
+      {/* 전방위 유기적 점프 통로 바 */}
       <div className={`px-2.5 sm:px-6 py-1.5 sm:py-2 border-b shrink-0 flex items-center justify-between z-20 backdrop-blur-md ${
         isDark ? 'border-white/[0.08] bg-[#10131B]/95' : 'border-slate-200 bg-white/95'
       }`}>
@@ -306,7 +376,7 @@ export default function Board({
             <span>🏛️</span> 설교
           </button>
           <button
-            onClick={() => setActiveScreen ? setActiveScreen('apply') : null}
+            onClick={() => setActiveScreen ? setActiveScreen('applyTracker') : null}
             className={`px-2 py-1 rounded-md text-[10.5px] sm:text-[11px] font-bold border ${isDark ? 'border-slate-700 bg-slate-800/80 text-gray-300' : 'border-slate-200 bg-slate-100 text-slate-700'} flex items-center gap-1 cursor-pointer shrink-0`}
           >
             <IconTarget /> 실천
@@ -332,14 +402,14 @@ export default function Board({
         </div>
 
         {/* 검색창 */}
-        <div className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded-lg border text-xs shrink-0 ml-1.5 ${isDark ? 'border-white/10 bg-black/25 text-slate-200' : 'border-slate-200 bg-white text-slate-700'}`}>
+        <div className={`flex items-center gap-1 sm:gap-1.5 px-2.5 py-1 rounded-lg border text-xs shrink-0 ml-1.5 ${isDark ? 'border-white/10 bg-black/35 text-slate-200' : 'border-slate-200 bg-white text-slate-700'}`}>
           <IconSearch />
           <input
             type="text"
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
             placeholder="성도, 키워드..."
-            className="bg-transparent outline-none text-[11px] sm:text-xs w-20 sm:w-36 placeholder:text-slate-400"
+            className="bg-transparent outline-none text-[11px] sm:text-xs w-20 sm:w-36 placeholder:text-slate-400 select-text"
           />
         </div>
       </div>
@@ -347,8 +417,9 @@ export default function Board({
       {/* 2대 탭 바 */}
       <div className={`flex ${isDark ? 'bg-[#10131B]/95 border-white/[0.08]' : 'bg-white/95 border-slate-200'} border-b shrink-0 px-2 sm:px-6 pt-1 relative z-10 backdrop-blur-md`}>
           <button 
+            type="button"
             onClick={() => setBoardTab('thanks')} 
-            className={`flex-1 pb-2.5 sm:pb-3 text-[12.5px] sm:text-[14px] font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+            className={`flex-1 pb-2.5 sm:pb-3 text-[13px] sm:text-[14px] font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
               currentBoardTab === 'thanks' 
                 ? `${isDark ? 'text-sky-400 border-sky-400' : 'text-sky-600 border-sky-600'} border-b-2 font-black` 
                 : textSub
@@ -357,8 +428,9 @@ export default function Board({
             <IconHeart /> 함께하는 감사
           </button>
           <button 
+            type="button"
             onClick={() => setBoardTab('prayer')} 
-            className={`flex-1 pb-2.5 sm:pb-3 text-[12.5px] sm:text-[14px] font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+            className={`flex-1 pb-2.5 sm:pb-3 text-[13px] sm:text-[14px] font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
               currentBoardTab === 'prayer' 
                 ? `${isDark ? 'text-sky-400 border-sky-400' : 'text-sky-600 border-sky-600'} border-b-2 font-black` 
                 : textSub
@@ -368,131 +440,236 @@ export default function Board({
           </button>
       </div>
       
-      {/* 메인 콘텐츠 리스트 영역 (모바일 상하 여백 최적화) */}
-      <div className="flex-1 overflow-y-auto px-2.5 sm:px-6 md:px-10 pb-16 sm:pb-28 space-y-3 sm:space-y-4.5 relative z-10 w-full max-w-4xl mx-auto hide-scrollbar pt-2.5 sm:pt-4">
+      {/* 메인 스크롤 영역 */}
+      <div className="flex-1 overflow-y-auto px-2.5 sm:px-6 md:px-10 pb-20 sm:pb-28 space-y-3.5 relative z-10 w-full max-w-4xl mx-auto hide-scrollbar pt-3">
         
-        {/* 4대 공동체 거버넌스 벤토 통계 카드 */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2.5">
-          <div className={`${glassCard} p-2.5 sm:p-3 rounded-xl sm:rounded-2xl flex flex-col justify-between`}>
-            <span className="text-[9.5px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-tight">SHARED THANKS</span>
-            <div className="flex items-baseline gap-1 mt-0.5 sm:mt-1">
-              <span className="text-lg sm:text-xl font-black text-rose-500 font-mono">{stats.thanksCount}</span>
-              <span className="text-[10.5px] sm:text-[11px] font-bold text-slate-400">건 나눔</span>
+        {/* 4대 공동체 벤토 통계 카드 */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div className={`${glassCard} p-2.5 sm:p-3 rounded-2xl flex flex-col justify-between`}>
+            <span className="text-[9.5px] font-bold text-slate-400 uppercase tracking-tight">SHARED THANKS</span>
+            <div className="flex items-baseline gap-1 mt-0.5">
+              <span className="text-xl font-black text-rose-500 font-mono">{stats.thanksCount}</span>
+              <span className="text-[11px] font-bold text-slate-400">건 나눔</span>
             </div>
           </div>
 
-          <div className={`${glassCard} p-2.5 sm:p-3 rounded-xl sm:rounded-2xl flex flex-col justify-between`}>
-            <span className="text-[9.5px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-tight">ACTIVE PRAYERS</span>
-            <div className="flex items-baseline gap-1 mt-0.5 sm:mt-1">
-              <span className="text-lg sm:text-xl font-black text-sky-500 font-mono">{stats.prayerCount}</span>
-              <span className="text-[10.5px] sm:text-[11px] font-bold text-slate-400">건 중보 중</span>
+          <div className={`${glassCard} p-2.5 sm:p-3 rounded-2xl flex flex-col justify-between`}>
+            <span className="text-[9.5px] font-bold text-slate-400 uppercase tracking-tight">ACTIVE PRAYERS</span>
+            <div className="flex items-baseline gap-1 mt-0.5">
+              <span className="text-xl font-black text-sky-500 font-mono">{stats.prayerCount}</span>
+              <span className="text-[11px] font-bold text-slate-400">건 중보 중</span>
             </div>
           </div>
 
-          <div className={`${glassCard} p-2.5 sm:p-3 rounded-xl sm:rounded-2xl flex flex-col justify-between`}>
-            <span className="text-[9.5px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-tight">ANSWERED</span>
-            <div className="flex items-baseline gap-1 mt-0.5 sm:mt-1">
-              <span className="text-lg sm:text-xl font-black text-emerald-500 font-mono">{stats.answeredCount}</span>
-              <span className="text-[10.5px] sm:text-[11px] font-bold text-slate-400">건 응답</span>
+          <div className={`${glassCard} p-2.5 sm:p-3 rounded-2xl flex flex-col justify-between`}>
+            <span className="text-[9.5px] font-bold text-slate-400 uppercase tracking-tight">ANSWERED</span>
+            <div className="flex items-baseline gap-1 mt-0.5">
+              <span className="text-xl font-black text-emerald-500 font-mono">{stats.answeredCount}</span>
+              <span className="text-[11px] font-bold text-slate-400">건 응답</span>
             </div>
           </div>
 
-          <div className={`${glassCard} p-2.5 sm:p-3 rounded-xl sm:rounded-2xl flex flex-col justify-between`}>
-            <span className="text-[9.5px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-tight">AMEN RESONANCE</span>
-            <div className="flex items-baseline gap-1 mt-0.5 sm:mt-1">
-              <span className="text-lg sm:text-xl font-black text-amber-500 font-mono">{stats.totalResonance}</span>
-              <span className="text-[10.5px] sm:text-[11px] font-bold text-slate-400">회 동참</span>
+          <div className={`${glassCard} p-2.5 sm:p-3 rounded-2xl flex flex-col justify-between`}>
+            <span className="text-[9.5px] font-bold text-slate-400 uppercase tracking-tight">AMEN RESONANCE</span>
+            <div className="flex items-baseline gap-1 mt-0.5">
+              <span className="text-xl font-black text-amber-500 font-mono">{stats.totalResonance}</span>
+              <span className="text-[11px] font-bold text-slate-400">회 동참</span>
             </div>
           </div>
         </div>
 
-        {/* 새 글 작성 카드 */}
-        <div className={`${glassCard} p-3.5 sm:p-5 rounded-2xl sm:rounded-[24px]`}>
-           <textarea 
-             value={newPostText || ''} 
-             onChange={e => setNewPostText && setNewPostText(e.target.value)} 
-             className={`w-full p-3 sm:p-4 rounded-xl sm:rounded-[16px] ${inputBg} border transition-colors resize-none h-20 sm:h-24 text-[13px] sm:text-[13.5px] leading-[1.6] shadow-inner`} 
-             placeholder={currentBoardTab === 'thanks' ? "우리 모두가 함께 감사할 수 있도록 은혜를 적어주세요..." : "우리 모두가 함께 기도할 수 있도록 기도제목을 나누어주세요..."} 
-           />
-           <button 
-             onClick={async () => {
-               if (!supabase) return alert("Supabase 연결 설정이 필요합니다."); 
-               if (!newPostText || !newPostText.trim()) return alert("내용을 입력해주세요."); 
-               const rawPayload = JSON.stringify({ type: currentBoardTab, text: newPostText.trim(), likes: 0, author: authUser?.name || '익명', status: 'praying' });
-               const { error } = await supabase.from('test_board').insert([{ content: encryptField(rawPayload) }]); 
-               if (error) alert("오류 발생: " + error.message); 
-               else { 
-                 if(setNewPostText) setNewPostText(''); 
-                 if(fetchPosts) fetchPosts(); 
-                 showToast("게시글이 공동체에 등록되었습니다!");
+        {/* 🌟 [핵심 고도화] 안전하고 완벽하게 글씨가 써지는 새 글 작성 카드 */}
+        <div className={`${glassCard} p-3.5 sm:p-5 rounded-2xl sm:rounded-[24px] space-y-2.5 relative z-20`}>
+           
+           {/* 헤더 및 익명 옵션 */}
+           <div className="flex justify-between items-center px-1">
+             <div className="flex items-center gap-1.5">
+               <span className="text-xs font-black text-sky-600 dark:text-sky-400">
+                 {currentBoardTab === 'thanks' ? '💖 새로운 감사 나눔' : '🙏 함께할 기도제목 나누기'}
+               </span>
+               <span className="text-[10.5px] font-medium text-slate-400">
+                 ({authUser?.name || '성도'} 님)
+               </span>
+             </div>
+
+             <label className="flex items-center gap-1 text-[11px] font-bold text-slate-500 dark:text-slate-400 cursor-pointer select-none">
+               <input
+                 type="checkbox"
+                 checked={isAnonymous}
+                 onChange={(e) => setIsAnonymous(e.target.checked)}
+                 className="w-3.5 h-3.5 accent-sky-500 rounded cursor-pointer"
+               />
+               익명 작성
+             </label>
+           </div>
+
+           {/* 🌟 텍스트에어리어 (터치 간섭 완전 차단 & select-text 보장) */}
+           <div className="relative">
+             <textarea 
+               value={currentInputText} 
+               onChange={e => handleInputChange(e.target.value)} 
+               onPointerDown={e => e.stopPropagation()}
+               onTouchStart={e => e.stopPropagation()}
+               placeholder={
+                 currentBoardTab === 'thanks'
+                   ? "우리 공동체가 함께 하나님을 찬양할 수 있도록 오늘 부어주신 은혜와 감사를 적어주세요..."
+                   : "지체들의 손을 모아 함께 부르짖을 기도제목을 솔직하고 편안하게 나누어주세요..."
                } 
-             }} 
-             className="w-full mt-2.5 sm:mt-3 h-10 sm:h-12 font-black rounded-xl sm:rounded-[16px] transition-transform active:scale-[0.98] text-[13px] sm:text-[13.5px] cursor-pointer bg-sky-500 hover:bg-sky-600 text-white shadow-sm"
-           >
-             등록하기
-           </button>
+               className={`w-full p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border transition-all resize-none h-24 sm:h-28 text-[13.5px] sm:text-[14px] leading-[1.7] shadow-inner select-text outline-none ${
+                 isDark 
+                   ? 'bg-black/40 border-white/10 text-slate-100 focus:border-sky-400 placeholder:text-slate-500' 
+                   : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-sky-500 focus:bg-white placeholder:text-slate-400'
+               }`} 
+             />
+             <div className="absolute right-3 bottom-2.5 text-[10.5px] font-mono text-slate-400 pointer-events-none">
+               {currentInputText.length}자
+             </div>
+           </div>
+
+           {/* 빠른 태그 칩 & 등록 버튼 */}
+           <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+             <div className="flex items-center gap-1 flex-wrap">
+               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight mr-0.5">태그:</span>
+               {quickChips.map(chip => (
+                 <button
+                   key={chip}
+                   type="button"
+                   onClick={() => handleAddChip(chip)}
+                   className="px-2 py-0.5 rounded-full text-[10px] sm:text-[10.5px] font-bold border border-slate-200 dark:border-slate-800 bg-slate-100/80 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 hover:border-sky-400 hover:text-sky-500 transition-all cursor-pointer"
+                 >
+                   {chip}
+                 </button>
+               ))}
+             </div>
+
+             <button 
+               type="button"
+               disabled={isSubmitting || !currentInputText.trim()}
+               onClick={handleSubmitPost} 
+               className="h-9 px-5 font-black rounded-xl transition-all active:scale-95 text-[12.5px] cursor-pointer bg-sky-500 hover:bg-sky-600 disabled:opacity-40 disabled:pointer-events-none text-white shadow-sm flex items-center gap-1.5 ml-auto"
+             >
+               <IconSend /> {isSubmitting ? '등록 중...' : '올리기'}
+             </button>
+           </div>
         </div>
         
-        {/* 게시글 리스트 (구문 오류 완전 소멸 & 단일 클린 루프) */}
-        <div className="space-y-2.5 sm:space-y-4">
+        {/* 게시글 리스트 */}
+        <div className="space-y-3">
           {isLoadingPosts ? (
-            <div className={`text-center py-8 text-[13px] font-medium ${textSub}`}>불러오는 중...</div>
+            <div className={`text-center py-10 text-[13px] font-medium ${textSub}`}>공동체의 은혜를 불러오는 중...</div>
           ) : displayPosts.length === 0 ? (
-            <div className={`text-center py-8 text-[13px] font-medium ${textSub}`}>아직 등록된 글이 없습니다.</div>
+            <div className={`text-center py-12 rounded-2xl border border-dashed ${isDark ? 'border-white/10' : 'border-slate-200'} p-8 space-y-1`}>
+              <span className="text-2xl block mb-2">{currentBoardTab === 'thanks' ? '💖' : '🕊️'}</span>
+              <p className={`text-[13.5px] font-bold ${textMain}`}>
+                {searchTerm ? '검색 결과가 없습니다.' : '아직 등록된 나눔이 없습니다.'}
+              </p>
+              <p className={`text-[11.5px] ${textSub}`}>
+                위 작성창에 첫 번째 {currentBoardTab === 'thanks' ? '감사 고백' : '기도제목'}을 남겨보세요!
+              </p>
+            </div>
           ) : (
             displayPosts.map(post => {
               const data = parsePostData(post.content);
               const isAuthor = data.author === authUser?.name;
               const isAdmin = authUser?.role === 'admin' || authUser?.role === '관리자' || authUser?.role === '운영자';
               const canEditOrDelete = isAuthor || isAdmin;
+              const isEditingThis = editingPostId === post.id;
 
               if (currentBoardTab === 'thanks') {
                 return (
-                  <div key={post.id} className={`${glassCard} p-3.5 sm:p-5 rounded-2xl sm:rounded-[24px] space-y-2.5 sm:space-y-3`}>
+                  <div key={post.id} className={`${glassCard} p-3.5 sm:p-5 rounded-2xl space-y-2.5`}>
                     <div className="flex justify-between items-center">
                       <span className={`text-[12px] sm:text-[12.5px] font-bold ${textMain} flex items-center gap-1.5`}>
                         <IconUser /> {data.author}
                       </span>
-                      <span className={`text-[10px] sm:text-[10.5px] font-medium ${textSub}`}>
+                      <span className={`text-[10.5px] font-mono ${textSub}`}>
                         {new Date(post.created_at).toLocaleString([], { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
 
-                    <p className={`text-[13px] sm:text-[13.5px] ${textMain} leading-[1.7] whitespace-pre-wrap break-keep`}>{data.text}</p>
+                    {/* 본문 (인라인 수정 모드 지원) */}
+                    {isEditingThis ? (
+                      <div className="space-y-2 pt-1">
+                        <textarea
+                          value={editingText}
+                          onChange={e => setEditingText(e.target.value)}
+                          className={`w-full p-3 rounded-xl border text-[13.5px] leading-[1.6] outline-none ${
+                            isDark ? 'bg-black/50 border-sky-400 text-white' : 'bg-slate-50 border-sky-500 text-slate-900'
+                          }`}
+                          rows={3}
+                        />
+                        <div className="flex justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setEditingPostId(null)}
+                            className="px-3 py-1 rounded-lg text-xs font-bold border border-slate-300 dark:border-slate-700 text-slate-500 cursor-pointer"
+                          >
+                            취소
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleSaveEdit(post)}
+                            className="px-3 py-1 rounded-lg text-xs font-bold bg-sky-500 text-white cursor-pointer"
+                          >
+                            저장
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className={`text-[13.5px] sm:text-[14px] ${textMain} leading-[1.75] whitespace-pre-wrap break-keep select-text`}>
+                        {data.text}
+                      </p>
+                    )}
 
-                    <div className={`flex flex-wrap justify-between items-center border-t ${isDark ? 'border-white/[0.08]' : 'border-slate-100'} pt-2.5 sm:pt-3 gap-1.5 sm:gap-2`}>
+                    {/* 액션 바 */}
+                    <div className={`flex flex-wrap justify-between items-center border-t ${isDark ? 'border-white/[0.08]' : 'border-slate-100'} pt-2.5 gap-2`}>
                       <div className="flex items-center gap-1 flex-wrap">
                         <button
+                          type="button"
                           onClick={() => handleImportToMyDiary(data)}
-                          className={`px-2 sm:px-2.5 py-1 rounded-lg text-[10px] sm:text-[10.5px] font-bold border ${isDark ? 'border-white/10 bg-white/5 hover:bg-white/10 text-slate-300' : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'} flex items-center gap-1 cursor-pointer`}
+                          className={`px-2.5 py-1 rounded-lg text-[10.5px] font-bold border ${isDark ? 'border-white/10 bg-white/5 hover:bg-white/10 text-slate-300' : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'} flex items-center gap-1 cursor-pointer`}
                           title="내 감사 일기장에 스크랩"
                         >
                           <IconBook /> 내 일기로 담기
                         </button>
 
                         <button
+                          type="button"
                           onClick={() => handleExportToApplyTracker(data)}
-                          className={`px-2 sm:px-2.5 py-1 rounded-lg text-[10px] sm:text-[10.5px] font-bold border ${isDark ? 'border-white/10 bg-white/5 hover:bg-white/10 text-slate-300' : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'} flex items-center gap-1 cursor-pointer`}
+                          className={`px-2.5 py-1 rounded-lg text-[10.5px] font-bold border ${isDark ? 'border-white/10 bg-white/5 hover:bg-white/10 text-slate-300' : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'} flex items-center gap-1 cursor-pointer`}
                           title="삶의 실천 과제로 결단"
                         >
                           <IconTarget /> 실천 결단
                         </button>
 
-                        {canEditOrDelete && (
+                        {canEditOrDelete && !isEditingThis && (
                           <>
-                            <button onClick={() => { const edited = window.prompt("수정:", data.text); if (edited) handleAction(post, 'edit', edited); }} className={`text-[10px] sm:text-[10.5px] font-semibold ${textSub} px-1.5 py-1 hover:${textMain} cursor-pointer`}>수정</button>
-                            <button onClick={() => handleDelete(post.id)} className="text-[10px] sm:text-[10.5px] font-semibold text-rose-500 px-1.5 py-1 hover:text-rose-600 cursor-pointer">삭제</button>
+                            <button
+                              type="button"
+                              onClick={() => { setEditingPostId(post.id); setEditingText(data.text); }}
+                              className={`text-[10.5px] font-semibold ${textSub} px-1.5 py-1 hover:${textMain} cursor-pointer`}
+                            >
+                              수정
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(post.id)}
+                              className="text-[10.5px] font-semibold text-rose-500 px-1.5 py-1 hover:text-rose-600 cursor-pointer"
+                            >
+                              삭제
+                            </button>
                           </>
                         )}
                       </div>
 
                       <button 
+                        type="button"
                         onClick={() => handleAction(post, 'amen')} 
-                        className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-xl text-[11px] sm:text-[12px] font-bold cursor-pointer transition-colors ${
+                        className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-[11.5px] font-bold cursor-pointer transition-colors ${
                           isDark ? 'bg-rose-500/15 text-rose-400 hover:bg-rose-500/25' : 'bg-rose-50 text-rose-600 hover:bg-rose-100'
                         }`}
                       >
-                        <IconHeart /> 할렐루야 <span className={`px-1.5 py-0.2 rounded-md ${isDark ? 'bg-black/30' : 'bg-white/90'}`}>{data.likes || 0}</span>
+                        <IconHeart /> 할렐루야 <span className={`px-1.5 py-0.2 rounded-md ${isDark ? 'bg-black/40' : 'bg-white/90'}`}>{data.likes || 0}</span>
                       </button>
                     </div>
                   </div>
@@ -500,51 +677,98 @@ export default function Board({
               }
 
               return (
-                <div key={post.id} className="flex relative shadow-xs rounded-2xl sm:rounded-[24px] overflow-hidden">
-                  <div className={`flex-1 ${glassCard} p-3.5 sm:p-5 flex flex-col justify-between ${!canEditOrDelete ? 'rounded-r-2xl sm:rounded-r-[24px]' : 'rounded-l-2xl sm:rounded-l-[24px]'}`}>
+                <div key={post.id} className="flex relative shadow-xs rounded-2xl overflow-hidden">
+                  <div className={`flex-1 ${glassCard} p-3.5 sm:p-5 flex flex-col justify-between ${!canEditOrDelete ? 'rounded-2xl' : 'rounded-l-2xl'}`}>
                     <div>
-                      <div className="flex justify-between items-center mb-2 sm:mb-2.5">
+                      <div className="flex justify-between items-center mb-2">
                         <span className={`text-[12px] sm:text-[12.5px] font-bold ${textMain} flex items-center gap-1.5`}>
                           <IconUser /> {data.author}
                         </span>
                         <div className="flex items-center gap-1.5">
-                          {canEditOrDelete && (
+                          {canEditOrDelete && !isEditingThis && (
                             <>
-                              <button onClick={() => { const edited = window.prompt("기도제목 수정:", data.text); if (edited) handleAction(post, 'edit', edited); }} className={`text-[10px] sm:text-[11px] font-semibold ${textSub} px-1 py-0.5 hover:${textMain} transition-colors cursor-pointer`}>수정</button>
-                              <button onClick={() => handleDelete(post.id)} className="text-[10px] sm:text-[11px] font-semibold text-rose-500 px-1 py-0.5 hover:text-rose-600 transition-colors cursor-pointer">삭제</button>
+                              <button
+                                type="button"
+                                onClick={() => { setEditingPostId(post.id); setEditingText(data.text); }}
+                                className={`text-[10.5px] font-semibold ${textSub} px-1 py-0.5 hover:${textMain} cursor-pointer`}
+                              >
+                                수정
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDelete(post.id)}
+                                className="text-[10.5px] font-semibold text-rose-500 px-1 py-0.5 hover:text-rose-600 cursor-pointer"
+                              >
+                                삭제
+                              </button>
                             </>
                           )}
-                          <span className={`text-[10px] sm:text-[10.5px] font-medium ${textSub}`}>
+                          <span className={`text-[10px] font-mono ${textSub}`}>
                             {new Date(post.created_at).toLocaleDateString([], { month: 'numeric', day: 'numeric' })}
                           </span>
                         </div>
                       </div>
 
-                      <p className={`text-[13px] sm:text-[13.5px] ${textMain} leading-[1.7] whitespace-pre-wrap mb-3 sm:mb-4 break-keep`}>{data.text}</p>
+                      {/* 본문 (인라인 수정 모드 지원) */}
+                      {isEditingThis ? (
+                        <div className="space-y-2 mb-3">
+                          <textarea
+                            value={editingText}
+                            onChange={e => setEditingText(e.target.value)}
+                            className={`w-full p-3 rounded-xl border text-[13.5px] leading-[1.6] outline-none ${
+                              isDark ? 'bg-black/50 border-sky-400 text-white' : 'bg-slate-50 border-sky-500 text-slate-900'
+                            }`}
+                            rows={3}
+                          />
+                          <div className="flex justify-end gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => setEditingPostId(null)}
+                              className="px-3 py-1 rounded-lg text-xs font-bold border border-slate-300 dark:border-slate-700 text-slate-500 cursor-pointer"
+                            >
+                              취소
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleSaveEdit(post)}
+                              className="px-3 py-1 rounded-lg text-xs font-bold bg-sky-500 text-white cursor-pointer"
+                            >
+                              저장
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className={`text-[13.5px] sm:text-[14px] ${textMain} leading-[1.75] whitespace-pre-wrap mb-3 break-keep select-text`}>
+                          {data.text}
+                        </p>
+                      )}
                     </div>
 
-                    <div className="flex flex-wrap justify-between items-center border-t border-slate-100 dark:border-white/[0.06] pt-2.5 sm:pt-3 gap-1.5 sm:gap-2">
+                    <div className="flex flex-wrap justify-between items-center border-t border-slate-100 dark:border-white/[0.06] pt-2.5 gap-2">
                       <div className="flex items-center gap-1 flex-wrap">
                         <button 
+                          type="button"
                           onClick={() => handleAction(post, 'amen')} 
-                          className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl text-[11px] sm:text-[12px] font-bold cursor-pointer transition-colors ${
+                          className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-[11.5px] font-bold cursor-pointer transition-colors ${
                             isDark ? 'bg-sky-500/15 text-sky-400 hover:bg-sky-500/25' : 'bg-sky-50 text-sky-600 hover:bg-sky-100'
                           }`}
                         >
-                          <IconPray /> 기도합니다 <span className={`px-1.5 py-0.2 rounded-md ${isDark ? 'bg-black/30' : 'bg-white/90'}`}>{data.likes || 0}</span>
+                          <IconPray /> 기도합니다 <span className={`px-1.5 py-0.2 rounded-md ${isDark ? 'bg-black/40' : 'bg-white/90'}`}>{data.likes || 0}</span>
                         </button>
 
                         <button
+                          type="button"
                           onClick={() => handleImportToMyPrayerBox(data)}
-                          className={`px-2 sm:px-2.5 py-1 rounded-lg text-[10px] sm:text-[10.5px] font-bold border ${isDark ? 'border-white/10 bg-white/5 hover:bg-white/10 text-slate-300' : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'} flex items-center gap-1 cursor-pointer`}
+                          className={`px-2.5 py-1 rounded-lg text-[10.5px] font-bold border ${isDark ? 'border-white/10 bg-white/5 hover:bg-white/10 text-slate-300' : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'} flex items-center gap-1 cursor-pointer`}
                           title="내 골방 기도함에 담기"
                         >
                           <span>🙏</span> 내 기도함
                         </button>
 
                         <button
+                          type="button"
                           onClick={() => handleExportToApplyTracker(data)}
-                          className={`px-2 sm:px-2.5 py-1 rounded-lg text-[10px] sm:text-[10.5px] font-bold border ${isDark ? 'border-white/10 bg-white/5 hover:bg-white/10 text-slate-300' : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'} flex items-center gap-1 cursor-pointer`}
+                          className={`px-2.5 py-1 rounded-lg text-[10.5px] font-bold border ${isDark ? 'border-white/10 bg-white/5 hover:bg-white/10 text-slate-300' : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'} flex items-center gap-1 cursor-pointer`}
                           title="삶의 실천 과제로 결단"
                         >
                           <IconTarget /> 실천 결단
@@ -553,13 +777,15 @@ export default function Board({
                     </div>
                   </div>
 
+                  {/* 응답 확정 버튼 (작성자 또는 관리자 전용) */}
                   {canEditOrDelete && (
                     <button 
+                      type="button"
                       onClick={() => handleAnswerPrayerWithDiary(post)} 
-                      className={`w-10 sm:w-14 cursor-pointer ${isDark ? 'bg-emerald-600 hover:bg-emerald-700 border-emerald-700' : 'bg-emerald-500 hover:bg-emerald-600 border-emerald-600'} text-white flex flex-col items-center justify-center text-[11px] sm:text-[13px] font-bold leading-tight transition-colors active:scale-95 border-y border-r`}
+                      className={`w-11 sm:w-14 cursor-pointer ${isDark ? 'bg-emerald-600 hover:bg-emerald-700 border-emerald-700' : 'bg-emerald-500 hover:bg-emerald-600 border-emerald-600'} text-white flex flex-col items-center justify-center text-[12px] font-bold leading-tight transition-colors active:scale-95 border-y border-r`}
                       title="기도 응답 감사 확정"
                     >
-                      <span>응</span><span className="mt-0.5 sm:mt-1">답</span>
+                      <span>응</span><span className="mt-1">답</span>
                     </button>
                   )}
                 </div>
@@ -570,38 +796,39 @@ export default function Board({
         
         {/* 주님이 응답하신 기도 섹션 */}
         {currentBoardTab === 'prayer' && answeredPrayers.length > 0 && (
-          <div className={`mt-5 sm:mt-8 pt-4 sm:pt-5 border-t border-dashed ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
-              <div className="flex justify-between items-center mb-2.5 px-0.5">
-                <h4 className={`text-[12px] sm:text-[13px] font-bold ${isDark ? 'text-emerald-400' : 'text-emerald-600'} flex items-center gap-1.5`}>
+          <div className={`mt-6 pt-5 border-t border-dashed ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
+              <div className="flex justify-between items-center mb-3 px-1">
+                <h4 className={`text-[13px] font-bold ${isDark ? 'text-emerald-400' : 'text-emerald-600'} flex items-center gap-1.5`}>
                   <IconCheck/> 주님이 응답하신 기도 ({answeredPrayers.length}건)
                 </h4>
-                <span className="text-[10px] sm:text-[10.5px] font-mono text-slate-400">모든 영광을 주님께!</span>
+                <span className="text-[10.5px] font-mono text-slate-400">모든 영광을 주님께!</span>
               </div>
 
-              <div className="space-y-2 sm:space-y-2.5">
+              <div className="space-y-2">
                   {answeredPrayers.map(post => {
                       const data = parsePostData(post.content);
                       return (
-                          <div key={post.id} className={`${isDark ? 'bg-emerald-950/20 border-emerald-900/40' : 'bg-emerald-50/80 border-emerald-200'} p-3 sm:p-4 rounded-xl sm:rounded-[20px] border flex justify-between items-center shadow-xs`}>
+                          <div key={post.id} className={`${isDark ? 'bg-emerald-950/20 border-emerald-900/40' : 'bg-emerald-50/80 border-emerald-200'} p-3.5 rounded-2xl border flex justify-between items-center shadow-xs`}>
                              <div className="space-y-0.5 min-w-0 pr-2">
                                <div className="flex items-center gap-1.5 mb-0.5">
-                                 <span className={`text-[10.5px] sm:text-[11px] font-bold ${isDark ? 'text-emerald-400' : 'text-emerald-700'} flex items-center gap-1`}><IconUser/> {data.author}</span>
+                                 <span className={`text-[11px] font-bold ${isDark ? 'text-emerald-400' : 'text-emerald-700'} flex items-center gap-1`}><IconUser/> {data.author}</span>
                                  <span className="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[9px] font-mono font-bold">응답 완료 🏆</span>
                                </div>
-                               <p className={`text-[11.5px] sm:text-[12.5px] font-medium ${isDark ? 'text-emerald-300/80' : 'text-emerald-800'} line-through opacity-80 break-keep truncate`}>{data.text}</p>
+                               <p className={`text-[12.5px] font-medium ${isDark ? 'text-emerald-300/80' : 'text-emerald-800'} line-through opacity-80 break-keep truncate select-text`}>{data.text}</p>
                              </div>
                              
                              <div className="flex items-center gap-1 shrink-0">
                                <button
+                                 type="button"
                                  onClick={() => handleImportToMyDiary(data)}
-                                 className="px-2 py-1 rounded-md text-[9.5px] sm:text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/25 cursor-pointer"
+                                 className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/25 cursor-pointer"
                                  title="내 감사 일기장으로 스크랩"
                                >
                                  간증 스크랩
                                </button>
 
                                {(data.author === authUser?.name || authUser?.role === 'admin' || authUser?.role === '관리자') && (
-                                 <button onClick={() => handleDelete(post.id)} className="text-[10px] sm:text-[10.5px] font-semibold text-rose-500 hover:text-rose-600 px-1.5 py-1 cursor-pointer">삭제</button>
+                                 <button type="button" onClick={() => handleDelete(post.id)} className="text-[10.5px] font-semibold text-rose-500 hover:text-rose-600 px-1.5 py-1 cursor-pointer">삭제</button>
                                )}
                              </div>
                           </div>
