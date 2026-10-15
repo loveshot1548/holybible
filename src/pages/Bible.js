@@ -366,6 +366,18 @@ const BibleTranscriptionNotePanel = ({ currentChapId, chapterTitle, isDark, note
   const [strokeColor, setStrokeColor] = useState('#1E293B');
   const [strokeWidth, setStrokeWidth] = useState(3.0);
 
+  // 🌟 [은하계 -> 성경 특정 권/장 직행 수신기] Bible.js 내부 useEffect 아래에 추가
+  useEffect(() => {
+    try {
+      const jumpTarget = localStorage.getItem('bible_jump_target');
+      if (jumpTarget) {
+        localStorage.removeItem('bible_jump_target');
+        setCurrentChapId(jumpTarget); // 예: "Genesis-15"
+        setBibleViewMode('read');     // 66권 목록('index')을 건너뛰고 즉시 본문('read') 오픈!
+      }
+    } catch (_) {}
+  }, [setCurrentChapId, setBibleViewMode]);
+  
   // 장 변경 시 해당 장의 필기 복원[cite: 13]
   useEffect(() => {
     try {
