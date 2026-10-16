@@ -4,7 +4,8 @@ import { BUILDINGS, HOUSE_TIERS } from '../data/buildings';
 import { MATTHEW_CAMPAIGN } from '../data/quests';
 
 export const MAP_SIZE = 16;
-const SAVE_KEY = 'jerusalem_master_game_v13';
+const SAVE_KEY = 'jerusalem_master_game_v14_25d';
+const LEGACY_SAVE_KEY = 'jerusalem_master_game_v13';
 
 // =====================================================================
 // 🎵 1. Web Audio API 싱글톤 사운드 신시사이저 (메모리 누수 완전 차단)
@@ -96,8 +97,21 @@ export const playSound = (type) => {
 };
 
 // =====================================================================
-// 🛤️ 2. BFS 도로망 경로 탐색기 (OpenTTD Logistics Engine)
+// 🛤️ 2. BFS 도로·광장·성문 통합 경로 탐색기 (OpenTTD Logistics Engine)
 // =====================================================================
+const WALKABLE_TILE_TYPES = new Set(['road', 'plaza', 'gate']);
+
+const isWalkableTile = (grid, r, c) => {
+  const cell = grid[r]?.[c];
+  if (!cell) return false;
+  if (WALKABLE_TILE_TYPES.has(cell.type)) return true;
+  if (cell.isOccupied && cell.rootR !== undefined && cell.rootC !== undefined) {
+    const rootCell = grid[cell.rootR]?.[cell.rootC];
+    return rootCell && WALKABLE_TILE_TYPES.has(rootCell.type);
+  }
+  return false;
+};
+
 const findRoadPath = (grid, start, end) => {
   const queue = [[start]];
   const visited = new Set([`${start.r},${start.c}`]);
@@ -119,7 +133,7 @@ const findRoadPath = (grid, start, end) => {
       if (
         d.r >= 0 && d.r < MAP_SIZE &&
         d.c >= 0 && d.c < MAP_SIZE &&
-        grid[d.r]?.[d.c]?.type === 'road' &&
+        isWalkableTile(grid, d.r, d.c) &&
         !visited.has(`${d.r},${d.c}`)
       ) {
         visited.add(`${d.r},${d.c}`);
@@ -131,42 +145,56 @@ const findRoadPath = (grid, start, end) => {
 };
 
 // =====================================================================
-// 🏛️ 3. 초기 그리드 맵 생성 팩토리 (안전 마이그레이션)
+// 🏛️ 3. 초기 2.5D 그리드 맵 생성 팩토리 (좌표 r, c 무결성 보장)
 // =====================================================================
+const normalizeSavedGrid = (rawGrid) => {
+  return rawGrid.map((row, r) =>
+    row.map((cell, c) => {
+      if (!cell) return null;
+      return { ...cell, r, c };
+    })
+  );
+};
+
 const createInitialGrid = () => {
   try {
-    const saved = localStorage.getItem(SAVE_KEY);
+    const saved = localStorage.getItem(SAVE_KEY) || localStorage.getItem(LEGACY_SAVE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
       if (Array.isArray(parsed) && parsed.length === MAP_SIZE && parsed[0]?.length === MAP_SIZE) {
-        return parsed;
+        return normalizeSavedGrid(parsed);
       }
     }
   } catch (_) {}
 
   const init = Array(MAP_SIZE).fill(null).map(() => Array(MAP_SIZE).fill(null));
-
-  // 시작 기본 십자로 판석 도로
-  init[7][7] = { type: 'road', isRoot: true, w: 1, h: 1 };
-  init[6][7] = { type: 'road', isRoot: true, w: 1, h: 1 };
-  init[8][7] = { type: 'road', isRoot: true, w: 1, h: 1 };
-  init[7][6] = { type: 'road', isRoot: true, w: 1, h: 1 };
-  init[7][8] = { type: 'road', isRoot: true, w: 1, h: 1 };
-
-  // 시작 기본 가옥 & 인프라
-  init[6][6] = { type: 'house', level: 1, isRoot: true, w: 1, h: 1 };
-  init[5][6] = { type: 'house', level: 2, isRoot: true, w: 1, h: 1 };
-  init[8][8] = { type: 'aqueduct', isRoot: true, w: 1, h: 1 };
-  init[7][5] = { type: 'well', isRoot: true, w: 1, h: 1 };
-
-  // 시작 2x2 밀밭 & 풍차 단지
-  for (let dr = 0; dr < 2; dr++) {
-    for (let dc = 0; dc < 2; dc++) {
-      init[4 + dr][7 + dc] = dr === 0 && dc === 0
-        ? { type: 'wheat_farm', isRoot: true, w: 2, h: 2 }
-        : { isOccupied: true, rootR: 4, rootC: 7 };
+  const place = (r, c, type, w = 1, h = 1, level = 1) => {
+    for (let dr = 0; dr < h; dr++) {
+      for (let dc = 0; dc < w; dc++) {
+        init[r + dr][c + dc] = dr === 0 && dc === 0
+          ? { type, level, isRoot: true, w, h, r, c }
+          : { isOccupied: true, rootR: r, rootC: c, r: r + dr, c: c + dc };
+      }
     }
-  }
+  };
+
+  // 시온산 고지대와 평야를 잇는 기본 십자로 판석 도로 & 광장
+  [4, 5, 6, 7, 8, 9, 10].forEach(i => {
+    place(7, i, 'road', 1, 1);
+    place(i, 7, 'road', 1, 1);
+  });
+  place(7, 7, 'plaza', 1, 1);
+
+  // 시작 기본 가옥 & 수자원 인프라
+  place(6, 6, 'house', 1, 1, 2);
+  place(5, 6, 'house', 1, 1, 3);
+  place(8, 5, 'house', 1, 1, 2);
+  place(8, 8, 'aqueduct', 1, 1);
+  place(6, 8, 'well', 1, 1);
+
+  // 시작 2x2 밀밭 & 생명의 빵 장터
+  place(9, 8, 'wheat_farm', 2, 2);
+  place(5, 8, 'bread_market', 2, 2);
 
   return init;
 };
@@ -176,18 +204,19 @@ const createInitialGrid = () => {
 // =====================================================================
 export const useTycoonStore = create((set, get) => ({
   // ── 7대 핵심 자원 & 경제 지표 ──
-  shekels: 600,
-  food: 90,
-  fish: 50,
-  oil: 35,
-  wine: 25,
-  faith: 45,
-  population: 14,
-  availableWorkers: 7,
-  requiredWorkers: 8,
-  workEfficiency: 0.88,
+  shekels: 650,
+  food: 95,
+  fish: 55,
+  oil: 40,
+  wine: 30,
+  faith: 55,
+  population: 47,
+  availableWorkers: 23,
+  requiredWorkers: 13,
+  workEfficiency: 1.0,
+  maxFoodStorage: 200,
 
-  // ── 시간 & 계절 ──
+  // ── 시간 & 4대 절기 ──
   year: 30,
   seasonIdx: 0,
   simSpeed: 1,
@@ -199,7 +228,8 @@ export const useTycoonStore = create((set, get) => ({
   walkers: [
     { id: 'jesus', type: 'jesus', r: 7, c: 7, path: [] },
     { id: 'peter', type: 'disciple', r: 6, c: 7, path: [] },
-    { id: 'donkey_1', type: 'donkey', r: 7, c: 8, path: [] }
+    { id: 'john', type: 'disciple', r: 8, c: 7, path: [] },
+    { id: 'merchant_1', type: 'merchant', r: 7, c: 8, path: [] }
   ],
 
   // ── 마태복음 퀘스트 & UI 상태 ──
@@ -224,7 +254,6 @@ export const useTycoonStore = create((set, get) => ({
     if (!buildingMeta) return false;
     const { id, w = 1, h = 1, cost, category } = buildingMeta;
 
-    // 타일 경계 및 점유 충돌 검증
     if (r + h > MAP_SIZE || c + w > MAP_SIZE || r < 0 || c < 0) return false;
     for (let dr = 0; dr < h; dr++) {
       for (let dc = 0; dc < w; dc++) {
@@ -243,9 +272,9 @@ export const useTycoonStore = create((set, get) => ({
     for (let dr = 0; dr < h; dr++) {
       for (let dc = 0; dc < w; dc++) {
         if (dr === 0 && dc === 0) {
-          nextGrid[r][c] = { type: id, level: 1, isRoot: true, w, h };
+          nextGrid[r][c] = { type: id, level: 1, isRoot: true, w, h, r, c };
         } else {
-          nextGrid[r + dr][c + dc] = { isOccupied: true, rootR: r, rootC: c };
+          nextGrid[r + dr][c + dc] = { isOccupied: true, rootR: r, rootC: c, r: r + dr, c: c + dc };
         }
       }
     }
@@ -289,18 +318,26 @@ export const useTycoonStore = create((set, get) => ({
   },
 
   // =====================================================================
-  // ⏱️ 5. 시저 3 / OpenTTD 고증 경제 및 시뮬레이션 틱
+  // ⏱️ 5. 시저 3 / 파라오 고증 경제·절기·보행자 시뮬레이션 틱
   // =====================================================================
   tickSimulation: () => {
     const state = get();
     if (state.simSpeed === 0) return;
 
-    const { grid, shekels, food, fish, oil, wine, faith, currentQuestIdx } = state;
+    const { grid, shekels, food, fish, oil, wine, faith, seasonIdx, currentQuestIdx } = state;
+
+    // 4대 절기(Seasons) 구속사 배율
+    // 0: 유월절(조세+25%), 1: 오순절(밀/어선+30%), 2: 초막절(기름/포도주+35%), 3: 수전절(신앙+30%)
+    const taxSeasonMult = seasonIdx === 0 ? 1.25 : 1.0;
+    const grainSeasonMult = seasonIdx === 1 ? 1.30 : 1.0;
+    const harvestSeasonMult = seasonIdx === 2 ? 1.35 : 1.0;
+    const faithSeasonMult = seasonIdx === 3 ? 1.30 : 1.0;
 
     let totalPop = 0;
     let totalTax = 0;
     let totalUpkeep = 0;
     let totalRequiredWorkers = 0;
+    let foodStorageCap = 200;
 
     let rawFoodProd = 0;
     let rawFishProd = 0;
@@ -309,51 +346,57 @@ export const useTycoonStore = create((set, get) => ({
     let faithGain = 25;
     let tradeBonus = 0;
 
-    const roadCoords = [];
+    const walkableCoords = [];
     const waterSources = [];
     const marketSources = [];
     const holySources = [];
 
-    // [1단계] 도시 그리드 스캔 및 인프라 매핑
+    // [1단계] 도시 그리드 스캔 및 멀티타일 중심점 매핑
     for (let r = 0; r < MAP_SIZE; r++) {
       for (let c = 0; c < MAP_SIZE; c++) {
+        if (isWalkableTile(grid, r, c)) {
+          walkableCoords.push([r, c]);
+        }
+
         const cell = grid[r]?.[c];
         if (!cell || !cell.isRoot) continue;
 
         const bMeta = BUILDINGS[cell.type];
+        const centerR = r + ((cell.h || 1) - 1) / 2;
+        const centerC = c + ((cell.w || 1) - 1) / 2;
+
         if (bMeta) {
           totalUpkeep += bMeta.upkeep || 0;
           totalRequiredWorkers += bMeta.workers || 0;
           if (bMeta.tradeTaxBonus) tradeBonus += bMeta.tradeTaxBonus;
           if (bMeta.faithBonus) faithGain += bMeta.faithBonus;
+          if (bMeta.storageBonus?.food) foodStorageCap += bMeta.storageBonus.food;
         }
 
-        if (cell.type === 'road') roadCoords.push([r, c]);
         if (['aqueduct', 'well', 'fountain'].includes(cell.type)) {
-          waterSources.push({ r, c, type: cell.type, radius: bMeta?.serviceRadius || 3.8 });
+          waterSources.push({ r: centerR, c: centerC, type: cell.type, radius: bMeta?.serviceRadius || 4.0 });
         }
         if (['bread_market', 'fish_market', 'sacrifice_market'].includes(cell.type)) {
-          marketSources.push({ r, c, type: cell.type, radius: bMeta?.serviceRadius || 4.8 });
+          marketSources.push({ r: centerR, c: centerC, type: cell.type, radius: bMeta?.serviceRadius || 5.0 });
         }
         if (['synagogue', 'beatitudes', 'temple', 'golgotha', 'gethsemane'].includes(cell.type)) {
-          holySources.push({ r, c, type: cell.type, radius: bMeta?.serviceRadius || 5.8 });
+          holySources.push({ r: centerR, c: centerC, type: cell.type, radius: bMeta?.serviceRadius || 6.5 });
         }
 
-        // 기본 생산량
-        if (cell.type === 'wheat_farm') rawFoodProd += 14;
-        if (cell.type === 'fishery') rawFishProd += 12;
-        if (cell.type === 'olive_grove') rawOilProd += 9;
-        if (cell.type === 'vineyard') rawWineProd += 7;
+        if (cell.type === 'wheat_farm') rawFoodProd += 14 * grainSeasonMult;
+        if (cell.type === 'fishery') rawFishProd += 12 * grainSeasonMult;
+        if (cell.type === 'olive_grove') rawOilProd += 9 * harvestSeasonMult;
+        if (cell.type === 'vineyard') rawWineProd += 7 * harvestSeasonMult;
       }
     }
 
-    // [2단계] 시저 3식 5단계 주택 진화 및 퇴보 판정
+    // [2단계] 시저 3식 5단계 주택 진화 및 퇴보 판정 (광장·성문 도로 인정 포함)
     let evolvedAny = false;
     const nextGrid = grid.map((row, r) =>
       row.map((cell, c) => {
         if (!cell || !cell.isRoot || cell.type !== 'house') return cell;
 
-        const hasRoad = roadCoords.some(([rr, rc]) => Math.abs(rr - r) + Math.abs(rc - c) === 1);
+        const hasRoad = walkableCoords.some(([rr, rc]) => Math.abs(rr - r) + Math.abs(rc - c) <= 1.5);
         const hasWater = waterSources.some(ws => Math.hypot(ws.r - r, ws.c - c) <= ws.radius);
         const hasMarket = marketSources.some(ms => Math.hypot(ms.r - r, ms.c - c) <= ms.radius);
         const hasHoly = holySources.some(hs => Math.hypot(hs.r - r, hs.c - c) <= hs.radius);
@@ -379,14 +422,14 @@ export const useTycoonStore = create((set, get) => ({
         totalPop += tierMeta.pop;
         totalTax += tierMeta.tax;
 
-        return { ...cell, level: nextLvl };
+        return { ...cell, level: nextLvl, r, c };
       })
     );
 
     if (evolvedAny) playSound('evolve');
 
     // [3단계] 노동력 고용률 연동 생산성 계산
-    const availableWorkers = Math.max(1, Math.floor(totalPop * 0.5));
+    const availableWorkers = Math.max(4, Math.floor(totalPop * 0.55));
     const workEfficiency = totalRequiredWorkers > 0
       ? Math.min(1.0, availableWorkers / totalRequiredWorkers)
       : 1.0;
@@ -397,20 +440,21 @@ export const useTycoonStore = create((set, get) => ({
     const actualWineProd = Math.floor(rawWineProd * workEfficiency);
 
     // [4단계] 인구 소비량 및 경제 결산
-    const foodNeed = Math.floor(totalPop * 0.35);
-    const fishNeed = Math.floor(totalPop * 0.25);
-    const oilNeed = Math.floor(totalPop * 0.15);
-    const wineNeed = Math.floor(totalPop * 0.1);
+    const foodNeed = Math.floor(totalPop * 0.25);
+    const fishNeed = Math.floor(totalPop * 0.18);
+    const oilNeed = Math.floor(totalPop * 0.12);
+    const wineNeed = Math.floor(totalPop * 0.08);
 
-    const nextShekels = Math.max(0, shekels + totalTax + tradeBonus - totalUpkeep);
-    const nextFood = Math.max(0, food + actualFoodProd - foodNeed);
-    const nextFish = Math.max(0, fish + actualFishProd - fishNeed);
+    const seasonalTaxIncome = Math.round((totalTax + tradeBonus) * taxSeasonMult);
+    const nextShekels = Math.max(0, shekels + seasonalTaxIncome - totalUpkeep);
+    const nextFood = Math.min(foodStorageCap, Math.max(0, food + actualFoodProd - foodNeed));
+    const nextFish = Math.min(foodStorageCap, Math.max(0, fish + actualFishProd - fishNeed));
     const nextOil = Math.max(0, oil + actualOilProd - oilNeed);
     const nextWine = Math.max(0, wine + actualWineProd - wineNeed);
-    const nextFaith = Math.min(100, Math.max(10, faithGain));
+    const nextFaith = Math.min(100, Math.max(15, Math.round(faithGain * faithSeasonMult)));
 
     // [5단계] 계절 및 연도 전환
-    const nextSeasonIdx = (state.seasonIdx + 1) % 4;
+    const nextSeasonIdx = (seasonIdx + 1) % 4;
     const nextYear = nextSeasonIdx === 0 ? state.year + 1 : state.year;
 
     // [6단계] 마태복음 퀘스트 검증
@@ -426,14 +470,28 @@ export const useTycoonStore = create((set, get) => ({
       }
     }
 
-    // [7단계] 보행자 & 나귀 캐러밴 도로 순회 AI
-    const nextWalkers = state.walkers.map((w) => {
-      if (roadCoords.length < 2) return w;
+    // [7단계] 도시 규모에 따른 동적 보행자(Walker) 자동 충원 및 BFS 순회 AI
+    let activeWalkers = [...state.walkers];
+    const desiredWalkerCount = Math.min(10, 3 + Math.floor(totalPop / 22));
+    while (activeWalkers.length < desiredWalkerCount && walkableCoords.length > 0) {
+      const spawnCoord = walkableCoords[activeWalkers.length % walkableCoords.length];
+      const newIdx = activeWalkers.length + 1;
+      activeWalkers.push({
+        id: `citizen_${newIdx}`,
+        type: newIdx % 2 === 0 ? 'disciple' : 'merchant',
+        r: spawnCoord[0],
+        c: spawnCoord[1],
+        path: []
+      });
+    }
+
+    const nextWalkers = activeWalkers.map((w) => {
+      if (walkableCoords.length < 2) return w;
 
       let curPath = w.path || [];
       if (curPath.length === 0) {
-        const randomTarget = roadCoords[Math.floor(Math.random() * roadCoords.length)];
-        const generatedPath = findRoadPath(nextGrid, { r: w.r, c: w.c }, { r: randomTarget[0], c: randomTarget[1] });
+        const randomTarget = walkableCoords[Math.floor(Math.random() * walkableCoords.length)];
+        const generatedPath = findRoadPath(nextGrid, { r: Math.round(w.r), c: Math.round(w.c) }, { r: randomTarget[0], c: randomTarget[1] });
         if (generatedPath && generatedPath.length > 1) {
           curPath = generatedPath.slice(1);
         }
@@ -464,6 +522,7 @@ export const useTycoonStore = create((set, get) => ({
       availableWorkers,
       requiredWorkers: totalRequiredWorkers,
       workEfficiency: Math.round(workEfficiency * 100) / 100,
+      maxFoodStorage: foodStorageCap,
       seasonIdx: nextSeasonIdx,
       year: nextYear,
       walkers: nextWalkers,
@@ -479,25 +538,26 @@ export const useTycoonStore = create((set, get) => ({
   // ── 새 게임 초기화 ──
   resetGame: () => {
     localStorage.removeItem(SAVE_KEY);
+    localStorage.removeItem(LEGACY_SAVE_KEY);
     const freshGrid = createInitialGrid();
     set({
-      shekels: 600,
-      food: 90,
-      fish: 50,
-      oil: 35,
-      wine: 25,
-      faith: 45,
-      population: 14,
-      availableWorkers: 7,
-      requiredWorkers: 8,
-      workEfficiency: 0.88,
+      shekels: 650,
+      food: 95,
+      fish: 55,
+      oil: 40,
+      wine: 30,
+      faith: 55,
+      population: 47,
+      availableWorkers: 23,
+      requiredWorkers: 13,
+      workEfficiency: 1.0,
       year: 30,
       seasonIdx: 0,
       grid: freshGrid,
       currentQuestIdx: 0,
       showQuestModal: false,
       inspectedTile: null,
-      notification: '새로운 예루살렘 도성이 시작되었습니다!'
+      notification: '새로운 2.5D 예루살렘 도성이 시작되었습니다!'
     });
   }
 }));

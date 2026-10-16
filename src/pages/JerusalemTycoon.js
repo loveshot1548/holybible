@@ -113,12 +113,11 @@ export default function JerusalemTycoon({ setActiveScreen }) {
     inspectedTile, setInspectedTile, notification, setNotification
   } = store;
 
-  // UI & 시저 3 고도화 상태
   const [isBuildMenuOpen, setIsBuildMenuOpen] = useState(true);
-  const [overlayMode, setOverlayMode] = useState('normal'); // 'normal' | 'water' | 'food' | 'faith' | 'prosperity'
-  const [timeOfDay, setTimeOfDay] = useState('day');        // 'day' | 'sunset' | 'night'
-  const [advisorModalTab, setAdvisorModalTab] = useState(null); // null | 'labor' | 'trade' | 'temple' | 'chronicle'
-  const [taxRate, setTaxRate] = useState(9); // 기본 세율 9%
+  const [overlayMode, setOverlayMode] = useState('normal');
+  const [timeOfDay, setTimeOfDay] = useState('day');
+  const [advisorModalTab, setAdvisorModalTab] = useState(null);
+  const [taxRate, setTaxRate] = useState(9);
   const [selectedWalker, setSelectedWalker] = useState(null);
   const [floatingEvents, setFloatingEvents] = useState([]);
 
@@ -129,8 +128,85 @@ export default function JerusalemTycoon({ setActiveScreen }) {
   const selectedMeta = BUILDINGS[selectedTool] || BUILDINGS.road;
 
   // =====================================================================
-  // 📊 시저 3식 도시 통계 & 고용/번영도 실시간 분석 엔진
+  // 🏰 [신규 기능] 원클릭 ‘솔로몬의 2.5D 왕립 성읍’ 샘플 조경 생성기
   // =====================================================================
+  const handleBuildRoyalShowcaseCity = () => {
+    const newGrid = Array.from({ length: MAP_SIZE }, () => Array(MAP_SIZE).fill(null));
+    const placeOnGrid = (r, c, type, w = 1, h = 1, level = 1) => {
+      for (let dr = 0; dr < h; dr++) {
+        for (let dc = 0; dc < w; dc++) {
+          if (r + dr < MAP_SIZE && c + dc < MAP_SIZE) {
+            newGrid[r + dr][c + dc] = {
+              type,
+              w,
+              h,
+              level,
+              isRoot: dr === 0 && dc === 0,
+              rootR: r,
+              rootC: c,
+              r,
+              c
+            };
+          }
+        }
+      }
+    };
+
+    // 1) 시온산 성전산 고지대(3,3)에 3x3 대성전 건립
+    placeOnGrid(3, 3, 'temple', 3, 3, 1);
+
+    // 2) 십자형 왕립 포장도로 & 광장망 구축
+    for (let i = 1; i < MAP_SIZE - 2; i++) {
+      if (!newGrid[7][i]) placeOnGrid(7, i, 'road', 1, 1);
+      if (!newGrid[i][7]) placeOnGrid(i, 7, 'road', 1, 1);
+      if (!newGrid[11][i]) placeOnGrid(11, i, 'road', 1, 1);
+    }
+    placeOnGrid(7, 7, 'plaza', 1, 1);
+    placeOnGrid(6, 7, 'plaza', 1, 1);
+
+    // 3) 분수대, 회당, 생명의 빵 장터, 생선 시장, 밀밭 풍차, 수로교 배치
+    placeOnGrid(5, 8, 'fountain', 2, 2);
+    placeOnGrid(2, 8, 'synagogue', 2, 2);
+    placeOnGrid(8, 4, 'bread_market', 2, 2);
+    placeOnGrid(8, 8, 'fish_market', 2, 2);
+    placeOnGrid(12, 2, 'wheat_farm', 2, 2);
+    placeOnGrid(12, 5, 'olive_grove', 2, 2);
+    placeOnGrid(12, 8, 'vineyard', 2, 2);
+    placeOnGrid(1, 2, 'aqueduct', 1, 1);
+    placeOnGrid(1, 3, 'aqueduct', 1, 1);
+    placeOnGrid(1, 4, 'aqueduct', 1, 1);
+    placeOnGrid(1, 5, 'well', 1, 1);
+
+    // 4) 다윗의 망루와 성벽
+    placeOnGrid(0, 0, 'tower', 1, 1);
+    placeOnGrid(0, 7, 'gate', 2, 1);
+
+    // 5) 1~5단계 진화형 주택 단지 배치
+    const houseSpots = [
+      [8, 1, 3], [8, 2, 4], [9, 1, 2], [9, 2, 5],
+      [8, 10, 4], [8, 11, 5], [9, 10, 3], [9, 11, 4],
+      [4, 1, 3], [5, 1, 4]
+    ];
+    houseSpots.forEach(([hr, hc, hlvl]) => {
+      if (!newGrid[hr]?.[hc]) placeOnGrid(hr, hc, 'house', 1, 1, hlvl);
+    });
+
+    useTycoonStore.setState({
+      grid: newGrid,
+      population: 145,
+      shekels: Math.max(shekels, 650),
+      food: Math.max(food, 120),
+      fish: Math.max(fish, 95),
+      oil: Math.max(oil, 80),
+      wine: Math.max(wine, 75),
+      faith: 98
+    });
+
+    playTycoonAudio('fanfare');
+    setNotification('🏰 시온산 대성전과 2.5D 왕립 예루살렘 성읍이 입체 조경되었습니다!');
+  };
+
+  // 📊 시저 3식 도시 통계 & 고용/번영도 실시간 분석 엔진
   const cityMetrics = useMemo(() => {
     let totalHouses = 0;
     let totalWorkersNeeded = 0;
@@ -193,20 +269,17 @@ export default function JerusalemTycoon({ setActiveScreen }) {
     };
   }, [grid, population, faith]);
 
-  // 플로팅 텍스트 알림 생성기
   const spawnFloatingText = useCallback((r, c, text, color = '#FBBF24') => {
     const id = Date.now() + Math.random();
     setFloatingEvents(prev => [...prev.slice(-18), { id, r, c, text, color, createdAt: Date.now() }]);
   }, []);
 
-  // ⏱️ 메인 경제 & 퀘스트 & 세율 시뮬레이션 타이머
   useEffect(() => {
     if (simSpeed === 0) return;
     const intervalTime = 3000 / simSpeed;
     const timer = setInterval(() => {
       tickSimulation();
 
-      // 세율 보정 및 플로팅 생산 이펙트 트리거
       const taxDiff = taxRate - 9;
       if (taxDiff !== 0 && cityMetrics.totalHouses > 0) {
         const extraGold = Math.round((cityMetrics.totalTaxBase * taxDiff) / 10);
@@ -217,7 +290,6 @@ export default function JerusalemTycoon({ setActiveScreen }) {
         }));
       }
 
-      // 생산 건물 위 떠오르는 자원 애니메이션 샘플링
       const curGrid = useTycoonStore.getState().grid;
       for (let r = 0; r < MAP_SIZE; r++) {
         for (let c = 0; c < MAP_SIZE; c++) {
@@ -237,16 +309,12 @@ export default function JerusalemTycoon({ setActiveScreen }) {
     return () => clearInterval(timer);
   }, [simSpeed, tickSimulation, taxRate, cityMetrics, spawnFloatingText]);
 
-  // 토스트 알림 자동 소멸
   useEffect(() => {
     if (!notification) return;
     const timer = setTimeout(() => setNotification(null), 2600);
     return () => clearTimeout(timer);
   }, [notification, setNotification]);
 
-  // =====================================================================
-  // 🗺️ 우측 상단 시저 3식 다이아몬드 미니맵 실시간 렌더링
-  // =====================================================================
   useEffect(() => {
     const canvas = minimapCanvasRef.current;
     if (!canvas || !grid) return;
@@ -256,7 +324,6 @@ export default function JerusalemTycoon({ setActiveScreen }) {
 
     ctx.clearRect(0, 0, w, h);
 
-    // 다이아몬드 배경
     ctx.save();
     ctx.beginPath();
     ctx.moveTo(w / 2, 4);
@@ -281,7 +348,7 @@ export default function JerusalemTycoon({ setActiveScreen }) {
 
         let color = '#D6C5A9';
         if (c === MAP_SIZE - 1 || (r >= MAP_SIZE - 2 && c >= MAP_SIZE - 3)) {
-          color = '#0284C7'; // 갈릴리 호수 / 강
+          color = '#0284C7';
         } else if (cell) {
           if (cell.type === 'road' || cell.type === 'plaza') color = '#78716C';
           else if (cell.type === 'house') color = '#F97316';
@@ -295,7 +362,6 @@ export default function JerusalemTycoon({ setActiveScreen }) {
       }
     }
 
-    // 워커(시민) 점 표시
     (walkers || []).forEach(wk => {
       const px = w / 2 + (wk.c - wk.r) * (tileW / 2);
       const py = 8 + (wk.c + wk.r) * (tileH / 2);
@@ -306,7 +372,6 @@ export default function JerusalemTycoon({ setActiveScreen }) {
     ctx.restore();
   }, [grid, walkers]);
 
-  // 미니맵 클릭 시 해당 위치로 뷰포트 즉시 점프
   const handleMinimapClick = (e) => {
     const canvas = minimapCanvasRef.current;
     if (!canvas || !window.tycoonViewport) return;
@@ -317,13 +382,12 @@ export default function JerusalemTycoon({ setActiveScreen }) {
     const normX = (clickX - canvas.width / 2) / (canvas.width / 2);
     const normY = (clickY - canvas.height / 2) / (canvas.height / 2);
 
-    const worldX = normX * (MAP_SIZE * 42);
-    const worldY = normY * (MAP_SIZE * 21) + 100;
+    const worldX = normX * (MAP_SIZE * 44);
+    const worldY = normY * (MAP_SIZE * 22) + 100;
     window.tycoonViewport.moveCenter(worldX, worldY);
     playTycoonAudio('coin');
   };
 
-  // 줌 핸들러
   const handleZoom = (delta) => {
     if (window.tycoonViewport) {
       const curScale = window.tycoonViewport.scale.x;
@@ -332,9 +396,6 @@ export default function JerusalemTycoon({ setActiveScreen }) {
     }
   };
 
-  // =====================================================================
-  // 🐪 무역 수출 / 수입 실행 핸들러
-  // =====================================================================
   const handleExecuteTrade = (route, mode) => {
     const curState = useTycoonStore.getState();
     const currentAmount = curState[route.resource] || 0;
@@ -364,9 +425,6 @@ export default function JerusalemTycoon({ setActiveScreen }) {
     }
   };
 
-  // =====================================================================
-  // ✨ 절기 봉헌 & 성경적 기적 발동 핸들러
-  // =====================================================================
   const handleInvokeMiracle = (miracle) => {
     const curState = useTycoonStore.getState();
     if (curState.shekels < miracle.costShekels) {
@@ -396,7 +454,6 @@ export default function JerusalemTycoon({ setActiveScreen }) {
     setAdvisorModalTab(null);
   };
 
-  // 인스펙터 창에서 해당 건물 즉시 축복/승급
   const handleDirectUpgradeHouse = () => {
     if (!inspectedTile || inspectedTile.type !== 'house') return;
     const curLvl = inspectedTile.level || 1;
@@ -427,12 +484,11 @@ export default function JerusalemTycoon({ setActiveScreen }) {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden select-none font-sans bg-[#241911] text-stone-900 relative">
+    <div className="flex-1 flex flex-col h-full overflow-hidden select-none font-sans bg-[#1E1610] text-stone-900 relative">
       
       {/* ── 1. 파라오 & 시저 3 스타일 황금 상단 왕실 상태바 (Top Royal HUD) ── */}
       <header className="px-2.5 sm:px-4 py-1.5 bg-gradient-to-b from-[#3E2723] to-[#271815] border-b-2 border-[#B45309] text-amber-100 flex items-center justify-between gap-2 z-30 shrink-0 shadow-lg">
         
-        {/* 좌측: 나가기 & 도시 칭호/연대기 */}
         <div className="flex items-center gap-2 shrink-0">
           <button 
             onClick={() => setActiveScreen('home')} 
@@ -458,7 +514,6 @@ export default function JerusalemTycoon({ setActiveScreen }) {
           <button
             onClick={() => setAdvisorModalTab('trade')}
             className="text-[11px] font-black text-amber-200 bg-black/40 hover:bg-black/60 px-2 py-1 rounded-lg border border-amber-500/30 shrink-0 cursor-pointer flex items-center gap-1"
-            title="클릭하여 재무 및 무역 자문관 열기"
           >
             <span>💰</span> <span>{shekels}</span>
           </button>
@@ -466,7 +521,6 @@ export default function JerusalemTycoon({ setActiveScreen }) {
           <button
             onClick={() => setAdvisorModalTab('labor')}
             className="text-[11px] font-black text-sky-200 bg-black/40 hover:bg-black/60 px-2 py-1 rounded-lg border border-sky-500/30 shrink-0 cursor-pointer flex items-center gap-1"
-            title="클릭하여 인구 및 노동 자문관 열기"
           >
             <span>👥</span> <span>{population}명</span>
             <span className={`text-[9.5px] font-mono px-1 rounded ${cityMetrics.employmentRate >= 80 ? 'bg-emerald-500/30 text-emerald-300' : 'bg-rose-500/40 text-rose-200'}`}>
@@ -489,7 +543,6 @@ export default function JerusalemTycoon({ setActiveScreen }) {
           <button
             onClick={() => setAdvisorModalTab('temple')}
             className="text-[11px] font-black text-rose-200 bg-black/40 hover:bg-black/60 px-2 py-1 rounded-lg border border-rose-500/30 shrink-0 cursor-pointer"
-            title="성전 및 절기 축복 자문관 열기"
           >
             🕊️ {faith}%
           </button>
@@ -497,19 +550,16 @@ export default function JerusalemTycoon({ setActiveScreen }) {
 
         {/* 우측: 시간대 조명 & 배속 컨트롤 */}
         <div className="flex items-center gap-1 shrink-0">
-          {/* 낮/황혼/밤 조명 토글 */}
           <button
             onClick={() => {
               playTycoonAudio('coin');
               setTimeOfDay(prev => prev === 'day' ? 'sunset' : prev === 'sunset' ? 'night' : 'day');
             }}
             className="px-2 py-1 rounded-lg text-[11px] font-bold bg-black/40 border border-amber-500/30 hover:bg-black/60 cursor-pointer"
-            title="도시 시간대 조명 전환 (낮 / 황혼 / 밤)"
           >
             {timeOfDay === 'day' ? '☀️ 낮' : timeOfDay === 'sunset' ? '🌅 황혼' : '🌙 밤'}
           </button>
 
-          {/* 배속 & 일시정지 */}
           <div className="flex items-center bg-black/40 p-0.5 rounded-lg border border-amber-500/30">
             <button
               onClick={() => { playTycoonAudio('coin'); setSimSpeed(simSpeed === 0 ? 1 : 0); }}
@@ -527,7 +577,7 @@ export default function JerusalemTycoon({ setActiveScreen }) {
         </div>
       </header>
 
-      {/* ── 2. 마태복음 연대기 퀘스트 & 4대 자문관 바로가기 서브 바 ── */}
+      {/* ── 2. 마태복음 연대기 퀘스트 & 원클릭 2.5D 왕립 조경 서브 바 ── */}
       <div className="bg-[#EFE5D4] border-b border-[#BBA585] px-3 py-1 flex items-center justify-between gap-2 text-xs z-20 shrink-0 shadow-xs">
         <div 
           onClick={() => setShowQuestModal(true)}
@@ -542,10 +592,17 @@ export default function JerusalemTycoon({ setActiveScreen }) {
 
         <div className="flex items-center gap-1 shrink-0">
           <button
+            onClick={handleBuildRoyalShowcaseCity}
+            className="px-2.5 py-0.5 rounded-md text-[10.5px] font-black bg-gradient-to-r from-amber-600 to-orange-600 text-white hover:from-amber-500 hover:to-orange-500 cursor-pointer shadow-xs"
+            title="시온산 대성전과 2.5D 왕립 성읍을 즉시 조경합니다"
+          >
+            🏰 왕립 도시 조경
+          </button>
+          <button
             onClick={() => { playTycoonAudio('coin'); setAdvisorModalTab('labor'); }}
             className="px-2 py-0.5 rounded-md text-[10.5px] font-black bg-[#78350F] text-amber-100 hover:bg-[#92400E] cursor-pointer shadow-2xs"
           >
-            👑 내각 자문관
+            👑 내각
           </button>
           <button
             onClick={() => { playTycoonAudio('coin'); setAdvisorModalTab('trade'); }}
@@ -557,12 +614,12 @@ export default function JerusalemTycoon({ setActiveScreen }) {
             onClick={() => { playTycoonAudio('coin'); setAdvisorModalTab('temple'); }}
             className="px-2 py-0.5 rounded-md text-[10.5px] font-black bg-indigo-700 text-white hover:bg-indigo-600 cursor-pointer shadow-2xs hidden sm:inline-block"
           >
-            🔥 절기 기적
+            🔥 기적
           </button>
         </div>
       </div>
 
-      {/* ── 3. 메인 뷰포트 컨테이너 (좌측 시저3 오버레이 독 + 우측 미니맵 + PixiJS 엔진) ── */}
+      {/* ── 3. 메인 뷰포트 컨테이너 ── */}
       <div className="flex-1 relative overflow-hidden flex">
         
         {/* 좌측 상단: 시저 3식 5대 오버레이 맵 전환 독 */}
@@ -585,7 +642,6 @@ export default function JerusalemTycoon({ setActiveScreen }) {
                   ? 'bg-amber-500 text-stone-950 shadow-md scale-105'
                   : 'text-amber-100/80 hover:bg-white/10'
               }`}
-              title={`${ov.label} 오버레이 보기`}
             >
               <span>{ov.icon}</span>
               <span className="hidden sm:inline">{ov.label}</span>
@@ -596,14 +652,12 @@ export default function JerusalemTycoon({ setActiveScreen }) {
           <button
             onClick={() => handleZoom(0.25)}
             className="py-1 rounded-lg bg-black/40 text-amber-200 hover:bg-black/60 text-xs font-black cursor-pointer"
-            title="화면 확대"
           >
             ＋
           </button>
           <button
             onClick={() => handleZoom(-0.25)}
             className="py-1 rounded-lg bg-black/40 text-amber-200 hover:bg-black/60 text-xs font-black cursor-pointer"
-            title="화면 축소"
           >
             －
           </button>
@@ -617,12 +671,11 @@ export default function JerusalemTycoon({ setActiveScreen }) {
             height={68}
             onClick={handleMinimapClick}
             className="cursor-pointer rounded-lg"
-            title="클릭하여 해당 구역으로 카메라 이동"
           />
           <div className="flex items-center justify-between w-full px-1 mt-1 text-[9px] font-bold text-amber-200/80">
             <span>🗺️ 미니맵</span>
             <button
-              onClick={() => window.tycoonViewport && window.tycoonViewport.moveCenter(0, 100)}
+              onClick={() => window.tycoonViewport && window.tycoonViewport.moveCenter(0, 120)}
               className="text-amber-400 hover:underline cursor-pointer"
             >
               중앙으로
@@ -655,7 +708,7 @@ export default function JerusalemTycoon({ setActiveScreen }) {
           </div>
         )}
 
-        {/* 🌟 업그레이드된 PixiJS 2.5D 시저 3 디오라마 엔진 */}
+        {/* 🌟 2.5D 입체 지형 & 디오라마 엔진 */}
         <GameEngine
           overlayMode={overlayMode}
           timeOfDay={timeOfDay}
@@ -673,9 +726,9 @@ export default function JerusalemTycoon({ setActiveScreen }) {
           <div className="bg-[#2A1B12]/95 backdrop-blur-md border-2 border-[#B45309] p-3 rounded-2xl shadow-2xl max-w-lg w-[92vw] sm:w-[510px] space-y-2 animate-fade-in text-amber-100">
             <div className="flex items-center justify-between pb-1.5 border-b border-amber-500/30">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-black text-amber-300">🏛️ 왕립 건축 카탈로그</span>
+                <span className="text-xs font-black text-amber-300">🏛️ 왕립 2.5D 건축 카탈로그</span>
                 <span className="text-[10px] text-amber-200/70 font-medium hidden sm:inline">
-                  (도로·성벽은 드래그하여 연속 건설 가능)
+                  (도로·성벽은 드래그하여 연속 시공 가능)
                 </span>
               </div>
               <button 
@@ -686,7 +739,6 @@ export default function JerusalemTycoon({ setActiveScreen }) {
               </button>
             </div>
 
-            {/* 카테고리 탭 바 */}
             <div className="flex items-center gap-1 overflow-x-auto hide-scrollbar pb-1">
               {CATEGORIES.map(cat => (
                 <button
@@ -724,7 +776,6 @@ export default function JerusalemTycoon({ setActiveScreen }) {
               </button>
             </div>
 
-            {/* 세부 건축물 그리드 */}
             <div className="grid grid-cols-4 gap-1.5 max-h-36 overflow-y-auto pr-1 hide-scrollbar">
               {Object.values(BUILDINGS)
                 .filter(b => b.category === activeCategory)
@@ -773,12 +824,11 @@ export default function JerusalemTycoon({ setActiveScreen }) {
         </button>
       </div>
 
-      {/* ── 5. 👑 시저 3 & 파라오식 4대 수석 자문관 내각 모달 ── */}
+      {/* ── 5. 👑 4대 수석 자문관 내각 모달 ── */}
       {advisorModalTab && (
         <div className="fixed inset-0 z-[1250] bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 select-none animate-fade-in">
           <div className="w-full max-w-lg rounded-3xl bg-[#2A1B12] border-2 border-[#D97706] p-5 shadow-2xl text-amber-100 space-y-4 max-h-[88vh] overflow-y-auto hide-scrollbar text-left">
             
-            {/* 모달 헤더 & 탭 전환 */}
             <div className="flex items-center justify-between border-b border-amber-500/30 pb-3">
               <div>
                 <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400 block">ROYAL COUNCIL OF JERUSALEM</span>
@@ -807,7 +857,6 @@ export default function JerusalemTycoon({ setActiveScreen }) {
               ))}
             </div>
 
-            {/* 탭 1: 노동·인구 및 도시 진화 진단 */}
             {advisorModalTab === 'labor' && (
               <div className="space-y-3 text-xs">
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -832,7 +881,7 @@ export default function JerusalemTycoon({ setActiveScreen }) {
                 <div className="p-3.5 rounded-2xl bg-black/35 border border-amber-500/25 space-y-2">
                   <span className="font-black text-amber-300 block">📋 수석 자문관 느헤미야의 도시 진단 보고:</span>
                   <p className="text-[11.5px] leading-relaxed text-amber-100/90">
-                    {cityMetrics.totalHouses === 0 && '• 아직 거주민 주택이 없습니다. 유목민 천막(주택)을 먼저 건설하여 백성들을 정착시키십시오.'}
+                    {cityMetrics.totalHouses === 0 && '• 아직 거주민 주택이 없습니다. 유목민 천막(주택)을 먼저 건설하거나 상단 [🏰 왕립 도시 조경]을 눌러 성읍을 세우십시오.'}
                     {cityMetrics.totalHouses > 0 && cityMetrics.waterBldgs === 0 && '• 식수가 부족합니다! 야곱의 우물이나 실로암 수로교를 주택 근처에 지어야 가옥이 2단계로 진화합니다.'}
                     {cityMetrics.waterBldgs > 0 && cityMetrics.foodBldgs === 0 && '• 식량 보급망이 없습니다! 갈릴리 밀밭과 생명의 빵 장터를 세워 백성들을 먹이십시오.'}
                     {cityMetrics.waterBldgs > 0 && cityMetrics.foodBldgs > 0 && cityMetrics.faithBldgs === 0 && '• 영적 갈급함이 큽니다! 백색 회당과 헤롯 대성전을 세워 신앙 지수를 높이십시오.'}
@@ -842,10 +891,8 @@ export default function JerusalemTycoon({ setActiveScreen }) {
               </div>
             )}
 
-            {/* 탭 2: 재무(세율) 및 지중해 무역 교역소 */}
             {advisorModalTab === 'trade' && (
               <div className="space-y-3.5 text-xs">
-                {/* 세율 조절기 */}
                 <div className="p-3.5 rounded-2xl bg-black/40 border border-amber-500/25 space-y-2">
                   <div className="flex justify-between items-center">
                     <span className="font-black text-amber-300">⚖️ 왕립 세율 설정 (마태 세무관)</span>
@@ -872,7 +919,6 @@ export default function JerusalemTycoon({ setActiveScreen }) {
                   </div>
                 </div>
 
-                {/* 4대 도시 무역 교역로 */}
                 <div className="space-y-2">
                   <span className="font-black text-amber-300 block">🐪 4대 이웃 성읍 무역 교역소 (요셉 총리관)</span>
                   {TRADE_ROUTES.map(route => (
@@ -908,7 +954,6 @@ export default function JerusalemTycoon({ setActiveScreen }) {
               </div>
             )}
 
-            {/* 탭 3: 성전 절기 봉헌 & 성경적 기적 */}
             {advisorModalTab === 'temple' && (
               <div className="space-y-3 text-xs">
                 <p className="text-[11.5px] text-amber-200/80 leading-relaxed">
@@ -965,7 +1010,7 @@ export default function JerusalemTycoon({ setActiveScreen }) {
         </div>
       )}
 
-      {/* ── 7. 시저 3식 건물 상세 인스펙터 모달 (즉시 증축 지원) ── */}
+      {/* ── 7. 시저 3식 건물 상세 인스펙터 모달 ── */}
       {inspectedTile && (
         <div className="fixed inset-0 z-[1150] bg-black/65 backdrop-blur-xs flex items-center justify-center p-3 select-none">
           <div className="w-full max-w-xs rounded-3xl bg-[#FFFDF7] border-2 border-[#78350F] p-4 shadow-2xl text-left space-y-3">
