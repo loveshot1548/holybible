@@ -46,6 +46,16 @@ import InterlinearKids from './pages/InterlinearKids';
 import JerusalemTycoon from './pages/JerusalemTycoon';
 import BibleKnowledgeGalaxy from './pages/BibleKnowledgeGalaxy';
 
+// 🛡️ [전역 안정화 패치] Passive 이벤트 리스너 내부의 preventDefault 호출 에러 원천 차단
+if (typeof window !== 'undefined' && typeof Event !== 'undefined') {
+  const rawPreventDefault = Event.prototype.preventDefault;
+  Event.prototype.preventDefault = function () {
+    if (this.cancelable !== false) {
+      rawPreventDefault.apply(this, arguments);
+    }
+  };
+}
+
 // 🛡️ 앱 크래시 방어선 (Error Boundary)
 class AppErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { hasError: false }; }
@@ -57,7 +67,7 @@ class AppErrorBoundary extends React.Component {
         <div style={{ padding: '30px', textAlign: 'center', background: '#0F1115', color: '#fff', height: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
           <h2 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '10px' }}>일시적인 화면 렌더링 오류가 발생했습니다.</h2>
           <p style={{ fontSize: '13px', color: '#94A3B8', marginBottom: '20px' }}>데이터는 안전하게 보존되어 있습니다. 아래 버튼을 눌러 화면을 복구하세요.</p>
-          <button onClick={() => { localStorage.removeItem('home_menu_order'); window.location.reload(true); }} style={{ padding: '12px 24px', background: '#38BDF8', color: '#000', borderRadius: '12px', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}>안전하게 앱 재시작하기</button>
+          <button onClick={() => { localStorage.removeItem('home_menu_order'); localStorage.removeItem('home_menu_order_ids_v2'); window.location.reload(true); }} style={{ padding: '12px 24px', background: '#38BDF8', color: '#000', borderRadius: '12px', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}>안전하게 앱 재시작하기</button>
         </div>
       );
     }
@@ -174,7 +184,94 @@ const IconPen = ({className}) => <svg fill="none" viewBox="0 0 24 24" strokeWidt
 const IconArrowLeft = ({className}) => <svg fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className={className}><polyline points="15 18 9 12 15 6" /></svg>;
 const IconUsers = ({className}) => <svg fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className={className}><path strokeLinecap="round" strokeLinejoin="round" d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>;
 
-// 커버플로우 스타일 카루셀
+// =====================================================================
+// 🌊 스크롤 반응형 3중 리퀴드 웨이브 & 오로라 배경 컴포넌트
+// (모바일 위아래 슬라이드 시 물결의 위상과 진폭이 실시간으로 출렁입니다)
+// =====================================================================
+const LiquidWaveBackground = ({ isDarkMode, scrollY = 0, scrollVelocity = 0 }) => {
+  const waveShift1 = (scrollY * 0.35) % 1200;
+  const waveShift2 = -(scrollY * 0.55) % 1200;
+  const waveScaleY = Math.min(1.65, 1 + Math.abs(scrollVelocity) * 0.025);
+
+  return (
+    <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden select-none">
+      {/* 상단 SaaS 오로라 메쉬 블롭 */}
+      <div
+        className="absolute -top-28 -left-24 w-[78vw] max-w-[520px] aspect-square rounded-full blur-[110px] transition-transform duration-300 ease-out"
+        style={{
+          background: isDarkMode
+            ? 'radial-gradient(circle, rgba(10, 132, 255, 0.16) 0%, rgba(175, 82, 222, 0.08) 55%, transparent 75%)'
+            : 'radial-gradient(circle, rgba(0, 122, 255, 0.12) 0%, rgba(90, 200, 250, 0.08) 55%, transparent 75%)',
+          transform: `translate3d(${Math.sin(scrollY * 0.008) * 28}px, ${(scrollY * 0.08) % 90}px, 0) scale(${waveScaleY})`
+        }}
+      />
+      <div
+        className="absolute top-[32%] -right-24 w-[70vw] max-w-[460px] aspect-square rounded-full blur-[110px] transition-transform duration-300 ease-out"
+        style={{
+          background: isDarkMode
+            ? 'radial-gradient(circle, rgba(48, 209, 88, 0.12) 0%, rgba(90, 200, 250, 0.07) 55%, transparent 75%)'
+            : 'radial-gradient(circle, rgba(52, 199, 89, 0.10) 0%, rgba(255, 149, 0, 0.06) 55%, transparent 75%)',
+          transform: `translate3d(${Math.cos(scrollY * 0.006) * -24}px, ${-(scrollY * 0.06) % 80}px, 0)`
+        }}
+      />
+
+      {/* 중앙~하단 넘실거리는 멀티 레이어 리퀴드 물결 SVG */}
+      <div
+        className="absolute inset-x-0 top-[18%] h-[420px] opacity-70 transition-transform duration-150 ease-out"
+        style={{
+          transform: `translate3d(0, ${Math.sin(scrollY * 0.012) * 18}px, 0) scaleY(${waveScaleY})`
+        }}
+      >
+        <svg
+          viewBox="0 0 2400 320"
+          preserveAspectRatio="none"
+          className="w-[200%] h-full gt-wave-anim-slow"
+          style={{ transform: `translate3d(${-waveShift1 * 0.25}px, 0, 0)` }}
+        >
+          <defs>
+            <linearGradient id="gtWaveGrad1" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor={isDarkMode ? '#0A84FF' : '#007AFF'} stopOpacity={isDarkMode ? '0.13' : '0.09'} />
+              <stop offset="50%" stopColor={isDarkMode ? '#5AC8FA' : '#38BDF8'} stopOpacity={isDarkMode ? '0.18' : '0.12'} />
+              <stop offset="100%" stopColor={isDarkMode ? '#AF52DE' : '#6366F1'} stopOpacity={isDarkMode ? '0.13' : '0.09'} />
+            </linearGradient>
+          </defs>
+          <path
+            fill="url(#gtWaveGrad1)"
+            d="M0,160 C300,60 600,260 900,160 C1200,60 1500,260 1800,160 C2100,60 2300,220 2400,160 L2400,320 L0,320 Z"
+          />
+        </svg>
+      </div>
+
+      <div
+        className="absolute inset-x-0 bottom-0 h-[360px] opacity-80 transition-transform duration-150 ease-out"
+        style={{
+          transform: `translate3d(0, ${Math.cos(scrollY * 0.015) * 14}px, 0) scaleY(${waveScaleY})`
+        }}
+      >
+        <svg
+          viewBox="0 0 2400 320"
+          preserveAspectRatio="none"
+          className="w-[200%] h-full gt-wave-anim-fast"
+          style={{ transform: `translate3d(${waveShift2 * 0.2}px, 0, 0)` }}
+        >
+          <defs>
+            <linearGradient id="gtWaveGrad2" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor={isDarkMode ? '#30D158' : '#34C759'} stopOpacity={isDarkMode ? '0.10' : '0.07'} />
+              <stop offset="50%" stopColor={isDarkMode ? '#0A84FF' : '#007AFF'} stopOpacity={isDarkMode ? '0.16' : '0.11'} />
+              <stop offset="100%" stopColor={isDarkMode ? '#FF375F' : '#FF2D55'} stopOpacity={isDarkMode ? '0.10' : '0.07'} />
+            </linearGradient>
+          </defs>
+          <path
+            fill="url(#gtWaveGrad2)"
+            d="M0,192 C400,290 800,90 1200,192 C1600,290 2000,90 2400,192 L2400,320 L0,320 Z"
+          />
+        </svg>
+      </div>
+    </div>
+  );
+};
+
+// 커버플로우 스타일 카루셀 (SaaS 인디케이터 닷 & 글래스 배지 업그레이드)
 const CoverCarousel = ({ items }) => {
   const scrollRef = useRef(null);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -206,40 +303,59 @@ const CoverCarousel = ({ items }) => {
   if (!items || items.length === 0) return null;
 
   return (
-    <div 
-      ref={scrollRef}
-      onScroll={handleScroll}
-      className="flex overflow-x-auto snap-x snap-mandatory hide-scrollbar py-6 w-full -mx-5 space-x-[-8vw] md:space-x-[-20px] items-center px-[17.5vw] md:px-[calc(50%-140px)]" 
-      style={{ width: 'calc(100% + 40px)' }}
-    >
-      {items.map((item, idx) => {
-        const isActive = activeIndex === idx;
-        return (
-          <div
-            key={idx}
-            onClick={() => {
-               if (isActive) window.open(item.url, '_blank');
-               else scrollRef.current.children[idx].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-            }}
-            className={`snap-center shrink-0 transition-all duration-300 ease-out cursor-pointer rounded-[24px] overflow-hidden relative border border-white/20 w-[65vw] md:w-[280px] aspect-[4/3] ${isActive ? 'scale-110 z-30 opacity-100 shadow-[0_15px_30px_rgba(0,0,0,0.3)]' : 'scale-90 z-10 opacity-40 hover:opacity-60'}`}
-          >
-            <img src={item.bg} alt={item.title} className="absolute inset-0 w-full h-full object-cover" crossOrigin="anonymous" />
-            <div className={`absolute inset-0 transition-opacity duration-300 ${isActive ? 'bg-gradient-to-t from-black/90 via-black/20 to-transparent' : 'bg-black/60'}`}></div>
-            <div className={`absolute inset-0 p-5 flex flex-col justify-end text-left transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-              <h4 className="text-white font-bold text-[15px] md:text-[18px] drop-shadow-md break-keep mb-3 leading-tight line-clamp-2">
-                {item.title}
-              </h4>
-              <div className="inline-flex items-center justify-center gap-1.5 bg-[#007AFF] text-white rounded-full px-3 py-1.5 text-[11.5px] font-bold w-max shadow-md">
-                <IconPlay className="w-3 h-3" /> 시청하기
+    <div className="relative">
+      <div 
+        ref={scrollRef}
+        onScroll={handleScroll}
+        className="flex overflow-x-auto snap-x snap-mandatory hide-scrollbar py-5 w-full -mx-5 space-x-[-8vw] md:space-x-[-20px] items-center px-[17.5vw] md:px-[calc(50%-140px)]" 
+        style={{ width: 'calc(100% + 40px)' }}
+      >
+        {items.map((item, idx) => {
+          const isActive = activeIndex === idx;
+          return (
+            <div
+              key={idx}
+              onClick={() => {
+                 if (isActive) window.open(item.url, '_blank');
+                 else scrollRef.current.children[idx].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+              }}
+              className={`snap-center shrink-0 transition-all duration-300 ease-out cursor-pointer rounded-[26px] overflow-hidden relative border border-white/25 w-[65vw] md:w-[280px] aspect-[4/3] ${isActive ? 'scale-105 z-30 opacity-100 shadow-[0_18px_38px_rgba(0,0,0,0.32)] ring-1 ring-white/30' : 'scale-90 z-10 opacity-45 hover:opacity-65'}`}
+            >
+              <img src={item.bg} alt={item.title} className="absolute inset-0 w-full h-full object-cover" crossOrigin="anonymous" />
+              <div className={`absolute inset-0 transition-opacity duration-300 ${isActive ? 'bg-gradient-to-t from-black/90 via-black/25 to-transparent' : 'bg-black/60'}`}></div>
+              <div className={`absolute top-3.5 left-3.5 px-2.5 py-1 rounded-full bg-black/45 backdrop-blur-md border border-white/20 text-[10px] font-mono font-bold text-white/90 ${isActive ? 'opacity-100' : 'opacity-0'}`}>
+                CH 0{idx + 1} • LIVE STREAM
+              </div>
+              <div className={`absolute inset-0 p-5 flex flex-col justify-end text-left transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                <h4 className="text-white font-bold text-[15px] md:text-[17px] drop-shadow-md break-keep mb-3 leading-tight line-clamp-2">
+                  {item.title}
+                </h4>
+                <div className="inline-flex items-center justify-center gap-1.5 bg-[#007AFF] hover:bg-[#0A84FF] text-white rounded-full px-3.5 py-1.5 text-[11.5px] font-bold w-max shadow-lg">
+                  <IconPlay className="w-3 h-3" /> 바로 시청하기
+                </div>
               </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
+      {/* 페이지 인디케이터 닷 */}
+      <div className="flex items-center justify-center gap-1.5 -mt-1 mb-1">
+        {items.map((_, i) => (
+          <span
+            key={i}
+            className={`h-1.5 rounded-full transition-all duration-300 ${
+              activeIndex === i ? 'w-5 bg-[#007AFF]' : 'w-1.5 bg-slate-400/40'
+            }`}
+          />
+        ))}
+      </div>
     </div>
   );
 };
 
+// =====================================================================
+// 🏠 고도화된 상용 SaaS형 메인 홈 화면 (Home)
+// =====================================================================
 export function Home({
   t, isDarkMode, setActiveScreen, isSidebarOpen, setIsSidebarOpen, openModal, bibleProgress, readChapsCount,
   currDay, readChallengeStart, date, setDate, hasNewBoardPost, setHasNewBoardPost,
@@ -250,6 +366,13 @@ export function Home({
   const dDay = Math.ceil((new Date().getTime() - startD.getTime()) / 86400000) + 1;
   const safeVerse = formatVerse || { text: '오늘의 말씀을 불러오는 중입니다...', ref: '' };
   const currentChecks = (currDay && currDay.checks) ? currDay.checks : {};
+
+  // 🌊 스마트폰 위아래 스크롤 반응형 물결 애니메이션 상태
+  const [scrollWaveOffset, setScrollWaveOffset] = useState(0);
+  const handleHomeScroll = useCallback((e) => {
+    const top = e.currentTarget.scrollTop || 0;
+    setScrollWaveOffset(top);
+  }, []);
 
   const worshipVideos = [
     { title: isWknd ? '우리들교회 주일예배' : '김양재 목사 큐티노트', url: `https://www.youtube.com/results?search_query=${isWknd ? '우리들교회+주일예배' : '김양재+목사+큐티노트'}+${ymdStr}`, bg: 'https://images.unsplash.com/photo-1438232992991-995b7058bbb3?auto=format&fit=crop&w=800&q=80' },
@@ -273,49 +396,153 @@ export function Home({
     } catch (error) { alert('말씀카드 저장 중 오류가 발생했습니다.'); }
   };
 
-  const defaultMenus = [
-    { id: 'sermonArchiveAdvanced', icon: <IconChurch className="w-4 h-4"/>, color: 'text-[#007AFF]', bg: 'bg-[#007AFF]/10', title: '삶의 적용과 실천', desc: '적용과 실천' },
-    { id: 'galaxy', icon: <span className="text-base">🌌</span>, color: 'text-[#38BDF8]', bg: 'bg-[#38BDF8]/10', title: '지식 은하계', desc: '세컨드 브레인' },
-    { id: 'qtArchiveDetail', icon: <IconFlame className="w-4 h-4"/>, color: 'text-[#FF2D55]', bg: 'bg-[#FF2D55]/10', title: 'QT 심층 분석', desc: 'QT 배경 및 적용' },
-    { id: 'sermonAnalysis', icon: <IconAnalytics className="w-4 h-4"/>, color: 'text-[#FF9500]', bg: 'bg-[#FF9500]/10', title: '설교 분석', desc: '전체 설교 DB' },
-    { id: 'applyTracker', icon: <IconSmile className="w-4 h-4"/>, color: 'text-[#AF52DE]', bg: 'bg-[#AF52DE]/10', title: '적용 트래커', desc: '신앙 결단 모아보기' },
-    { id: 'bibleWikiAdvanced', icon: <IconMap className="w-4 h-4"/>, color: 'text-[#34C759]', bg: 'bg-[#34C759]/10', title: '성경 위키', desc: '지식 마인드맵' },
-    { id: 'interlinear', icon: <IconDocument className="w-4 h-4"/>, color: 'text-[#5AC8FA]', bg: 'bg-[#5AC8FA]/10', title: '원어 성경', desc: '히브리어/헬라어' },
-    { id: 'trainingCurriculum', icon: <IconBook className="w-4 h-4"/>, color: 'text-[#AF52DE]', bg: 'bg-[#AF52DE]/10', title: '양육 커리큘럼', desc: '성장 단계별 훈련' },
-    { id: 'trainingSubPages', icon: <IconDocument className="w-4 h-4"/>, color: 'text-[#007AFF]', bg: 'bg-[#007AFF]/10', title: '4주 심화 워크북', desc: '제자 훈련 심화' },
-    { id: 'prayer', icon: <IconPray className="w-4 h-4"/>, color: 'text-[#34C759]', bg: 'bg-[#34C759]/10', title: '기도 보관함', desc: '나의 기도 기록' },
-    { id: 'jericho', icon: <IconMap className="w-4 h-4"/>, color: 'text-[#5AC8FA]', bg: 'bg-[#5AC8FA]/10', title: '여리고 땅밟기', desc: '세상을 향한 기도' }
-  ];
+  // 🛡️ 마스터 메뉴 정의 (JSX 아이콘은 메모리에만 두고 localStorage에는 ID만 저장하여 크래시 원천 차단!)
+  const MASTER_MENUS = useMemo(() => [
+    { id: 'sermonArchiveAdvanced', icon: <IconChurch className="w-4 h-4"/>, color: 'text-[#007AFF]', bg: 'bg-[#007AFF]/12', title: '삶의 적용과 실천', desc: '적용과 실천' },
+    { id: 'galaxy', icon: <span className="text-base">🌌</span>, color: 'text-[#38BDF8]', bg: 'bg-[#38BDF8]/12', title: '지식 은하계', desc: '세컨드 브레인' },
+    { id: 'qtArchiveDetail', icon: <IconFlame className="w-4 h-4"/>, color: 'text-[#FF2D55]', bg: 'bg-[#FF2D55]/12', title: 'QT 심층 분석', desc: 'QT 배경 및 적용' },
+    { id: 'sermonAnalysis', icon: <IconAnalytics className="w-4 h-4"/>, color: 'text-[#FF9500]', bg: 'bg-[#FF9500]/12', title: '설교 분석', desc: '전체 설교 DB' },
+    { id: 'applyTracker', icon: <IconSmile className="w-4 h-4"/>, color: 'text-[#AF52DE]', bg: 'bg-[#AF52DE]/12', title: '적용 트래커', desc: '신앙 결단 모아보기' },
+    { id: 'bibleWikiAdvanced', icon: <IconMap className="w-4 h-4"/>, color: 'text-[#34C759]', bg: 'bg-[#34C759]/12', title: '성경 위키', desc: '지식 마인드맵' },
+    { id: 'interlinear', icon: <IconDocument className="w-4 h-4"/>, color: 'text-[#5AC8FA]', bg: 'bg-[#5AC8FA]/12', title: '원어 성경', desc: '히브리어/헬라어' },
+    { id: 'trainingCurriculum', icon: <IconBook className="w-4 h-4"/>, color: 'text-[#AF52DE]', bg: 'bg-[#AF52DE]/12', title: '양육 커리큘럼', desc: '성장 단계별 훈련' },
+    { id: 'trainingSubPages', icon: <IconDocument className="w-4 h-4"/>, color: 'text-[#007AFF]', bg: 'bg-[#007AFF]/12', title: '4주 심화 워크북', desc: '제자 훈련 심화' },
+    { id: 'prayer', icon: <IconPray className="w-4 h-4"/>, color: 'text-[#34C759]', bg: 'bg-[#34C759]/12', title: '기도 보관함', desc: '나의 기도 기록' },
+    { id: 'jericho', icon: <IconMap className="w-4 h-4"/>, color: 'text-[#5AC8FA]', bg: 'bg-[#5AC8FA]/12', title: '여리고 땅밟기', desc: '세상을 향한 기도' }
+  ], []);
 
-  const [menuItems, setMenuItems] = useState(() => {
+  const [menuOrderIds, setMenuOrderIds] = useState(() => {
     try {
-      const saved = localStorage.getItem('home_menu_order');
-      return saved ? JSON.parse(saved) : defaultMenus;
-    } catch(e) {
+      // 구버전 크래시 유발 키 자동 정리
       localStorage.removeItem('home_menu_order');
-      return defaultMenus;
-    }
+      const savedIds = JSON.parse(localStorage.getItem('home_menu_order_ids') || 'null');
+      if (Array.isArray(savedIds) && savedIds.length > 0) {
+        const allIds = MASTER_MENUS.map(m => m.id);
+        const validIds = savedIds.filter(id => allIds.includes(id));
+        const missingIds = allIds.filter(id => !validIds.includes(id));
+        return [...validIds, ...missingIds];
+      }
+    } catch (_) {}
+    return MASTER_MENUS.map(m => m.id);
   });
 
-  const [draggedItem, setDraggedItem] = useState(null);
+  const orderedMenus = useMemo(() => {
+    return menuOrderIds.map(id => MASTER_MENUS.find(m => m.id === id)).filter(Boolean);
+  }, [menuOrderIds, MASTER_MENUS]);
 
-  const handleDragStart = (idx) => setDraggedItem(idx);
-  const handleDragEnter = (idx) => {
-    if (draggedItem === null || draggedItem === idx) return;
-    const copy = [...menuItems];
-    const target = copy.splice(draggedItem, 1)[0];
-    copy.splice(idx, 0, target);
-    setDraggedItem(idx);
-    setMenuItems(copy);
+  // 📱 아이폰 홈화면 스타일 편집 모드 (꾹 누르기 500ms 감지 & 드래그/스왑)
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [draggedIdx, setDraggedIdx] = useState(null);
+  const longPressTimerRef = useRef(null);
+
+  const saveNewOrder = useCallback((nextIds) => {
+    setMenuOrderIds(nextIds);
+    try {
+      localStorage.setItem('home_menu_order_ids', JSON.stringify(nextIds));
+    } catch (_) {}
+  }, []);
+
+  const handleSwapMenuOrder = (fromIdx, toIdx) => {
+    if (toIdx < 0 || toIdx >= menuOrderIds.length || fromIdx === toIdx) return;
+    const copy = [...menuOrderIds];
+    const [moved] = copy.splice(fromIdx, 1);
+    copy.splice(toIdx, 0, moved);
+    saveNewOrder(copy);
   };
-  const handleDragEnd = () => {
-    setDraggedItem(null);
-    localStorage.setItem('home_menu_order', JSON.stringify(menuItems));
+
+  const handleTouchStartCard = (idx) => {
+    clearTimeout(longPressTimerRef.current);
+    longPressTimerRef.current = setTimeout(() => {
+      setIsEditMode(true);
+      setDraggedIdx(idx);
+      if (navigator.vibrate) navigator.vibrate(35);
+    }, 480);
   };
+
+  const handleTouchEndCard = () => {
+    clearTimeout(longPressTimerRef.current);
+    setDraggedIdx(null);
+  };
+
+  const handleTouchMoveGrid = (e) => {
+    if (!isEditMode || draggedIdx === null) {
+      clearTimeout(longPressTimerRef.current);
+      return;
+    }
+    const touch = e.touches?.[0];
+    if (!touch) return;
+    const targetEl = document.elementFromPoint(touch.clientX, touch.clientY);
+    const cardEl = targetEl?.closest?.('[data-menu-idx]');
+    if (cardEl) {
+      const overIdx = Number(cardEl.getAttribute('data-menu-idx'));
+      if (!Number.isNaN(overIdx) && overIdx !== draggedIdx) {
+        handleSwapMenuOrder(draggedIdx, overIdx);
+        setDraggedIdx(overIdx);
+      }
+    }
+  };
+
+  const completedFiveCount = ['감사', '성경읽기', 'QTin', '기도하기', '가정예배'].filter(k => currentChecks[k]).length;
 
   return (
-    <div className={`flex-1 flex flex-col h-full ${t.pageBg} overflow-y-auto pb-[140px] hide-scrollbar animate-fade-in-up pointer-events-auto relative`}>
-      
+    <div 
+      onScroll={handleHomeScroll}
+      className={`flex-1 flex flex-col h-full ${t.pageBg} overflow-y-auto pb-[140px] hide-scrollbar animate-fade-in-up pointer-events-auto relative`}
+    >
+      {/* 🌊 SaaS 스타일 애니메이션 키프레임 & 아이폰 흔들림(Jiggle) 효과 */}
+      <style>{`
+        @keyframes saasWaveDrift {
+          0% { transform: translate3d(0, 0, 0); }
+          50% { transform: translate3d(-25%, 6px, 0); }
+          100% { transform: translate3d(-50%, 0, 0); }
+        }
+        @keyframes iosJiggle {
+          0% { transform: rotate(-1.1deg) translateY(0px); }
+          50% { transform: rotate(1.1deg) translateY(-1.5px); }
+          100% { transform: rotate(-1.1deg) translateY(0px); }
+        }
+        .saas-wave-slow { animation: saasWaveDrift 16s ease-in-out infinite; }
+        .saas-wave-fast { animation: saasWaveDrift 11s ease-in-out infinite reverse; }
+        .ios-jiggle-card { animation: iosJiggle 0.28s ease-in-out infinite; }
+      `}</style>
+
+      {/* 🌊 안쪽 배경 스크롤 반응형 3중 물결 레이어 (터치 방해 없음) */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+        <div 
+          className="absolute -top-24 left-1/2 -translate-x-1/2 w-[130vw] h-[360px] rounded-full blur-[95px] transition-transform duration-300"
+          style={{
+            background: isDarkMode
+              ? 'radial-gradient(circle, rgba(10,132,255,0.16) 0%, rgba(175,82,222,0.10) 45%, transparent 75%)'
+              : 'radial-gradient(circle, rgba(0,122,255,0.10) 0%, rgba(88,86,214,0.07) 45%, transparent 75%)',
+            transform: `translate3d(-50%, ${Math.sin(scrollWaveOffset * 0.015) * 18}px, 0)`
+          }}
+        />
+        <div 
+          className="absolute bottom-0 left-0 w-[200%] h-[220px] opacity-40 dark:opacity-25 transition-transform duration-150"
+          style={{ transform: `translate3d(0, ${Math.cos(scrollWaveOffset * 0.02) * 14}px, 0)` }}
+        >
+          <svg viewBox="0 0 1440 320" preserveAspectRatio="none" className="w-full h-full saas-wave-slow">
+            <path
+              fill={isDarkMode ? '#0A84FF' : '#38BDF8'}
+              fillOpacity="0.22"
+              d="M0,160L60,170.7C120,181,240,203,360,192C480,181,600,139,720,138.7C840,139,960,181,1080,197.3C1200,213,1320,203,1380,197.3L1440,192L1440,320L1380,320C1320,320,1200,320,1080,320C960,320,840,320,720,320C600,320,480,320,360,320C240,320,120,320,60,320L0,320Z"
+            />
+          </svg>
+        </div>
+        <div 
+          className="absolute bottom-0 left-0 w-[200%] h-[180px] opacity-35 dark:opacity-20 transition-transform duration-150"
+          style={{ transform: `translate3d(0, ${Math.sin(scrollWaveOffset * 0.025) * 12}px, 0)` }}
+        >
+          <svg viewBox="0 0 1440 320" preserveAspectRatio="none" className="w-full h-full saas-wave-fast">
+            <path
+              fill={isDarkMode ? '#AF52DE' : '#6366F1'}
+              fillOpacity="0.18"
+              d="M0,224L80,213.3C160,203,320,181,480,186.7C640,192,800,224,960,218.7C1120,213,1280,171,1360,149.3L1440,128L1440,320L1360,320C1280,320,1120,320,960,320C800,320,640,320,480,320C320,320,160,320,80,320L0,320Z"
+            />
+          </svg>
+        </div>
+      </div>
+
       {showTuesdayPopup && (
         <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/40 backdrop-blur-md pointer-events-auto">
           <div className={`${t.cardBg} p-8 rounded-[32px] max-w-sm w-full shadow-2xl text-center space-y-5 border ${t.border}`}>
@@ -330,21 +557,21 @@ export function Home({
         </div>
       )}
 
-      {/* 1열 고정 상단 네비게이션 바 */}
-      <div className={`flex items-center justify-between px-4 pt-5 pb-2.5 z-[45] pointer-events-auto sticky top-0 ${isDarkMode ? 'bg-[#000000]/80' : 'bg-[#F5F5F7]/80'} backdrop-blur-xl border-b border-black/5 dark:border-white/5`}>
+      {/* ── 상단 SaaS 글래스모피즘 네비게이션 바 ── */}
+      <div className={`flex items-center justify-between px-4 pt-4 pb-2.5 z-[45] pointer-events-auto sticky top-0 ${isDarkMode ? 'bg-[#090C12]/80' : 'bg-white/80'} backdrop-blur-2xl border-b border-black/5 dark:border-white/10`}>
         <div className="flex items-center gap-2 min-w-0">
            <button 
              onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
-             className={`w-9 h-9 flex items-center justify-center rounded-full active:scale-95 transition-transform shrink-0 ${isDarkMode ? 'bg-white/10 text-white' : 'bg-black/5 text-[#1D1D1F]'}`}
+             className={`w-9 h-9 flex items-center justify-center rounded-xl active:scale-95 transition-transform shrink-0 border ${isDarkMode ? 'bg-white/10 border-white/10 text-white' : 'bg-slate-100 border-slate-200/80 text-[#1D1D1F]'}`}
            >
              <IconMenu className="w-4 h-4" />
            </button>
            
-           <div className={`relative inline-flex items-center cursor-pointer px-3.5 h-9 rounded-full backdrop-blur-md border transition-all active:scale-95 shrink-0 ${isDarkMode ? 'bg-white/10 border-white/10 text-white' : 'bg-white/70 border-black/5 text-[#1D1D1F] shadow-sm'}`}>
+           <div className={`relative inline-flex items-center cursor-pointer px-3.5 h-9 rounded-xl backdrop-blur-md border transition-all active:scale-95 shrink-0 ${isDarkMode ? 'bg-white/10 border-white/10 text-white' : 'bg-slate-100/90 border-slate-200/80 text-[#1D1D1F]'}`}>
               <input type="date" value={date} onChange={e=>setDate(e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-40" />
-              <span className="font-black text-[13.5px] tracking-tight select-none pointer-events-none whitespace-nowrap flex items-center">
-                 {new Date(date).toLocaleDateString('ko-KR', {month:'numeric', day:'numeric'})} 
-                 <span className={`text-[11px] ml-1 font-semibold ${isDarkMode ? 'text-white/50' : 'text-black/40'}`}>
+              <span className="font-black text-[13px] tracking-tight select-none pointer-events-none whitespace-nowrap flex items-center gap-1">
+                 <span>📅 {new Date(date).toLocaleDateString('ko-KR', {month:'numeric', day:'numeric'})}</span>
+                 <span className={`text-[11px] font-semibold ${isDarkMode ? 'text-sky-400' : 'text-[#007AFF]'}`}>
                    ({['일','월','화','수','목','금','토'][new Date(date).getDay()]})
                  </span>
               </span>
@@ -354,16 +581,16 @@ export function Home({
         <div className="flex items-center gap-1.5 shrink-0">
            <button 
              onClick={() => { setActiveScreen('board'); setHasNewBoardPost(false); }} 
-             className={`h-9 px-3 rounded-full text-[12px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all border whitespace-nowrap ${isDarkMode ? 'bg-white/10 border-white/10 text-[#FF375F]' : 'bg-white/70 border-black/5 text-[#FF2D55] shadow-sm'} relative`}
+             className={`h-9 px-3 rounded-xl text-[11.5px] font-black flex items-center justify-center gap-1.5 active:scale-95 transition-all border whitespace-nowrap ${isDarkMode ? 'bg-[#FF375F]/15 border-[#FF375F]/30 text-[#FF375F]' : 'bg-rose-50 border-rose-200/70 text-[#FF2D55]'} relative`}
            >
               <IconHeart className="w-3.5 h-3.5" />
               <span>공동체 감사</span>
-              {hasNewBoardPost && <span className="absolute top-1 right-1 w-2 h-2 bg-[#FF2D55] rounded-full animate-pulse"></span>}
+              {hasNewBoardPost && <span className="absolute top-1 right-1 w-2 h-2 bg-[#FF2D55] rounded-full animate-ping"></span>}
            </button>
            
            <button 
              onClick={() => { setActiveScreen('board'); setHasNewBoardPost(false); }} 
-             className={`h-9 px-3 rounded-full text-[12px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all border whitespace-nowrap ${isDarkMode ? 'bg-white/10 border-white/10 text-[#30D158]' : 'bg-white/70 border-black/5 text-[#34C759] shadow-sm'}`}
+             className={`h-9 px-3 rounded-xl text-[11.5px] font-black flex items-center justify-center gap-1.5 active:scale-95 transition-all border whitespace-nowrap ${isDarkMode ? 'bg-[#30D158]/15 border-[#30D158]/30 text-[#30D158]' : 'bg-emerald-50 border-emerald-200/70 text-[#34C759]'}`}
            >
               <IconPray className="w-3.5 h-3.5" />
               <span>공동체 기도</span>
@@ -371,9 +598,10 @@ export function Home({
         </div>
       </div>
 
-      <div className="px-5 mt-4 mb-4 max-w-[1200px] mx-auto w-full">
+      {/* ── 메인 SaaS 컨텐츠 컨테이너 ── */}
+      <div className="px-4 sm:px-5 mt-4 mb-4 max-w-[1200px] mx-auto w-full relative z-10">
         
-        <div className="px-3 sm:px-4 mb-3">
+        <div className="mb-3">
           <MemoryFestivalBanner 
             isDarkMode={isDarkMode} 
             currDay={currDay} 
@@ -386,206 +614,319 @@ export function Home({
           />
         </div>
 
-        {/* 오늘의 말씀 카드 */}
-        <div ref={verseCardRef} className={`relative rounded-[32px] overflow-hidden shadow-[0_8px_20px_rgba(0,0,0,0.08)] cursor-pointer hover:scale-[0.99] transition-all min-h-[200px] flex flex-col justify-center border ${t.border} mb-8`} onClick={() => openModal('fullVerse', { text: `${safeVerse.text} ${safeVerse.ref}`, bgHash: dateHash })}>
-           <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${currentBgUrl})` }} crossOrigin="anonymous"></div>
-           <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"></div>
+        {/* 오늘의 말씀 카드 (프리미엄 글래스 프레임) */}
+        <div 
+          ref={verseCardRef} 
+          className={`relative rounded-[28px] overflow-hidden shadow-[0_14px_34px_rgba(0,0,0,0.12)] cursor-pointer hover:scale-[0.995] transition-all min-h-[205px] flex flex-col justify-center border ${t.border} mb-7 group`} 
+          onClick={() => openModal('fullVerse', { text: `${safeVerse.text} ${safeVerse.ref}`, bgHash: dateHash })}
+        >
+           <div className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105" style={{ backgroundImage: `url(${currentBgUrl})` }} crossOrigin="anonymous"></div>
+           <div className="absolute inset-0 bg-gradient-to-br from-black/65 via-black/40 to-black/70 backdrop-blur-[1.5px]"></div>
            <div className="relative z-10 p-6 md:p-8 pb-14 h-full flex flex-col justify-between">
-             <span className="text-[11px] font-bold text-white/80 uppercase tracking-widest mb-3 flex items-center gap-1.5 drop-shadow-md">
-                 <IconFlame className="w-3.5 h-3.5 text-[#FF9500]"/> Today's Word
-             </span>
+             <div className="flex items-center justify-between mb-3">
+               <span className="text-[10.5px] font-black text-amber-300 uppercase tracking-widest px-2.5 py-1 rounded-full bg-black/35 border border-white/15 backdrop-blur-md flex items-center gap-1.5">
+                 <IconFlame className="w-3.5 h-3.5 text-[#FF9500]"/> TODAY'S WORD
+               </span>
+               <span className="text-[11px] font-semibold text-white/70">터치하여 전체화면 보기 ↗</span>
+             </div>
              <span className="text-[20px] md:text-[24px] text-white font-bold leading-[1.6] drop-shadow-lg break-keep font-yeongnamnu tracking-wide">
                  "{safeVerse.text}"
              </span>
-             <span className="block mt-4 text-[13px] text-white/80 font-sans tracking-normal font-bold">{safeVerse.ref}</span>
+             <span className="block mt-4 text-[13px] text-amber-200/95 font-sans tracking-normal font-extrabold">{safeVerse.ref}</span>
            </div>
-           <button onClick={handleSaveVerseImage} title="저장" data-html2canvas-ignore="true" className="absolute bottom-5 right-5 flex items-center justify-center w-9 h-9 rounded-full bg-white/20 border border-white/20 backdrop-blur-xl text-white hover:bg-white/40 transition-all z-50">
-              <IconDownload className="w-4 h-4" />
+           <button onClick={handleSaveVerseImage} title="저장" data-html2canvas-ignore="true" className="absolute bottom-4 right-4 flex items-center gap-1.5 px-3 h-9 rounded-full bg-white/20 border border-white/25 backdrop-blur-xl text-white text-[11px] font-bold hover:bg-white/35 transition-all z-50">
+              <IconDownload className="w-3.5 h-3.5" /> 카드저장
            </button>
         </div>
 
-        {/* 영적 5종 세트 */}
-        <div className="mb-8">
-           <div className="flex justify-between items-end mb-3 px-1">
-              <div>
-                 <h2 className={`text-[18px] font-bold ${t.textMain} tracking-tight flex items-center gap-2`}><IconFlame className={`w-5 h-5 text-[#FF9500]`} /> 영적 5종 세트</h2>
+        {/* 영적 5종 세트 (SaaS 데일리 루틴 트래커 디자인) */}
+        <div className="mb-7">
+           <div className="flex justify-between items-center mb-3 px-1">
+              <div className="flex items-center gap-2">
+                 <h2 className={`text-[17px] font-black ${t.textMain} tracking-tight flex items-center gap-1.5`}>
+                   <IconFlame className="w-5 h-5 text-[#FF9500]" /> 영적 5종 세트
+                 </h2>
+                 <span className="text-[11px] font-extrabold px-2 py-0.5 rounded-full bg-[#FF9500]/15 text-[#FF9500]">
+                   오늘 {completedFiveCount}/5 달성
+                 </span>
               </div>
+              <span className={`text-[11px] font-semibold ${t.textSub}`}>아이콘을 터치해 체크하세요</span>
            </div>
            
-           <div className="flex flex-col md:flex-row gap-3">
-               <div className={`p-4 md:p-5 rounded-[24px] border ${t.border} flex-[3] flex justify-around items-center ${isDarkMode ? 'bg-[#1C1C1E]' : 'bg-white'}`}>
-                  {[ 
-                    { id: '감사', color: '#FF2D55', icon: <IconHeart className={`w-6 h-6`} /> }, 
-                    { id: '성경읽기', label: '성경', color: '#007AFF', icon: <IconBook className={`w-6 h-6`} /> }, 
-                    { id: 'QTin', color: '#FF9500', icon: <IconFlame className={`w-6 h-6`} /> } 
-                  ].map(item => {
-                    const isChecked = currentChecks[item.id];
-                    return (
-                      <div key={item.id} onClick={() => { updateDay({ checks: { ...currentChecks, [item.id]: !isChecked } }); if (!isChecked) triggerConfetti(); }} className="flex flex-col items-center cursor-pointer active:scale-95 transition-transform group">
-                        <div className={`w-12 h-12 md:w-14 md:h-14 rounded-[16px] flex items-center justify-center transition-all duration-300 ${isChecked ? 'shadow-md scale-105' : `${isDarkMode?'bg-[#2C2C2E]':'bg-[#F2F2F7]'}`}`} style={isChecked ? {backgroundColor: item.color, color: 'white'} : {color: t.textSub}}>
-                            {item.icon}
-                        </div>
-                        <span className={`text-[11.5px] mt-2 font-bold whitespace-nowrap ${isChecked ? t.textMain : t.textSub}`}>{item.label || item.id}</span>
+           <div className={`p-4 md:p-5 rounded-[24px] border ${t.border} shadow-xs backdrop-blur-xl ${isDarkMode ? 'bg-[#1C1C1E]/90' : 'bg-white/90'}`}>
+              <div className="grid grid-cols-5 gap-2">
+                {[ 
+                  { id: '감사', label: '감사', color: '#FF2D55', icon: <IconHeart className="w-5 h-5 sm:w-6 sm:h-6" /> }, 
+                  { id: '성경읽기', label: '성경', color: '#007AFF', icon: <IconBook className="w-5 h-5 sm:w-6 sm:h-6" /> }, 
+                  { id: 'QTin', label: 'QTin', color: '#FF9500', icon: <IconFlame className="w-5 h-5 sm:w-6 sm:h-6" /> },
+                  { id: '기도하기', label: '기도', color: '#34C759', icon: <IconPray className="w-5 h-5 sm:w-6 sm:h-6" /> }, 
+                  { id: '가정예배', label: '가정예배', color: '#AF52DE', icon: <IconSmile className="w-5 h-5 sm:w-6 sm:h-6" /> } 
+                ].map(item => {
+                  const isChecked = currentChecks[item.id];
+                  return (
+                    <div 
+                      key={item.id} 
+                      onClick={() => { updateDay({ checks: { ...currentChecks, [item.id]: !isChecked } }); if (!isChecked) triggerConfetti(); }} 
+                      className="flex flex-col items-center cursor-pointer active:scale-90 transition-all group"
+                    >
+                      <div 
+                        className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center transition-all duration-300 relative ${
+                          isChecked ? 'shadow-lg scale-105' : `${isDarkMode ? 'bg-[#2C2C2E] hover:bg-[#3A3A3C]' : 'bg-slate-100 hover:bg-slate-200/70'}`
+                        }`} 
+                        style={isChecked ? { backgroundColor: item.color, color: 'white' } : { color: t.textSub }}
+                      >
+                        {item.icon}
+                        {isChecked && (
+                          <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-white text-slate-900 text-[10px] font-black flex items-center justify-center shadow">
+                            ✓
+                          </span>
+                        )}
                       </div>
-                    );
-                  })}
-               </div>
-               
-               <div className={`p-4 md:p-5 rounded-[24px] border ${t.border} flex-[2] flex justify-around items-center ${isDarkMode ? 'bg-[#1C1C1E]' : 'bg-white'}`}>
-                  {[ 
-                    { id: '기도하기', label: '기도', color: '#34C759', icon: <IconPray className={`w-6 h-6`} /> }, 
-                    { id: '가정예배', label: '가정예배', color: '#AF52DE', icon: <IconSmile className={`w-6 h-6`} /> } 
-                  ].map(item => {
-                    const isChecked = currentChecks[item.id];
-                    return (
-                      <div key={item.id} onClick={() => { updateDay({ checks: { ...currentChecks, [item.id]: !isChecked } }); if (!isChecked) triggerConfetti(); }} className="flex flex-col items-center cursor-pointer active:scale-95 transition-transform group">
-                        <div className={`w-12 h-12 md:w-14 md:h-14 rounded-[16px] flex items-center justify-center transition-all duration-300 ${isChecked ? 'shadow-md scale-105' : `${isDarkMode?'bg-[#2C2C2E]':'bg-[#F2F2F7]'}`}`} style={isChecked ? {backgroundColor: item.color, color: 'white'} : {color: t.textSub}}>
-                            {item.icon}
-                        </div>
-                        <span className={`text-[11.5px] mt-2 font-bold whitespace-nowrap ${isChecked ? t.textMain : t.textSub}`}>{item.label || item.id}</span>
-                      </div>
-                    );
-                  })}
-               </div>
+                      <span className={`text-[11px] sm:text-[12px] mt-2 font-extrabold whitespace-nowrap ${isChecked ? t.textMain : t.textSub}`}>
+                        {item.label}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
            </div>
         </div>
 
-        {/* 챌린지 및 통독 스탯 */}
-        <div className="grid grid-cols-2 gap-3 mb-10">
-           <div onClick={() => setActiveScreen('fiveSetMenu')} className={`${t.cardBg} p-5 rounded-[24px] cursor-pointer shadow-sm border ${t.border} flex flex-col items-center justify-center active:scale-[0.98] transition-transform`}>
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 bg-[#FF9500]/10 text-[#FF9500]`}><IconFlame className="w-5 h-5" /></div>
-              <span className={`text-[12px] font-bold ${t.textSub} mb-1 whitespace-nowrap`}>연속 실천 기록</span>
-              <span className={`text-[18px] md:text-[20px] font-black text-[#FF9500] whitespace-nowrap tracking-tight`}>{streak5 || 0}일</span>
+        {/* 챌린지 및 통독 스탯 (SaaS KPI 메트릭 카드) */}
+        <div className="grid grid-cols-2 gap-3 mb-9">
+           <div onClick={() => setActiveScreen('fiveSetMenu')} className={`${t.cardBg} p-4 sm:p-5 rounded-[24px] cursor-pointer shadow-xs border ${t.border} flex items-center justify-between active:scale-[0.98] transition-all backdrop-blur-xl`}>
+              <div className="flex flex-col">
+                <span className={`text-[11.5px] font-bold ${t.textSub} mb-1`}>연속 실천 스트릭</span>
+                <span className="text-[22px] sm:text-[26px] font-black text-[#FF9500] leading-none tracking-tight">{streak5 || 0}일째</span>
+                <span className="text-[10.5px] font-bold text-[#FF9500]/80 mt-1.5">🔥 현황 분석 보기 ➔</span>
+              </div>
+              <div className="w-11 h-11 rounded-2xl flex items-center justify-center bg-[#FF9500]/12 text-[#FF9500] shrink-0">
+                <IconFlame className="w-6 h-6" />
+              </div>
            </div>
-           <div onClick={() => { setActiveScreen('bible'); openModal('bibleChallenge'); }} className={`${t.cardBg} p-5 rounded-[24px] cursor-pointer shadow-sm border ${t.border} flex flex-col items-center justify-center active:scale-[0.98] transition-transform`}>
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 bg-[#007AFF]/10 text-[#007AFF]`}><IconBook className="w-5 h-5" /></div>
-              <span className={`text-[12px] font-bold ${t.textSub} mb-1 whitespace-nowrap`}>통독 365 챌린지</span>
-              <span className={`text-[18px] md:text-[20px] font-black text-[#007AFF] mb-2 whitespace-nowrap tracking-tight`}>D-{dDay > 0 ? dDay : 0}</span>
-              <div className={`w-full max-w-[100px] ${isDarkMode ? 'bg-[#2C2C2E]' : 'bg-[#F2F2F7]'} rounded-full h-1 overflow-hidden`}><div className={`bg-[#007AFF] h-full transition-all duration-700`} style={{width:`${bibleProgress}%`}}></div></div>
+
+           <div onClick={() => { setActiveScreen('bible'); openModal('bibleChallenge'); }} className={`${t.cardBg} p-4 sm:p-5 rounded-[24px] cursor-pointer shadow-xs border ${t.border} flex flex-col justify-between active:scale-[0.98] transition-all backdrop-blur-xl`}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className={`text-[11.5px] font-bold ${t.textSub} block mb-0.5`}>통독 365 챌린지</span>
+                  <span className="text-[20px] sm:text-[24px] font-black text-[#007AFF] leading-none tracking-tight">D+{dDay > 0 ? dDay : 0}</span>
+                </div>
+                <span className="text-[11px] font-mono font-black text-[#007AFF] bg-[#007AFF]/10 px-2 py-1 rounded-lg">
+                  {bibleProgress}%
+                </span>
+              </div>
+              <div className={`w-full ${isDarkMode ? 'bg-[#2C2C2E]' : 'bg-slate-100'} rounded-full h-2 overflow-hidden mt-3`}>
+                <div className="bg-gradient-to-r from-[#007AFF] to-[#5AC8FA] h-full transition-all duration-700 rounded-full" style={{ width: `${bibleProgress}%` }}></div>
+              </div>
            </div>
         </div>
 
         {/* 1. 말씀 */}
-        <div className="mb-10">
-           <h2 className={`text-[18px] font-bold ${t.textMain} tracking-tight mb-3 flex items-center gap-2 px-1`}><IconBook className={`w-5 h-5 text-[#007AFF]`} /> 말씀</h2>
+        <div className="mb-9">
+           <h2 className={`text-[17px] font-black ${t.textMain} tracking-tight mb-3 flex items-center gap-2 px-1`}><IconBook className="w-5 h-5 text-[#007AFF]" /> 말씀 워크스페이스</h2>
            <div className="grid grid-cols-2 gap-3 mb-3">
-              <div onClick={() => setActiveScreen('qt')} className={`${t.cardBg} p-5 rounded-[24px] cursor-pointer shadow-sm border ${t.border} flex flex-col items-center justify-center active:scale-95 transition-transform group`}>
-                 <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 bg-[#FF2D55]/10 text-[#FF2D55]`}><IconFlame className="w-5 h-5" /></div>
-                 <span className={`text-[14.5px] font-bold ${t.textMain} whitespace-nowrap`}>매일 QT</span>
+              <div onClick={() => setActiveScreen('qt')} className={`${t.cardBg} p-4 sm:p-5 rounded-[22px] cursor-pointer shadow-xs border ${t.border} flex items-center gap-3.5 active:scale-95 transition-transform group`}>
+                 <div className="w-11 h-11 rounded-2xl flex items-center justify-center bg-[#FF2D55]/12 text-[#FF2D55] shrink-0"><IconFlame className="w-5 h-5" /></div>
+                 <div className="min-w-0">
+                   <span className={`text-[14.5px] font-black ${t.textMain} block truncate`}>매일 QT</span>
+                   <span className="text-[11px] font-medium text-[#8E8E93] block truncate">오늘의 큐티 말씀</span>
+                 </div>
               </div>
-              <div onClick={() => setActiveScreen('mcheyne')} className={`${t.cardBg} p-5 rounded-[24px] cursor-pointer shadow-sm border ${t.border} flex flex-col items-center justify-center active:scale-95 transition-transform group`}>
-                 <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 bg-[#007AFF]/10 text-[#007AFF]`}><IconDocument className="w-5 h-5" /></div>
-                 <span className={`text-[14.5px] font-bold ${t.textMain} whitespace-nowrap`}>맥체인 읽기</span>
+              <div onClick={() => setActiveScreen('mcheyne')} className={`${t.cardBg} p-4 sm:p-5 rounded-[22px] cursor-pointer shadow-xs border ${t.border} flex items-center gap-3.5 active:scale-95 transition-transform group`}>
+                 <div className="w-11 h-11 rounded-2xl flex items-center justify-center bg-[#007AFF]/12 text-[#007AFF] shrink-0"><IconDocument className="w-5 h-5" /></div>
+                 <div className="min-w-0">
+                   <span className={`text-[14.5px] font-black ${t.textMain} block truncate`}>맥체인 읽기</span>
+                   <span className="text-[11px] font-medium text-[#8E8E93] block truncate">365 성경 통독 플랜</span>
+                 </div>
               </div>
            </div>
-           <div onClick={() => setActiveScreen('generalNote')} className={`${t.cardBg} p-5 rounded-[24px] cursor-pointer shadow-sm border ${t.border} flex items-center justify-between active:scale-[0.98] transition-transform group`}>
-              <div className="flex items-center gap-4">
-                 <div className={`w-10 h-10 bg-[#AF52DE]/10 rounded-full flex items-center justify-center text-[#AF52DE]`}><IconPen className="w-5 h-5" /></div>
-                 <div className="flex flex-col"><span className={`text-[14.5px] font-bold ${t.textMain} whitespace-nowrap`}>자유 말씀 노트</span><span className={`text-[11.5px] font-medium text-[#8E8E93]`}>말씀을 첨부하고 마음껏 필기하세요</span></div>
+           <div onClick={() => setActiveScreen('generalNote')} className={`${t.cardBg} p-4 sm:p-5 rounded-[22px] cursor-pointer shadow-xs border ${t.border} flex items-center justify-between active:scale-[0.98] transition-transform group`}>
+              <div className="flex items-center gap-3.5">
+                 <div className="w-11 h-11 bg-[#AF52DE]/12 rounded-2xl flex items-center justify-center text-[#AF52DE] shrink-0"><IconPen className="w-5 h-5" /></div>
+                 <div className="flex flex-col"><span className={`text-[14.5px] font-black ${t.textMain} whitespace-nowrap`}>자유 말씀 노트</span><span className="text-[11.5px] font-medium text-[#8E8E93]">말씀 자동 첨부 및 다꾸 필기 캔버스</span></div>
               </div>
-              <IconChevronRight className={`w-4 h-4 text-[#C7C7CC]`} />
+              <IconChevronRight className="w-4 h-4 text-[#C7C7CC]" />
            </div>
         </div>
 
         {/* 2. 예배 */}
-        <div className="mb-10">
-           <h2 className={`text-[18px] font-bold ${t.textMain} tracking-tight mb-3 flex items-center gap-2 px-1`}><IconChurch className={`w-5 h-5 text-[#34C759]`} /> 예배</h2>
+        <div className="mb-9">
+           <h2 className={`text-[17px] font-black ${t.textMain} tracking-tight mb-3 flex items-center gap-2 px-1`}><IconChurch className="w-5 h-5 text-[#34C759]" /> 예배 & 미디어</h2>
            
-           <div className="mb-3 flex justify-between items-center px-1">
-              <h3 className={`text-[14px] font-bold ${t.textMain} flex items-center gap-1.5`}><IconYoutube className={`w-4 h-4 text-[#FF2D55]`} /> 매일 예배 및 설교</h3>
+           <div className="mb-2 flex justify-between items-center px-1">
+              <h3 className={`text-[13.5px] font-bold ${t.textMain} flex items-center gap-1.5`}><IconYoutube className="w-4 h-4 text-[#FF2D55]" /> 매일 예배 및 설교 스트림</h3>
            </div>
            <CoverCarousel items={worshipVideos} t={t} />
 
-           <div className="grid grid-cols-2 gap-3 mt-4">
-              <div onClick={() => setActiveScreen('sermon')} className={`${t.cardBg} p-5 rounded-[24px] cursor-pointer shadow-sm border ${t.border} flex flex-col items-center justify-center active:scale-[0.98] transition-transform group`}>
-                 <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 bg-[#007AFF]/10 text-[#007AFF]`}><IconDocument className="w-5 h-5" /></div>
-                 <span className={`text-[14.5px] font-bold ${t.textMain} whitespace-nowrap`}>예배 노트 작성</span>
+           <div className="grid grid-cols-2 gap-3 mt-3">
+              <div onClick={() => setActiveScreen('sermon')} className={`${t.cardBg} p-4 sm:p-5 rounded-[22px] cursor-pointer shadow-xs border ${t.border} flex items-center gap-3.5 active:scale-[0.98] transition-transform group`}>
+                 <div className="w-11 h-11 rounded-2xl flex items-center justify-center bg-[#007AFF]/12 text-[#007AFF] shrink-0"><IconDocument className="w-5 h-5" /></div>
+                 <div className="min-w-0">
+                   <span className={`text-[14.5px] font-black ${t.textMain} block truncate`}>예배 노트 작성</span>
+                   <span className="text-[11px] font-medium text-[#8E8E93] block truncate">설교 필기 및 AI 요약</span>
+                 </div>
               </div>
-              <div onClick={() => setActiveScreen('familySelect')} className={`${t.cardBg} p-5 rounded-[24px] cursor-pointer shadow-sm border ${t.border} flex flex-col items-center justify-center active:scale-[0.98] transition-transform group`}>
-                 <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 bg-[#FF9500]/10 text-[#FF9500]`}><IconSmile className="w-5 h-5" /></div>
-                 <span className={`text-[14.5px] font-bold ${t.textMain} whitespace-nowrap`}>가정 예배 시작</span>
+              <div onClick={() => setActiveScreen('familySelect')} className={`${t.cardBg} p-4 sm:p-5 rounded-[22px] cursor-pointer shadow-xs border ${t.border} flex items-center gap-3.5 active:scale-[0.98] transition-transform group`}>
+                 <div className="w-11 h-11 rounded-2xl flex items-center justify-center bg-[#FF9500]/12 text-[#FF9500] shrink-0"><IconSmile className="w-5 h-5" /></div>
+                 <div className="min-w-0">
+                   <span className={`text-[14.5px] font-black ${t.textMain} block truncate`}>가정 예배 시작</span>
+                   <span className="text-[11px] font-medium text-[#8E8E93] block truncate">온 가족 말씀 나눔</span>
+                 </div>
               </div>
            </div>
         </div>
 
         {/* 3. 묵상 */}
-        <div className="mb-10">
-           <h2 className={`text-[18px] font-bold ${t.textMain} tracking-tight mb-3 flex items-center gap-2 px-1`}><IconHeart className={`w-5 h-5 text-[#AF52DE]`} /> 묵상</h2>
+        <div className="mb-9">
+           <h2 className={`text-[17px] font-black ${t.textMain} tracking-tight mb-3 flex items-center gap-2 px-1`}><IconHeart className="w-5 h-5 text-[#AF52DE]" /> 묵상 & 찬양</h2>
 
-           <div className="grid grid-cols-2 gap-3 mb-6">
-              <div onClick={() => setActiveScreen('diary')} className={`${t.cardBg} p-5 rounded-[24px] cursor-pointer shadow-sm border ${t.border} flex flex-col active:scale-[0.98] transition-transform group`}>
-                 <div className="flex items-center gap-2 mb-2"><div className="w-10 h-10 rounded-full bg-[#AF52DE]/10 text-[#AF52DE] flex items-center justify-center"><IconHeart className="w-5 h-5"/></div></div>
-                 <span className={`text-[14.5px] font-bold ${t.textMain} mb-0.5`}>감사/간증 일기</span>
-                 <span className={`text-[11.5px] font-medium text-[#8E8E93] break-keep`}>나의 묵상과 감사 기록</span>
+           <div className="grid grid-cols-2 gap-3 mb-5">
+              <div onClick={() => setActiveScreen('diary')} className={`${t.cardBg} p-4 sm:p-5 rounded-[22px] cursor-pointer shadow-xs border ${t.border} flex flex-col active:scale-[0.98] transition-transform group`}>
+                 <div className="w-10 h-10 rounded-2xl bg-[#AF52DE]/12 text-[#AF52DE] flex items-center justify-center mb-2.5"><IconHeart className="w-5 h-5"/></div>
+                 <span className={`text-[14.5px] font-black ${t.textMain} mb-0.5`}>감사/간증 일기</span>
+                 <span className="text-[11.5px] font-medium text-[#8E8E93] break-keep">나의 묵상과 감사 기록</span>
               </div>
-              <div onClick={() => setActiveScreen('prayer')} className={`${t.cardBg} p-5 rounded-[24px] cursor-pointer shadow-sm border ${t.border} flex flex-col active:scale-[0.98] transition-transform group`}>
-                 <div className="flex items-center gap-2 mb-2"><div className="w-10 h-10 rounded-full bg-[#34C759]/10 text-[#34C759] flex items-center justify-center"><IconPray className="w-5 h-5"/></div></div>
-                 <span className={`text-[14.5px] font-bold ${t.textMain} mb-0.5`}>나의 기도함</span>
-                 <span className={`text-[11.5px] font-medium text-[#8E8E93] break-keep`}>나의 기도와 중보기도</span>
+              <div onClick={() => setActiveScreen('prayer')} className={`${t.cardBg} p-4 sm:p-5 rounded-[22px] cursor-pointer shadow-xs border ${t.border} flex flex-col active:scale-[0.98] transition-transform group`}>
+                 <div className="w-10 h-10 rounded-2xl bg-[#34C759]/12 text-[#34C759] flex items-center justify-center mb-2.5"><IconPray className="w-5 h-5"/></div>
+                 <span className={`text-[14.5px] font-black ${t.textMain} mb-0.5`}>나의 기도함</span>
+                 <span className="text-[11.5px] font-medium text-[#8E8E93] break-keep">나의 기도와 중보기도</span>
               </div>
            </div>
 
-           <div className="mb-3 flex justify-between items-center px-1">
-              <h3 className={`text-[14px] font-bold ${t.textMain} flex items-center gap-1.5`}><IconHeadphones className={`w-4 h-4 text-[#AF52DE]`} /> 유튜브 찬양 채널</h3>
+           <div className="mb-2 flex justify-between items-center px-1">
+              <h3 className={`text-[13.5px] font-bold ${t.textMain} flex items-center gap-1.5`}><IconHeadphones className="w-4 h-4 text-[#AF52DE]" /> 유튜브 찬양 채널</h3>
            </div>
            <CoverCarousel items={praiseChannels} t={t} />
         </div>
         
         {/* 4. 목장 나눔 */}
-        <div className="mb-10">
-           <h2 className={`text-[18px] font-bold ${t.textMain} tracking-tight mb-3 flex items-center gap-2 px-1`}><IconPeople className={`w-5 h-5 text-[#FF9500]`} /> 목장 나눔</h2>
-           <div onClick={() => setActiveScreen('cell')} className={`${t.cardBg} p-5 md:p-6 rounded-[24px] cursor-pointer shadow-sm border ${t.border} flex items-center justify-between active:scale-[0.99] transition-transform group`}>
+        <div className="mb-9">
+           <h2 className={`text-[17px] font-black ${t.textMain} tracking-tight mb-3 flex items-center gap-2 px-1`}><IconPeople className="w-5 h-5 text-[#FF9500]" /> 목장 커뮤니티</h2>
+           <div onClick={() => setActiveScreen('cell')} className={`${t.cardBg} p-5 rounded-[24px] cursor-pointer shadow-xs border ${t.border} flex items-center justify-between active:scale-[0.99] transition-transform group`}>
               <div className="flex items-center gap-4">
-                 <div className={`w-12 h-12 bg-[#FF9500]/10 rounded-full flex items-center justify-center text-[#FF9500]`}><IconPeople className="w-6 h-6" /></div>
+                 <div className="w-12 h-12 bg-[#FF9500]/12 rounded-2xl flex items-center justify-center text-[#FF9500] shrink-0"><IconPeople className="w-6 h-6" /></div>
                  <div className="flex flex-col">
-                    <span className={`text-[15px] font-bold ${t.textMain}`}>목장 나눔 (작성/조회)</span>
-                    <span className={`text-[11.5px] font-medium text-[#8E8E93] mt-0.5`}>{authUser?.role === 'admin' ? '관리자 권한 활성화됨' : '말씀/감사 나눔 제출하기'}</span>
+                    <span className={`text-[15px] font-black ${t.textMain}`}>목장 나눔 (작성/조회)</span>
+                    <span className="text-[11.5px] font-medium text-[#8E8E93] mt-0.5">{authUser?.role === 'admin' ? '관리자 권한 활성화됨' : '말씀/감사 나눔 제출하기'}</span>
                  </div>
               </div>
-              <IconChevronRight className={`w-5 h-5 text-[#C7C7CC]`} />
+              <IconChevronRight className="w-5 h-5 text-[#C7C7CC]" />
            </div>
         </div>
 
-        {/* 5. 통합 대시보드 */}
+        {/* 5. 성경 연구 & 추가 메뉴 (📱 아이폰식 꾹 눌러 위치 변경 & 안전 저장 탑재) */}
         <div className="mb-12">
            <div className="flex justify-between items-center px-1 mb-3">
-             <h2 className={`text-[18px] font-bold ${t.textMain} tracking-tight flex items-center gap-2`}>
-               <IconAnalytics className={`w-5 h-5 text-[#5AC8FA]`} /> 성경 연구 & 추가 메뉴
-             </h2>
+             <div>
+               <h2 className={`text-[17px] font-black ${t.textMain} tracking-tight flex items-center gap-2`}>
+                 <IconAnalytics className="w-5 h-5 text-[#5AC8FA]" /> 성경 연구 & 추가 메뉴
+               </h2>
+               <span className="text-[11px] font-medium text-[#8E8E93] block mt-0.5">
+                 {isEditMode ? '📱 카드를 드래그하거나 ◀ ▶ 버튼으로 순서를 바꾸세요' : '💡 카드를 0.5초간 꾹 누르면 아이폰처럼 순서를 바꿀 수 있어요'}
+               </span>
+             </div>
+
+             <div className="flex items-center gap-1.5 shrink-0">
+               {isEditMode && (
+                 <button
+                   type="button"
+                   onClick={() => saveNewOrder(MASTER_MENUS.map(m => m.id))}
+                   className="px-2.5 py-1.5 rounded-xl text-[11px] font-bold bg-slate-200 dark:bg-white/10 text-slate-700 dark:text-slate-300 cursor-pointer"
+                 >
+                   초기화
+                 </button>
+               )}
+               <button
+                 type="button"
+                 onClick={() => setIsEditMode(!isEditMode)}
+                 className={`px-3 py-1.5 rounded-xl text-[11.5px] font-black transition-all cursor-pointer ${
+                   isEditMode
+                     ? 'bg-[#007AFF] text-white shadow-md scale-105'
+                     : 'bg-[#007AFF]/12 text-[#007AFF]'
+                 }`}
+               >
+                 {isEditMode ? '✓ 완료' : '순서편집'}
+               </button>
+             </div>
            </div>
            
-           <div className="grid grid-cols-2 gap-3">
-             {menuItems.map((item, index) => (
+           <div 
+             onTouchMove={handleTouchMoveGrid}
+             className="grid grid-cols-2 sm:grid-cols-3 gap-3"
+           >
+             {orderedMenus.map((item, index) => (
                <div 
-                 key={item.id} 
-                 draggable
-                 onDragStart={() => handleDragStart(index)}
-                 onDragEnter={() => handleDragEnter(index)}
-                 onDragEnd={handleDragEnd}
+                 key={item.id}
+                 data-menu-idx={index}
+                 draggable={isEditMode}
+                 onDragStart={() => setDraggedIdx(index)}
+                 onDragEnter={() => {
+                   if (draggedIdx !== null && draggedIdx !== index) {
+                     handleSwapMenuOrder(draggedIdx, index);
+                     setDraggedIdx(index);
+                   }
+                 }}
+                 onDragEnd={() => setDraggedIdx(null)}
                  onDragOver={(e) => e.preventDefault()}
-                 onClick={() => setActiveScreen(item.id)} 
-                 className={`${t.cardBg} p-3.5 rounded-[20px] cursor-grab shadow-sm border ${t.border} flex flex-col justify-between h-[95px] active:scale-[0.98] transition-all select-none ${draggedItem === index ? 'opacity-30 scale-95' : 'opacity-100'}`}
+                 onTouchStart={() => handleTouchStartCard(index)}
+                 onTouchEnd={handleTouchEndCard}
+                 onContextMenu={(e) => { e.preventDefault(); setIsEditMode(true); }}
+                 onClick={() => {
+                   if (isEditMode) return;
+                   setActiveScreen(item.id);
+                 }} 
+                 className={`${t.cardBg} p-3.5 rounded-[22px] shadow-xs border transition-all select-none relative flex flex-col justify-between h-[102px] ${
+                   isEditMode
+                     ? 'ios-jiggle-card border-[#007AFF] ring-2 ring-[#007AFF]/30 cursor-grab'
+                     : `${t.border} cursor-pointer active:scale-[0.98] hover:border-[#007AFF]/40`
+                 } ${draggedIdx === index ? 'opacity-60 scale-95' : 'opacity-100'}`}
                >
-                  <div className={`w-8 h-8 rounded-[10px] flex items-center justify-center ${item.bg} ${item.color}`}>
-                    {item.icon}
+                  <div className="flex items-center justify-between">
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${item.bg} ${item.color}`}>
+                      {item.icon}
+                    </div>
+
+                    {isEditMode ? (
+                      <div className="flex items-center gap-1 z-20" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          type="button"
+                          onClick={() => handleSwapMenuOrder(index, index - 1)}
+                          disabled={index === 0}
+                          className="w-6 h-6 rounded-full bg-black/10 dark:bg-white/15 text-[10px] font-black flex items-center justify-center disabled:opacity-25 cursor-pointer"
+                        >
+                          ◀
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleSwapMenuOrder(index, index + 1)}
+                          disabled={index === orderedMenus.length - 1}
+                          className="w-6 h-6 rounded-full bg-black/10 dark:bg-white/15 text-[10px] font-black flex items-center justify-center disabled:opacity-25 cursor-pointer"
+                        >
+                          ▶
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-[10px] font-mono opacity-30 font-bold">#{index + 1}</span>
+                    )}
                   </div>
+
                   <div className="mt-auto pointer-events-none">
-                      <span className={`text-[13.5px] font-bold ${t.textMain} block truncate`}>{item.title}</span>
-                      <span className={`text-[11px] font-medium text-[#8E8E93] truncate block mt-0.5`}>{item.desc}</span>
+                      <span className={`text-[13.5px] font-black ${t.textMain} block truncate`}>{item.title}</span>
+                      <span className="text-[11px] font-medium text-[#8E8E93] truncate block mt-0.5">{item.desc}</span>
                   </div>
                </div>
              ))}
              
-             <div onClick={() => setActiveScreen('board')} className={`col-span-2 ${t.cardBg} p-4 rounded-[20px] cursor-pointer shadow-sm border ${t.border} flex items-center justify-between active:scale-[0.98] transition-transform relative mt-1`}>
+             <div onClick={() => setActiveScreen('board')} className={`col-span-2 sm:col-span-3 ${t.cardBg} p-4 rounded-[22px] cursor-pointer shadow-xs border ${t.border} flex items-center justify-between active:scale-[0.99] transition-transform relative mt-1`}>
                  <div className="flex items-center gap-3.5">
-                     <div className={`w-10 h-10 rounded-[12px] flex items-center justify-center bg-[#FF9500]/10 text-[#FF9500]`}><IconUsers className="w-5 h-5" /></div>
+                     <div className="w-11 h-11 rounded-2xl flex items-center justify-center bg-[#FF9500]/12 text-[#FF9500] shrink-0"><IconUsers className="w-5 h-5" /></div>
                      <div className="flex flex-col">
-                         <span className={`text-[14.5px] font-bold ${t.textMain} block`}>공동체 게시판</span>
-                         <span className={`text-[11.5px] font-medium text-[#8E8E93] mt-0.5`}>성도들의 기도와 감사 나눔</span>
+                         <span className={`text-[14.5px] font-black ${t.textMain} block`}>공동체 게시판</span>
+                         <span className="text-[11.5px] font-medium text-[#8E8E93] mt-0.5">성도들의 기도와 감사 나눔</span>
                      </div>
                  </div>
                  {hasNewBoardPost && <span className="absolute top-4 right-4 w-2 h-2 bg-[#FF2D55] rounded-full animate-pulse"></span>}
-                 <IconChevronRight className={`w-4 h-4 text-[#C7C7CC]`} />
+                 <IconChevronRight className="w-4 h-4 text-[#C7C7CC]" />
              </div>
            </div>
         </div>
@@ -641,7 +982,7 @@ const FULL_BIBLE_MAP = {
 };
 
 const getLocalToday = () => { const o = new Date().getTimezoneOffset() * 60000; return new Date(Date.now() - o).toISOString().split('T')[0]; };
-const cleanText = (t) => { if (!t) return ''; let str = typeof t === 'object' ? (t.text || t.content || JSON.stringify(t)) : String(t); return str.replace(/|'|\x1B|\(가정\d*\)|\(개인\d*\)|\(개인\)/gi, '').trim(); };
+const cleanText = (t) => { if (!t) return ''; let str = typeof t === 'object' ? (t.text || t.content || JSON.stringify(t)) : String(t); return str.replace(/ |'|\x1B|\(가정\d*\)|\(개인\d*\)|\(개인\)/gi, '').trim(); };
 
 const parseBibleRefExt = (r) => {
     if (!r) return null;
@@ -691,14 +1032,14 @@ const isGisangogi = (d) => {
 };
 
 const useTheme = (isD) => useMemo(() => ({
-  appBg: isD ? 'bg-[#000000]' : 'bg-[#F5F5F7]',
-  pageBg: isD ? 'bg-[#000000]' : 'bg-[#F5F5F7]',
-  cardBg: isD ? 'bg-[#1C1C1E] border-[#38383A]' : 'bg-white border-[#E5E5EA]',
+  appBg: isD ? 'bg-[#090C12]' : 'bg-[#F4F6FA]',
+  pageBg: isD ? 'bg-[#090C12]' : 'bg-[#F4F6FA]',
+  cardBg: isD ? 'bg-[#161922] border-[#2A2F3D]' : 'bg-white border-[#E5E8F0]',
   textMain: isD ? 'text-[#FFFFFF]' : 'text-[#1D1D1F]',
   textSub: isD ? 'text-[#EBEBF5]/60' : 'text-[#8E8E93]',
   inputBg: isD ? 'bg-[#2C2C2E] text-[#FFFFFF] border-[#38383A]' : 'bg-[#F2F2F7] text-[#1D1D1F] border-transparent',
   tabBar: isD ? 'bg-[#1C1C1E]/90 border-[#38383A]' : 'bg-white/90 border-[#E5E5EA]',
-  border: isD ? 'border-[#38383A]' : 'border-[#E5E5EA]',
+  border: isD ? 'border-[#2A2F3D]' : 'border-[#E5E8F0]',
   iconDarkBg: isD ? 'bg-[#2C2C2E]' : 'bg-[#F2F2F7]', 
   primaryBg: isD ? 'bg-[#0A84FF]' : 'bg-[#007AFF]', 
   primaryText: isD ? 'text-[#0A84FF]' : 'text-[#007AFF]',
@@ -732,6 +1073,21 @@ const GlobalStyles = () => (
     [contenteditable]:empty:before { content: attr(placeholder); color: #8E8E93; pointer-events: none; display: block; white-space: pre-wrap; font-weight: normal;}
     .note-lines { background-image: repeating-linear-gradient(transparent, transparent 37px, rgba(142,142,147,0.15) 38px); background-size: 100% 38px; line-height: 38px; padding-top: 6px; background-attachment: local; }
     .dark .note-lines { background-image: repeating-linear-gradient(transparent, transparent 37px, rgba(235,235,245,0.1) 38px); }
+
+    @keyframes gtWaveLoop {
+      0% { transform: translate3d(0, 0, 0); }
+      50% { transform: translate3d(-25%, 6px, 0); }
+      100% { transform: translate3d(-50%, 0, 0); }
+    }
+    .gt-wave-anim-slow { animation: gtWaveLoop 18s ease-in-out infinite; }
+    .gt-wave-anim-fast { animation: gtWaveLoop 13s ease-in-out infinite reverse; }
+
+    @keyframes iosJiggle {
+      0% { transform: rotate(-1.1deg) translateY(0px); }
+      50% { transform: rotate(1.1deg) translateY(-1px); }
+      100% { transform: rotate(-1.1deg) translateY(0px); }
+    }
+    .gt-ios-jiggle { animation: iosJiggle 0.28s ease-in-out infinite; }
   `}</style>
 );
 
@@ -811,7 +1167,7 @@ const SubPageHeader = ({ title, onBack, t, isSp=false, spTitle="", spDesc="", to
     </div>
   );
   return (
-    <div className={`${t.cardBg} px-5 py-4 z-[60] shrink-0 flex items-center justify-between relative border-b ${t.border} pointer-events-auto`}>
+    <div className={`${t.cardBg} px-5 py-4 z-[60] shrink-0 flex items-center justify-between relative border-b${t.border} pointer-events-auto`}>
       <button onClick={onBack} className={`${t.textMain} hover:opacity-70 transition-opacity`}><IconArrowLeft className="w-5 h-5"/></button>
       <h1 className={`text-[16px] font-black ${t.textMain} tracking-tight`}>{title}</h1>
       {toggleSidebar ? <button onClick={toggleSidebar} className={`${t.textMain} hover:opacity-70 transition-opacity`}><IconMenu className="w-5 h-5"/></button> : <div className="w-5 h-5"></div>}
@@ -1141,14 +1497,12 @@ export default function CompleteQtApp() {
 
   const store = useAppStore();
 
-  // 🌟 [통합 정리 1] activeScreen 초기화 단일 선언 (중복 제거 완료)
   useEffect(() => {
     if (!store.activeScreen) {
       store.setActiveScreen('meditationPilgrimage');
     }
   }, [store.activeScreen]);
 
-  // 1단계: store 상태 연결
   const {
     authUser, setAuthUser,
     activeScreen, setActiveScreen,
@@ -1163,7 +1517,6 @@ export default function CompleteQtApp() {
     generalNotes, setGeneralNotes
   } = store;
 
-  // 2단계: 기존 세션 복원 및 app_users 자동 등록 + 관제 핑 활성화
   useEffect(() => {
     const localUserRaw = localStorage.getItem('church_auth_user');
     let currentUserObj = authUser;
@@ -1217,15 +1570,12 @@ export default function CompleteQtApp() {
     }
   }, [authUser?.name, setAuthUser]);
 
-  // QR 자동 출석 훅
   useAutoQRAttendance(authUser);
 
-  // 원스트림 글로벌 사이드시트 Drawer 상태
   const [globalDrawer, setGlobalDrawer] = useState({ isOpen: false, type: null });
   const openGlobalDrawer = (type) => setGlobalDrawer({ isOpen: true, type });
   const closeGlobalDrawer = () => setGlobalDrawer({ isOpen: false, type: null });
 
-  // 활동 로그 수집
   useEffect(() => {
     const currentName = typeof authUser === 'object' ? authUser?.name : authUser;
     if (currentName) {
@@ -1315,7 +1665,6 @@ export default function CompleteQtApp() {
   const handleMemoAdd = (animal) => { updateDay({ memos: [...getArr(currDay.memos), { id: Date.now(), animal, text: '', x: window.innerWidth/2 - 80, y: 150 }] }); };
   const handleFileUpload = (e) => { const file = e.target.files[0]; if (file) { const reader = new FileReader(); reader.onload = (ev) => { updateDay({ stickers: [...getArr(currDay.stickers), { id: Date.now(), src: ev.target.result, isEmoji: false, x: window.innerWidth/2 - 40, y: 150 }] }); }; reader.readAsDataURL(file); } };
 
-  // 15초 주기 클라우드 동기화
   const fetchCloudData = useCallback(async () => {
     if (!supabase || document.hidden) return;
     try {
@@ -1428,6 +1777,7 @@ export default function CompleteQtApp() {
     { id: 11, title: '제이어스', url: 'https://youtube.com/@jusministry?si=Q6p4biaIcH2Uh7JM', bg: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=800&q=80' }
   ];
 
+  // ✅ 수정 후 (정상적인 || 연산자 적용)
   const copyCellReport = () => { const pray = getArr(globalCellData.groupPrayers).map((p,i)=>`${i+1}. [${p.name}] ${p.text}`).join('\n'); const txt = `[목장 모임 보고서]\n목장명: ${authUser?.group||''}\n작성자: ${authUser?.name||''}\n\n[주간 공지사항]\n${globalCellData.notice||''}\n\n[목장 중보기도]\n${globalCellData.cellIntercession||''}\n\n[식구 기도제목]\n${pray}`; navigator.clipboard.writeText(txt); alert("목장 보고서가 복사되었습니다!"); };
   
   const findBibleText = (refText) => { 
@@ -1510,12 +1860,12 @@ export default function CompleteQtApp() {
   ];
 
   const renderToolbar = (editorRef, showFont = true, handleStkAdd, handleMmAdd, handleFileUp) => (
-  <div className={`w-full ${t.cardBg} border-b ${t.border} p-1 md:p-1.5 flex flex-wrap gap-1 items-center rounded-t-[20px] ignore-draw z-[70] shrink-0 shadow-sm pointer-events-auto relative`}>
+  <div className={`w-full ${t.cardBg} border-b${t.border} p-1 md:p-1.5 flex flex-wrap gap-1 items-center rounded-t-[20px] ignore-draw z-[70] shrink-0 shadow-sm pointer-events-auto relative`}>
      {showFont && (
          <div className={`flex items-center gap-1 shrink-0 border-r pr-2 ${t.border} mr-1`}>
-              <button onClick={()=>editorRef?.current?.exec('bold')} className={`w-7 h-7 flex items-center justify-center font-extrabold rounded-lg ${t.textMain} ${t.btnGhost}`} title="굵게">B</button>
-              <button onClick={()=>editorRef?.current?.exec('underline')} className={`w-7 h-7 flex items-center justify-center font-extrabold underline rounded-lg ${t.textMain} ${t.btnGhost}`} title="밑줄">U</button>
-              <select onChange={(e)=>editorRef?.current?.exec('fontSize', e.target.value)} className={`h-7 px-2 text-[12px] font-bold rounded-lg border outline-none ${t.inputBg} ${t.textMain} cursor-pointer`}><option value="3">본문</option><option value="4">중간</option><option value="5">크게</option></select>
+              <button onClick={()=>editorRef?.current?.exec('bold')} className={`w-7 h-7 flex items-center justify-center font-extrabold rounded-lg ${t.textMain}${t.btnGhost}`} title="굵게">B</button>
+              <button onClick={()=>editorRef?.current?.exec('underline')} className={`w-7 h-7 flex items-center justify-center font-extrabold underline rounded-lg ${t.textMain}${t.btnGhost}`} title="밑줄">U</button>
+              <select onChange={(e)=>editorRef?.current?.exec('fontSize', e.target.value)} className={`h-7 px-2 text-[12px] font-bold rounded-lg border outline-none ${t.inputBg}${t.textMain} cursor-pointer`}><option value="3">본문</option><option value="4">중간</option><option value="5">크게</option></select>
               <button onClick={()=>editorRef?.current?.insertTable()} className={`h-7 px-2.5 text-[12px] font-bold ${t.primaryText} rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/30 whitespace-nowrap`}>표삽입</button>
          </div>
      )}
@@ -1523,7 +1873,7 @@ export default function CompleteQtApp() {
      {handleStkAdd && (
          <details className={`relative shrink-0 border-r pr-2 ${t.border} mr-1 group`}>
             <summary className={`h-7 px-2.5 flex items-center justify-center rounded-lg bg-[#FF2D55]/10 text-[#FF2D55] shadow-sm text-[12px] font-bold hover:bg-[#FF2D55]/20 cursor-pointer list-none whitespace-nowrap`} title="다꾸 스티커">✨ 다꾸</summary>
-            <div className={`absolute top-9 left-0 ${t.cardBg} p-4 rounded-2xl shadow-2xl border ${t.border} w-[280px] h-[320px] overflow-y-auto flex flex-col gap-3 z-[110]`}>
+            <div className={`absolute top-9 left-0 ${t.cardBg} p-4 rounded-2xl shadow-2xl border${t.border} w-[280px] h-[320px] overflow-y-auto flex flex-col gap-3 z-[110]`}>
                <div className={`flex justify-between items-center border-b ${t.border} pb-2`}><span className={`text-[12px] font-bold ${t.textMain}`}>다꾸 스티커/메모</span><label className="text-[11px] bg-[#007AFF]/10 text-[#007AFF] px-2 py-1 rounded-md cursor-pointer whitespace-nowrap font-bold">사진+ <input type="file" accept="image/*" onChange={(e)=>{if(handleFileUp) handleFileUp(e); e.target.parentElement.parentElement.parentElement.removeAttribute('open');}} className="hidden" /></label></div>
                <div className="grid grid-cols-6 gap-2 mt-1">
                   {richStickers.map((st, i) => (
@@ -1602,13 +1952,21 @@ export default function CompleteQtApp() {
           />
         );
       
-        case 'jerusalem_tycoon':
-        case 'jerusalemTycoon':
-          return <JerusalemTycoon setActiveScreen={setActiveScreen} />;
+      case 'jerusalem_tycoon':
+      case 'jerusalemTycoon':
+        return <JerusalemTycoon setActiveScreen={setActiveScreen} />;
 
-          case 'galaxy':
+      // 📍 src/App.js (763번째 줄 근처)
+      case 'galaxy':
       case 'bibleKnowledgeGalaxy':
-        return <BibleKnowledgeGalaxy setActiveScreen={setActiveScreen} />;
+        return (
+          <BibleKnowledgeGalaxy 
+            setActiveScreen={setActiveScreen}
+            setCurrentChapId={setCurrentChapId}
+            setBibleViewMode={setBibleViewMode}
+            setTargetVerse={setTargetVerse}
+          />
+        );
 
       case 'sermonAnalytics':
       case 'sermonAnalysis':
@@ -1775,9 +2133,9 @@ export default function CompleteQtApp() {
       case 'bibleMap':
         return (
           <div className="flex flex-col h-full relative overflow-hidden">
-            <div className={`px-5 py-4 ${t.cardBg} border-b ${t.border} flex items-center justify-between z-10 shadow-sm`}>
+            <div className={`px-5 py-4 ${t.cardBg} border-b${t.border} flex items-center justify-between z-10 shadow-sm`}>
               <div className="flex items-center gap-3">
-                <button onClick={() => setActiveScreen('bibleWikiAdvanced')} className={`p-2 rounded-xl ${t.btnGhost} ${t.textMain}`}><IconArrowLeft className="w-5 h-5"/></button>
+                <button onClick={() => setActiveScreen('bibleWikiAdvanced')} className={`p-2 rounded-xl ${t.btnGhost}${t.textMain}`}><IconArrowLeft className="w-5 h-5"/></button>
                 <h2 className={`text-[16px] font-black tracking-tight ${t.textMain} flex items-center gap-2`}><IconMap className="w-5 h-5 text-[#007AFF]"/> 입체 성경 지도</h2>
               </div>
             </div>
@@ -1882,7 +2240,7 @@ export default function CompleteQtApp() {
           />
         );
       
-        case 'interlinear_kids':
+      case 'interlinear_kids':
       case 'interlinearKids':
         return (
           <InterlinearKids 
@@ -2022,8 +2380,8 @@ export default function CompleteQtApp() {
             <div className="fixed inset-0 z-[300] bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center sm:p-4 pointer-events-auto transition-all">
               
               {modal.type === 'generalNoteHistory' && (
-                <div className={`flex flex-col h-[90vh] sm:h-[85vh] w-full max-w-[600px] mx-auto rounded-t-[32px] sm:rounded-[32px] overflow-hidden shadow-2xl ${t.pageBg} absolute bottom-0 sm:static pointer-events-auto border ${t.border} transition-transform`}>
-                  <div className={`flex justify-between items-center px-6 py-5 ${t.cardBg} border-b ${t.border} shrink-0`}>
+                <div className={`flex flex-col h-[90vh] sm:h-[85vh] w-full max-w-[600px] mx-auto rounded-t-[32px] sm:rounded-[32px] overflow-hidden shadow-2xl ${t.pageBg} absolute bottom-0 sm:static pointer-events-auto border${t.border} transition-transform`}>
+                  <div className={`flex justify-between items-center px-6 py-5 ${t.cardBg} border-b${t.border} shrink-0`}>
                       <h2 className={`text-[17px] font-black tracking-tight ${t.textMain}`}>나의 자유 노트 이력</h2>
                       <button onClick={closeModal} className={`${t.btnSecondary} px-4 py-2 rounded-full text-[13px] font-bold shadow-sm`}>닫기</button>
                   </div>
@@ -2034,7 +2392,7 @@ export default function CompleteQtApp() {
                           getArr(generalNotes).map(note => (
                               <div 
                                   key={note.id} 
-                                  className={`${t.cardBg} p-5 rounded-[24px] border ${t.border} shadow-sm flex flex-col gap-2 cursor-pointer hover:scale-[1.01] transition-transform`}
+                                  className={`${t.cardBg} p-5 rounded-[24px] border${t.border} shadow-sm flex flex-col gap-2 cursor-pointer hover:scale-[1.01] transition-transform`}
                                   onClick={() => { setCurrentGenNoteId(note.id); closeModal(); }}
                               >
                                  <div className="flex justify-between items-center border-b border-dashed border-[#E5E5EA] dark:border-[#38383A] pb-3 mb-2">
@@ -2055,8 +2413,8 @@ export default function CompleteQtApp() {
               )}
 
               {modal.type === 'familyHistory' && (
-                <div className={`flex flex-col h-[90vh] sm:h-[85vh] w-full max-w-[600px] mx-auto rounded-t-[32px] sm:rounded-[32px] overflow-hidden shadow-2xl ${t.pageBg} absolute bottom-0 sm:static pointer-events-auto border ${t.border}`}>
-                  <div className={`flex justify-between items-center px-6 py-5 ${t.cardBg} border-b ${t.border} shrink-0`}>
+                <div className={`flex flex-col h-[90vh] sm:h-[85vh] w-full max-w-[600px] mx-auto rounded-t-[32px] sm:rounded-[32px] overflow-hidden shadow-2xl ${t.pageBg} absolute bottom-0 sm:static pointer-events-auto border${t.border}`}>
+                  <div className={`flex justify-between items-center px-6 py-5 ${t.cardBg} border-b${t.border} shrink-0`}>
                       <h2 className={`text-[17px] font-black tracking-tight ${t.textMain}`}>가정예배 이력 조회</h2>
                       <button onClick={closeModal} className={`${t.btnSecondary} px-4 py-2 rounded-full text-[13px] font-bold shadow-sm`}>닫기</button>
                   </div>
@@ -2065,7 +2423,7 @@ export default function CompleteQtApp() {
                           <div className={`text-center py-20 ${t.textSub} text-[15px] font-bold`}>저장된 가정예배 이력이 없습니다.</div>
                       ) : (
                           getArr(familyHistory).map(record => (
-                              <div key={record.id} className={`${t.cardBg} p-6 rounded-[24px] border ${t.border} shadow-sm flex flex-col gap-4`}>
+                              <div key={record.id} className={`${t.cardBg} p-6 rounded-[24px] border${t.border} shadow-sm flex flex-col gap-4`}>
                                  <div className="flex justify-between items-center border-b border-[#E5E5EA] dark:border-[#38383A] pb-3">
                                      <span className={`text-[16px] font-black ${t.primaryText}`}>{record.date} 예배</span>
                                      <span className={`text-[13px] ${t.textSub} font-bold`}>참석자: {record.data.attendees || '미입력'}</span>
@@ -2086,8 +2444,8 @@ export default function CompleteQtApp() {
               )}
 
               {modal.type === 'cellHistory' && (
-                <div className={`flex flex-col h-[90vh] sm:h-[85vh] w-full max-w-[600px] mx-auto rounded-t-[32px] sm:rounded-[32px] overflow-hidden shadow-2xl ${t.pageBg} absolute bottom-0 sm:static pointer-events-auto border ${t.border}`}>
-                  <div className={`flex justify-between items-center px-6 py-5 ${t.cardBg} border-b ${t.border} shrink-0`}>
+                <div className={`flex flex-col h-[90vh] sm:h-[85vh] w-full max-w-[600px] mx-auto rounded-t-[32px] sm:rounded-[32px] overflow-hidden shadow-2xl ${t.pageBg} absolute bottom-0 sm:static pointer-events-auto border${t.border}`}>
+                  <div className={`flex justify-between items-center px-6 py-5 ${t.cardBg} border-b${t.border} shrink-0`}>
                       <h2 className={`text-[17px] font-black tracking-tight ${t.textMain}`}>목장나눔 이력 조회</h2>
                       <button onClick={closeModal} className={`${t.btnSecondary} px-4 py-2 rounded-full text-[13px] font-bold shadow-sm`}>닫기</button>
                   </div>
@@ -2096,7 +2454,7 @@ export default function CompleteQtApp() {
                           <div className={`text-center py-20 ${t.textSub} text-[15px] font-bold`}>저장된 목장나눔 이력이 없습니다.</div>
                       ) : (
                           getArr(cellHistory).map(record => (
-                              <div key={record.id} className={`${t.cardBg} p-6 rounded-[24px] border ${t.border} shadow-sm flex flex-col gap-4`}>
+                              <div key={record.id} className={`${t.cardBg} p-6 rounded-[24px] border${t.border} shadow-sm flex flex-col gap-4`}>
                                  <div className="flex justify-between items-center border-b border-[#E5E5EA] dark:border-[#38383A] pb-3">
                                      <span className={`text-[16px] font-black text-[#FF9500]`}>{record.week} 모임</span>
                                      <span className={`text-[12px] ${t.textSub} font-bold`}>({record.date} 저장)</span>
@@ -2114,7 +2472,7 @@ export default function CompleteQtApp() {
               )}
 
               {modal.type === 'wikiDetail' ? (
-                 <div className={`${t.cardBg} sm:rounded-[32px] rounded-t-[32px] p-0 w-full max-w-[480px] mx-auto overflow-hidden h-[90vh] sm:h-auto max-h-[85vh] flex flex-col shadow-2xl border ${t.border} absolute bottom-0 sm:static pointer-events-auto`}>
+                 <div className={`${t.cardBg} sm:rounded-[32px] rounded-t-[32px] p-0 w-full max-w-[480px] mx-auto overflow-hidden h-[90vh] sm:h-auto max-h-[85vh] flex flex-col shadow-2xl border${t.border} absolute bottom-0 sm:static pointer-events-auto`}>
                    <div className={`${isDarkMode ? 'bg-[#1C1C1E]' : 'bg-[#F2F2F7]'} flex items-center justify-between px-6 py-5 shrink-0 border-b ${t.border}`}>
                       <div className="flex items-center gap-2">
                          <span className={`text-[16px] font-black flex items-center gap-1.5 ${t.textMain}`}><IconMap className="w-5 h-5 text-[#34C759]"/> 사건 상세정보</span>
@@ -2153,10 +2511,10 @@ export default function CompleteQtApp() {
                    <button onClick={closeModal} className="absolute top-5 right-5 w-10 h-10 flex items-center justify-center bg-black/30 text-white rounded-full font-black text-xl drop-shadow-md z-20 backdrop-blur-md border border-white/10">✕</button>
                  </div>
               ) : (
-                <div className={`${t.cardBg} sm:rounded-[32px] rounded-t-[32px] p-0 w-full max-w-[500px] mx-auto overflow-hidden ${['testimony', 'bibleNoteList', 'thanks', 'sermonList'].includes(modal.type) ? 'h-[95vh] sm:h-[90vh]' : modal.type === 'strongsDic' ? 'h-auto max-h-[85vh]' : 'h-[90vh] sm:h-[80vh]'} flex flex-col shadow-2xl border ${t.border} relative pointer-events-auto absolute bottom-0 sm:static transition-transform`}>
+                <div className={`${t.cardBg} sm:rounded-[32px] rounded-t-[32px] p-0 w-full max-w-[500px] mx-auto overflow-hidden ${['testimony', 'bibleNoteList', 'thanks', 'sermonList'].includes(modal.type) ? 'h-[95vh] sm:h-[90vh]' : modal.type === 'strongsDic' ? 'h-auto max-h-[85vh]' : 'h-[90vh] sm:h-[80vh]'} flex flex-col shadow-2xl border${t.border} relative pointer-events-auto absolute bottom-0 sm:static transition-transform`}>
                   
                   {!['testimony', 'bibleNoteList', 'thanks', 'sermonList', 'strongsDic', 'wikiDetail', 'generalNoteHistory', 'familyHistory', 'cellHistory', 'globalPrayer', 'globalIntercession'].includes(modal.type) && (
-                    <div className={`flex justify-between items-center px-6 py-5 border-b ${t.border} shrink-0 ${t.cardBg}`}>
+                    <div className={`flex justify-between items-center px-6 py-5 border-b ${t.border} shrink-0${t.cardBg}`}>
                       <h2 className={`text-[17px] font-black tracking-tight ${t.textMain}`}>{modal.type==='bibleRef' ? '말씀 본문 찾기' : modal.type==='bibleChallenge' ? '성경 365 통독표' : '기록하기'}</h2>
                       <div className="flex gap-2">
                          <button onClick={closeModal} className={`${t.btnSecondary} px-4 py-2 rounded-full text-[13px] font-bold shadow-sm`}>닫기</button>
@@ -2168,7 +2526,7 @@ export default function CompleteQtApp() {
                     
                     {modal.type === 'thanks' && (
                       <div className={`flex flex-col h-full ${t.bgBody} absolute inset-0 z-50`}>
-                         <div className={`flex justify-between items-center px-6 py-5 ${t.cardBg} border-b ${t.border} shrink-0`}>
+                         <div className={`flex justify-between items-center px-6 py-5 ${t.cardBg} border-b${t.border} shrink-0`}>
                             <h2 className={`text-[17px] font-black tracking-tight ${t.textMain}`}>오늘의 감사 리스트 <span className={`text-[13px] font-normal ${t.textSub} ml-1`}>({date})</span></h2>
                             <div className="flex gap-2 shrink-0">
                                <button onClick={handleCopy} className={`${t.btnSecondary} px-4 py-2 rounded-full text-[13px] font-bold`}>복사</button>
@@ -2190,7 +2548,7 @@ export default function CompleteQtApp() {
                                     setMLocal({...mLocal, thanksText: val}); 
                                     updateDay({thanksText: val, checks: { ...(currDay.checks||{}), '감사': true }}); 
                                 }} 
-                                className={`w-full flex-1 p-5 rounded-[24px] ${t.cardBg} ${t.textMain} border ${t.border} shadow-inner outline-none resize-none overflow-hidden text-[16px] leading-[1.8] h-full relative pointer-events-auto font-sans note-lines`} 
+                                className={`w-full flex-1 p-5 rounded-[24px] ${t.cardBg} ${t.textMain} border${t.border} shadow-inner outline-none resize-none overflow-hidden text-[16px] leading-[1.8] h-full relative pointer-events-auto font-sans note-lines`} 
                                 placeholder="감사한 내용을 적어보세요..." 
                                 onPointerDown={e => e.stopPropagation()} 
                              />
@@ -2200,7 +2558,7 @@ export default function CompleteQtApp() {
 
                     {modal.type === 'testimony' && (
                       <div className={`absolute inset-0 flex flex-col h-full ${t.bgBody} z-50`}>
-                        <div className={`flex justify-between items-center px-6 py-5 ${t.cardBg} border-b ${t.border} shrink-0 z-50`}>
+                        <div className={`flex justify-between items-center px-6 py-5 ${t.cardBg} border-b${t.border} shrink-0 z-50`}>
                           <h2 className={`text-[17px] font-black tracking-tight ${t.textMain}`}>나의 묵상 간증</h2>
                           <div className="flex gap-2 shrink-0">
                              <button onClick={() => { const txt = currDay.testimony || ''; navigator.clipboard.writeText(txt); alert("복사되었습니다."); }} className={`${t.btnSecondary} px-4 py-2 rounded-full text-[13px] font-bold`}>복사</button>
@@ -2212,18 +2570,18 @@ export default function CompleteQtApp() {
                           </div>
                         </div>
                         
-                        <div className={`${t.cardBg} px-6 py-3 border-b ${t.border} flex justify-between items-center shrink-0`}>
+                        <div className={`${t.cardBg} px-6 py-3 border-b${t.border} flex justify-between items-center shrink-0`}>
                             <span className={`text-[13px] font-black ${t.textSub}`}>💡 간증문 작성 가이드 및 질문</span>
                             <button 
                                 onClick={() => setShowGuide(!showGuide)} 
-                                className={`px-3 py-1.5 rounded-xl text-[12px] font-bold ${t.bgElevated} ${t.primaryText} hover:opacity-80 transition-opacity`}
+                                className={`px-3 py-1.5 rounded-xl text-[12px] font-bold ${t.bgElevated}${t.primaryText} hover:opacity-80 transition-opacity`}
                             >
                                 {showGuide ? '가이드 숨기기 ▴' : '가이드 보기 ▾'}
                             </button>
                         </div>
 
                         {showGuide && (
-                            <div className={`${t.cardBg} px-6 pb-6 pt-2 shrink-0 shadow-sm z-40 border-b ${t.border} animate-fade-in-up`}>
+                            <div className={`${t.cardBg} px-6 pb-6 pt-2 shrink-0 shadow-sm z-40 border-b${t.border} animate-fade-in-up`}>
                                 <div className={`${t.bgElevated} p-5 rounded-[24px]`}>
                                    <ul className={`text-[13px] ${t.textSub} space-y-2 font-bold leading-[1.6]`}>
                                       <li>• 사건을 먼저 쓰지 말고 <b className={t.textMain}>말씀을 먼저</b> 붙듭니다.</li>
@@ -2245,16 +2603,16 @@ export default function CompleteQtApp() {
                                  value={currDay.testimony || TESTIMONY_TEMPLATE} 
                                  onChange={(e) => updateDay({testimony: e.target.value})} 
                                  onPointerDown={e => e.stopPropagation()}
-                                 className={`w-full flex-1 p-5 rounded-[24px] ${t.cardBg} ${t.textMain} border ${t.border} outline-none resize-none text-[15px] h-auto overflow-hidden font-sans min-h-[800px] leading-[2.5] relative pointer-events-auto shadow-inner note-lines`} 
+                                 className={`w-full flex-1 p-5 rounded-[24px] ${t.cardBg} ${t.textMain} border${t.border} outline-none resize-none text-[15px] h-auto overflow-hidden font-sans min-h-[800px] leading-[2.5] relative pointer-events-auto shadow-inner note-lines`} 
                               />
                           </div>
                         </div>
                       </div>
                     )}
 
-                    {modal.type === 'sermonList' && (
+                   {modal.type === 'sermonList' && (
                       <div className={`flex flex-col h-full ${t.bgBody} absolute inset-0 z-50`}>
-                         <div className={`flex justify-between items-center px-6 py-5 ${t.cardBg} border-b ${t.border} shrink-0`}>
+                         <div className={`flex justify-between items-center px-6 py-5 ${t.cardBg} border-b${t.border} shrink-0`}>
                             <h2 className={`text-[17px] font-black tracking-tight ${t.textMain}`}>예배 노트 목록</h2>
                             <button onClick={closeModal} className={`${t.btnSecondary} px-4 py-2 rounded-full text-[13px] font-bold`}>닫기</button>
                          </div>
@@ -2263,7 +2621,7 @@ export default function CompleteQtApp() {
                                 <div className={`text-center py-20 ${t.textSub} text-[15px] font-bold`}>작성된 예배 노트가 없습니다.</div>
                             ) : (
                                 getArr(mLocal.notes).map(([dKey, dVal]) => (
-                                    <div key={dKey} onClick={() => { setDate(dKey); closeModal(); }} className={`${t.cardBg} p-6 rounded-[24px] border ${t.border} shadow-sm cursor-pointer hover:scale-[1.02] transition-transform flex flex-col gap-2.5`}>
+                                    <div key={dKey} onClick={() => { setDate(dKey); closeModal(); }} className={`${t.cardBg} p-6 rounded-[24px] border${t.border} shadow-sm cursor-pointer hover:scale-[1.02] transition-transform flex flex-col gap-2.5`}>
                                        <div className="flex justify-between items-center"><span className={`text-[13px] font-black ${t.primaryText}`}>{dKey}</span><span className={`text-[12px] font-bold ${t.textSub}`}>설교자: {dVal.sermonPreacher || '미입력'}</span></div>
                                        <h3 className={`text-[17px] font-black tracking-tight ${t.textMain}`}>{dVal.sermonTitle || '제목 없는 예배 노트'}</h3>
                                        <p className={`text-[13px] font-bold ${t.textSub} truncate mt-1`}>본문: {dVal.sermonReference || '본문 없음'}</p>
@@ -2292,22 +2650,22 @@ export default function CompleteQtApp() {
                                   <span className={`text-[15px] ${t.textSub} font-mono tracking-widest font-bold mb-6`}>[{w.pronunciation || w.pron}]</span>
                                   <div className="flex flex-wrap gap-2 justify-center items-center">
                                      <span className={`bg-[#007AFF] text-white px-5 py-2 rounded-full text-[13px] font-bold shadow-sm`}>Strong's {w.strongs_id || w.strongs}</span>
-                                     {w.grammar && <span className={`${t.bgElevated} ${t.textMain} px-5 py-2 rounded-full text-[13px] font-bold shadow-sm`}>{w.grammar}</span>}
+                                     {w.grammar && <span className={`${t.bgElevated}${t.textMain} px-5 py-2 rounded-full text-[13px] font-bold shadow-sm`}>{w.grammar}</span>}
                                   </div>
                                </div>
 
                                <div className="grid grid-cols-2 gap-4 mt-2">
-                                  <div className={`${t.cardBg} p-6 rounded-[24px] shadow-sm border ${t.border} flex flex-col`}>
+                                  <div className={`${t.cardBg} p-6 rounded-[24px] shadow-sm border${t.border} flex flex-col`}>
                                      <span className={`block text-[12px] font-black uppercase tracking-widest ${t.textSub} mb-3`}>한국어 뜻</span>
                                      <span className={`text-[17px] font-black ${t.textMain} break-keep mt-auto leading-tight`}>{w.meaning || w.kor || w.korean_trans}</span>
                                   </div>
-                                  <div className={`${t.cardBg} p-6 rounded-[24px] shadow-sm border ${t.border} flex flex-col`}>
+                                  <div className={`${t.cardBg} p-6 rounded-[24px] shadow-sm border${t.border} flex flex-col`}>
                                      <span className={`block text-[12px] font-black uppercase tracking-widest ${t.textSub} mb-3`}>영문 (Gloss)</span>
                                      <span className={`text-[17px] font-black ${t.textMain} break-keep mt-auto leading-tight`}>{w.eng || w.gloss || 'N/A'}</span>
                                   </div>
                                </div>
 
-                               <div className={`${t.cardBg} p-6 rounded-[24px] shadow-sm border ${t.border} mt-2`}>
+                               <div className={`${t.cardBg} p-6 rounded-[24px] shadow-sm border${t.border} mt-2`}>
                                   <h4 className={`font-black ${t.textMain} text-[15px] mb-4`}>상세 해석 및 어원</h4>
                                   <p className={`text-[15px] ${t.textSub} font-medium leading-[1.8] whitespace-pre-wrap break-keep`}>{w.description || w.desc || '등록된 어원 정보가 없습니다.'}</p>
                                </div>
@@ -2319,12 +2677,12 @@ export default function CompleteQtApp() {
                     {modal.type === 'bibleRef' && (
                       <div className="flex flex-col h-full gap-4 p-5 pointer-events-auto">
                         <div className="bg-[#007AFF]/10 p-4 rounded-[16px]"><span className={`text-[13px] font-bold ${t.primaryText} leading-relaxed block`}>💡 <b>복사</b> 버튼을 눌러 복사한 뒤 화면에 붙여넣으세요.</span></div>
-                        <div className={`space-y-4 p-5 ${t.cardBg} rounded-[24px] leading-relaxed text-[15px] ${t.textMain} overflow-y-auto flex-1 border ${t.border} shadow-sm`}>
+                        <div className={`space-y-4 p-5 ${t.cardBg} rounded-[24px] leading-relaxed text-[15px] ${t.textMain} overflow-y-auto flex-1 border${t.border} shadow-sm`}>
                            {getArr(mLocal.verses).map((v, i) => {
-                               const copyText = `> [${v.ref}] ${cleanText(v.text||v)}\n`;
+                               const copyText = `> [${v.ref}]${cleanText(v.text||v)}\n`;
                                return (
                                <div key={i} className={`flex items-start gap-4 mb-4 pb-4 border-b ${t.border} last:border-0 last:pb-0 last:mb-0`}>
-                                 <div onClick={() => { navigator.clipboard.writeText(copyText); alert('말씀이 복사되었습니다!'); }} className={`cursor-pointer shrink-0 py-2 px-3 ${t.bgElevated} rounded-[10px] text-[12px] font-bold ${t.textMain} shadow-sm hover:opacity-80 active:scale-95 transition-all`}>복사</div>
+                                 <div onClick={() => { navigator.clipboard.writeText(copyText); alert('말씀이 복사되었습니다!'); }} className={`cursor-pointer shrink-0 py-2 px-3 ${t.bgElevated} rounded-[10px] text-[12px] font-bold${t.textMain} shadow-sm hover:opacity-80 active:scale-95 transition-all`}>복사</div>
                                  <p className="flex-1 pt-1 font-medium"><span className={`${t.primaryText} font-black mr-2.5`}>{v.ref?.split(' ')[1]||v.vIdx}</span>{cleanText(v.text||v)}</p>
                                </div>
                            )})}
@@ -2334,11 +2692,11 @@ export default function CompleteQtApp() {
 
                     {modal.type === 'thanksDeclaration' && (
                       <div className="space-y-4 p-5 pointer-events-auto">
-                        <div className="flex justify-end"><button onClick={() => { const txt = getArr(mLocal?.thanksDeclarations, ['','']).map((q,i)=>`${i+1}. ${q}`).join('\n'); navigator.clipboard.writeText(txt); alert("복사되었습니다."); }} className={`${t.btnSecondary} px-4 py-2 rounded-full text-[13px] font-bold`}>전체 복사</button></div>
+                        <div className="flex justify-end"><button onClick={() => { const txt = getArr(mLocal?.thanksDeclarations, ['','']).map((q,i)=>`${i+1}.${q}`).join('\n'); navigator.clipboard.writeText(txt); alert("복사되었습니다."); }} className={`${t.btnSecondary} px-4 py-2 rounded-full text-[13px] font-bold`}>전체 복사</button></div>
                         {[0, 1].map((i) => ( 
                           <div key={i} className="flex flex-col gap-2">
                             <span className={`text-[13px] font-bold px-1 ${t.textSub}`}>{i+1}번째 감사 선포</span>
-                            <textarea value={(mLocal.thanksDeclarations || ['',''])[i]||''} onChange={(e) => { const next = [...(mLocal.thanksDeclarations || ['',''])]; next[i] = e.target.value; setMLocal({...mLocal, thanksDeclarations: next}); updateDay({thanksDeclarations: next, checks: { ...(currDay.checks||{}), '감사': true }}); }} onInput={handleAutoResize} className={`w-full p-5 rounded-[20px] ${t.bgInput} ${t.textMain} min-h-[80px] resize-none overflow-hidden border outline-none text-[15px] font-bold whitespace-pre-wrap shadow-inner focus:border-[#007AFF] transition-colors`} placeholder="나는 ~를 감사합니다." onPointerDown={e => e.stopPropagation()} />
+                            <textarea value={(mLocal.thanksDeclarations || ['',''])[i]||''} onChange={(e) => { const next = [...(mLocal.thanksDeclarations || ['',''])]; next[i] = e.target.value; setMLocal({...mLocal, thanksDeclarations: next}); updateDay({thanksDeclarations: next, checks: { ...(currDay.checks||{}), '감사': true }}); }} onInput={handleAutoResize} className={`w-full p-5 rounded-[20px] ${t.bgInput}${t.textMain} min-h-[80px] resize-none overflow-hidden border outline-none text-[15px] font-bold whitespace-pre-wrap shadow-inner focus:border-[#007AFF] transition-colors`} placeholder="나는 ~를 감사합니다." onPointerDown={e => e.stopPropagation()} />
                           </div> 
                         ))}
                       </div>
@@ -2346,26 +2704,26 @@ export default function CompleteQtApp() {
 
                     {modal.type === 'applyQuestion' && (
                       <div className="space-y-4 p-5 pointer-events-auto">
-                        <div className="flex justify-end mb-2"><button onClick={() => { const txt = getArr(mLocal?.applyQuestions).map((q,i)=>`${i+1}. ${q}`).join('\n'); navigator.clipboard.writeText(txt); alert("복사되었습니다."); }} className={`${t.btnSecondary} px-4 py-2 rounded-full text-[13px] font-bold`}>전체 복사</button></div>
+                        <div className="flex justify-end mb-2"><button onClick={() => { const txt = getArr(mLocal?.applyQuestions).map((q,i)=>`${i+1}.${q}`).join('\n'); navigator.clipboard.writeText(txt); alert("복사되었습니다."); }} className={`${t.btnSecondary} px-4 py-2 rounded-full text-[13px] font-bold`}>전체 복사</button></div>
                         {getArr(mLocal.applyQuestions).map((qItem, i) => (
                           <div key={i} className="flex gap-3 items-center">
-                            <textarea value={qItem||''} onChange={(e) => { const n = [...getArr(mLocal.applyQuestions)]; n[i] = e.target.value; setMLocal({...mLocal, applyQuestions: n}); updateDay({applyQuestions: n}); }} onInput={handleAutoResize} className={`flex-1 min-h-[60px] p-4 rounded-[20px] ${t.bgInput} ${t.textMain} border outline-none resize-none overflow-hidden text-[15px] font-bold whitespace-pre-wrap shadow-inner focus:border-[#007AFF] transition-colors`} onPointerDown={e => e.stopPropagation()}/>
+                            <textarea value={qItem||''} onChange={(e) => { const n = [...getArr(mLocal.applyQuestions)]; n[i] = e.target.value; setMLocal({...mLocal, applyQuestions: n}); updateDay({applyQuestions: n}); }} onInput={handleAutoResize} className={`flex-1 min-h-[60px] p-4 rounded-[20px] ${t.bgInput}${t.textMain} border outline-none resize-none overflow-hidden text-[15px] font-bold whitespace-pre-wrap shadow-inner focus:border-[#007AFF] transition-colors`} onPointerDown={e => e.stopPropagation()}/>
                             <button onClick={() => { const n = [...getArr(mLocal.applyQuestions)]; n.splice(i, 1); setMLocal({...mLocal, applyQuestions: n}); updateDay({applyQuestions: n}); }} className={`bg-[#FF3B30]/10 text-[#FF3B30] text-[13px] px-4 py-4 rounded-[16px] font-bold shrink-0 hover:bg-[#FF3B30]/20 transition-colors`}>삭제</button>
                           </div>
                         ))}
-                        <button onClick={() => { const n = [...getArr(mLocal.applyQuestions), '']; setMLocal({...mLocal, applyQuestions: n}); updateDay({applyQuestions: n}); }} className={`w-full py-4 border-2 border-dashed ${t.border} ${t.textSub} font-black rounded-[20px] text-[14px] hover:border-[#007AFF] hover:text-[#007AFF] transition-colors`}>+ 질문 추가</button>
+                        <button onClick={() => { const n = [...getArr(mLocal.applyQuestions), '']; setMLocal({...mLocal, applyQuestions: n}); updateDay({applyQuestions: n}); }} className={`w-full py-4 border-2 border-dashed ${t.border}${t.textSub} font-black rounded-[20px] text-[14px] hover:border-[#007AFF] hover:text-[#007AFF] transition-colors`}>+ 질문 추가</button>
                       </div>
                     )}
 
                     {modal.type === 'globalPrayer' && (
                       <div className={`flex flex-col h-full ${t.bgBody} absolute inset-0 z-50`}>
-                         <div className={`flex justify-between items-center px-4 md:px-6 py-4 ${t.cardBg} border-b ${t.border} shrink-0`}>
+                         <div className={`flex justify-between items-center px-4 md:px-6 py-4 ${t.cardBg} border-b${t.border} shrink-0`}>
                             <div className="flex items-center gap-1.5 shrink-0">
                                <span className="text-rose-500"><IconPray className="w-5 h-5" /></span>
                                <h2 className={`text-[17px] font-black tracking-tight ${t.textMain} whitespace-nowrap`}>나의 기도제목</h2>
                             </div>
                             <div className="flex gap-2 shrink-0">
-                               <button onClick={() => { const txt = getArr(mLocal).filter(p=>p.status==='praying').map((p,i)=>`${i+1}. ${p.text}`).join('\n'); navigator.clipboard.writeText(txt); alert("기도제목이 복사되었습니다."); }} className={`${t.btnSecondary} px-3.5 py-2 rounded-xl text-[12px] font-bold whitespace-nowrap`}>복사</button>
+                               <button onClick={() => { const txt = getArr(mLocal).filter(p=>p.status==='praying').map((p,i)=>`${i+1}.${p.text}`).join('\n'); navigator.clipboard.writeText(txt); alert("기도제목이 복사되었습니다."); }} className={`${t.btnSecondary} px-3.5 py-2 rounded-xl text-[12px] font-bold whitespace-nowrap`}>복사</button>
                                <button onClick={closeModal} className={`${t.btnPrimary} px-3.5 py-2 rounded-xl text-[12px] font-bold whitespace-nowrap`}>닫기</button>
                             </div>
                          </div>
@@ -2378,7 +2736,7 @@ export default function CompleteQtApp() {
 
                                <div className="flex flex-col gap-3">
                                   {getArr(mLocal).filter(p=>p.status==='praying').map(p => (
-                                     <div key={p.id} className={`flex gap-3 items-center p-3 rounded-2xl ${t.cardBg} border ${t.border} shadow-sm transition-all`}>
+                                     <div key={p.id} className={`flex gap-3 items-center p-3 rounded-2xl ${t.cardBg} border${t.border} shadow-sm transition-all`}>
                                         <textarea 
                                            value={p.text || ''} 
                                            onChange={(e) => setMLocal(getArr(mLocal).map(pr => pr.id === p.id ? { ...pr, text: e.target.value } : pr))} 
@@ -2422,7 +2780,7 @@ export default function CompleteQtApp() {
                                     setMLocal([...getArr(mLocal), { id: Date.now(), text: '', status: 'praying' }]); 
                                     updateDay({ checks: { ...(currDay.checks || {}), '기도하기': true } }); 
                                   }}
-                                  className={`w-full py-3.5 rounded-2xl border-2 border-dashed ${t.border} text-[13px] font-black ${t.primaryText} hover:bg-black/5 dark:hover:bg-white/5 transition-colors mt-1 flex items-center justify-center gap-1.5`}
+                                  className={`w-full py-3.5 rounded-2xl border-2 border-dashed ${t.border} text-[13px] font-black${t.primaryText} hover:bg-black/5 dark:hover:bg-white/5 transition-colors mt-1 flex items-center justify-center gap-1.5`}
                                >
                                   + 새로운 기도제목 추가
                                 </button>
@@ -2433,7 +2791,7 @@ export default function CompleteQtApp() {
                                   <span className="text-[13.5px] font-black text-[#34C759] px-1 shrink-0 whitespace-nowrap">응답 받은 기도 ({getArr(mLocal).filter(p=>p.status==='answered').length})</span>
                                   <div className="flex flex-col gap-2.5">
                                      {getArr(mLocal).filter(p=>p.status==='answered').map(p => (
-                                        <div key={p.id} className={`flex gap-3 items-center p-3.5 rounded-2xl ${t.bgElevated} border ${t.border} opacity-80`}>
+                                        <div key={p.id} className={`flex gap-3 items-center p-3.5 rounded-2xl ${t.bgElevated} border${t.border} opacity-80`}>
                                            <span className={`flex-1 min-w-0 text-[13.5px] font-medium text-[#34C759] line-through decoration-1 break-keep`}>
                                               ✔ {p.text}
                                            </span>
@@ -2454,13 +2812,13 @@ export default function CompleteQtApp() {
 
                     {modal.type === 'globalIntercession' && (
                       <div className={`flex flex-col h-full ${t.bgBody} absolute inset-0 z-50`}>
-                         <div className={`flex justify-between items-center px-4 md:px-6 py-4 ${t.cardBg} border-b ${t.border} shrink-0`}>
+                         <div className={`flex justify-between items-center px-4 md:px-6 py-4 ${t.cardBg} border-b${t.border} shrink-0`}>
                             <div className="flex items-center gap-1.5 shrink-0">
                                <span className="text-[#34C759]"><IconPray className="w-5 h-5" /></span>
                                <h2 className={`text-[17px] font-black tracking-tight ${t.textMain} whitespace-nowrap`}>이웃 중보기도</h2>
                             </div>
                             <div className="flex gap-2 shrink-0">
-                               <button onClick={() => { const txt = getArr(mLocal).filter(p=>p.status==='praying').map((p,i)=>`${i+1}. ${p.text}`).join('\n'); navigator.clipboard.writeText(txt); alert("중보기도가 복사되었습니다."); }} className={`${t.btnSecondary} px-3.5 py-2 rounded-xl text-[12px] font-bold whitespace-nowrap`}>복사</button>
+                               <button onClick={() => { const txt = getArr(mLocal).filter(p=>p.status==='praying').map((p,i)=>`${i+1}.${p.text}`).join('\n'); navigator.clipboard.writeText(txt); alert("중보기도가 복사되었습니다."); }} className={`${t.btnSecondary} px-3.5 py-2 rounded-xl text-[12px] font-bold whitespace-nowrap`}>복사</button>
                                <button onClick={closeModal} className={`${t.btnPrimary} px-3.5 py-2 rounded-xl text-[12px] font-bold whitespace-nowrap`}>닫기</button>
                             </div>
                          </div>
@@ -2473,7 +2831,7 @@ export default function CompleteQtApp() {
 
                                <div className="flex flex-col gap-3">
                                   {getArr(mLocal).filter(p=>p.status==='praying').map(p => (
-                                     <div key={p.id} className={`flex gap-3 items-center p-3 rounded-2xl ${t.cardBg} border ${t.border} shadow-sm transition-all`}>
+                                     <div key={p.id} className={`flex gap-3 items-center p-3 rounded-2xl ${t.cardBg} border${t.border} shadow-sm transition-all`}>
                                         <textarea 
                                            value={p.text || ''} 
                                            onChange={(e) => setMLocal(getArr(mLocal).map(pr => pr.id === p.id ? { ...pr, text: e.target.value } : pr))} 
@@ -2510,7 +2868,7 @@ export default function CompleteQtApp() {
                                   <span className="text-[13.5px] font-black text-[#007AFF] px-1 shrink-0 whitespace-nowrap">응답 받은 중보기도 ({getArr(mLocal).filter(p=>p.status==='answered').length})</span>
                                   <div className="flex flex-col gap-2.5">
                                      {getArr(mLocal).filter(p=>p.status==='answered').map(p => (
-                                        <div key={p.id} className={`flex gap-3 items-center p-3.5 rounded-2xl ${t.bgElevated} border ${t.border} opacity-80`}>
+                                        <div key={p.id} className={`flex gap-3 items-center p-3.5 rounded-2xl ${t.bgElevated} border${t.border} opacity-80`}>
                                            <span className={`flex-1 min-w-0 text-[13.5px] font-medium text-[#007AFF] line-through decoration-1 break-keep`}>
                                               ✔ {p.text}
                                            </span>
@@ -2535,10 +2893,10 @@ export default function CompleteQtApp() {
                        
                        return (
                          <div className="flex flex-col gap-4 p-5 pointer-events-auto">
-                           <div className={`${t.cardBg} p-6 rounded-[28px] border ${t.border} text-center flex flex-col gap-3 shadow-sm`}>
+                           <div className={`${t.cardBg} p-6 rounded-[28px] border${t.border} text-center flex flex-col gap-3 shadow-sm`}>
                              <div className="flex items-center justify-center gap-3">
                                  <span className={`text-[13px] font-black ${t.textSub}`}>전체 통독 진행률</span>
-                                 <div className={`flex items-center ${t.bgElevated} px-3 py-1.5 rounded-xl border ${t.border}`}>
+                                 <div className={`flex items-center ${t.bgElevated} px-3 py-1.5 rounded-xl border${t.border}`}>
                                      <span className={`text-[12px] font-black ${t.primaryText} mr-2`}>시작일</span>
                                      <input 
                                          type="date" 
@@ -2549,7 +2907,7 @@ export default function CompleteQtApp() {
                                  </div>
                              </div>
                              <span className={`text-[20px] font-black ${t.primaryText} tracking-tight`}>D+{dDay > 0 ? dDay : 0}일 째</span>
-                             <div className={`w-full ${t.bgElevated} rounded-full h-4 overflow-hidden shadow-inner border ${t.border} mt-2`}>
+                             <div className={`w-full ${t.bgElevated} rounded-full h-4 overflow-hidden shadow-inner border${t.border} mt-2`}>
                                  <div className="bg-[#007AFF] h-full transition-all duration-700" style={{ width: `${bibleProgress}%` }}></div>
                              </div>
                              <div className={`flex justify-between text-[12px] font-bold ${t.textMain} px-1 mt-1`}>
@@ -2607,20 +2965,20 @@ export default function CompleteQtApp() {
 
                     {modal.type === 'bibleNoteCreate' && (
                       <div className="flex flex-col gap-5 h-full p-5 pointer-events-auto">
-                        <div className={`p-5 ${t.cardBg} rounded-[24px] border ${t.border} max-h-[200px] overflow-y-auto shadow-sm`}>
+                        <div className={`p-5 ${t.cardBg} rounded-[24px] border${t.border} max-h-[200px] overflow-y-auto shadow-sm`}>
                             <h4 className={`font-black ${t.textMain} mb-3 text-[14px]`}>선택한 말씀</h4>
                             {getArr(mLocal.verses).map((v, i) => <p key={i} className={`text-[15px] ${t.textMain} mb-2 leading-relaxed font-medium`}><span className={`font-black ${t.primaryText} mr-2`}>{v.ref}</span> {v.text}</p>)}
                         </div>
                         <div className="flex-1 flex flex-col">
                             <h4 className={`font-black ${t.textMain} mb-3 text-[14px] px-1`}>말씀 묵상과 나눔</h4>
-                            <textarea value={mLocal.note||''} onChange={(e)=>setMLocal({...mLocal, note: e.target.value})} className={`w-full flex-1 p-5 rounded-[24px] ${t.bgInput} ${t.textMain} border ${t.border} outline-none resize-none leading-[1.8] font-bold text-[15px] shadow-inner focus:border-[#007AFF] transition-colors placeholder:text-[#A8A29A]`} placeholder="이 말씀을 통해 깨달은 은혜와 묵상을 자유롭게 기록하세요..." onPointerDown={e => e.stopPropagation()} />
+                            <textarea value={mLocal.note||''} onChange={(e)=>setMLocal({...mLocal, note: e.target.value})} className={`w-full flex-1 p-5 rounded-[24px] ${t.bgInput} ${t.textMain} border${t.border} outline-none resize-none leading-[1.8] font-bold text-[15px] shadow-inner focus:border-[#007AFF] transition-colors placeholder:text-[#A8A29A]`} placeholder="이 말씀을 통해 깨달은 은혜와 묵상을 자유롭게 기록하세요..." onPointerDown={e => e.stopPropagation()} />
                         </div>
                       </div>
                     )}
 
                     {modal.type === 'bibleNoteList' && (
                       <div className={`flex flex-col h-full ${t.bgBody} absolute inset-0 z-50 pointer-events-auto`}>
-                        <div className={`flex justify-between items-center px-6 py-5 ${t.cardBg} border-b ${t.border} shrink-0`}>
+                        <div className={`flex justify-between items-center px-6 py-5 ${t.cardBg} border-b${t.border} shrink-0`}>
                             <h2 className={`text-[17px] font-black tracking-tight ${t.textMain}`}>기록된 말씀 노트</h2>
                             <button onClick={closeModal} className={`${t.btnSecondary} px-4 py-2 rounded-full text-[13px] font-bold shadow-sm`}>닫기</button>
                         </div>
@@ -2634,14 +2992,14 @@ export default function CompleteQtApp() {
                                         <button onClick={() => { if(window.confirm('삭제하시겠습니까?')) { setBibleNotes(prev => getArr(prev).filter(x => x.id !== n.id)); closeModal(); } }} className={`text-[#FF3B30] text-[13px] font-bold hover:opacity-80`}>삭제</button>
                                     </div>
                                 </div>
-                                <div className={`${t.cardBg} rounded-[24px] border ${t.border} p-6 mb-4 shadow-sm`}>
+                                <div className={`${t.cardBg} rounded-[24px] border${t.border} p-6 mb-4 shadow-sm`}>
                                     {getArr(n.verses).map((v, i) => (
                                         <p key={i} className={`mb-3 last:mb-0 text-[16px] leading-[1.8] ${t.textMain} font-medium`}>
                                             <span className={`font-black ${t.primaryText} mr-3`}>{v.ref}</span>{v.text}
                                         </p>
                                     ))}
                                 </div>
-                                <div className={`px-2 py-4 rounded-[24px] ${t.cardBg} border ${t.border} p-6 shadow-sm`}>
+                                <div className={`px-2 py-4 rounded-[24px] ${t.cardBg} border${t.border} p-6 shadow-sm`}>
                                     <p className={`text-[16px] leading-[2.0] ${t.textMain} font-bold whitespace-pre-wrap break-keep note-lines p-2`}>{n.note}</p>
                                 </div>
                               </div>
@@ -2651,8 +3009,8 @@ export default function CompleteQtApp() {
                     )}
 
                     {modal.type === 'pipelineGuide' && (
-                      <div className={`flex flex-col h-[90vh] sm:h-[85vh] w-full max-w-[600px] mx-auto rounded-t-[32px] sm:rounded-[32px] overflow-hidden shadow-2xl ${t.pageBg} absolute bottom-0 sm:static pointer-events-auto border ${t.border} transition-transform`}>
-                        <div className={`flex justify-between items-center px-6 py-5 ${t.cardBg} border-b ${t.border} shrink-0`}>
+                      <div className={`flex flex-col h-[90vh] sm:h-[85vh] w-full max-w-[600px] mx-auto rounded-t-[32px] sm:rounded-[32px] overflow-hidden shadow-2xl ${t.pageBg} absolute bottom-0 sm:static pointer-events-auto border${t.border} transition-transform`}>
+                        <div className={`flex justify-between items-center px-6 py-5 ${t.cardBg} border-b${t.border} shrink-0`}>
                             <div className="flex items-center gap-2">
                                <span className="text-[18px]">🧭</span>
                                <h2 className={`text-[17px] font-black tracking-tight ${t.textMain}`}>앱 활용 가이드북</h2>
@@ -2705,7 +3063,7 @@ export default function CompleteQtApp() {
                                </div>
                             </div>
 
-                            <div className={`mt-14 p-5 rounded-[24px] ${t.bgElevated} border ${t.border} text-center`}>
+                            <div className={`mt-14 p-5 rounded-[24px] ${t.bgElevated} border${t.border} text-center`}>
                                <p className={`text-[14px] font-black ${t.textMain}`}>기록이 모여 훈련이 되고, <br className="sm:hidden"/>훈련이 삶의 예배가 됩니다.</p>
                             </div>
                         </div>
