@@ -2030,53 +2030,59 @@ export default function AdminCounselingTab({
       )}
 
       {/* =========================================================================
-          [4] 📝 고정형 ‘표준 신앙상담 기록카드’ 작성/수정 모달
+          [4] 📝 고정형 ‘표준 신앙상담 기록카드’ 작성/수정 모달 (모바일 화면 고정 완료)
           ========================================================================= */}
       {isStandardFormOpen && (
-        <div className="fixed inset-0 z-[340] bg-zinc-950/65 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in">
+        <div className="fixed inset-0 z-[340] w-full max-w-full overflow-hidden bg-zinc-950/65 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in touch-pan-y">
           <form
             onSubmit={handleSaveStandardCard}
-            className="w-full sm:max-w-2xl bg-white rounded-t-3xl sm:rounded-2xl border border-zinc-200 shadow-2xl max-h-[92vh] flex flex-col overflow-hidden"
+            className="w-full max-w-full sm:max-w-2xl bg-white rounded-t-3xl sm:rounded-2xl border border-zinc-200 shadow-2xl max-h-[92dvh] flex flex-col overflow-hidden box-border"
           >
-            <div className="px-5 py-3.5 bg-zinc-900 text-white flex items-center justify-between shrink-0">
-              <div>
-                <span className="text-[10px] font-mono text-amber-400 uppercase block">AES-256 ENCRYPTED STANDARD COUNSELING FORM</span>
-                <h3 className="text-sm font-black">
+            {/* 모달 상단 헤더 */}
+            <div className="px-4 sm:px-5 py-3 bg-zinc-900 text-white flex items-center justify-between gap-2 shrink-0 w-full box-border">
+              <div className="min-w-0 flex-1">
+                <span className="text-[9.5px] font-mono text-amber-400 uppercase block truncate">
+                  AES-256 ENCRYPTED STANDARD COUNSELING FORM
+                </span>
+                <h3 className="text-[13.5px] sm:text-sm font-black truncate mt-0.5">
                   {cardForm.id ? '✏️ 표준 신앙상담 기록카드 수정' : '📝 표준 신앙상담 기록카드 작성'}
                 </h3>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 shrink-0">
                 <button
                   type="button"
                   onClick={() => {
                     setIsStandardFormOpen(false);
                     setIsOcrModalOpen(true);
                   }}
-                  className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-black cursor-pointer"
+                  className="px-2.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-black cursor-pointer whitespace-nowrap"
                 >
-                  📷 OCR 스캔으로 자동 입력
+                  📷 OCR 스캔 입력
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsStandardFormOpen(false)}
-                  className="text-zinc-400 hover:text-white text-sm font-bold cursor-pointer"
+                  className="text-zinc-400 hover:text-white text-sm font-bold px-1.5 py-1 cursor-pointer"
                 >
                   ✕
                 </button>
               </div>
             </div>
 
-            <div className="p-5 overflow-y-auto space-y-4 flex-1 hide-scrollbar text-xs">
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                <div>
-                  <label className="text-[10.5px] font-black text-zinc-600 block mb-1">성도명 (자동완성) *</label>
+            {/* 모달 본문 (가로 스크롤 원천 차단: overflow-x-hidden & min-w-0) */}
+            <div className="p-4 sm:p-5 overflow-y-auto overflow-x-hidden touch-pan-y space-y-4 flex-1 hide-scrollbar text-xs w-full max-w-full box-border">
+              
+              {/* 성도명 / 직분 / 소속 목장 / 상담 일자 */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 w-full">
+                <div className="min-w-0">
+                  <label className="text-[10.5px] font-black text-zinc-600 block mb-1 truncate">성도명 (자동완성) *</label>
                   <input
                     type="text"
                     list="gt-real-members-datalist"
                     value={cardForm.memberName}
                     onChange={(e) => handleSelectMemberInForm(e.target.value)}
                     placeholder="성도 이름 입력"
-                    className="w-full px-3 py-2 rounded-lg bg-zinc-50 border border-zinc-300 font-bold text-zinc-900 outline-none focus:bg-white focus:border-zinc-900"
+                    className="w-full min-w-0 px-2.5 py-2 rounded-lg bg-zinc-50 border border-zinc-300 font-bold text-zinc-900 outline-none focus:bg-white focus:border-zinc-900 box-border"
                     required
                   />
                   <datalist id="gt-real-members-datalist">
@@ -2087,44 +2093,48 @@ export default function AdminCounselingTab({
                     ))}
                   </datalist>
                 </div>
-                <div>
-                  <label className="text-[10.5px] font-black text-zinc-600 block mb-1">직분</label>
+
+                <div className="min-w-0">
+                  <label className="text-[10.5px] font-black text-zinc-600 block mb-1 truncate">직분</label>
                   <select
                     value={cardForm.memberOffice}
                     onChange={(e) => setCardForm({ ...cardForm, memberOffice: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg bg-zinc-50 border border-zinc-300 font-bold text-zinc-900 outline-none"
+                    className="w-full min-w-0 px-2.5 py-2 rounded-lg bg-zinc-50 border border-zinc-300 font-bold text-zinc-900 outline-none box-border"
                   >
                     {['성도', '서리집사', '안수집사', '권사', '장로', '청년', '새가족'].map(o => <option key={o} value={o}>{o}</option>)}
                   </select>
                 </div>
-                <div>
-                  <label className="text-[10.5px] font-black text-zinc-600 block mb-1">소속 목장</label>
+
+                <div className="min-w-0">
+                  <label className="text-[10.5px] font-black text-zinc-600 block mb-1 truncate">소속 목장</label>
                   <input
                     type="text"
                     list="gt-real-cells-datalist"
                     value={cardForm.cellName}
                     onChange={(e) => setCardForm({ ...cardForm, cellName: e.target.value })}
                     placeholder="소속 목장명"
-                    className="w-full px-3 py-2 rounded-lg bg-zinc-50 border border-zinc-300 font-bold text-zinc-900 outline-none"
+                    className="w-full min-w-0 px-2.5 py-2 rounded-lg bg-zinc-50 border border-zinc-300 font-bold text-zinc-900 outline-none box-border"
                   />
                   <datalist id="gt-real-cells-datalist">
                     {realCellList.map(c => <option key={c} value={c} />)}
                   </datalist>
                 </div>
-                <div>
-                  <label className="text-[10.5px] font-black text-zinc-600 block mb-1">상담 일자</label>
+
+                <div className="min-w-0">
+                  <label className="text-[10.5px] font-black text-zinc-600 block mb-1 truncate">상담 일자</label>
                   <input
                     type="date"
                     value={cardForm.date}
                     onChange={(e) => setCardForm({ ...cardForm, date: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg bg-zinc-50 border border-zinc-300 font-bold text-zinc-900 outline-none"
+                    className="w-full min-w-0 max-w-full px-2 py-2 rounded-lg bg-zinc-50 border border-zinc-300 font-bold text-zinc-900 outline-none box-border appearance-none"
                   />
                 </div>
               </div>
 
-              <div>
+              {/* 신앙 위험도 5단계 분류 (좁은 모바일에서도 오른쪽 잘림 없이 5등분 정렬) */}
+              <div className="w-full min-w-0">
                 <label className="text-[10.5px] font-black text-zinc-600 block mb-1.5">신앙 위험도 5단계 분류 *</label>
-                <div className="grid grid-cols-5 gap-1.5">
+                <div className="grid grid-cols-5 gap-1 sm:gap-1.5 w-full">
                   {RISK_LEVELS.map(rk => {
                     const isSelected = Number(cardForm.riskLevel) === rk.level;
                     return (
@@ -2132,138 +2142,139 @@ export default function AdminCounselingTab({
                         key={rk.level}
                         type="button"
                         onClick={() => setCardForm({ ...cardForm, riskLevel: rk.level })}
-                        className={`py-2 px-1.5 rounded-xl border text-center transition-all cursor-pointer ${
+                        className={`min-w-0 py-2 px-0.5 rounded-xl border text-center transition-all cursor-pointer truncate ${
                           isSelected
-                            ? `${rk.bgCls} ring-2 ${rk.ringCls} font-black scale-102`
+                            ? `${rk.bgCls} ring-2${rk.ringCls} font-black`
                             : 'bg-zinc-50 border-zinc-200 text-zinc-500 hover:bg-zinc-100'
                         }`}
                       >
-                        <div className="text-[11px] font-black">{rk.short}</div>
+                        <span className="text-[10px] sm:text-[11px] font-black block truncate">{rk.short}</span>
                       </button>
                     );
                   })}
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-2.5">
-                <div>
+              {/* 주제별 카테고리 / 상담 방식 / 칸반 단계 (모바일에서 넘치지 않도록 min-w-0 적용) */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full">
+                <div className="min-w-0">
                   <label className="text-[10.5px] font-black text-zinc-600 block mb-1">주제별 카테고리</label>
                   <select
                     value={cardForm.category}
                     onChange={(e) => setCardForm({ ...cardForm, category: e.target.value })}
-                    className="w-full px-2.5 py-2 rounded-lg bg-zinc-50 border border-zinc-300 font-bold text-zinc-900 outline-none"
+                    className="w-full min-w-0 px-2.5 py-2 rounded-lg bg-zinc-50 border border-zinc-300 font-bold text-zinc-900 outline-none box-border"
                   >
                     {COUNSELING_CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
                   </select>
                 </div>
-                <div>
+                <div className="min-w-0">
                   <label className="text-[10.5px] font-black text-zinc-600 block mb-1">상담 방식</label>
                   <select
                     value={cardForm.method}
                     onChange={(e) => setCardForm({ ...cardForm, method: e.target.value })}
-                    className="w-full px-2.5 py-2 rounded-lg bg-zinc-50 border border-zinc-300 font-bold text-zinc-900 outline-none"
+                    className="w-full min-w-0 px-2.5 py-2 rounded-lg bg-zinc-50 border border-zinc-300 font-bold text-zinc-900 outline-none box-border"
                   >
                     {['대면심방', '전화상담', '목장나눔', '성전상담', '카톡/문서'].map(m => <option key={m} value={m}>{m}</option>)}
                   </select>
                 </div>
-                <div>
+                <div className="min-w-0">
                   <label className="text-[10.5px] font-black text-zinc-600 block mb-1">칸반 단계</label>
                   <select
                     value={cardForm.stage}
                     onChange={(e) => setCardForm({ ...cardForm, stage: e.target.value })}
-                    className="w-full px-2.5 py-2 rounded-lg bg-zinc-50 border border-zinc-300 font-bold text-zinc-900 outline-none"
+                    className="w-full min-w-0 px-2.5 py-2 rounded-lg bg-zinc-50 border border-zinc-300 font-bold text-zinc-900 outline-none box-border"
                   >
                     {KANBAN_STAGES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
                   </select>
                 </div>
               </div>
 
-              <div>
+              <div className="w-full min-w-0">
                 <label className="text-[10.5px] font-black text-zinc-600 block mb-1">상담 핵심 한줄 요약 *</label>
                 <input
                   type="text"
                   value={cardForm.title}
                   onChange={(e) => setCardForm({ ...cardForm, title: e.target.value })}
                   placeholder="예: 가정 및 직장 문제를 두고 나눈 말씀과 심방 상담"
-                  className="w-full px-3 py-2 rounded-lg bg-zinc-50 border border-zinc-300 font-bold text-zinc-900 outline-none focus:bg-white focus:border-zinc-900"
+                  className="w-full min-w-0 px-3 py-2 rounded-lg bg-zinc-50 border border-zinc-300 font-bold text-zinc-900 outline-none focus:bg-white focus:border-zinc-900 box-border"
                   required
                 />
               </div>
 
-              <div>
+              <div className="w-full min-w-0">
                 <label className="text-[10.5px] font-black text-zinc-600 block mb-1">1. 영적 현황 및 예배·QT 진단</label>
                 <input
                   type="text"
                   value={cardForm.spiritualState}
                   onChange={(e) => setCardForm({ ...cardForm, spiritualState: e.target.value })}
                   placeholder="예배 참석, 큐티, 기도 생활 등 현재 영적 상태 요약"
-                  className="w-full px-3 py-2 rounded-lg bg-zinc-50 border border-zinc-300 font-medium text-zinc-900 outline-none focus:bg-white"
+                  className="w-full min-w-0 px-3 py-2 rounded-lg bg-zinc-50 border border-zinc-300 font-medium text-zinc-900 outline-none focus:bg-white box-border"
                 />
               </div>
 
-              <div>
+              <div className="w-full min-w-0">
                 <label className="text-[10.5px] font-black text-zinc-600 block mb-1">2. 상담 상세 기록 (사건 · 나눈 말씀 · 권면 내용)</label>
                 <textarea
                   rows={4}
                   value={cardForm.content}
                   onChange={(e) => setCardForm({ ...cardForm, content: e.target.value })}
                   placeholder="상담한 구체적인 내용과 함께 나눈 말씀을 기록하세요 (AES-256 자동 암호화 저장)..."
-                  className="w-full p-3 rounded-lg bg-zinc-50 border border-zinc-300 font-medium text-zinc-900 outline-none focus:bg-white resize-none leading-relaxed"
+                  className="w-full min-w-0 p-3 rounded-lg bg-zinc-50 border border-zinc-300 font-medium text-zinc-900 outline-none focus:bg-white resize-none leading-relaxed box-border"
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
+                <div className="min-w-0">
                   <label className="text-[10.5px] font-black text-purple-800 block mb-1">3. 집중 중보기도 제목</label>
                   <textarea
                     rows={3}
                     value={cardForm.prayerTopics}
                     onChange={(e) => setCardForm({ ...cardForm, prayerTopics: e.target.value })}
                     placeholder="1) 기도제목...\n2) 기도제목..."
-                    className="w-full p-2.5 rounded-lg bg-purple-50/40 border border-purple-200 font-medium text-zinc-900 outline-none resize-none"
+                    className="w-full min-w-0 p-2.5 rounded-lg bg-purple-50/40 border border-purple-200 font-medium text-zinc-900 outline-none resize-none box-border"
                   />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <label className="text-[10.5px] font-black text-sky-800 block mb-1">4. 목자 소견 및 목사님께 건의사항</label>
                   <textarea
                     rows={3}
                     value={cardForm.shepherdOpinion}
                     onChange={(e) => setCardForm({ ...cardForm, shepherdOpinion: e.target.value })}
                     placeholder="목자 소견 및 교역자 심방/안수기도 요청 사항..."
-                    className="w-full p-2.5 rounded-lg bg-sky-50/40 border border-sky-200 font-medium text-zinc-900 outline-none resize-none"
+                    className="w-full min-w-0 p-2.5 rounded-lg bg-sky-50/40 border border-sky-200 font-medium text-zinc-900 outline-none resize-none box-border"
                   />
                 </div>
               </div>
 
-              {/* 공유 및 보고 라우팅 체크박스 2종 */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                <label className="flex items-center gap-2 p-3 rounded-xl bg-emerald-50/70 border border-emerald-200 cursor-pointer">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full">
+                <label className="flex items-center gap-2 p-3 rounded-xl bg-emerald-50/70 border border-emerald-200 cursor-pointer min-w-0">
                   <input
                     type="checkbox"
                     checked={cardForm.isSharedWithShepherds}
                     onChange={(e) => setCardForm({ ...cardForm, isSharedWithShepherds: e.target.checked })}
-                    className="w-4 h-4 accent-emerald-600 rounded cursor-pointer"
+                    className="w-4 h-4 accent-emerald-600 rounded cursor-pointer shrink-0"
                   />
-                  <span className="text-[11.5px] font-black text-emerald-900">
+                  <span className="text-[11px] font-black text-emerald-900 truncate">
                     🌿 [목자방 공유] 동역 목자들과 중보기도 공유
                   </span>
                 </label>
 
-                <label className="flex items-center gap-2 p-3 rounded-xl bg-indigo-50/70 border border-indigo-200 cursor-pointer">
+                <label className="flex items-center gap-2 p-3 rounded-xl bg-indigo-50/70 border border-indigo-200 cursor-pointer min-w-0">
                   <input
                     type="checkbox"
                     checked={cardForm.isSubmittedToPastor}
                     onChange={(e) => setCardForm({ ...cardForm, isSubmittedToPastor: e.target.checked })}
-                    className="w-4 h-4 accent-indigo-600 rounded cursor-pointer"
+                    className="w-4 h-4 accent-indigo-600 rounded cursor-pointer shrink-0"
                   />
-                  <span className="text-[11.5px] font-black text-indigo-900">
+                  <span className="text-[11px] font-black text-indigo-900 truncate">
                     📥 [사역자 모음함 제출] 전도사·담임목사님께 보고
                   </span>
                 </label>
               </div>
             </div>
 
-            <div className="px-5 py-3.5 bg-zinc-50 border-t border-zinc-200 flex items-center justify-end gap-2 shrink-0">
+            {/* 모달 하단 저장 버튼 바 */}
+            <div className="px-4 sm:px-5 py-3 bg-zinc-50 border-t border-zinc-200 flex items-center justify-end gap-2 shrink-0 w-full box-border">
               <button
                 type="button"
                 onClick={() => setIsStandardFormOpen(false)}
@@ -2273,7 +2284,7 @@ export default function AdminCounselingTab({
               </button>
               <button
                 type="submit"
-                className="px-6 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-black cursor-pointer shadow-md"
+                className="px-5 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-black cursor-pointer shadow-md"
               >
                 🔐 암호화 저장 및 동기화
               </button>

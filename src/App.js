@@ -303,12 +303,11 @@ const CoverCarousel = ({ items }) => {
   if (!items || items.length === 0) return null;
 
   return (
-    <div className="relative">
+    <div className="relative w-full max-w-full overflow-hidden">
       <div 
         ref={scrollRef}
         onScroll={handleScroll}
-        className="flex overflow-x-auto snap-x snap-mandatory hide-scrollbar py-5 w-full -mx-5 space-x-[-8vw] md:space-x-[-20px] items-center px-[17.5vw] md:px-[calc(50%-140px)]" 
-        style={{ width: 'calc(100% + 40px)' }}
+        className="flex overflow-x-auto snap-x snap-mandatory hide-scrollbar py-5 w-full space-x-[-6vw] md:space-x-[-20px] items-center px-[14vw] md:px-[calc(50%-140px)]"
       >
         {items.map((item, idx) => {
           const isActive = activeIndex === idx;
@@ -487,7 +486,7 @@ export function Home({
   return (
     <div 
       onScroll={handleHomeScroll}
-      className={`flex-1 flex flex-col h-full ${t.pageBg} overflow-y-auto pb-[140px] hide-scrollbar animate-fade-in-up pointer-events-auto relative`}
+      className={`flex-1 flex flex-col h-full w-full max-w-full overflow-x-hidden touch-pan-y ${t.pageBg} overflow-y-auto pb-[140px] hide-scrollbar animate-fade-in-up pointer-events-auto relative`}
     >
       {/* 🌊 SaaS 스타일 애니메이션 키프레임 & 아이폰 흔들림(Jiggle) 효과 */}
       <style>{`
@@ -557,42 +556,42 @@ export function Home({
         </div>
       )}
 
-      {/* ── 상단 SaaS 글래스모피즘 네비게이션 바 ── */}
-      <div className={`flex items-center justify-between px-4 pt-4 pb-2.5 z-[45] pointer-events-auto sticky top-0 ${isDarkMode ? 'bg-[#090C12]/80' : 'bg-white/80'} backdrop-blur-2xl border-b border-black/5 dark:border-white/10`}>
-        <div className="flex items-center gap-2 min-w-0">
+      {/* ── 상단 SaaS 글래스모피즘 네비게이션 바 (모바일 가로 넘침 방지 고정) ── */}
+      <div className={`w-full max-w-full overflow-hidden flex items-center justify-between gap-1.5 px-3 sm:px-4 pt-3.5 pb-2.5 z-[45] pointer-events-auto sticky top-0 ${isDarkMode ? 'bg-[#090C12]/85' : 'bg-white/85'} backdrop-blur-2xl border-b border-black/5 dark:border-white/10`}>
+        <div className="flex items-center gap-1.5 min-w-0 shrink-0">
            <button 
              onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
-             className={`w-9 h-9 flex items-center justify-center rounded-xl active:scale-95 transition-transform shrink-0 border ${isDarkMode ? 'bg-white/10 border-white/10 text-white' : 'bg-slate-100 border-slate-200/80 text-[#1D1D1F]'}`}
+             className={`w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-xl active:scale-95 transition-transform shrink-0 border ${isDarkMode ? 'bg-white/10 border-white/10 text-white' : 'bg-slate-100 border-slate-200/80 text-[#1D1D1F]'}`}
            >
              <IconMenu className="w-4 h-4" />
            </button>
            
-           <div className={`relative inline-flex items-center cursor-pointer px-3.5 h-9 rounded-xl backdrop-blur-md border transition-all active:scale-95 shrink-0 ${isDarkMode ? 'bg-white/10 border-white/10 text-white' : 'bg-slate-100/90 border-slate-200/80 text-[#1D1D1F]'}`}>
+           <div className={`relative inline-flex items-center cursor-pointer px-2.5 sm:px-3.5 h-8 sm:h-9 rounded-xl backdrop-blur-md border transition-all active:scale-95 shrink-0 ${isDarkMode ? 'bg-white/10 border-white/10 text-white' : 'bg-slate-100/90 border-slate-200/80 text-[#1D1D1F]'}`}>
               <input type="date" value={date} onChange={e=>setDate(e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-40" />
-              <span className="font-black text-[13px] tracking-tight select-none pointer-events-none whitespace-nowrap flex items-center gap-1">
+              <span className="font-black text-[12px] sm:text-[13px] tracking-tight select-none pointer-events-none whitespace-nowrap flex items-center gap-1">
                  <span>📅 {new Date(date).toLocaleDateString('ko-KR', {month:'numeric', day:'numeric'})}</span>
-                 <span className={`text-[11px] font-semibold ${isDarkMode ? 'text-sky-400' : 'text-[#007AFF]'}`}>
+                 <span className={`text-[10.5px] sm:text-[11px] font-semibold ${isDarkMode ? 'text-sky-400' : 'text-[#007AFF]'}`}>
                    ({['일','월','화','수','목','금','토'][new Date(date).getDay()]})
                  </span>
               </span>
            </div>
         </div>
 
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-1 sm:gap-1.5 min-w-0 shrink-0">
            <button 
              onClick={() => { setActiveScreen('board'); setHasNewBoardPost(false); }} 
-             className={`h-9 px-3 rounded-xl text-[11.5px] font-black flex items-center justify-center gap-1.5 active:scale-95 transition-all border whitespace-nowrap ${isDarkMode ? 'bg-[#FF375F]/15 border-[#FF375F]/30 text-[#FF375F]' : 'bg-rose-50 border-rose-200/70 text-[#FF2D55]'} relative`}
+             className={`h-8 sm:h-9 px-2 sm:px-3 rounded-xl text-[11px] sm:text-[11.5px] font-black flex items-center justify-center gap-1 active:scale-95 transition-all border whitespace-nowrap ${isDarkMode ? 'bg-[#FF375F]/15 border-[#FF375F]/30 text-[#FF375F]' : 'bg-rose-50 border-rose-200/70 text-[#FF2D55]'} relative`}
            >
-              <IconHeart className="w-3.5 h-3.5" />
+              <IconHeart className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
               <span>공동체 감사</span>
               {hasNewBoardPost && <span className="absolute top-1 right-1 w-2 h-2 bg-[#FF2D55] rounded-full animate-ping"></span>}
            </button>
            
            <button 
              onClick={() => { setActiveScreen('board'); setHasNewBoardPost(false); }} 
-             className={`h-9 px-3 rounded-xl text-[11.5px] font-black flex items-center justify-center gap-1.5 active:scale-95 transition-all border whitespace-nowrap ${isDarkMode ? 'bg-[#30D158]/15 border-[#30D158]/30 text-[#30D158]' : 'bg-emerald-50 border-emerald-200/70 text-[#34C759]'}`}
+             className={`h-8 sm:h-9 px-2 sm:px-3 rounded-xl text-[11px] sm:text-[11.5px] font-black flex items-center justify-center gap-1 active:scale-95 transition-all border whitespace-nowrap ${isDarkMode ? 'bg-[#30D158]/15 border-[#30D158]/30 text-[#30D158]' : 'bg-emerald-50 border-emerald-200/70 text-[#34C759]'}`}
            >
-              <IconPray className="w-3.5 h-3.5" />
+              <IconPray className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
               <span>공동체 기도</span>
            </button>
         </div>
