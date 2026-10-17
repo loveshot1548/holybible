@@ -2367,6 +2367,7 @@ export default function BibleKnowledgeGalaxy({
     const bObj = BIBLE_BOOK_LOOKUP[enBook] || BIBLE_BOOK_LOOKUP[bookKo];
     const chapArr = bObj?.chapters?.[Math.max(0, chap - 1)] || [];
     setReaderModalData({
+      mode: 'single',
       bookKo,
       enBook,
       chap,
@@ -2375,6 +2376,34 @@ export default function BibleKnowledgeGalaxy({
         vNum: i + 1,
         text: String(t).replace(/&#x27;/g, "'").replace(/&quot;/g, '"').trim()
       }))
+    });
+  };
+
+  // ⚖️ 구약(출발) ⇄ 신약(도착) 양쪽 본문을 나란히 1:1 대조하는 팝업 리더 호출기
+  const handleOpenParallelComparisonReader = (arcItem, e) => {
+    if (e) e.stopPropagation();
+    if (!arcItem) return;
+
+    const buildChapVerses = (bKo, ch, vs) => {
+      const enBk = KO_TO_EN_BOOK[bKo] || 'Genesis';
+      const validV = clampValidVerse(bKo, ch, vs);
+      const bObj = BIBLE_BOOK_LOOKUP[enBk] || BIBLE_BOOK_LOOKUP[bKo];
+      const chapArr = bObj?.chapters?.[Math.max(0, ch - 1)] || [];
+      const verses = chapArr.map((t, i) => ({
+        vNum: i + 1,
+        text: String(t).replace(/&#x27;/g, "'").replace(/&quot;/g, '"').trim()
+      }));
+      const targetText = verses.find(v => v.vNum === validV)?.text || '';
+      return { bookKo: bKo, enBook: enBk, chap: ch, targetVerse: validV, targetText, verses };
+    };
+
+    setReaderModalData({
+      mode: 'parallel',
+      arcTitle: arcItem.title,
+      badgeLabel: arcItem.badgeLabel,
+      desc: arcItem.desc,
+      left: buildChapVerses(arcItem.fromBook, arcItem.fromChap, arcItem.fromVerse),
+      right: buildChapVerses(arcItem.toBook, arcItem.toChap, arcItem.toVerse)
     });
   };
 
@@ -3077,63 +3106,71 @@ export default function BibleKnowledgeGalaxy({
                           </div>
                         </div>
 
-                        {/* 구약/출발 구절 vs 신약/도착 구절 1:1 실증 대조 카드 */}
+                        {/* ⚖️ 구약(좌) vs 신약(우) 1:1 나란히 실증 대조 카드 */}
                         <div className="grid grid-cols-2 gap-1.5 text-left text-xs">
                           <div 
-                            onClick={() => handleJumpToBibleChapter(currentDisplayArc.fromBook, currentDisplayArc.fromChap, currentDisplayArc.fromVerse)}
-                            className="p-2 rounded-xl bg-white/90 hover:bg-white border border-stone-300 cursor-pointer transition-all min-w-0 group"
+                            onClick={(e) => handleOpenParallelComparisonReader(currentDisplayArc, e)}
+                            className="p-2.5 rounded-xl bg-white/95 hover:bg-white border border-amber-300 cursor-pointer transition-all min-w-0 group shadow-2xs"
                           >
-                            <div className="flex justify-between items-center font-black text-amber-900 text-[10.5px] mb-0.5">
+                            <div className="flex justify-between items-center font-black text-amber-900 text-[10.5px] mb-1">
                               <span className="truncate">📜 {currentDisplayArc.fromBook} {currentDisplayArc.fromChap}:{currentDisplayArc.fromVerse}</span>
-                              <div className="flex items-center gap-1 shrink-0">
-                                <button
-                                  type="button"
-                                  onClick={(e) => handleOpenInlineReader(currentDisplayArc.fromBook, currentDisplayArc.fromChap, currentDisplayArc.fromVerse, e)}
-                                  className="px-1.5 py-0.2 rounded bg-amber-200/80 text-amber-950 text-[9px] font-black hover:bg-amber-300"
-                                  title="이 화면에서 즉시 장 전체 보기"
-                                >
-                                  팝업
-                                </button>
-                                <span className="text-[9.5px] underline group-hover:text-blue-700">열기➔</span>
-                              </div>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleJumpToBibleChapter(currentDisplayArc.fromBook, currentDisplayArc.fromChap, currentDisplayArc.fromVerse);
+                                }}
+                                className="px-1.5 py-0.5 rounded bg-amber-100 hover:bg-amber-200 text-amber-950 text-[9px] font-black shrink-0"
+                              >
+                                본문열기➔
+                              </button>
                             </div>
-                            <p className="text-[10.5px] sm:text-[11px] font-serif text-stone-800 line-clamp-2 leading-snug">
+                            <p className="text-[11px] font-serif text-stone-900 leading-snug break-keep max-h-14 overflow-y-auto hide-scrollbar">
                               {spotlightFromVerses?.[0]?.text || currentDisplayArc.desc}
                             </p>
                           </div>
 
                           <div 
-                            onClick={() => handleJumpToBibleChapter(currentDisplayArc.toBook, currentDisplayArc.toChap, currentDisplayArc.toVerse)}
-                            className="p-2 rounded-xl bg-white/90 hover:bg-white border border-stone-300 cursor-pointer transition-all min-w-0 group"
+                            onClick={(e) => handleOpenParallelComparisonReader(currentDisplayArc, e)}
+                            className="p-2.5 rounded-xl bg-white/95 hover:bg-white border border-indigo-300 cursor-pointer transition-all min-w-0 group shadow-2xs"
                           >
-                            <div className="flex justify-between items-center font-black text-indigo-900 text-[10.5px] mb-0.5">
+                            <div className="flex justify-between items-center font-black text-indigo-900 text-[10.5px] mb-1">
                               <span className="truncate">✝️ {currentDisplayArc.toBook} {currentDisplayArc.toChap}:{currentDisplayArc.toVerse}</span>
-                              <div className="flex items-center gap-1 shrink-0">
-                                <button
-                                  type="button"
-                                  onClick={(e) => handleOpenInlineReader(currentDisplayArc.toBook, currentDisplayArc.toChap, currentDisplayArc.toVerse, e)}
-                                  className="px-1.5 py-0.2 rounded bg-indigo-100 text-indigo-950 text-[9px] font-black hover:bg-indigo-200"
-                                  title="이 화면에서 즉시 장 전체 보기"
-                                >
-                                  팝업
-                                </button>
-                                <span className="text-[9.5px] underline group-hover:text-blue-700">열기➔</span>
-                              </div>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleJumpToBibleChapter(currentDisplayArc.toBook, currentDisplayArc.toChap, currentDisplayArc.toVerse);
+                                }}
+                                className="px-1.5 py-0.5 rounded bg-indigo-100 hover:bg-indigo-200 text-indigo-950 text-[9px] font-black shrink-0"
+                              >
+                                본문열기➔
+                              </button>
                             </div>
-                            <p className="text-[10.5px] sm:text-[11px] font-serif text-stone-800 line-clamp-2 leading-snug">
+                            <p className="text-[11px] font-serif text-stone-900 leading-snug break-keep max-h-14 overflow-y-auto hide-scrollbar">
                               {spotlightToVerses?.[0]?.text || currentDisplayArc.desc}
                             </p>
                           </div>
                         </div>
 
-                        <div className="flex items-center justify-between pt-0.5 text-[10px] sm:text-[10.5px] font-bold text-stone-700">
+                        <div className="flex items-center justify-between gap-1.5 pt-0.5 text-[10px] sm:text-[10.5px] font-bold text-stone-700">
                           <span className="truncate">💡 {currentDisplayArc.desc}</span>
-                          <button
-                            onClick={() => handleJumpToInterlinear(currentDisplayArc.fromBook, currentDisplayArc.fromChap, currentDisplayArc.fromVerse)}
-                            className="px-2 py-0.5 rounded bg-indigo-900 text-white text-[10px] font-black shrink-0 ml-2 cursor-pointer"
-                          >
-                            🔬 원어대조
-                          </button>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              type="button"
+                              onClick={(e) => handleOpenParallelComparisonReader(currentDisplayArc, e)}
+                              className="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-[10px] font-black cursor-pointer shadow-2xs"
+                            >
+                              ⚖️ 구약·신약 나란히 대조
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleJumpToInterlinear(currentDisplayArc.fromBook, currentDisplayArc.fromChap, currentDisplayArc.fromVerse)}
+                              className="px-2 py-1 rounded-lg bg-indigo-900 text-white text-[10px] font-black cursor-pointer"
+                            >
+                              🔬 원어
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -3219,67 +3256,204 @@ export default function BibleKnowledgeGalaxy({
         </aside>
       </div>
 
-      {/* ── 3. 📖 은하계 내장 성경 장 전체 & 하이라이트 구절 즉시 열람 모달 ── */}
+      {/* ── 3. 📖 은하계 내장 [구약 ⇄ 신약 나란히 대조] & 단일 장 열람 모달 ── */}
       {readerModalData && (
-        <div className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-md flex items-center justify-center p-3 animate-fade-in">
+        <div className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 animate-fade-in">
           <div 
-            className="w-full max-w-lg rounded-3xl border p-5 shadow-2xl flex flex-col max-h-[85vh] text-left"
+            className="w-full max-w-4xl rounded-3xl border p-4 sm:p-5 shadow-2xl flex flex-col max-h-[88dvh] text-left overflow-hidden"
             style={{ backgroundColor: theme.panelBg, borderColor: theme.panelBorder, color: theme.textMain }}
           >
-            <div className="flex items-center justify-between border-b pb-3 mb-3" style={{ borderColor: theme.panelBorder }}>
-              <div>
-                <span className="text-[10px] font-mono text-amber-400 uppercase block">VERIFIED SCRIPTURE READER</span>
-                <h3 className="text-base font-black text-white">
-                  📖 {readerModalData.bookKo} {readerModalData.chap}장 ({readerModalData.targetVerse}절 집중 대조)
-                </h3>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <button
-                  onClick={() => {
-                    const { bookKo, chap, targetVerse } = readerModalData;
-                    setReaderModalData(null);
-                    handleJumpToBibleChapter(bookKo, chap, targetVerse);
-                  }}
-                  className="px-3 py-1.5 rounded-xl bg-cyan-500 text-slate-950 font-black text-xs cursor-pointer"
-                >
-                  통독365 본문으로 이동 ➔
-                </button>
-                <button
-                  onClick={() => setReaderModalData(null)}
-                  className="px-2.5 py-1.5 rounded-xl bg-white/10 text-slate-300 hover:text-white text-xs font-bold cursor-pointer"
-                >
-                  ✕
-                </button>
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-y-auto space-y-2 pr-1 hide-scrollbar">
-              {readerModalData.verses.map(v => {
-                const isTarget = v.vNum === readerModalData.targetVerse;
-                return (
-                  <div
-                    key={v.vNum}
-                    ref={el => {
-                      if (isTarget && el) {
-                        setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'center' }), 80);
-                      }
-                    }}
-                    className={`p-3 rounded-2xl border transition-all ${
-                      isTarget
-                        ? 'bg-amber-500/20 border-amber-400 ring-2 ring-amber-400/50 shadow-lg'
-                        : 'bg-black/35 border-white/5'
-                    }`}
+            {readerModalData.mode === 'parallel' ? (
+              <>
+                {/* 상단 헤더 */}
+                <div className="flex items-center justify-between border-b pb-3 mb-3 gap-2 shrink-0" style={{ borderColor: theme.panelBorder }}>
+                  <div className="min-w-0">
+                    <span className="text-[10px] font-mono text-amber-400 uppercase block">
+                      SIDE-BY-SIDE PARALLEL SCRIPTURE COMPARISON ({readerModalData.badgeLabel})
+                    </span>
+                    <h3 className="text-sm sm:text-base font-black text-white truncate">
+                      ⚖️ {readerModalData.left.bookKo} {readerModalData.left.chap}:{readerModalData.left.targetVerse} ⇄ {readerModalData.right.bookKo} {readerModalData.right.chap}:{readerModalData.right.targetVerse} 나란히 대조
+                    </h3>
+                  </div>
+                  <button
+                    onClick={() => setReaderModalData(null)}
+                    className="px-3 py-1.5 rounded-xl bg-white/10 text-slate-300 hover:text-white text-xs font-bold cursor-pointer shrink-0"
                   >
-                    <p className="text-xs sm:text-[13px] font-serif leading-relaxed text-slate-100 break-keep select-text">
-                      <span className={`font-mono font-black mr-2 ${isTarget ? 'text-amber-300 text-sm' : 'text-cyan-400'}`}>
-                        {v.vNum}절
+                    ✕ 닫기
+                  </button>
+                </div>
+
+                {/* 핵심 대조 두 구절 1:1 상단 고정 비교 박스 */}
+                <div className="grid grid-cols-2 gap-2 mb-3 p-2.5 rounded-2xl bg-amber-500/10 border border-amber-400/40 shrink-0">
+                  <div className="p-2.5 rounded-xl bg-black/50 border border-amber-400/50 min-w-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[11px] font-black text-amber-300">
+                        📜 {readerModalData.left.bookKo} {readerModalData.left.chap}:{readerModalData.left.targetVerse}
                       </span>
-                      {v.text}
+                      <button
+                        onClick={() => {
+                          const { bookKo, chap, targetVerse } = readerModalData.left;
+                          setReaderModalData(null);
+                          handleJumpToBibleChapter(bookKo, chap, targetVerse);
+                        }}
+                        className="text-[9.5px] font-black text-cyan-300 underline cursor-pointer"
+                      >
+                        통독365 이동➔
+                      </button>
+                    </div>
+                    <p className="text-xs font-serif text-white leading-relaxed break-keep">
+                      {readerModalData.left.targetText}
                     </p>
                   </div>
-                );
-              })}
-            </div>
+
+                  <div className="p-2.5 rounded-xl bg-black/50 border border-cyan-400/50 min-w-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[11px] font-black text-cyan-300">
+                        ✝️ {readerModalData.right.bookKo} {readerModalData.right.chap}:{readerModalData.right.targetVerse}
+                      </span>
+                      <button
+                        onClick={() => {
+                          const { bookKo, chap, targetVerse } = readerModalData.right;
+                          setReaderModalData(null);
+                          handleJumpToBibleChapter(bookKo, chap, targetVerse);
+                        }}
+                        className="text-[9.5px] font-black text-cyan-300 underline cursor-pointer"
+                      >
+                        통독365 이동➔
+                      </button>
+                    </div>
+                    <p className="text-xs font-serif text-white leading-relaxed break-keep">
+                      {readerModalData.right.targetText}
+                    </p>
+                  </div>
+                </div>
+
+                {/* 좌(구약 장 전체) · 우(신약 장 전체) 나란히 스크롤 대조 뷰 */}
+                <div className="grid grid-cols-2 gap-2.5 flex-1 min-h-0 overflow-hidden">
+                  {/* 좌측 컬럼 */}
+                  <div className="flex flex-col min-h-0 border rounded-2xl p-2.5 bg-black/30" style={{ borderColor: theme.panelBorder }}>
+                    <div className="text-xs font-black text-amber-400 pb-2 mb-2 border-b border-white/10">
+                      📜 {readerModalData.left.bookKo} {readerModalData.left.chap}장 전체 문맥
+                    </div>
+                    <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 hide-scrollbar">
+                      {readerModalData.left.verses.map(v => {
+                        const isTarget = v.vNum === readerModalData.left.targetVerse;
+                        return (
+                          <div
+                            key={v.vNum}
+                            ref={el => {
+                              if (isTarget && el) {
+                                setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'center' }), 80);
+                              }
+                            }}
+                            className={`p-2.5 rounded-xl border transition-all ${
+                              isTarget
+                                ? 'bg-amber-500/25 border-amber-400 ring-1 ring-amber-400'
+                                : 'bg-black/30 border-white/5'
+                            }`}
+                          >
+                            <p className="text-[11.5px] sm:text-xs font-serif leading-relaxed text-slate-100 break-keep select-text">
+                              <b className={`font-mono mr-1.5 ${isTarget ? 'text-amber-300' : 'text-slate-400'}`}>{v.vNum}</b>
+                              {v.text}
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* 우측 컬럼 */}
+                  <div className="flex flex-col min-h-0 border rounded-2xl p-2.5 bg-black/30" style={{ borderColor: theme.panelBorder }}>
+                    <div className="text-xs font-black text-cyan-400 pb-2 mb-2 border-b border-white/10">
+                      ✝️ {readerModalData.right.bookKo} {readerModalData.right.chap}장 전체 문맥
+                    </div>
+                    <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 hide-scrollbar">
+                      {readerModalData.right.verses.map(v => {
+                        const isTarget = v.vNum === readerModalData.right.targetVerse;
+                        return (
+                          <div
+                            key={v.vNum}
+                            ref={el => {
+                              if (isTarget && el) {
+                                setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'center' }), 80);
+                              }
+                            }}
+                            className={`p-2.5 rounded-xl border transition-all ${
+                              isTarget
+                                ? 'bg-cyan-500/25 border-cyan-400 ring-1 ring-cyan-400'
+                                : 'bg-black/30 border-white/5'
+                            }`}
+                          >
+                            <p className="text-[11.5px] sm:text-xs font-serif leading-relaxed text-slate-100 break-keep select-text">
+                              <b className={`font-mono mr-1.5 ${isTarget ? 'text-cyan-300' : 'text-slate-400'}`}>{v.vNum}</b>
+                              {v.text}
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </>
+            ) : (
+              /* 단일 성경 장 전체 읽기 모드 */
+              <>
+                <div className="flex items-center justify-between border-b pb-3 mb-3" style={{ borderColor: theme.panelBorder }}>
+                  <div>
+                    <span className="text-[10px] font-mono text-amber-400 uppercase block">VERIFIED SCRIPTURE READER</span>
+                    <h3 className="text-base font-black text-white">
+                      📖 {readerModalData.bookKo} {readerModalData.chap}장 ({readerModalData.targetVerse}절 집중 대조)
+                    </h3>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => {
+                        const { bookKo, chap, targetVerse } = readerModalData;
+                        setReaderModalData(null);
+                        handleJumpToBibleChapter(bookKo, chap, targetVerse);
+                      }}
+                      className="px-3 py-1.5 rounded-xl bg-cyan-500 text-slate-950 font-black text-xs cursor-pointer"
+                    >
+                      통독365 본문으로 이동 ➔
+                    </button>
+                    <button
+                      onClick={() => setReaderModalData(null)}
+                      className="px-2.5 py-1.5 rounded-xl bg-white/10 text-slate-300 hover:text-white text-xs font-bold cursor-pointer"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex-1 overflow-y-auto space-y-2 pr-1 hide-scrollbar">
+                  {readerModalData.verses.map(v => {
+                    const isTarget = v.vNum === readerModalData.targetVerse;
+                    return (
+                      <div
+                        key={v.vNum}
+                        ref={el => {
+                          if (isTarget && el) {
+                            setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'center' }), 80);
+                          }
+                        }}
+                        className={`p-3 rounded-2xl border transition-all ${
+                          isTarget
+                            ? 'bg-amber-500/20 border-amber-400 ring-2 ring-amber-400/50 shadow-lg'
+                            : 'bg-black/35 border-white/5'
+                        }`}
+                      >
+                        <p className="text-xs sm:text-[13px] font-serif leading-relaxed text-slate-100 break-keep select-text">
+                          <span className={`font-mono font-black mr-2 ${isTarget ? 'text-amber-300 text-sm' : 'text-cyan-400'}`}>
+                            {v.vNum}절
+                          </span>
+                          {v.text}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

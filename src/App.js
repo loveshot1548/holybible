@@ -1064,8 +1064,23 @@ const GlobalStyles = () => (
   <style>{`
     @font-face { font-family: 'MYYeongnamnu'; src: url('${myFontUrl}') format('truetype'); font-display: swap; }
     .font-yeongnamnu { font-family: 'MYYeongnamnu', sans-serif !important; }
-    html, body { overflow-x: hidden; overscroll-behavior-x: none; width: 100vw; height: 100vh; margin: 0; padding: 0; position: fixed; -webkit-font-smoothing: antialiased; }
-    #root { width: 100vw; height: 100vh; display: flex; overflow-x: hidden; }
+    html, body { overflow-x: hidden !important; overscroll-behavior-x: none; width: 100%; max-width: 100vw; height: 100dvh; margin: 0; padding: 0; position: fixed; -webkit-font-smoothing: antialiased; }
+    #root { width: 100%; max-width: 100vw; height: 100dvh; display: flex; overflow-x: hidden !important; }
+    
+    /* 🛡️ 모바일 성경통독(Bible) & 맥체인(Mcheyne) 개역개정 본문 화면 뚫림 원천 방지 */
+    p, span, div {
+      overflow-wrap: break-word;
+      word-wrap: break-word;
+    }
+    @media (max-width: 768px) {
+      .font-serif, p {
+        max-width: 100% !important;
+        white-space: normal !important;
+        word-break: keep-all;
+        overflow-wrap: anywhere !important;
+      }
+    }
+
     .hide-scrollbar::-webkit-scrollbar { display: none; }
     .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     input[type="date"].date-hidden::-webkit-calendar-picker-indicator { background: transparent; bottom: 0; color: transparent; cursor: pointer; height: auto; left: 0; position: absolute; right: 0; top: 0; width: auto; pointer-events: none; }
