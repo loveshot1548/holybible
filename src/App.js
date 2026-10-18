@@ -362,8 +362,10 @@ export function Home({
   formatVerse, dateHash, currentBgUrl, updateDay, triggerConfetti, isWknd, ymdStr, praiseChannels, authUser, streak5
 }) {
   const [showTuesdayPopup, setShowTuesdayPopup] = useState(false);
-  const startD = new Date(readChallengeStart); 
-  const dDay = Math.ceil((new Date().getTime() - startD.getTime()) / 86400000) + 1;
+  // 🛡️ 매일 초기화되지 않고 날짜에 따라 정상적으로 증가하는 챌린지 시작일 고정
+  const challengeStartKey = localStorage.getItem('readChallengeStart') || '2026-01-01';
+  const startD = new Date(challengeStartKey); 
+  const dDay = Math.max(1, Math.ceil((new Date().getTime() - startD.getTime()) / 86400000) + 1);
   const safeVerse = formatVerse || { text: '오늘의 말씀을 불러오는 중입니다...', ref: '' };
   const currentChecks = (currDay && currDay.checks) ? currDay.checks : {};
 
