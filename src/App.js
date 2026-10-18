@@ -271,7 +271,7 @@ const LiquidWaveBackground = ({ isDarkMode, scrollY = 0, scrollVelocity = 0 }) =
   );
 };
 
-// 커버플로우 스타일 카루셀 (SaaS 인디케이터 닷 & 글래스 배지 업그레이드)
+// 커버플로우 스타일 카루셀 (모바일 넘침 방지 & 상용 SaaS 슬림 프레임)
 const CoverCarousel = ({ items }) => {
   const scrollRef = useRef(null);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -285,12 +285,12 @@ const CoverCarousel = ({ items }) => {
     let minDistance = Infinity;
 
     Array.from(scrollRef.current.children).forEach((child, idx) => {
-       const childCenter = child.offsetLeft + child.clientWidth / 2;
-       const distance = Math.abs(centerPosition - childCenter);
-       if (distance < minDistance) {
-           minDistance = distance;
-           closestIdx = idx;
-       }
+      const childCenter = child.offsetLeft + child.clientWidth / 2;
+      const distance = Math.abs(centerPosition - childCenter);
+      if (distance < minDistance) {
+        minDistance = distance;
+        closestIdx = idx;
+      }
     });
     if (activeIndex !== closestIdx) setActiveIndex(closestIdx);
   }, [activeIndex]);
@@ -307,7 +307,7 @@ const CoverCarousel = ({ items }) => {
       <div 
         ref={scrollRef}
         onScroll={handleScroll}
-        className="flex overflow-x-auto snap-x snap-mandatory hide-scrollbar py-5 w-full space-x-[-6vw] md:space-x-[-20px] items-center px-[14vw] md:px-[calc(50%-140px)]"
+        className="flex overflow-x-auto snap-x snap-mandatory hide-scrollbar py-3 w-full space-x-[-5vw] md:space-x-[-16px] items-center px-[12vw] md:px-[calc(50%-140px)]"
       >
         {items.map((item, idx) => {
           const isActive = activeIndex === idx;
@@ -315,21 +315,23 @@ const CoverCarousel = ({ items }) => {
             <div
               key={idx}
               onClick={() => {
-                 if (isActive) window.open(item.url, '_blank');
-                 else scrollRef.current.children[idx].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                if (isActive) window.open(item.url, '_blank');
+                else scrollRef.current.children[idx].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
               }}
-              className={`snap-center shrink-0 transition-all duration-300 ease-out cursor-pointer rounded-[26px] overflow-hidden relative border border-white/25 w-[65vw] md:w-[280px] aspect-[4/3] ${isActive ? 'scale-105 z-30 opacity-100 shadow-[0_18px_38px_rgba(0,0,0,0.32)] ring-1 ring-white/30' : 'scale-90 z-10 opacity-45 hover:opacity-65'}`}
+              className={`snap-center shrink-0 transition-all duration-300 ease-out cursor-pointer rounded-[22px] overflow-hidden relative border border-white/20 w-[72vw] max-w-[300px] md:w-[280px] aspect-[16/10] ${
+                isActive ? 'scale-100 z-30 opacity-100 shadow-[0_12px_28px_rgba(0,0,0,0.25)] ring-1 ring-white/30' : 'scale-90 z-10 opacity-45 hover:opacity-65'
+              }`}
             >
               <img src={item.bg} alt={item.title} className="absolute inset-0 w-full h-full object-cover" crossOrigin="anonymous" />
-              <div className={`absolute inset-0 transition-opacity duration-300 ${isActive ? 'bg-gradient-to-t from-black/90 via-black/25 to-transparent' : 'bg-black/60'}`}></div>
-              <div className={`absolute top-3.5 left-3.5 px-2.5 py-1 rounded-full bg-black/45 backdrop-blur-md border border-white/20 text-[10px] font-mono font-bold text-white/90 ${isActive ? 'opacity-100' : 'opacity-0'}`}>
-                CH 0{idx + 1} • LIVE STREAM
+              <div className={`absolute inset-0 transition-opacity duration-300 ${isActive ? 'bg-gradient-to-t from-black/90 via-black/30 to-transparent' : 'bg-black/60'}`} />
+              <div className={`absolute top-3 left-3 px-2.5 py-0.5 rounded-full bg-black/50 backdrop-blur-md border border-white/20 text-[10px] font-mono font-bold text-white/95 ${isActive ? 'opacity-100' : 'opacity-0'}`}>
+                CH 0{idx + 1} • LIVE
               </div>
-              <div className={`absolute inset-0 p-5 flex flex-col justify-end text-left transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-                <h4 className="text-white font-bold text-[15px] md:text-[17px] drop-shadow-md break-keep mb-3 leading-tight line-clamp-2">
+              <div className={`absolute inset-0 p-4 flex flex-col justify-end text-left transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                <h4 className="text-white font-black text-[15px] md:text-[16px] drop-shadow-md break-keep mb-2 leading-snug line-clamp-1">
                   {item.title}
                 </h4>
-                <div className="inline-flex items-center justify-center gap-1.5 bg-[#007AFF] hover:bg-[#0A84FF] text-white rounded-full px-3.5 py-1.5 text-[11.5px] font-bold w-max shadow-lg">
+                <div className="inline-flex items-center justify-center gap-1.5 bg-[#007AFF] hover:bg-[#0A84FF] text-white rounded-full px-3.5 py-1.5 text-[11.5px] font-extrabold w-max shadow-md">
                   <IconPlay className="w-3 h-3" /> 바로 시청하기
                 </div>
               </div>
@@ -337,8 +339,7 @@ const CoverCarousel = ({ items }) => {
           );
         })}
       </div>
-      {/* 페이지 인디케이터 닷 */}
-      <div className="flex items-center justify-center gap-1.5 -mt-1 mb-1">
+      <div className="flex items-center justify-center gap-1.5 mt-0.5 mb-1">
         {items.map((_, i) => (
           <span
             key={i}
@@ -353,7 +354,7 @@ const CoverCarousel = ({ items }) => {
 };
 
 // =====================================================================
-// 🏠 고도화된 상용 SaaS형 메인 홈 화면 (Home)
+// 🏠 상용 SaaS급 고밀도 메인 홈 화면 (Home)
 // =====================================================================
 export function Home({
   t, isDarkMode, setActiveScreen, isSidebarOpen, setIsSidebarOpen, openModal, bibleProgress, readChapsCount,
@@ -366,7 +367,6 @@ export function Home({
   const safeVerse = formatVerse || { text: '오늘의 말씀을 불러오는 중입니다...', ref: '' };
   const currentChecks = (currDay && currDay.checks) ? currDay.checks : {};
 
-  // 🌊 스마트폰 위아래 스크롤 반응형 물결 애니메이션 상태
   const [scrollWaveOffset, setScrollWaveOffset] = useState(0);
   const handleHomeScroll = useCallback((e) => {
     const top = e.currentTarget.scrollTop || 0;
@@ -395,15 +395,14 @@ export function Home({
     } catch (error) { alert('말씀카드 저장 중 오류가 발생했습니다.'); }
   };
 
-  // 🛡️ 마스터 메뉴 정의 (JSX 아이콘은 메모리에만 두고 localStorage에는 ID만 저장하여 크래시 원천 차단!)
   const MASTER_MENUS = useMemo(() => [
-    { id: 'sermonArchiveAdvanced', icon: <IconChurch className="w-4 h-4"/>, color: 'text-[#007AFF]', bg: 'bg-[#007AFF]/12', title: '삶의 적용과 실천', desc: '적용과 실천' },
-    { id: 'galaxy', icon: <span className="text-base">🌌</span>, color: 'text-[#38BDF8]', bg: 'bg-[#38BDF8]/12', title: '지식 은하계', desc: '세컨드 브레인' },
+    { id: 'sermonArchiveAdvanced', icon: <IconChurch className="w-4 h-4"/>, color: 'text-[#007AFF]', bg: 'bg-[#007AFF]/12', title: '삶의 적용과 실천', desc: '말씀 적용과 실천' },
+    { id: 'galaxy', icon: <span className="text-base leading-none">🌌</span>, color: 'text-[#38BDF8]', bg: 'bg-[#38BDF8]/12', title: '지식 은하계', desc: '구속사 아크·별자리' },
     { id: 'qtArchiveDetail', icon: <IconFlame className="w-4 h-4"/>, color: 'text-[#FF2D55]', bg: 'bg-[#FF2D55]/12', title: 'QT 심층 분석', desc: 'QT 배경 및 적용' },
     { id: 'sermonAnalysis', icon: <IconAnalytics className="w-4 h-4"/>, color: 'text-[#FF9500]', bg: 'bg-[#FF9500]/12', title: '설교 분석', desc: '전체 설교 DB' },
-    { id: 'applyTracker', icon: <IconSmile className="w-4 h-4"/>, color: 'text-[#AF52DE]', bg: 'bg-[#AF52DE]/12', title: '적용 트래커', desc: '신앙 결단 모아보기' },
+    { id: 'applyTracker', icon: <IconSmile className="w-4 h-4"/>, color: 'text-[#AF52DE]', bg: 'bg-[#AF52DE]/12', title: '적용 트래커', desc: '신앙 결단 체크' },
     { id: 'bibleWikiAdvanced', icon: <IconMap className="w-4 h-4"/>, color: 'text-[#34C759]', bg: 'bg-[#34C759]/12', title: '성경 위키', desc: '지식 마인드맵' },
-    { id: 'interlinear', icon: <IconDocument className="w-4 h-4"/>, color: 'text-[#5AC8FA]', bg: 'bg-[#5AC8FA]/12', title: '원어 성경', desc: '히브리어/헬라어' },
+    { id: 'interlinear', icon: <IconDocument className="w-4 h-4"/>, color: 'text-[#5AC8FA]', bg: 'bg-[#5AC8FA]/12', title: '원어 성경', desc: '히브리어·헬라어' },
     { id: 'trainingCurriculum', icon: <IconBook className="w-4 h-4"/>, color: 'text-[#AF52DE]', bg: 'bg-[#AF52DE]/12', title: '양육 커리큘럼', desc: '성장 단계별 훈련' },
     { id: 'trainingSubPages', icon: <IconDocument className="w-4 h-4"/>, color: 'text-[#007AFF]', bg: 'bg-[#007AFF]/12', title: '4주 심화 워크북', desc: '제자 훈련 심화' },
     { id: 'prayer', icon: <IconPray className="w-4 h-4"/>, color: 'text-[#34C759]', bg: 'bg-[#34C759]/12', title: '기도 보관함', desc: '나의 기도 기록' },
@@ -412,7 +411,6 @@ export function Home({
 
   const [menuOrderIds, setMenuOrderIds] = useState(() => {
     try {
-      // 구버전 크래시 유발 키 자동 정리
       localStorage.removeItem('home_menu_order');
       const savedIds = JSON.parse(localStorage.getItem('home_menu_order_ids') || 'null');
       if (Array.isArray(savedIds) && savedIds.length > 0) {
@@ -429,7 +427,6 @@ export function Home({
     return menuOrderIds.map(id => MASTER_MENUS.find(m => m.id === id)).filter(Boolean);
   }, [menuOrderIds, MASTER_MENUS]);
 
-  // 📱 아이폰 홈화면 스타일 편집 모드 (꾹 누르기 500ms 감지 & 드래그/스왑)
   const [isEditMode, setIsEditMode] = useState(false);
   const [draggedIdx, setDraggedIdx] = useState(null);
   const longPressTimerRef = useRef(null);
@@ -486,449 +483,487 @@ export function Home({
   return (
     <div 
       onScroll={handleHomeScroll}
-      className={`flex-1 flex flex-col h-full w-full max-w-full overflow-x-hidden touch-pan-y ${t.pageBg} overflow-y-auto pb-[140px] hide-scrollbar animate-fade-in-up pointer-events-auto relative`}
+      className={`flex-1 flex flex-col h-full w-full max-w-full overflow-x-hidden touch-pan-y ${t.pageBg} overflow-y-auto pb-[130px] hide-scrollbar animate-fade-in-up pointer-events-auto relative`}
     >
-      {/* 🌊 SaaS 스타일 애니메이션 키프레임 & 아이폰 흔들림(Jiggle) 효과 */}
       <style>{`
         @keyframes saasWaveDrift {
           0% { transform: translate3d(0, 0, 0); }
-          50% { transform: translate3d(-25%, 6px, 0); }
+          50% { transform: translate3d(-25%, 5px, 0); }
           100% { transform: translate3d(-50%, 0, 0); }
         }
         @keyframes iosJiggle {
-          0% { transform: rotate(-1.1deg) translateY(0px); }
-          50% { transform: rotate(1.1deg) translateY(-1.5px); }
-          100% { transform: rotate(-1.1deg) translateY(0px); }
+          0% { transform: rotate(-1deg) translateY(0px); }
+          50% { transform: rotate(1deg) translateY(-1px); }
+          100% { transform: rotate(-1deg) translateY(0px); }
         }
         .saas-wave-slow { animation: saasWaveDrift 16s ease-in-out infinite; }
         .saas-wave-fast { animation: saasWaveDrift 11s ease-in-out infinite reverse; }
         .ios-jiggle-card { animation: iosJiggle 0.28s ease-in-out infinite; }
       `}</style>
 
-      {/* 🌊 안쪽 배경 스크롤 반응형 3중 물결 레이어 (터치 방해 없음) */}
+      {/* 배경 리퀴드 웨이브 */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
         <div 
-          className="absolute -top-24 left-1/2 -translate-x-1/2 w-[130vw] h-[360px] rounded-full blur-[95px] transition-transform duration-300"
+          className="absolute -top-24 left-1/2 -translate-x-1/2 w-[120vw] h-[320px] rounded-full blur-[95px] transition-transform duration-300"
           style={{
             background: isDarkMode
-              ? 'radial-gradient(circle, rgba(10,132,255,0.16) 0%, rgba(175,82,222,0.10) 45%, transparent 75%)'
-              : 'radial-gradient(circle, rgba(0,122,255,0.10) 0%, rgba(88,86,214,0.07) 45%, transparent 75%)',
-            transform: `translate3d(-50%, ${Math.sin(scrollWaveOffset * 0.015) * 18}px, 0)`
+              ? 'radial-gradient(circle, rgba(10,132,255,0.14) 0%, rgba(175,82,222,0.08) 45%, transparent 75%)'
+              : 'radial-gradient(circle, rgba(0,122,255,0.08) 0%, rgba(88,86,214,0.05) 45%, transparent 75%)',
+            transform: `translate3d(-50%, ${Math.sin(scrollWaveOffset * 0.015) * 14}px, 0)`
           }}
         />
-        <div 
-          className="absolute bottom-0 left-0 w-[200%] h-[220px] opacity-40 dark:opacity-25 transition-transform duration-150"
-          style={{ transform: `translate3d(0, ${Math.cos(scrollWaveOffset * 0.02) * 14}px, 0)` }}
-        >
-          <svg viewBox="0 0 1440 320" preserveAspectRatio="none" className="w-full h-full saas-wave-slow">
-            <path
-              fill={isDarkMode ? '#0A84FF' : '#38BDF8'}
-              fillOpacity="0.22"
-              d="M0,160L60,170.7C120,181,240,203,360,192C480,181,600,139,720,138.7C840,139,960,181,1080,197.3C1200,213,1320,203,1380,197.3L1440,192L1440,320L1380,320C1320,320,1200,320,1080,320C960,320,840,320,720,320C600,320,480,320,360,320C240,320,120,320,60,320L0,320Z"
-            />
-          </svg>
-        </div>
-        <div 
-          className="absolute bottom-0 left-0 w-[200%] h-[180px] opacity-35 dark:opacity-20 transition-transform duration-150"
-          style={{ transform: `translate3d(0, ${Math.sin(scrollWaveOffset * 0.025) * 12}px, 0)` }}
-        >
-          <svg viewBox="0 0 1440 320" preserveAspectRatio="none" className="w-full h-full saas-wave-fast">
-            <path
-              fill={isDarkMode ? '#AF52DE' : '#6366F1'}
-              fillOpacity="0.18"
-              d="M0,224L80,213.3C160,203,320,181,480,186.7C640,192,800,224,960,218.7C1120,213,1280,171,1360,149.3L1440,128L1440,320L1360,320C1280,320,1120,320,960,320C800,320,640,320,480,320C320,320,160,320,80,320L0,320Z"
-            />
-          </svg>
-        </div>
       </div>
 
       {showTuesdayPopup && (
         <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/40 backdrop-blur-md pointer-events-auto">
-          <div className={`${t.cardBg} p-8 rounded-[32px] max-w-sm w-full shadow-2xl text-center space-y-5 border ${t.border}`}>
-            <div className="w-16 h-16 bg-[#FF2D55]/10 text-[#FF2D55] rounded-full flex items-center justify-center mx-auto text-3xl"><IconYoutube className="w-8 h-8"/></div>
-            <h3 className={`text-xl font-bold ${t.textMain} tracking-tight`}>터치유 더치유 라이브</h3>
-            <p className={`text-sm ${t.textSub} leading-relaxed`}>매달 첫째 주 화요일은 라이브 방송일입니다!<br/>은혜로운 말씀과 교제를 함께 나누세요.</p>
-            <div className="flex gap-3 pt-4">
-              <a href="https://www.youtube.com" target="_blank" rel="noopener noreferrer" className="flex-1 py-4 bg-[#FF2D55] hover:bg-[#E0244A] text-white font-bold rounded-[16px] text-[15px] flex items-center justify-center transition-colors shadow-md">방송 보기</a>
-              <button onClick={() => setShowTuesdayPopup(false)} className={`px-6 py-4 ${isDarkMode ? 'bg-[#2C2C2E] text-white hover:bg-[#3A3A3C]' : 'bg-[#F2F2F7] text-[#1D1D1F] hover:bg-[#E5E5EA]'} font-bold rounded-[16px] text-[15px] transition-colors`}>닫기</button>
+          <div className={`${t.cardBg} p-7 rounded-[28px] max-w-sm w-full shadow-2xl text-center space-y-4 border ${t.border}`}>
+            <div className="w-14 h-14 bg-[#FF2D55]/10 text-[#FF2D55] rounded-full flex items-center justify-center mx-auto text-2xl"><IconYoutube className="w-7 h-7"/></div>
+            <h3 className={`text-lg font-black ${t.textMain} tracking-tight`}>터치유 더치유 라이브</h3>
+            <p className={`text-xs ${t.textSub} leading-relaxed`}>매달 첫째 주 화요일은 라이브 방송일입니다!<br/>은혜로운 말씀과 교제를 함께 나누세요.</p>
+            <div className="flex gap-2.5 pt-2">
+              <a href="https://www.youtube.com" target="_blank" rel="noopener noreferrer" className="flex-1 py-3.5 bg-[#FF2D55] hover:bg-[#E0244A] text-white font-bold rounded-2xl text-sm flex items-center justify-center transition-colors shadow-md">방송 보기</a>
+              <button onClick={() => setShowTuesdayPopup(false)} className={`px-5 py-3.5 ${isDarkMode ? 'bg-[#2C2C2E] text-white' : 'bg-[#F2F2F7] text-[#1D1D1F]'} font-bold rounded-2xl text-sm`}>닫기</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── 상단 SaaS 글래스모피즘 네비게이션 바 (모바일 가로 넘침 방지 고정) ── */}
-      <div className={`w-full max-w-full overflow-hidden flex items-center justify-between gap-1.5 px-3 sm:px-4 pt-3.5 pb-2.5 z-[45] pointer-events-auto sticky top-0 ${isDarkMode ? 'bg-[#090C12]/85' : 'bg-white/85'} backdrop-blur-2xl border-b border-black/5 dark:border-white/10`}>
+      {/* ── 상단 SaaS 헤더 바 (모바일 잘림 0% 완벽 최적화) ── */}
+      <header className={`w-full max-w-full shrink-0 flex items-center justify-between gap-2 px-3.5 sm:px-5 py-2.5 z-[45] pointer-events-auto sticky top-0 ${isDarkMode ? 'bg-[#090C12]/90' : 'bg-white/90'} backdrop-blur-2xl border-b ${t.border}`}>
         <div className="flex items-center gap-1.5 min-w-0 shrink-0">
-           <button 
-             onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
-             className={`w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-xl active:scale-95 transition-transform shrink-0 border ${isDarkMode ? 'bg-white/10 border-white/10 text-white' : 'bg-slate-100 border-slate-200/80 text-[#1D1D1F]'}`}
-           >
-             <IconMenu className="w-4 h-4" />
-           </button>
-           
-           <div className={`relative inline-flex items-center cursor-pointer px-2.5 sm:px-3.5 h-8 sm:h-9 rounded-xl backdrop-blur-md border transition-all active:scale-95 shrink-0 ${isDarkMode ? 'bg-white/10 border-white/10 text-white' : 'bg-slate-100/90 border-slate-200/80 text-[#1D1D1F]'}`}>
-              <input type="date" value={date} onChange={e=>setDate(e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-40" />
-              <span className="font-black text-[12px] sm:text-[13px] tracking-tight select-none pointer-events-none whitespace-nowrap flex items-center gap-1">
-                 <span>📅 {new Date(date).toLocaleDateString('ko-KR', {month:'numeric', day:'numeric'})}</span>
-                 <span className={`text-[10.5px] sm:text-[11px] font-semibold ${isDarkMode ? 'text-sky-400' : 'text-[#007AFF]'}`}>
-                   ({['일','월','화','수','목','금','토'][new Date(date).getDay()]})
-                 </span>
+          <button 
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
+            className={`w-8 h-8 flex items-center justify-center rounded-xl active:scale-95 transition-transform shrink-0 border ${isDarkMode ? 'bg-white/10 border-white/10 text-white' : 'bg-slate-100 border-slate-200/90 text-[#1D1D1F]'}`}
+          >
+            <IconMenu className="w-4 h-4" />
+          </button>
+          
+          <div className={`relative inline-flex items-center cursor-pointer px-2.5 h-8 rounded-xl border transition-all active:scale-95 shrink-0 ${isDarkMode ? 'bg-white/10 border-white/10 text-white' : 'bg-slate-100/90 border-slate-200/90 text-[#1D1D1F]'}`}>
+            <input type="date" value={date} onChange={e=>setDate(e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-40" />
+            <span className="font-black text-[12px] tracking-tight select-none pointer-events-none whitespace-nowrap flex items-center gap-1">
+              <span>📅 {new Date(date).toLocaleDateString('ko-KR', {month:'numeric', day:'numeric'})}</span>
+              <span className={`text-[11px] font-bold ${isDarkMode ? 'text-sky-400' : 'text-[#007AFF]'}`}>
+                ({['일','월','화','수','목','금','토'][new Date(date).getDay()]})
               </span>
-           </div>
+            </span>
+          </div>
         </div>
 
-        <div className="flex items-center gap-1 sm:gap-1.5 min-w-0 shrink-0">
-           <button 
-             onClick={() => { setActiveScreen('board'); setHasNewBoardPost(false); }} 
-             className={`h-8 sm:h-9 px-2 sm:px-3 rounded-xl text-[11px] sm:text-[11.5px] font-black flex items-center justify-center gap-1 active:scale-95 transition-all border whitespace-nowrap ${isDarkMode ? 'bg-[#FF375F]/15 border-[#FF375F]/30 text-[#FF375F]' : 'bg-rose-50 border-rose-200/70 text-[#FF2D55]'} relative`}
-           >
-              <IconHeart className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
-              <span>공동체 감사</span>
-              {hasNewBoardPost && <span className="absolute top-1 right-1 w-2 h-2 bg-[#FF2D55] rounded-full animate-ping"></span>}
-           </button>
-           
-           <button 
-             onClick={() => { setActiveScreen('board'); setHasNewBoardPost(false); }} 
-             className={`h-8 sm:h-9 px-2 sm:px-3 rounded-xl text-[11px] sm:text-[11.5px] font-black flex items-center justify-center gap-1 active:scale-95 transition-all border whitespace-nowrap ${isDarkMode ? 'bg-[#30D158]/15 border-[#30D158]/30 text-[#30D158]' : 'bg-emerald-50 border-emerald-200/70 text-[#34C759]'}`}
-           >
-              <IconPray className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
-              <span>공동체 기도</span>
-           </button>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <button 
+            onClick={() => { setActiveScreen('board'); setHasNewBoardPost(false); }} 
+            className={`h-8 px-2.5 rounded-xl text-[11.5px] font-extrabold flex items-center justify-center gap-1 active:scale-95 transition-all border whitespace-nowrap ${isDarkMode ? 'bg-[#FF375F]/15 border-[#FF375F]/30 text-[#FF375F]' : 'bg-rose-50 border-rose-200/80 text-[#FF2D55]'} relative`}
+          >
+            <IconHeart className="w-3.5 h-3.5 shrink-0" />
+            <span>공동체 감사</span>
+            {hasNewBoardPost && <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-[#FF2D55] rounded-full animate-ping" />}
+          </button>
+          
+          <button 
+            onClick={() => { setActiveScreen('board'); setHasNewBoardPost(false); }} 
+            className={`h-8 px-2.5 rounded-xl text-[11.5px] font-extrabold flex items-center justify-center gap-1 active:scale-95 transition-all border whitespace-nowrap ${isDarkMode ? 'bg-[#30D158]/15 border-[#30D158]/30 text-[#30D158]' : 'bg-emerald-50 border-emerald-200/80 text-[#34C759]'}`}
+          >
+            <IconPray className="w-3.5 h-3.5 shrink-0" />
+            <span>공동체 기도</span>
+          </button>
         </div>
-      </div>
+      </header>
 
-      {/* ── 메인 SaaS 컨텐츠 컨테이너 ── */}
-      <div className="px-4 sm:px-5 mt-4 mb-4 max-w-[1200px] mx-auto w-full relative z-10">
+      {/* ── 메인 SaaS 컨텐츠 영역 ── */}
+      <div className="px-3.5 sm:px-5 pt-3.5 pb-6 max-w-[1140px] mx-auto w-full relative z-10 space-y-5">
         
-        <div className="mb-3">
-          <MemoryFestivalBanner 
-            isDarkMode={isDarkMode} 
-            currDay={currDay} 
-            date={date} 
-            onCompleteCheck={() => {
-              if (updateDay) {
-                updateDay({ checks: { ...(currDay?.checks || {}), '암송': true } });
-              }
-            }} 
-          />
-        </div>
+        {/* 말씀 암송 배너 */}
+        <MemoryFestivalBanner 
+          isDarkMode={isDarkMode} 
+          currDay={currDay} 
+          date={date} 
+          onCompleteCheck={() => {
+            if (updateDay) {
+              updateDay({ checks: { ...(currDay?.checks || {}), '암송': true } });
+            }
+          }} 
+        />
 
-        {/* 오늘의 말씀 카드 (프리미엄 글래스 프레임) */}
+        {/* 오늘의 말씀 카드 (컴팩트 & 고가독성) */}
         <div 
           ref={verseCardRef} 
-          className={`relative rounded-[28px] overflow-hidden shadow-[0_14px_34px_rgba(0,0,0,0.12)] cursor-pointer hover:scale-[0.995] transition-all min-h-[205px] flex flex-col justify-center border ${t.border} mb-7 group`} 
+          className={`relative rounded-[24px] overflow-hidden shadow-[0_10px_28px_rgba(0,0,0,0.10)] cursor-pointer active:scale-[0.99] transition-all min-h-[175px] flex flex-col justify-between border ${t.border} group`} 
           onClick={() => openModal('fullVerse', { text: `${safeVerse.text} ${safeVerse.ref}`, bgHash: dateHash })}
         >
-           <div className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105" style={{ backgroundImage: `url(${currentBgUrl})` }} crossOrigin="anonymous"></div>
-           <div className="absolute inset-0 bg-gradient-to-br from-black/65 via-black/40 to-black/70 backdrop-blur-[1.5px]"></div>
-           <div className="relative z-10 p-6 md:p-8 pb-14 h-full flex flex-col justify-between">
-             <div className="flex items-center justify-between mb-3">
-               <span className="text-[10.5px] font-black text-amber-300 uppercase tracking-widest px-2.5 py-1 rounded-full bg-black/35 border border-white/15 backdrop-blur-md flex items-center gap-1.5">
-                 <IconFlame className="w-3.5 h-3.5 text-[#FF9500]"/> TODAY'S WORD
-               </span>
-               <span className="text-[11px] font-semibold text-white/70">터치하여 전체화면 보기 ↗</span>
-             </div>
-             <span className="text-[20px] md:text-[24px] text-white font-bold leading-[1.6] drop-shadow-lg break-keep font-yeongnamnu tracking-wide">
-                 "{safeVerse.text}"
-             </span>
-             <span className="block mt-4 text-[13px] text-amber-200/95 font-sans tracking-normal font-extrabold">{safeVerse.ref}</span>
-           </div>
-           <button onClick={handleSaveVerseImage} title="저장" data-html2canvas-ignore="true" className="absolute bottom-4 right-4 flex items-center gap-1.5 px-3 h-9 rounded-full bg-white/20 border border-white/25 backdrop-blur-xl text-white text-[11px] font-bold hover:bg-white/35 transition-all z-50">
-              <IconDownload className="w-3.5 h-3.5" /> 카드저장
-           </button>
+          <div className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105" style={{ backgroundImage: `url(${currentBgUrl})` }} crossOrigin="anonymous" />
+          <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-black/45 to-black/75" />
+          <div className="relative z-10 p-5 md:p-6 pb-12 flex flex-col justify-between gap-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-black text-amber-300 uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-black/40 border border-white/15 backdrop-blur-md flex items-center gap-1">
+                <IconFlame className="w-3 h-3 text-[#FF9500]"/> TODAY'S WORD
+              </span>
+              <span className="text-[11px] font-bold text-white/75">전체화면 ↗</span>
+            </div>
+            <p className="text-[18.5px] sm:text-[22px] text-white font-bold leading-[1.55] drop-shadow-md break-keep font-yeongnamnu tracking-wide">
+              "{safeVerse.text}"
+            </p>
+            <span className="text-[12.5px] text-amber-200 font-sans font-extrabold">{safeVerse.ref}</span>
+          </div>
+          <button onClick={handleSaveVerseImage} title="저장" data-html2canvas-ignore="true" className="absolute bottom-3.5 right-3.5 flex items-center gap-1 px-3 h-8 rounded-full bg-white/20 border border-white/25 backdrop-blur-xl text-white text-[11px] font-bold hover:bg-white/35 transition-all z-50">
+            <IconDownload className="w-3.5 h-3.5" /> 카드저장
+          </button>
         </div>
 
-        {/* 영적 5종 세트 (SaaS 데일리 루틴 트래커 디자인) */}
-        <div className="mb-7">
-           <div className="flex justify-between items-center mb-3 px-1">
-              <div className="flex items-center gap-2">
-                 <h2 className={`text-[17px] font-black ${t.textMain} tracking-tight flex items-center gap-1.5`}>
-                   <IconFlame className="w-5 h-5 text-[#FF9500]" /> 영적 5종 세트
-                 </h2>
-                 <span className="text-[11px] font-extrabold px-2 py-0.5 rounded-full bg-[#FF9500]/15 text-[#FF9500]">
-                   오늘 {completedFiveCount}/5 달성
-                 </span>
+        {/* 🔥 영적 5종 세트 — 원래대로 [감사·성경·QT (3종)] + [기도·가정예배 (2종)] 두 박스로 분리 복원! */}
+        <section className="space-y-2.5">
+          <div className="flex justify-between items-center px-1">
+            <div className="flex items-center gap-2">
+              <h2 className={`text-[15.5px] font-black ${t.textMain} tracking-tight flex items-center gap-1.5`}>
+                <IconFlame className="w-4 h-4 text-[#FF9500]" /> 영적 5종 세트
+              </h2>
+              <span className="text-[11px] font-extrabold px-2 py-0.5 rounded-full bg-[#FF9500]/15 text-[#FF9500]">
+                오늘 {completedFiveCount}/5
+              </span>
+            </div>
+            <span className={`text-[11px] font-bold ${t.textSub}`}>터치하여 오늘 루틴 체크</span>
+          </div>
+          
+          <div className="grid grid-cols-5 gap-2.5">
+            {/* 박스 1: 말씀·감사 루틴 (감사, 성경, QTin — 3칸) */}
+            <div className={`col-span-3 p-3 sm:p-4 rounded-[20px] border ${t.border} shadow-2xs ${t.cardBg} flex flex-col justify-between`}>
+              <div className="flex items-center justify-between mb-2 px-0.5">
+                <span className="text-[10.5px] font-extrabold text-[#007AFF] tracking-tight">말씀 · 감사 3종</span>
+                <span className={`text-[10px] font-mono font-bold ${t.textSub}`}>
+                  {['감사', '성경읽기', 'QTin'].filter(k => currentChecks[k]).length}/3
+                </span>
               </div>
-              <span className={`text-[11px] font-semibold ${t.textSub}`}>아이콘을 터치해 체크하세요</span>
-           </div>
-           
-           <div className={`p-4 md:p-5 rounded-[24px] border ${t.border} shadow-xs backdrop-blur-xl ${isDarkMode ? 'bg-[#1C1C1E]/90' : 'bg-white/90'}`}>
-              <div className="grid grid-cols-5 gap-2">
-                {[ 
-                  { id: '감사', label: '감사', color: '#FF2D55', icon: <IconHeart className="w-5 h-5 sm:w-6 sm:h-6" /> }, 
-                  { id: '성경읽기', label: '성경', color: '#007AFF', icon: <IconBook className="w-5 h-5 sm:w-6 sm:h-6" /> }, 
-                  { id: 'QTin', label: 'QTin', color: '#FF9500', icon: <IconFlame className="w-5 h-5 sm:w-6 sm:h-6" /> },
-                  { id: '기도하기', label: '기도', color: '#34C759', icon: <IconPray className="w-5 h-5 sm:w-6 sm:h-6" /> }, 
-                  { id: '가정예배', label: '가정예배', color: '#AF52DE', icon: <IconSmile className="w-5 h-5 sm:w-6 sm:h-6" /> } 
+              <div className="grid grid-cols-3 gap-1.5">
+                {[
+                  { id: '감사', label: '감사', color: '#FF2D55', icon: <IconHeart className="w-5 h-5" /> },
+                  { id: '성경읽기', label: '성경', color: '#007AFF', icon: <IconBook className="w-5 h-5" /> },
+                  { id: 'QTin', label: 'QTin', color: '#FF9500', icon: <IconFlame className="w-5 h-5" /> }
                 ].map(item => {
                   const isChecked = currentChecks[item.id];
                   return (
-                    <div 
-                      key={item.id} 
-                      onClick={() => { updateDay({ checks: { ...currentChecks, [item.id]: !isChecked } }); if (!isChecked) triggerConfetti(); }} 
-                      className="flex flex-col items-center cursor-pointer active:scale-90 transition-all group"
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => { updateDay({ checks: { ...currentChecks, [item.id]: !isChecked } }); if (!isChecked) triggerConfetti(); }}
+                      className="flex flex-col items-center justify-center py-1 cursor-pointer active:scale-90 transition-all"
                     >
-                      <div 
-                        className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center transition-all duration-300 relative ${
-                          isChecked ? 'shadow-lg scale-105' : `${isDarkMode ? 'bg-[#2C2C2E] hover:bg-[#3A3A3C]' : 'bg-slate-100 hover:bg-slate-200/70'}`
-                        }`} 
-                        style={isChecked ? { backgroundColor: item.color, color: 'white' } : { color: t.textSub }}
+                      <div
+                        className={`w-11 h-11 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center transition-all duration-200 relative ${
+                          isChecked ? 'shadow-md scale-105' : `${isDarkMode ? 'bg-[#252834] text-slate-400' : 'bg-slate-100 text-slate-500'}`
+                        }`}
+                        style={isChecked ? { backgroundColor: item.color, color: '#ffffff' } : undefined}
                       >
                         {item.icon}
                         {isChecked && (
-                          <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-white text-slate-900 text-[10px] font-black flex items-center justify-center shadow">
+                          <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-white text-slate-900 text-[9px] font-black flex items-center justify-center shadow">
                             ✓
                           </span>
                         )}
                       </div>
-                      <span className={`text-[11px] sm:text-[12px] mt-2 font-extrabold whitespace-nowrap ${isChecked ? t.textMain : t.textSub}`}>
+                      <span className={`text-[12px] mt-1.5 font-extrabold whitespace-nowrap ${isChecked ? t.textMain : t.textSub}`}>
                         {item.label}
                       </span>
-                    </div>
+                    </button>
                   );
                 })}
               </div>
-           </div>
-        </div>
+            </div>
 
-        {/* 챌린지 및 통독 스탯 (SaaS KPI 메트릭 카드) */}
-        <div className="grid grid-cols-2 gap-3 mb-9">
-           <div onClick={() => setActiveScreen('fiveSetMenu')} className={`${t.cardBg} p-4 sm:p-5 rounded-[24px] cursor-pointer shadow-xs border ${t.border} flex items-center justify-between active:scale-[0.98] transition-all backdrop-blur-xl`}>
-              <div className="flex flex-col">
-                <span className={`text-[11.5px] font-bold ${t.textSub} mb-1`}>연속 실천 스트릭</span>
-                <span className="text-[22px] sm:text-[26px] font-black text-[#FF9500] leading-none tracking-tight">{streak5 || 0}일째</span>
-                <span className="text-[10.5px] font-bold text-[#FF9500]/80 mt-1.5">🔥 현황 분석 보기 ➔</span>
-              </div>
-              <div className="w-11 h-11 rounded-2xl flex items-center justify-center bg-[#FF9500]/12 text-[#FF9500] shrink-0">
-                <IconFlame className="w-6 h-6" />
-              </div>
-           </div>
-
-           <div onClick={() => { setActiveScreen('bible'); openModal('bibleChallenge'); }} className={`${t.cardBg} p-4 sm:p-5 rounded-[24px] cursor-pointer shadow-xs border ${t.border} flex flex-col justify-between active:scale-[0.98] transition-all backdrop-blur-xl`}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className={`text-[11.5px] font-bold ${t.textSub} block mb-0.5`}>통독 365 챌린지</span>
-                  <span className="text-[20px] sm:text-[24px] font-black text-[#007AFF] leading-none tracking-tight">D+{dDay > 0 ? dDay : 0}</span>
-                </div>
-                <span className="text-[11px] font-mono font-black text-[#007AFF] bg-[#007AFF]/10 px-2 py-1 rounded-lg">
-                  {bibleProgress}%
+            {/* 박스 2: 기도·가정예배 루틴 (기도, 가정예배 — 2칸) */}
+            <div className={`col-span-2 p-3 sm:p-4 rounded-[20px] border ${t.border} shadow-2xs ${t.cardBg} flex flex-col justify-between`}>
+              <div className="flex items-center justify-between mb-2 px-0.5">
+                <span className="text-[10.5px] font-extrabold text-[#34C759] tracking-tight">기도 · 예배 2종</span>
+                <span className={`text-[10px] font-mono font-bold ${t.textSub}`}>
+                  {['기도하기', '가정예배'].filter(k => currentChecks[k]).length}/2
                 </span>
               </div>
-              <div className={`w-full ${isDarkMode ? 'bg-[#2C2C2E]' : 'bg-slate-100'} rounded-full h-2 overflow-hidden mt-3`}>
-                <div className="bg-gradient-to-r from-[#007AFF] to-[#5AC8FA] h-full transition-all duration-700 rounded-full" style={{ width: `${bibleProgress}%` }}></div>
-              </div>
-           </div>
-        </div>
-
-        {/* 1. 말씀 */}
-        <div className="mb-9">
-           <h2 className={`text-[17px] font-black ${t.textMain} tracking-tight mb-3 flex items-center gap-2 px-1`}><IconBook className="w-5 h-5 text-[#007AFF]" /> 말씀 워크스페이스</h2>
-           <div className="grid grid-cols-2 gap-3 mb-3">
-              <div onClick={() => setActiveScreen('qt')} className={`${t.cardBg} p-4 sm:p-5 rounded-[22px] cursor-pointer shadow-xs border ${t.border} flex items-center gap-3.5 active:scale-95 transition-transform group`}>
-                 <div className="w-11 h-11 rounded-2xl flex items-center justify-center bg-[#FF2D55]/12 text-[#FF2D55] shrink-0"><IconFlame className="w-5 h-5" /></div>
-                 <div className="min-w-0">
-                   <span className={`text-[14.5px] font-black ${t.textMain} block truncate`}>매일 QT</span>
-                   <span className="text-[11px] font-medium text-[#8E8E93] block truncate">오늘의 큐티 말씀</span>
-                 </div>
-              </div>
-              <div onClick={() => setActiveScreen('mcheyne')} className={`${t.cardBg} p-4 sm:p-5 rounded-[22px] cursor-pointer shadow-xs border ${t.border} flex items-center gap-3.5 active:scale-95 transition-transform group`}>
-                 <div className="w-11 h-11 rounded-2xl flex items-center justify-center bg-[#007AFF]/12 text-[#007AFF] shrink-0"><IconDocument className="w-5 h-5" /></div>
-                 <div className="min-w-0">
-                   <span className={`text-[14.5px] font-black ${t.textMain} block truncate`}>맥체인 읽기</span>
-                   <span className="text-[11px] font-medium text-[#8E8E93] block truncate">365 성경 통독 플랜</span>
-                 </div>
-              </div>
-           </div>
-           <div onClick={() => setActiveScreen('generalNote')} className={`${t.cardBg} p-4 sm:p-5 rounded-[22px] cursor-pointer shadow-xs border ${t.border} flex items-center justify-between active:scale-[0.98] transition-transform group`}>
-              <div className="flex items-center gap-3.5">
-                 <div className="w-11 h-11 bg-[#AF52DE]/12 rounded-2xl flex items-center justify-center text-[#AF52DE] shrink-0"><IconPen className="w-5 h-5" /></div>
-                 <div className="flex flex-col"><span className={`text-[14.5px] font-black ${t.textMain} whitespace-nowrap`}>자유 말씀 노트</span><span className="text-[11.5px] font-medium text-[#8E8E93]">말씀 자동 첨부 및 다꾸 필기 캔버스</span></div>
-              </div>
-              <IconChevronRight className="w-4 h-4 text-[#C7C7CC]" />
-           </div>
-        </div>
-
-        {/* 2. 예배 */}
-        <div className="mb-9">
-           <h2 className={`text-[17px] font-black ${t.textMain} tracking-tight mb-3 flex items-center gap-2 px-1`}><IconChurch className="w-5 h-5 text-[#34C759]" /> 예배 & 미디어</h2>
-           
-           <div className="mb-2 flex justify-between items-center px-1">
-              <h3 className={`text-[13.5px] font-bold ${t.textMain} flex items-center gap-1.5`}><IconYoutube className="w-4 h-4 text-[#FF2D55]" /> 매일 예배 및 설교 스트림</h3>
-           </div>
-           <CoverCarousel items={worshipVideos} t={t} />
-
-           <div className="grid grid-cols-2 gap-3 mt-3">
-              <div onClick={() => setActiveScreen('sermon')} className={`${t.cardBg} p-4 sm:p-5 rounded-[22px] cursor-pointer shadow-xs border ${t.border} flex items-center gap-3.5 active:scale-[0.98] transition-transform group`}>
-                 <div className="w-11 h-11 rounded-2xl flex items-center justify-center bg-[#007AFF]/12 text-[#007AFF] shrink-0"><IconDocument className="w-5 h-5" /></div>
-                 <div className="min-w-0">
-                   <span className={`text-[14.5px] font-black ${t.textMain} block truncate`}>예배 노트 작성</span>
-                   <span className="text-[11px] font-medium text-[#8E8E93] block truncate">설교 필기 및 AI 요약</span>
-                 </div>
-              </div>
-              <div onClick={() => setActiveScreen('familySelect')} className={`${t.cardBg} p-4 sm:p-5 rounded-[22px] cursor-pointer shadow-xs border ${t.border} flex items-center gap-3.5 active:scale-[0.98] transition-transform group`}>
-                 <div className="w-11 h-11 rounded-2xl flex items-center justify-center bg-[#FF9500]/12 text-[#FF9500] shrink-0"><IconSmile className="w-5 h-5" /></div>
-                 <div className="min-w-0">
-                   <span className={`text-[14.5px] font-black ${t.textMain} block truncate`}>가정 예배 시작</span>
-                   <span className="text-[11px] font-medium text-[#8E8E93] block truncate">온 가족 말씀 나눔</span>
-                 </div>
-              </div>
-           </div>
-        </div>
-
-        {/* 3. 묵상 */}
-        <div className="mb-9">
-           <h2 className={`text-[17px] font-black ${t.textMain} tracking-tight mb-3 flex items-center gap-2 px-1`}><IconHeart className="w-5 h-5 text-[#AF52DE]" /> 묵상 & 찬양</h2>
-
-           <div className="grid grid-cols-2 gap-3 mb-5">
-              <div onClick={() => setActiveScreen('diary')} className={`${t.cardBg} p-4 sm:p-5 rounded-[22px] cursor-pointer shadow-xs border ${t.border} flex flex-col active:scale-[0.98] transition-transform group`}>
-                 <div className="w-10 h-10 rounded-2xl bg-[#AF52DE]/12 text-[#AF52DE] flex items-center justify-center mb-2.5"><IconHeart className="w-5 h-5"/></div>
-                 <span className={`text-[14.5px] font-black ${t.textMain} mb-0.5`}>감사/간증 일기</span>
-                 <span className="text-[11.5px] font-medium text-[#8E8E93] break-keep">나의 묵상과 감사 기록</span>
-              </div>
-              <div onClick={() => setActiveScreen('prayer')} className={`${t.cardBg} p-4 sm:p-5 rounded-[22px] cursor-pointer shadow-xs border ${t.border} flex flex-col active:scale-[0.98] transition-transform group`}>
-                 <div className="w-10 h-10 rounded-2xl bg-[#34C759]/12 text-[#34C759] flex items-center justify-center mb-2.5"><IconPray className="w-5 h-5"/></div>
-                 <span className={`text-[14.5px] font-black ${t.textMain} mb-0.5`}>나의 기도함</span>
-                 <span className="text-[11.5px] font-medium text-[#8E8E93] break-keep">나의 기도와 중보기도</span>
-              </div>
-           </div>
-
-           <div className="mb-2 flex justify-between items-center px-1">
-              <h3 className={`text-[13.5px] font-bold ${t.textMain} flex items-center gap-1.5`}><IconHeadphones className="w-4 h-4 text-[#AF52DE]" /> 유튜브 찬양 채널</h3>
-           </div>
-           <CoverCarousel items={praiseChannels} t={t} />
-        </div>
-        
-        {/* 4. 목장 나눔 */}
-        <div className="mb-9">
-           <h2 className={`text-[17px] font-black ${t.textMain} tracking-tight mb-3 flex items-center gap-2 px-1`}><IconPeople className="w-5 h-5 text-[#FF9500]" /> 목장 커뮤니티</h2>
-           <div onClick={() => setActiveScreen('cell')} className={`${t.cardBg} p-5 rounded-[24px] cursor-pointer shadow-xs border ${t.border} flex items-center justify-between active:scale-[0.99] transition-transform group`}>
-              <div className="flex items-center gap-4">
-                 <div className="w-12 h-12 bg-[#FF9500]/12 rounded-2xl flex items-center justify-center text-[#FF9500] shrink-0"><IconPeople className="w-6 h-6" /></div>
-                 <div className="flex flex-col">
-                    <span className={`text-[15px] font-black ${t.textMain}`}>목장 나눔 (작성/조회)</span>
-                    <span className="text-[11.5px] font-medium text-[#8E8E93] mt-0.5">{authUser?.role === 'admin' ? '관리자 권한 활성화됨' : '말씀/감사 나눔 제출하기'}</span>
-                 </div>
-              </div>
-              <IconChevronRight className="w-5 h-5 text-[#C7C7CC]" />
-           </div>
-        </div>
-
-        {/* 5. 성경 연구 & 추가 메뉴 (📱 아이폰식 꾹 눌러 위치 변경 & 안전 저장 탑재) */}
-        <div className="mb-12">
-           <div className="flex justify-between items-center px-1 mb-3">
-             <div>
-               <h2 className={`text-[17px] font-black ${t.textMain} tracking-tight flex items-center gap-2`}>
-                 <IconAnalytics className="w-5 h-5 text-[#5AC8FA]" /> 성경 연구 & 추가 메뉴
-               </h2>
-               <span className="text-[11px] font-medium text-[#8E8E93] block mt-0.5">
-                 {isEditMode ? '📱 카드를 드래그하거나 ◀ ▶ 버튼으로 순서를 바꾸세요' : '💡 카드를 0.5초간 꾹 누르면 아이폰처럼 순서를 바꿀 수 있어요'}
-               </span>
-             </div>
-
-             <div className="flex items-center gap-1.5 shrink-0">
-               {isEditMode && (
-                 <button
-                   type="button"
-                   onClick={() => saveNewOrder(MASTER_MENUS.map(m => m.id))}
-                   className="px-2.5 py-1.5 rounded-xl text-[11px] font-bold bg-slate-200 dark:bg-white/10 text-slate-700 dark:text-slate-300 cursor-pointer"
-                 >
-                   초기화
-                 </button>
-               )}
-               <button
-                 type="button"
-                 onClick={() => setIsEditMode(!isEditMode)}
-                 className={`px-3 py-1.5 rounded-xl text-[11.5px] font-black transition-all cursor-pointer ${
-                   isEditMode
-                     ? 'bg-[#007AFF] text-white shadow-md scale-105'
-                     : 'bg-[#007AFF]/12 text-[#007AFF]'
-                 }`}
-               >
-                 {isEditMode ? '✓ 완료' : '순서편집'}
-               </button>
-             </div>
-           </div>
-           
-           <div 
-             onTouchMove={handleTouchMoveGrid}
-             className="grid grid-cols-2 sm:grid-cols-3 gap-3"
-           >
-             {orderedMenus.map((item, index) => (
-               <div 
-                 key={item.id}
-                 data-menu-idx={index}
-                 draggable={isEditMode}
-                 onDragStart={() => setDraggedIdx(index)}
-                 onDragEnter={() => {
-                   if (draggedIdx !== null && draggedIdx !== index) {
-                     handleSwapMenuOrder(draggedIdx, index);
-                     setDraggedIdx(index);
-                   }
-                 }}
-                 onDragEnd={() => setDraggedIdx(null)}
-                 onDragOver={(e) => e.preventDefault()}
-                 onTouchStart={() => handleTouchStartCard(index)}
-                 onTouchEnd={handleTouchEndCard}
-                 onContextMenu={(e) => { e.preventDefault(); setIsEditMode(true); }}
-                 onClick={() => {
-                   if (isEditMode) return;
-                   setActiveScreen(item.id);
-                 }} 
-                 className={`${t.cardBg} p-3.5 rounded-[22px] shadow-xs border transition-all select-none relative flex flex-col justify-between h-[102px] ${
-                   isEditMode
-                     ? 'ios-jiggle-card border-[#007AFF] ring-2 ring-[#007AFF]/30 cursor-grab'
-                     : `${t.border} cursor-pointer active:scale-[0.98] hover:border-[#007AFF]/40`
-                 } ${draggedIdx === index ? 'opacity-60 scale-95' : 'opacity-100'}`}
-               >
-                  <div className="flex items-center justify-between">
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${item.bg} ${item.color}`}>
-                      {item.icon}
-                    </div>
-
-                    {isEditMode ? (
-                      <div className="flex items-center gap-1 z-20" onClick={(e) => e.stopPropagation()}>
-                        <button
-                          type="button"
-                          onClick={() => handleSwapMenuOrder(index, index - 1)}
-                          disabled={index === 0}
-                          className="w-6 h-6 rounded-full bg-black/10 dark:bg-white/15 text-[10px] font-black flex items-center justify-center disabled:opacity-25 cursor-pointer"
-                        >
-                          ◀
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleSwapMenuOrder(index, index + 1)}
-                          disabled={index === orderedMenus.length - 1}
-                          className="w-6 h-6 rounded-full bg-black/10 dark:bg-white/15 text-[10px] font-black flex items-center justify-center disabled:opacity-25 cursor-pointer"
-                        >
-                          ▶
-                        </button>
+              <div className="grid grid-cols-2 gap-1.5">
+                {[
+                  { id: '기도하기', label: '기도', color: '#34C759', icon: <IconPray className="w-5 h-5" /> },
+                  { id: '가정예배', label: '가정예배', color: '#AF52DE', icon: <IconSmile className="w-5 h-5" /> }
+                ].map(item => {
+                  const isChecked = currentChecks[item.id];
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => { updateDay({ checks: { ...currentChecks, [item.id]: !isChecked } }); if (!isChecked) triggerConfetti(); }}
+                      className="flex flex-col items-center justify-center py-1 cursor-pointer active:scale-90 transition-all"
+                    >
+                      <div
+                        className={`w-11 h-11 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center transition-all duration-200 relative ${
+                          isChecked ? 'shadow-md scale-105' : `${isDarkMode ? 'bg-[#252834] text-slate-400' : 'bg-slate-100 text-slate-500'}`
+                        }`}
+                        style={isChecked ? { backgroundColor: item.color, color: '#ffffff' } : undefined}
+                      >
+                        {item.icon}
+                        {isChecked && (
+                          <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-white text-slate-900 text-[9px] font-black flex items-center justify-center shadow">
+                            ✓
+                          </span>
+                        )}
                       </div>
-                    ) : (
-                      <span className="text-[10px] font-mono opacity-30 font-bold">#{index + 1}</span>
-                    )}
-                  </div>
+                      <span className={`text-[12px] mt-1.5 font-extrabold whitespace-nowrap ${isChecked ? t.textMain : t.textSub}`}>
+                        {item.label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </section>
 
-                  <div className="mt-auto pointer-events-none">
-                      <span className={`text-[13.5px] font-black ${t.textMain} block truncate`}>{item.title}</span>
-                      <span className="text-[11px] font-medium text-[#8E8E93] truncate block mt-0.5">{item.desc}</span>
-                  </div>
-               </div>
-             ))}
-             
-             <div onClick={() => setActiveScreen('board')} className={`col-span-2 sm:col-span-3 ${t.cardBg} p-4 rounded-[22px] cursor-pointer shadow-xs border ${t.border} flex items-center justify-between active:scale-[0.99] transition-transform relative mt-1`}>
-                 <div className="flex items-center gap-3.5">
-                     <div className="w-11 h-11 rounded-2xl flex items-center justify-center bg-[#FF9500]/12 text-[#FF9500] shrink-0"><IconUsers className="w-5 h-5" /></div>
-                     <div className="flex flex-col">
-                         <span className={`text-[14.5px] font-black ${t.textMain} block`}>공동체 게시판</span>
-                         <span className="text-[11.5px] font-medium text-[#8E8E93] mt-0.5">성도들의 기도와 감사 나눔</span>
-                     </div>
-                 </div>
-                 {hasNewBoardPost && <span className="absolute top-4 right-4 w-2 h-2 bg-[#FF2D55] rounded-full animate-pulse"></span>}
-                 <IconChevronRight className="w-4 h-4 text-[#C7C7CC]" />
-             </div>
-           </div>
+        {/* 스트릭 & 통독 365 KPI 카드 (컴팩트 고가독성) */}
+        <div className="grid grid-cols-2 gap-2.5">
+          <div onClick={() => setActiveScreen('fiveSetMenu')} className={`${t.cardBg} p-3.5 sm:p-4 rounded-[20px] cursor-pointer shadow-2xs border ${t.border} flex items-center justify-between active:scale-[0.98] transition-all`}>
+            <div className="flex flex-col min-w-0">
+              <span className={`text-[11.5px] font-bold ${t.textSub}`}>연속 실천 스트릭</span>
+              <span className="text-[22px] sm:text-[24px] font-black text-[#FF9500] leading-tight mt-0.5">{streak5 || 0}일째</span>
+              <span className="text-[11px] font-extrabold text-[#FF9500] mt-1">🔥 분석 보기 ➔</span>
+            </div>
+            <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-[#FF9500]/12 text-[#FF9500] shrink-0">
+              <IconFlame className="w-5 h-5" />
+            </div>
+          </div>
+
+          <div onClick={() => { setActiveScreen('bible'); openModal('bibleChallenge'); }} className={`${t.cardBg} p-3.5 sm:p-4 rounded-[20px] cursor-pointer shadow-2xs border ${t.border} flex flex-col justify-between active:scale-[0.98] transition-all`}>
+            <div className="flex items-center justify-between gap-1">
+              <div className="min-w-0">
+                <span className={`text-[11.5px] font-bold ${t.textSub} block`}>통독 365 챌린지</span>
+                <span className="text-[20px] sm:text-[22px] font-black text-[#007AFF] leading-tight">D+{dDay > 0 ? dDay : 0}</span>
+              </div>
+              <span className="text-[11.5px] font-mono font-black text-[#007AFF] bg-[#007AFF]/12 px-2 py-0.5 rounded-lg shrink-0">
+                {bibleProgress}%
+              </span>
+            </div>
+            <div className={`w-full ${isDarkMode ? 'bg-[#252834]' : 'bg-slate-100'} rounded-full h-2 overflow-hidden mt-2.5`}>
+              <div className="bg-gradient-to-r from-[#007AFF] to-[#5AC8FA] h-full transition-all duration-700 rounded-full" style={{ width: `${bibleProgress}%` }} />
+            </div>
+          </div>
         </div>
+
+        {/* 1. 말씀 워크스페이스 (글자 잘림 0%, 큼직한 SaaS 타이포그래피) */}
+        <section className="space-y-2.5">
+          <h2 className={`text-[15.5px] font-black ${t.textMain} tracking-tight flex items-center gap-1.5 px-1`}>
+            <IconBook className="w-4 h-4 text-[#007AFF]" /> 말씀 워크스페이스
+          </h2>
+          <div className="grid grid-cols-2 gap-2.5">
+            <div onClick={() => setActiveScreen('qt')} className={`${t.cardBg} p-3.5 rounded-[20px] cursor-pointer shadow-2xs border ${t.border} flex items-center gap-3 active:scale-95 transition-transform`}>
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-[#FF2D55]/12 text-[#FF2D55] shrink-0"><IconFlame className="w-5 h-5" /></div>
+              <div className="min-w-0 flex-1">
+                <span className={`text-[14.5px] font-black ${t.textMain} block leading-snug`}>매일 QT</span>
+                <span className={`text-[11.5px] font-semibold ${t.textSub} block mt-0.5`}>오늘의 큐티 말씀</span>
+              </div>
+            </div>
+            <div onClick={() => setActiveScreen('mcheyne')} className={`${t.cardBg} p-3.5 rounded-[20px] cursor-pointer shadow-2xs border ${t.border} flex items-center gap-3 active:scale-95 transition-transform`}>
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-[#007AFF]/12 text-[#007AFF] shrink-0"><IconDocument className="w-5 h-5" /></div>
+              <div className="min-w-0 flex-1">
+                <span className={`text-[14.5px] font-black ${t.textMain} block leading-snug`}>맥체인 읽기</span>
+                <span className={`text-[11.5px] font-semibold ${t.textSub} block mt-0.5`}>365 성경 통독</span>
+              </div>
+            </div>
+          </div>
+          <div onClick={() => setActiveScreen('generalNote')} className={`${t.cardBg} p-3.5 rounded-[20px] cursor-pointer shadow-2xs border ${t.border} flex items-center justify-between active:scale-[0.99] transition-transform`}>
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 bg-[#AF52DE]/12 rounded-xl flex items-center justify-center text-[#AF52DE] shrink-0"><IconPen className="w-5 h-5" /></div>
+              <div className="min-w-0">
+                <span className={`text-[14.5px] font-black ${t.textMain} block leading-snug`}>자유 말씀 노트</span>
+                <span className={`text-[11.5px] font-semibold ${t.textSub} block mt-0.5`}>말씀 자동 첨부 및 다꾸 필기 캔버스</span>
+              </div>
+            </div>
+            <IconChevronRight className="w-4 h-4 text-[#C7C7CC] shrink-0" />
+          </div>
+        </section>
+
+        {/* 2. 예배 & 미디어 (말줄임표 ... 없이 전체 글자 선명 표시) */}
+        <section className="space-y-2.5">
+          <div className="flex items-center justify-between px-1">
+            <h2 className={`text-[15.5px] font-black ${t.textMain} tracking-tight flex items-center gap-1.5`}>
+              <IconChurch className="w-4 h-4 text-[#34C759]" /> 예배 & 미디어 스트림
+            </h2>
+            <span className={`text-[11px] font-bold ${t.textSub}`}>좌우로 밀어 채널 선택</span>
+          </div>
+          
+          <CoverCarousel items={worshipVideos} t={t} />
+
+          <div className="grid grid-cols-2 gap-2.5 pt-1">
+            <div onClick={() => setActiveScreen('sermon')} className={`${t.cardBg} p-3.5 rounded-[20px] cursor-pointer shadow-2xs border ${t.border} flex items-center gap-3 active:scale-[0.98] transition-transform`}>
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-[#007AFF]/12 text-[#007AFF] shrink-0"><IconDocument className="w-5 h-5" /></div>
+              <div className="min-w-0 flex-1">
+                <span className={`text-[14px] sm:text-[14.5px] font-black ${t.textMain} block leading-snug break-keep`}>예배 노트 작성</span>
+                <span className={`text-[11.5px] font-semibold ${t.textSub} block mt-0.5 break-keep`}>설교 필기 · AI 요약</span>
+              </div>
+            </div>
+            <div onClick={() => setActiveScreen('familySelect')} className={`${t.cardBg} p-3.5 rounded-[20px] cursor-pointer shadow-2xs border ${t.border} flex items-center gap-3 active:scale-[0.98] transition-transform`}>
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-[#FF9500]/12 text-[#FF9500] shrink-0"><IconSmile className="w-5 h-5" /></div>
+              <div className="min-w-0 flex-1">
+                <span className={`text-[14px] sm:text-[14.5px] font-black ${t.textMain} block leading-snug break-keep`}>가정 예배 시작</span>
+                <span className={`text-[11.5px] font-semibold ${t.textSub} block mt-0.5 break-keep`}>온 가족 말씀 나눔</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* 3. 묵상 & 찬양 (불필요하게 높던 빈 박스 제거 -> 슬림 가로형 SaaS 카드) */}
+        <section className="space-y-2.5">
+          <h2 className={`text-[15.5px] font-black ${t.textMain} tracking-tight flex items-center gap-1.5 px-1`}>
+            <IconHeart className="w-4 h-4 text-[#AF52DE]" /> 묵상 & 찬양
+          </h2>
+
+          <div className="grid grid-cols-2 gap-2.5">
+            <div onClick={() => setActiveScreen('diary')} className={`${t.cardBg} p-3.5 rounded-[20px] cursor-pointer shadow-2xs border ${t.border} flex items-center gap-3 active:scale-[0.98] transition-transform`}>
+              <div className="w-10 h-10 rounded-xl bg-[#AF52DE]/12 text-[#AF52DE] flex items-center justify-center shrink-0"><IconHeart className="w-5 h-5"/></div>
+              <div className="min-w-0 flex-1">
+                <span className={`text-[14px] sm:text-[14.5px] font-black ${t.textMain} block leading-snug`}>감사/간증 일기</span>
+                <span className={`text-[11.5px] font-semibold ${t.textSub} block mt-0.5`}>묵상과 감사 기록</span>
+              </div>
+            </div>
+            <div onClick={() => setActiveScreen('prayer')} className={`${t.cardBg} p-3.5 rounded-[20px] cursor-pointer shadow-2xs border ${t.border} flex items-center gap-3 active:scale-[0.98] transition-transform`}>
+              <div className="w-10 h-10 rounded-xl bg-[#34C759]/12 text-[#34C759] flex items-center justify-center shrink-0"><IconPray className="w-5 h-5"/></div>
+              <div className="min-w-0 flex-1">
+                <span className={`text-[14px] sm:text-[14.5px] font-black ${t.textMain} block leading-snug`}>나의 기도함</span>
+                <span className={`text-[11.5px] font-semibold ${t.textSub} block mt-0.5`}>기도와 중보기도</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-1">
+            <h3 className={`text-[13px] font-extrabold ${t.textMain} flex items-center gap-1.5 px-1 mb-1`}>
+              <IconHeadphones className="w-4 h-4 text-[#AF52DE]" /> 유튜브 찬양 채널
+            </h3>
+            <CoverCarousel items={praiseChannels} t={t} />
+          </div>
+        </section>
+        
+        {/* 4. 목장 커뮤니티 */}
+        <section className="space-y-2.5">
+          <h2 className={`text-[15.5px] font-black ${t.textMain} tracking-tight flex items-center gap-1.5 px-1`}>
+            <IconPeople className="w-4 h-4 text-[#FF9500]" /> 목장 커뮤니티
+          </h2>
+          <div onClick={() => setActiveScreen('cell')} className={`${t.cardBg} p-4 rounded-[20px] cursor-pointer shadow-2xs border ${t.border} flex items-center justify-between active:scale-[0.99] transition-transform`}>
+            <div className="flex items-center gap-3.5 min-w-0">
+              <div className="w-11 h-11 bg-[#FF9500]/12 rounded-xl flex items-center justify-center text-[#FF9500] shrink-0"><IconPeople className="w-6 h-6" /></div>
+              <div className="min-w-0">
+                <span className={`text-[14.5px] font-black ${t.textMain} block leading-snug`}>목장 나눔 (작성/조회)</span>
+                <span className={`text-[11.5px] font-semibold ${t.textSub} block mt-0.5`}>{authUser?.role === 'admin' ? '관리자 권한 활성화됨' : '주간 말씀·감사·기도 나눔지'}</span>
+              </div>
+            </div>
+            <IconChevronRight className="w-4 h-4 text-[#C7C7CC] shrink-0" />
+          </div>
+        </section>
+
+        {/* 5. 성경 연구 & 추가 메뉴 (고밀도 가로형 SaaS 타일 — 빈 공간 축소 & 글씨 확대) */}
+        <section className="space-y-2.5 pb-6">
+          <div className="flex justify-between items-center px-1">
+            <div>
+              <h2 className={`text-[15.5px] font-black ${t.textMain} tracking-tight flex items-center gap-1.5`}>
+                <IconAnalytics className="w-4 h-4 text-[#5AC8FA]" /> 성경 연구 & 추가 메뉴
+              </h2>
+              <span className={`text-[11px] font-semibold ${t.textSub} block mt-0.5`}>
+                {isEditMode ? '📱 카드를 드래그하거나 ◀ ▶ 버튼으로 순서를 바꾸세요' : '카드를 0.5초간 꾹 누르면 순서를 바꿀 수 있어요'}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-1.5 shrink-0">
+              {isEditMode && (
+                <button
+                  type="button"
+                  onClick={() => saveNewOrder(MASTER_MENUS.map(m => m.id))}
+                  className="px-2.5 py-1.5 rounded-xl text-[11px] font-bold bg-slate-200 dark:bg-white/10 text-slate-700 dark:text-slate-300 cursor-pointer"
+                >
+                  초기화
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setIsEditMode(!isEditMode)}
+                className={`px-3 py-1.5 rounded-xl text-[11.5px] font-black transition-all cursor-pointer ${
+                  isEditMode
+                    ? 'bg-[#007AFF] text-white shadow-md scale-105'
+                    : 'bg-[#007AFF]/12 text-[#007AFF]'
+                }`}
+              >
+                {isEditMode ? '✓ 완료' : '순서편집'}
+              </button>
+            </div>
+          </div>
+          
+          <div 
+            onTouchMove={handleTouchMoveGrid}
+            className="grid grid-cols-2 sm:grid-cols-3 gap-2.5"
+          >
+            {orderedMenus.map((item, index) => (
+              <div 
+                key={item.id}
+                data-menu-idx={index}
+                draggable={isEditMode}
+                onDragStart={() => setDraggedIdx(index)}
+                onDragEnter={() => {
+                  if (draggedIdx !== null && draggedIdx !== index) {
+                    handleSwapMenuOrder(draggedIdx, index);
+                    setDraggedIdx(index);
+                  }
+                }}
+                onDragEnd={() => setDraggedIdx(null)}
+                onDragOver={(e) => e.preventDefault()}
+                onTouchStart={() => handleTouchStartCard(index)}
+                onTouchEnd={handleTouchEndCard}
+                onContextMenu={(e) => { e.preventDefault(); setIsEditMode(true); }}
+                onClick={() => {
+                  if (isEditMode) return;
+                  setActiveScreen(item.id);
+                }} 
+                className={`${t.cardBg} p-3 rounded-[18px] shadow-2xs border transition-all select-none relative flex items-center gap-2.5 min-h-[68px] ${
+                  isEditMode
+                    ? 'ios-jiggle-card border-[#007AFF] ring-2 ring-[#007AFF]/30 cursor-grab'
+                    : `${t.border} cursor-pointer active:scale-[0.98] hover:border-[#007AFF]/40`
+                } ${draggedIdx === index ? 'opacity-60 scale-95' : 'opacity-100'}`}
+              >
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${item.bg} ${item.color}`}>
+                  {item.icon}
+                </div>
+
+                <div className="min-w-0 flex-1 pointer-events-none">
+                  <span className={`text-[13.5px] font-black ${t.textMain} block leading-tight break-keep`}>{item.title}</span>
+                  <span className={`text-[11px] font-semibold ${t.textSub} block mt-0.5 truncate`}>{item.desc}</span>
+                </div>
+
+                {isEditMode && (
+                  <div className="flex flex-col gap-0.5 z-20 shrink-0" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      onClick={() => handleSwapMenuOrder(index, index - 1)}
+                      disabled={index === 0}
+                      className="w-5 h-5 rounded bg-black/10 dark:bg-white/15 text-[9px] font-black flex items-center justify-center disabled:opacity-25 cursor-pointer"
+                    >
+                      ◀
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSwapMenuOrder(index, index + 1)}
+                      disabled={index === orderedMenus.length - 1}
+                      className="w-5 h-5 rounded bg-black/10 dark:bg-white/15 text-[9px] font-black flex items-center justify-center disabled:opacity-25 cursor-pointer"
+                    >
+                      ▶
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+            
+            <div onClick={() => setActiveScreen('board')} className={`col-span-2 sm:col-span-3 ${t.cardBg} p-3.5 rounded-[18px] cursor-pointer shadow-2xs border ${t.border} flex items-center justify-between active:scale-[0.99] transition-transform relative`}>
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-[#FF9500]/12 text-[#FF9500] shrink-0"><IconUsers className="w-5 h-5" /></div>
+                <div className="min-w-0">
+                  <span className={`text-[14.5px] font-black ${t.textMain} block leading-snug`}>공동체 게시판</span>
+                  <span className={`text-[11.5px] font-semibold ${t.textSub} block mt-0.5`}>전교인 기도와 감사 실시간 나눔 광장</span>
+                </div>
+              </div>
+              {hasNewBoardPost && <span className="absolute top-3.5 right-3.5 w-2 h-2 bg-[#FF2D55] rounded-full animate-pulse" />}
+              <IconChevronRight className="w-4 h-4 text-[#C7C7CC] shrink-0" />
+            </div>
+          </div>
+        </section>
 
       </div>
     </div>
@@ -981,7 +1016,18 @@ const FULL_BIBLE_MAP = {
 };
 
 const getLocalToday = () => { const o = new Date().getTimezoneOffset() * 60000; return new Date(Date.now() - o).toISOString().split('T')[0]; };
-const cleanText = (t) => { if (!t) return ''; let str = typeof t === 'object' ? (t.text || t.content || JSON.stringify(t)) : String(t); return str.replace(/ |'|\x1B|\(가정\d*\)|\(개인\d*\)|\(개인\)/gi, '').trim(); };
+
+// ✅ [핵심 버그 수정 완료] 성경 본문의 정상 띄어쓰기(공백)가 삭제되지 않도록 정밀 보존!
+const cleanText = (t) => {
+  if (!t) return '';
+  let str = typeof t === 'object' ? (t.text || t.content || JSON.stringify(t)) : String(t);
+  return str
+    .replace(/&#x27;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/['\x1B]|\(가정\d*\)|\(개인\d*\)|\(개인\)/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+};
 
 const parseBibleRefExt = (r) => {
     if (!r) return null;
@@ -1035,7 +1081,7 @@ const useTheme = (isD) => useMemo(() => ({
   pageBg: isD ? 'bg-[#090C12]' : 'bg-[#F4F6FA]',
   cardBg: isD ? 'bg-[#161922] border-[#2A2F3D]' : 'bg-white border-[#E5E8F0]',
   textMain: isD ? 'text-[#FFFFFF]' : 'text-[#1D1D1F]',
-  textSub: isD ? 'text-[#EBEBF5]/60' : 'text-[#8E8E93]',
+  textSub: isD ? 'text-[#A0AEC0]' : 'text-[#64748B]',
   inputBg: isD ? 'bg-[#2C2C2E] text-[#FFFFFF] border-[#38383A]' : 'bg-[#F2F2F7] text-[#1D1D1F] border-transparent',
   tabBar: isD ? 'bg-[#1C1C1E]/90 border-[#38383A]' : 'bg-white/90 border-[#E5E5EA]',
   border: isD ? 'border-[#2A2F3D]' : 'border-[#E5E8F0]',
@@ -1066,9 +1112,10 @@ const GlobalStyles = () => (
     .font-yeongnamnu { font-family: 'MYYeongnamnu', sans-serif !important; }
     html, body { overflow-x: hidden !important; overscroll-behavior-x: none; width: 100%; max-width: 100vw; height: 100dvh; margin: 0; padding: 0; position: fixed; -webkit-font-smoothing: antialiased; }
     #root { width: 100%; max-width: 100vw; height: 100dvh; display: flex; overflow-x: hidden !important; }
-    
-    /* 🛡️ 모바일 성경통독(Bible) & 맥체인(Mcheyne) 개역개정 본문 화면 뚫림 원천 방지 */
+
+    /* 🛡️ 성경통독(Bible) & 맥체인(Mcheyne) 모바일 본문 박스 우측 여백 및 줄바꿈 정밀 보정 */
     p, span, div {
+      box-sizing: border-box;
       overflow-wrap: break-word;
       word-wrap: break-word;
     }
@@ -1077,7 +1124,9 @@ const GlobalStyles = () => (
         max-width: 100% !important;
         white-space: normal !important;
         word-break: keep-all;
-        overflow-wrap: anywhere !important;
+        overflow-wrap: break-word !important;
+        padding-right: 4px;
+        line-height: 1.78;
       }
     }
 
