@@ -492,8 +492,8 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
       </div>
 
       {/* ── 1. 상단 글로벌 헤더 (음성 안내 낭독기 & 큰글씨 효도 모드 탑재) ── */}
-      <header className={`px-3.5 sm:px-6 py-2.5 sm:py-3 flex flex-wrap items-center justify-between gap-2 border-b ${ui.border} backdrop-blur-xl shrink-0 relative z-20 bg-white/85 dark:bg-[#090C12]/85`}>
-        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+      <header className={`w-full max-w-full overflow-hidden px-3.5 sm:px-6 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b ${ui.border} backdrop-blur-xl shrink-0 relative z-20 bg-white/90 dark:bg-[#090C12]/90`}>
+        <div className="flex items-center gap-2.5 min-w-0 w-full sm:w-auto sm:flex-1">
           <button
             onClick={() => setActiveScreen && setActiveScreen('home')}
             className="p-1.5 rounded-xl hover:bg-black/5 dark:hover:bg-white/10 transition-colors shrink-0 cursor-pointer text-stone-700 dark:text-stone-200"
@@ -508,53 +508,44 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
 
           <div className="flex flex-col min-w-0 flex-1">
             <div className="flex items-center gap-1.5 flex-wrap">
-              <h2 className={`text-[14.5px] sm:text-[16.5px] font-black ${ui.textMain} tracking-tight leading-tight truncate`}>
+              <h2 className={`text-[14px] sm:text-[16.5px] font-black ${ui.textMain} tracking-tight leading-snug break-keep`}>
                 좋은나무 전 세대 시청각 실천 가이드북
               </h2>
               <span className="text-[9.5px] font-mono px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-900 dark:bg-indigo-950/90 dark:text-indigo-300 font-bold border border-indigo-200 dark:border-indigo-800 shrink-0">
                 실천 달성 {missionStats.rate}%
               </span>
             </div>
-            <p className="text-[11px] font-medium text-stone-500 dark:text-slate-400 leading-tight truncate mt-0.5">
-              10대 아이부터 90대 어르신까지 듣고·보고·누르며 바로 따라하는 행동 중심 매뉴얼
+            <p className="text-[10.5px] sm:text-[11px] font-medium text-stone-500 dark:text-slate-400 leading-snug break-keep mt-0.5">
+              10대 아이부터 90대 어르신까지 듣고·보고·누르며 바로 따라하는 행동 매뉴얼
             </p>
           </div>
         </div>
 
-        {/* 우측: 🔊 음성 낭독 버튼 & 🔍 큰글씨 효도 모드 토글 */}
-        <div className="flex items-center gap-1.5 shrink-0">
+        {/* 우측: 🔊 음성 낭독 버튼 & 🔍 큰글씨 효도 모드 토글 (모바일에서 줄바꿈 안 되게 가로 정렬) */}
+        <div className="flex items-center gap-1.5 shrink-0 w-full sm:w-auto justify-end pt-1 sm:pt-0 border-t sm:border-t-0 border-stone-200 dark:border-white/10">
           <button
             type="button"
-            onClick={() => handleToggleSpeech()}
-            className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer border ${
+            onClick={() => handleToggleSpeech(currentTabMeta.ttsScript)}
+            className={`px-2.5 py-1.5 rounded-xl text-[11px] font-black flex items-center gap-1 transition-all cursor-pointer border ${
               isSpeaking
                 ? 'bg-rose-600 text-white border-rose-500 animate-pulse shadow-md'
                 : 'bg-indigo-50 text-indigo-800 border-indigo-200 dark:bg-indigo-950/70 dark:text-indigo-300 dark:border-indigo-800 hover:bg-indigo-100'
             }`}
-            title="현재 탭의 설명을 아나운서 음성으로 읽어줍니다"
           >
             <IconVolume />
-            <span>{isSpeaking ? '낭독 정지' : '음성 안내 듣기'}</span>
+            <span>{isSpeaking ? '정지' : '소리로 듣기'}</span>
           </button>
 
           <button
             type="button"
             onClick={toggleLargeText}
-            className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-black transition-all cursor-pointer border ${
+            className={`px-2.5 py-1.5 rounded-xl text-[11px] font-black transition-all cursor-pointer border ${
               isLargeText
                 ? 'bg-amber-400 text-slate-950 border-amber-500 shadow-md'
                 : 'bg-stone-100 text-stone-800 border-stone-200 dark:bg-white/10 dark:text-slate-200 dark:border-white/15'
             }`}
-            title="어르신들을 위해 글씨 크기를 크게 확대합니다"
           >
             {isLargeText ? '🔍 큰글씨 켜짐' : '가+ 큰글씨 모드'}
-          </button>
-
-          <button
-            onClick={() => setIsSidebarOpen && setIsSidebarOpen(!isSidebarOpen)}
-            className="p-1.5 rounded-xl hover:bg-black/5 dark:hover:bg-white/10 transition-colors shrink-0 cursor-pointer text-stone-700 dark:text-stone-200 md:hidden"
-          >
-            <IconMenu />
           </button>
         </div>
       </header>
@@ -643,30 +634,24 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
         <main className="flex-1 overflow-y-auto w-full hide-scrollbar pb-32 px-3.5 sm:px-6 py-4 sm:py-6">
           <div className="w-full max-w-5xl mx-auto flex flex-col gap-5 sm:gap-6 animate-fade-in">
             
-            {/* ── 모든 탭 공통 상단: 💡 "10대도 90대 어르신도 3초 만에 이해하는 쉬운 요약" & 🎯 따라하기 실천 미션 ── */}
-            <div className={`p-4 sm:p-6 rounded-3xl border-2 border-amber-400/70 dark:border-amber-500/40 ${ui.cardBg} flex flex-col gap-4 shadow-md`}>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-3.5 border-stone-200/80 dark:border-white/10">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <span className="px-2.5 py-1 rounded-lg bg-amber-400 text-slate-950 text-[11px] font-black shrink-0">
-                    💡 한눈에 쏙! 쉬운 설명
+            {/* ── 모든 탭 공통 상단: 💡 쉬운 요약 & 🎯 따라하기 실천 미션 (모바일 겹침 방지 최적화) ── */}
+            <div className={`w-full max-w-full overflow-hidden p-4 sm:p-6 rounded-3xl border-2 border-amber-400/70 dark:border-amber-500/40 ${ui.cardBg} flex flex-col gap-3.5 shadow-md box-border`}>
+              
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b pb-3 border-stone-200/80 dark:border-white/10 w-full">
+                <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                  <span className="px-2.5 py-0.5 rounded-lg bg-amber-400 text-slate-950 text-[10.5px] font-black shrink-0">
+                    💡 쉬운 설명
                   </span>
-                  <h3 className={`font-black ${ui.titleSize} ${ui.textMain} truncate`}>
+                  <h3 className={`font-black ${ui.titleSize} ${ui.textMain} break-keep`}>
                     {currentTabMeta.label}
                   </h3>
                 </div>
 
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => handleToggleSpeech(currentTabMeta.ttsScript)}
-                    className="px-3 py-2 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-950 dark:bg-amber-500/20 dark:text-amber-300 text-xs font-black flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <IconVolume /> <span>{isSpeaking ? '낭독 멈추기' : '소리로 듣기'}</span>
-                  </button>
+                <div className="flex items-center gap-1.5 shrink-0 w-full sm:w-auto justify-end">
                   <button
                     type="button"
                     onClick={() => setActiveScreen && setActiveScreen(currentTabMeta.targetScreen)}
-                    className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black flex items-center gap-1.5 shadow-sm cursor-pointer active:scale-95 transition-all"
+                    className="w-full sm:w-auto px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-[11.5px] sm:text-xs font-black flex items-center justify-center gap-1 shadow-sm cursor-pointer active:scale-95 transition-all"
                   >
                     <span>🚀 {currentTabMeta.targetBtnLabel}</span>
                     <IconChevronRight />
@@ -675,38 +660,38 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
               </div>
 
               {/* 전 세대 쉬운 요약 본문 */}
-              <div className={`p-3.5 sm:p-4 rounded-2xl bg-amber-50/80 dark:bg-amber-950/25 border border-amber-200/80 dark:border-amber-800/50 ${ui.bodySize} font-bold text-stone-800 dark:text-amber-100 break-keep`}>
+              <div className={`p-3.5 rounded-2xl bg-amber-50/90 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 ${ui.bodySize} font-bold text-stone-900 dark:text-amber-100 break-keep w-full box-border`}>
                 "{currentTabMeta.easySummary}"
               </div>
 
-              {/* 🎯 따라하기 실천 미션 3단계 (읽기 ➔ 즉시 행동) */}
+              {/* 🎯 따라하기 실천 미션 3단계 */}
               {currentTabMeta.missions && currentTabMeta.missions.length > 0 && (
-                <div className="space-y-2 pt-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-black text-indigo-700 dark:text-indigo-300 flex items-center gap-1.5">
+                <div className="space-y-2 pt-1 w-full">
+                  <div className="flex items-center justify-between gap-1 flex-wrap">
+                    <span className="text-[11px] sm:text-xs font-black text-indigo-700 dark:text-indigo-300 flex items-center gap-1.5">
                       <span>✅</span>
-                      <span>눈으로만 읽지 말고 지금 하나씩 눌러서 따라해 보세요! (실천 체크리스트)</span>
+                      <span className="break-keep">지금 바로 눌러서 따라해 보세요! (실천 체크리스트)</span>
                     </span>
-                    <span className="text-[11px] font-mono font-bold text-stone-500 dark:text-slate-400">
-                      터치하면 체크됩니다
+                    <span className="text-[10px] font-mono font-bold text-stone-500 dark:text-slate-400 shrink-0">
+                      터치 시 체크 완료
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 w-full">
                     {currentTabMeta.missions.map((m, idx) => {
                       const isDone = !!completedMissions[m.id];
                       return (
                         <div
                           key={m.id}
                           onClick={() => toggleMissionCheck(m.id)}
-                          className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between gap-2.5 min-w-0 ${
+                          className={`p-3 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between gap-2 min-w-0 box-border ${
                             isDone
-                              ? 'bg-emerald-50/90 dark:bg-emerald-950/30 border-emerald-400 dark:border-emerald-600'
+                              ? 'bg-emerald-50/90 dark:bg-emerald-950/40 border-emerald-400 dark:border-emerald-600'
                               : `${ui.innerCard} hover:border-indigo-400`
                           }`}
                         >
-                          <div className="flex items-start gap-2.5 min-w-0">
-                            <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 mt-0.5 border ${
+                          <div className="flex items-start gap-2 min-w-0">
+                            <div className={`w-4.5 h-4.5 rounded-md flex items-center justify-center shrink-0 mt-0.5 border ${
                               isDone
                                 ? 'bg-emerald-600 border-emerald-600 text-white'
                                 : 'bg-white dark:bg-black/40 border-stone-300 dark:border-white/20'
@@ -714,12 +699,12 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
                               {isDone && <IconCheck />}
                             </div>
                             <span className={`${ui.subSize} font-bold break-keep ${isDone ? 'line-through opacity-75' : ''}`}>
-                              <b className="text-indigo-600 dark:text-indigo-400 mr-1">실천 {idx + 1}.</b>
+                              <b className="text-indigo-600 dark:text-indigo-400 mr-1">실천{idx + 1}.</b>
                               {m.text}
                             </span>
                           </div>
 
-                          <div className="flex justify-end">
+                          <div className="flex justify-end pt-1">
                             <button
                               type="button"
                               onClick={(e) => {
@@ -727,7 +712,7 @@ export default function AppGuidebook({ isDarkMode, setActiveScreen, isSidebarOpe
                                 toggleMissionCheck(m.id);
                                 if (setActiveScreen && m.screen) setActiveScreen(m.screen);
                               }}
-                              className="px-2.5 py-1 rounded-lg bg-white dark:bg-white/10 hover:bg-indigo-600 hover:text-white text-indigo-700 dark:text-indigo-300 text-[11px] font-black border border-indigo-200 dark:border-white/10 transition-colors cursor-pointer"
+                              className="px-2.5 py-1 rounded-lg bg-white dark:bg-white/10 hover:bg-indigo-600 hover:text-white text-indigo-700 dark:text-indigo-300 text-[10.5px] font-black border border-indigo-200 dark:border-white/10 transition-colors cursor-pointer"
                             >
                               지금 해보기 ➔
                             </button>
