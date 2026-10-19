@@ -146,6 +146,23 @@ export default function TrainingCurriculum({ t, isDarkMode, setActiveScreen }) {
   const [weeklyCheck, setWeeklyCheck] = useState(() => getLocal('tc_final_weekly_v7', {}));
   const [rubrics, setRubrics] = useState(() => getLocal('tc_final_rubrics_v7', { word: 3, reflect: 3, apply: 3, community: 3, reproduce: 3 }));
 
+  // 🌐 설교 요약본(90+편) 실시간 동기화 상태
+  const [liveSermonCount, setLiveSermonCount] = useState(SERMON_DATA.length);
+
+  useEffect(() => {
+    fetch('/sermon_summary.json')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (!data) return;
+        // index 키 목록 또는 sermons 배열 전체 길이를 실시간 카운트
+        const totalCount = Array.isArray(data.sermons)
+          ? data.sermons.length
+          : data.index ? Object.keys(data.index).length : 0;
+        if (totalCount > 0) setLiveSermonCount(totalCount);
+      })
+      .catch(() => {});
+  }, []);
+
   const [completedWeeks, setCompletedWeeks] = useState([]);
   const [gameNotes, setGameNotes] = useState(() => getLocal('diary_curriculum_notes', {}));
   const [activeGameModal, setActiveGameModal] = useState(null);
@@ -263,50 +280,54 @@ export default function TrainingCurriculum({ t, isDarkMode, setActiveScreen }) {
     <div className={`flex-1 flex flex-col h-full overflow-hidden select-none relative ${bgMain} w-full`}>
       
       {/* ── 1. 학술 툴바 헤더 (Command Ribbon) ── */}
-      <header className={`relative z-20 px-3 sm:px-4 py-2 flex items-center justify-between border-b shrink-0 ${borderRule} ${isDark ? 'bg-[#161A20]' : 'bg-[#EFECE4]'}`}>
-        <div className="flex items-center gap-2 min-w-0">
+      <header className={`relative z-20 px-2.5 sm:px-4 py-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b shrink-0 ${borderRule} ${isDark ? 'bg-[#161A20]' : 'bg-[#EFECE4]'}`}>
+        <div className="flex items-center gap-2 min-w-0 w-full sm:w-auto">
           <button 
             onClick={() => setActiveScreen && setActiveScreen('home')} 
-            className={`p-1 rounded-sm transition-colors cursor-pointer shrink-0 border ${
+            className={`p-1.5 rounded-sm transition-colors cursor-pointer shrink-0 border ${
               isDark ? 'border-[#2D333F] text-[#C5CDD7] hover:bg-[#20252E]' : 'border-[#D8D0C3] text-[#4A5568] hover:bg-[#E5E0D5]'
             }`}
             title="홈 화면"
           >
             <IconArrowLeft />
           </button>
-          <div className="flex items-center gap-2 min-w-0">
-            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-none font-mono ${
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <span className={`text-[9.5px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-none font-mono shrink-0 ${
               isDark ? 'bg-[#7A2E26]/30 text-[#FCA5A5] border border-[#7A2E26]' : 'bg-[#7A2E26] text-white'
             }`}>
               CURRICULUM
             </span>
-            <div className="flex flex-col min-w-0">
-              <h1 className={`text-[13px] sm:text-[14px] font-bold tracking-tight truncate ${textHead}`} style={fontSans}>
-                실천신학 제자훈련 커리큘럼 아카이브
+            <div className="flex flex-col min-w-0 flex-1">
+              <h1 className={`text-[12.5px] sm:text-[14px] font-bold tracking-tight truncate ${textHead}`} style={fontSans}>
+                실천신학 제자훈련 아카이브
               </h1>
-              <span className={`text-[9.5px] font-mono tracking-wider uppercase ${textMuted}`}>
+              {/* 🛡️ 모바일 세로 찢어짐 버그 해결: 모바일에서는 숨기고 sm 이상에서만 가로 한 줄로 표시 */}
+              <span className={`hidden sm:block text-[9.5px] font-mono tracking-wider uppercase truncate ${textMuted}`}>
                 DISCIPLESHIP MONOGRAPH ARCHIVE
               </span>
             </div>
           </div>
         </div>
 
-        {/* 상단 6대 원본 탭 바인더 */}
-        <div className="flex items-center border border-inherit bg-transparent p-0.5 overflow-x-auto hide-scrollbar" style={fontSans}>
-          {TABS.map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-2.5 sm:px-3 py-1 text-[11.5px] font-bold cursor-pointer whitespace-nowrap transition-all ${
-                activeTab === tab.id
-                  ? (isDark ? 'bg-[#7A2E26] text-white' : 'bg-[#1B365D] text-white shadow-xs')
-                  : (isDark ? 'text-[#848E9B] hover:text-white' : 'text-[#5A6578] hover:text-black')
-              }`}
-            >
-              <span className="font-mono text-[10px] opacity-70 mr-1">{tab.code}</span>
-              {tab.label}
-            </button>
-          ))}
+        {/* 상단 6대 원본 탭 바인더 (좌우 스크롤 터치 최적화 & 설교 코퍼스 실시간 개수 반영) */}
+        <div className="flex items-center border border-inherit bg-transparent p-0.5 overflow-x-auto hide-scrollbar w-full sm:w-auto shrink-0" style={fontSans}>
+          {TABS.map(tab => {
+            const displayLabel = tab.id === 'gimpo' ? `${liveSermonCount}편 설교 코퍼스` : tab.label;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-2.5 sm:px-3 py-1 text-[11px] sm:text-[11.5px] font-bold cursor-pointer whitespace-nowrap transition-all ${
+                  activeTab === tab.id
+                    ? (isDark ? 'bg-[#7A2E26] text-white' : 'bg-[#1B365D] text-white shadow-xs')
+                    : (isDark ? 'text-[#848E9B] hover:text-white' : 'text-[#5A6578] hover:text-black')
+                }`}
+              >
+                <span className="font-mono text-[9.5px] opacity-70 mr-1">{tab.code}</span>
+                {displayLabel}
+              </button>
+            );
+          })}
         </div>
       </header>
 
@@ -369,7 +390,7 @@ export default function TrainingCurriculum({ t, isDarkMode, setActiveScreen }) {
                 {[
                   { label: '완주 주차', val: `${completedWeeks.length} / 12` },
                   { label: '평가 체크', val: `${Object.values(checks).filter(Boolean).length}개` },
-                  { label: '설교 코퍼스', val: `${SERMON_DATA.length}편` },
+                  { label: '설교 코퍼스', val: `${liveSermonCount}편` },
                   { label: '실천 일지', val: `${Object.values(forms).filter(Boolean).length}건` }
                 ].map(stat => (
                   <div key={stat.label} className={`p-1 border text-center ${cardBox}`}>
@@ -447,7 +468,7 @@ export default function TrainingCurriculum({ t, isDarkMode, setActiveScreen }) {
               {[
                 { label: '완주 주차', val: `${completedWeeks.length} / 12` },
                 { label: '평가 체크', val: `${Object.values(checks).filter(Boolean).length}개` },
-                { label: '설교 코퍼스', val: `${SERMON_DATA.length}편` },
+                { label: '설교 코퍼스', val: `${liveSermonCount}편` },
                 { label: '실천 일지', val: `${Object.values(forms).filter(Boolean).length}건` }
               ].map(stat => (
                 <div key={stat.label} className={`p-2 border text-center ${cardBox}`}>
