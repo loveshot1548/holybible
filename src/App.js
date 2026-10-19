@@ -362,10 +362,11 @@ export function Home({
   formatVerse, dateHash, currentBgUrl, updateDay, triggerConfetti, isWknd, ymdStr, praiseChannels, authUser, streak5
 }) {
   const [showTuesdayPopup, setShowTuesdayPopup] = useState(false);
-  // 🛡️ 매일 초기화되지 않고 날짜에 따라 정상적으로 증가하는 챌린지 시작일 고정
-  const challengeStartKey = localStorage.getItem('readChallengeStart') || '2026-01-01';
-  const startD = new Date(challengeStartKey); 
-  const dDay = Math.max(1, Math.ceil((new Date().getTime() - startD.getTime()) / 86400000) + 1);
+  // 🛡️ 로컬스토리지에 영구 저장된 시작일을 최우선으로 읽어와 홈 화면과 통독표 팝업창을 100% 일치시킴
+  const savedStart = localStorage.getItem('readChallengeStart') || readChallengeStart || '2026-01-01';
+  const startD = new Date(`${savedStart}T00:00:00`);
+  const todayD = new Date(`${getLocalToday()}T00:00:00`);
+  const dDay = Math.max(1, Math.floor((todayD.getTime() - startD.getTime()) / 86400000) + 1);
   const safeVerse = formatVerse || { text: '오늘의 말씀을 불러오는 중입니다...', ref: '' };
   const currentChecks = (currDay && currDay.checks) ? currDay.checks : {};
 
@@ -1581,6 +1582,18 @@ export default function CompleteQtApp() {
     globalIntercessions, setGlobalIntercessions,
     generalNotes, setGeneralNotes
   } = store;
+  
+  // 🛡️ 앱 시작 시 로컬스토리지에 고정된 통독 시작일이 있으면 스토어 초기값(오늘 날짜)을 덮어씌워 초기화 방지!
+  useEffect(() => {
+    const saved = localStorage.getItem('readChallengeStart');
+    if (saved && /^\d{4}-\d{2}-\d{2}$/.test(saved)) {
+      if (readChallengeStart !== saved) setReadChallengeStart(saved);
+    } else {
+      const initDate = (readChallengeStart && /^\d{4}-\d{2}-\d{2}$/.test(readChallengeStart)) ? readChallengeStart : '2026-01-01';
+      localStorage.setItem('readChallengeStart', initDate);
+      if (readChallengeStart !== initDate) setReadChallengeStart(initDate);
+    }
+  }, [readChallengeStart, setReadChallengeStart]);
 
   useEffect(() => {
     const localUserRaw = localStorage.getItem('church_auth_user');
@@ -2953,8 +2966,10 @@ export default function CompleteQtApp() {
                     )}
 
                     {modal.type === 'bibleChallenge' && (() => {
-                       const startDate = readChallengeStart || getLocalToday();
-                       const dDay = Math.ceil((new Date().getTime() - new Date(startDate).getTime()) / 86400000) + 1;
+                       const startDate = localStorage.getItem('readChallengeStart') || readChallengeStart || '2026-01-01';
+                       const startD = new Date(`${startDate}T00:00:00`);
+                       const todayD = new Date(`${getLocalToday()}T00:00:00`);
+                       const dDay = Math.max(1, Math.floor((todayD.getTime() - startD.getTime()) / 86400000) + 1);
                        
                        return (
                          <div className="flex flex-col gap-4 p-5 pointer-events-auto">

@@ -1123,7 +1123,7 @@ export default function Bible({
              <div className={`${ui.glassCard} p-4 sm:p-5 rounded-2xl text-center shadow-2xs relative z-[45] pointer-events-auto`}>
                 <span className={`text-[12px] font-bold ${isDark ? 'text-slate-300' : 'text-stone-700'} mb-2 flex items-center justify-center gap-1.5`}>📅 말씀과 함께하는 365일 기간 설정</span>
                 <div className="flex items-center justify-center gap-2 mb-3">
-                  <input type="date" value={readChallengeStart} onChange={(e)=>setReadChallengeStart(e.target.value)} className={`${isDark ? 'bg-black/40 border-white/10 text-white' : 'bg-white border-stone-300 text-stone-900'} text-[12px] font-bold px-3 py-1.5 rounded-xl outline-none shadow-inner`} />
+                  <input type="date" value={localStorage.getItem('readChallengeStart') || readChallengeStart || '2026-01-01'} onChange={(e)=>{ setReadChallengeStart(e.target.value); localStorage.setItem('readChallengeStart', e.target.value); }} className={`${isDark ? 'bg-black/40 border-white/10 text-white' : 'bg-white border-stone-300 text-stone-900'} text-[12px] font-bold px-3 py-1.5 rounded-xl outline-none shadow-inner`} />
                 </div>
                 <div className={`w-full ${isDark ? 'bg-black/30' : 'bg-stone-100'} rounded-full h-2.5 overflow-hidden shadow-inner mb-2`}><div className={`bg-amber-600 h-full transition-all duration-700 rounded-full`} style={{width:`${bibleProgress}%`}}></div></div>
                 <div className={`flex justify-between text-[11px] font-bold ${ui.textMain} px-1`}><span>완독: {readChapsCount}장</span><span className={isDark ? 'text-slate-300' : 'text-stone-700'}>진행도 {bibleProgress}%</span></div>
@@ -1279,7 +1279,7 @@ export default function Bible({
                                      if (allVersesReadNow) {
                                        const todayKey = getLocalToday ? getLocalToday() : new Date().toISOString().slice(0, 10);
                                        const curCount = parseInt(localStorage.getItem(`chap_count_${todayKey}`) || '0', 10);
-                                       localStorage.setItem(`chap_count_${todayKey}`, Math.max(0, currentDayChaps + 1));
+                                       localStorage.setItem(`chap_count_${todayKey}`, Math.max(0, curCount + 1));
                                      }
 
                                      if (willBeRead) syncBibleReading();
