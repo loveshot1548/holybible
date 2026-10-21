@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 
 // =====================================================================
-// ✒️ 전문 학술 & SaaS 정밀 헤어라인 SVG 아이콘 세트
+// ✒️ 전문 학술 & 하이엔드 SaaS 정밀 헤어라인 SVG 아이콘 세트
 // =====================================================================
 const StrokeWidth = "1.8";
 const IconHome = ({ className }) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={StrokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>;
@@ -23,8 +23,8 @@ const IconBookGuide = ({ className }) => <svg viewBox="0 0 24 24" fill="none" st
 const IconLogOut = ({ className }) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={StrokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>;
 const IconChevronUpDown = ({ className }) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={StrokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="7 15 12 20 17 15" /><polyline points="7 9 12 4 17 9" /></svg>;
 const IconChevronRight = ({ className }) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={StrokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="9 18 15 12 9 6" /></svg>;
-const IconSun = () => <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5 text-[#EAB308]"><circle cx="12" cy="12" r="5" /><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>;
-const IconMoon = () => <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5 text-[#818CF8]"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" /></svg>;
+const IconSun = () => <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5 text-amber-500"><circle cx="12" cy="12" r="5" /><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>;
+const IconMoon = () => <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5 text-indigo-300"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" /></svg>;
 const IconClock = ({ className }) => <svg fill="none" viewBox="0 0 24 24" strokeWidth="1.8" stroke="currentColor" className={className}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
 const IconShieldAdmin = ({ className }) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={StrokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>;
 const IconChart = ({ className }) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={StrokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 3v18h18"/><path d="M18 9l-5 5-4-4-5 5"/></svg>;
@@ -100,27 +100,16 @@ export default function Sidebar({
   const currentUserName = getResolvedUserName();
   const cleanName = (currentUserName || '').replace(/\s+/g, '').toLowerCase();
 
-  // 🛡️ 정신동 본인 단독 식별 (관리자 페이지 접근 권한 유지를 위해 롤백)
+  // 정신동 본인 식별 (관리자 페이지 접근 권한)
   const isOwnerJeongShinDong = 
     cleanName === '정신동' || 
     cleanName === 'shindong' || 
     cleanName.startsWith('정신동(');
 
-  // 관리자 권한 확인 로직 (복원됨)
+  // 관리자 권한 확인 로직
   const currentUserRole = typeof authUser === 'object' ? (authUser?.role || '') : '';
   const isExplicitAdmin = typeof authUser === 'object' ? !!authUser?.is_admin : false;
   const canAccessAdmin = isOwnerJeongShinDong || isExplicitAdmin || ['관리자', '운영자', '목자', '전도사', '목사'].includes(currentUserRole);
-
-  const ui = {
-    bg: isDark ? 'bg-[#0F1115]' : 'bg-[#F4F5F7]', 
-    border: isDark ? 'border-white/10' : 'border-slate-200/60',
-    textPrimary: isDark ? 'text-white' : 'text-slate-900', 
-    textSecondary: isDark ? 'text-slate-400' : 'text-slate-500',
-    hoverBg: isDark ? 'hover:bg-white/5' : 'hover:bg-black/5', 
-    activeBg: isDark ? 'bg-white/10' : 'bg-slate-200/50', 
-    activeText: isDark ? 'text-indigo-400' : 'text-indigo-600',
-    iconBase: isDark ? 'text-slate-400' : 'text-slate-400'
-  };
 
   useEffect(() => {
     const group = MENU_GROUPS.find(g => g.items.some(i => i.id === activeScreen));
@@ -129,28 +118,116 @@ export default function Sidebar({
 
   return (
     <>
+      <style>{`
+        /* 🚫 클릭 시 검은 테두리(포커스 링) 원천 차단 */
+        * {
+          -webkit-tap-highlight-color: transparent !important;
+          outline: none !important;
+        }
+        button, a, div {
+          outline: none !important;
+          -webkit-focus-ring-color: transparent !important;
+        }
+        button:focus, button:active, button:focus-visible {
+          outline: none !important;
+          box-shadow: none !important;
+        }
+
+        /* 🌿 1. 실사 생명나무 숲이 바람에 우아하게 살랑살랑 흔들리는 애니메이션 */
+        @keyframes treeSwayBreeze {
+          0% {
+            transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+          }
+          25% {
+            transform: translate3d(4px, -3px, 0) rotate(1.5deg) scale(1.02);
+          }
+          50% {
+            transform: translate3d(-3px, 1px, 0) rotate(-1.2deg) scale(0.99);
+          }
+          75% {
+            transform: translate3d(3px, -2px, 0) rotate(1.7deg) scale(1.015);
+          }
+          100% {
+            transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+          }
+        }
+        .animate-tree-sway-real {
+          transform-origin: 80% 100%;
+          animation: treeSwayBreeze 12s cubic-bezier(0.4, 0.0, 0.2, 1) infinite;
+        }
+
+        /* ✨ 2. 선택된 활성 메뉴의 은은한 살랑임 애니메이션 */
+        @keyframes menuActiveSway {
+          0%, 100% {
+            transform: translate3d(0, 0, 0) scale(1.02);
+          }
+          50% {
+            transform: translate3d(2px, -1px, 0) scale(1.03);
+          }
+        }
+        .animate-menu-sway-active {
+          animation: menuActiveSway 3.6s ease-in-out infinite;
+        }
+      `}</style>
+
       {/* 모바일 백드롭 */}
       <div 
-        className={`fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[140] md:hidden transition-opacity duration-300 ${
+        className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-[140] md:hidden transition-opacity duration-300 ${
           isSidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`} 
         onClick={() => setIsSidebarOpen(false)} 
       />
 
-      {/* 사이드바 본체 */}
+      {/* 사이드바 본체 (가려짐 방지: aside 자체의 overflow-hidden 제거) */}
       <aside 
-        className={`fixed inset-y-0 left-0 z-[150] h-full flex flex-col transition-all duration-300 ease-in-out border-r md:relative ${ui.bg} ${ui.border} ${
+        className={`fixed inset-y-0 left-0 z-[150] h-full flex flex-col transition-all duration-300 ease-in-out md:relative ${
+          isDark 
+            ? 'bg-[#0B0F17]/70 border-r border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)]' 
+            : 'bg-white/60 border-r border-slate-200 shadow-[0_8px_32px_0_rgba(15,23,42,0.06)]'
+        } backdrop-blur-2xl ${
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
-        } ${isSlim ? 'w-[72px]' : 'w-[220px] md:w-[260px]'}`}
+        } ${isSlim ? 'w-[72px]' : 'w-[230px] md:w-[260px]'}`}
       >
-        {/* 데스크톱 슬림 토글 버튼 */}
+        {/* ===================================================================== */}
+        {/* 🌿 [상시 기능] 선명하게 눈에 보이는 실사 생명나무 비디오 배경 */}
+        {/* ===================================================================== */}
+        <div className="absolute inset-0 pointer-events-none select-none overflow-hidden z-0">
+          <video
+            src="/video/good_tree.mp4"
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="absolute inset-0 w-full h-full object-cover"
+            style={{
+              opacity: isDark ? 0.65 : 0.72,
+              filter: isDark 
+                ? 'contrast(130%) brightness(75%) saturate(125%)' 
+                : 'contrast(125%) brightness(95%) saturate(135%)'
+            }}
+          />
+
+          {/* 투명 글래스 베일 (배경의 숲이 맑고 선명하게 비치도록 조절) */}
+          <div 
+            className={`absolute inset-0 ${
+              isDark 
+                ? 'bg-gradient-to-t from-[#0B0F17]/85 via-[#0B0F17]/35 to-[#0B0F17]/60' 
+                : 'bg-gradient-to-t from-white/75 via-white/30 to-white/50'
+            }`} 
+          />
+        </div>
+
+        {/* 🌟 [가려짐 완벽 해결] 사이드바 경계선 밖으로 온전하게 100% 빠져나온 슬림 토글 버튼 */}
         <button 
           onClick={() => setIsSlim(!isSlim)} 
-          className={`hidden md:flex absolute top-5 -right-3 w-6 h-6 rounded-full border shadow-sm items-center justify-center z-[160] transition-transform ${
-            isDark ? 'bg-[#1C1C1E] border-white/10 text-white' : 'bg-white border-slate-200 text-slate-700'
+          className={`hidden md:flex absolute top-5 -right-3.5 w-7 h-7 rounded-full border shadow-md items-center justify-center z-[170] transition-transform cursor-pointer ${
+            isDark 
+              ? 'bg-slate-900 border-white/20 text-white hover:bg-slate-800' 
+              : 'bg-white border-slate-300 text-slate-800 hover:bg-slate-100'
           }`}
+          title={isSlim ? '사이드바 펼치기' : '사이드바 접기'}
         >
-          <IconChevronRight className={`w-3.5 h-3.5 transition-transform ${!isSlim ? 'rotate-180' : ''}`} />
+          <IconChevronRight className={`w-3.5 h-3.5 transition-transform duration-300 ${!isSlim ? 'rotate-180' : ''}`} />
         </button>
 
         {/* 로고 & 사용자 헤더 */}
@@ -159,29 +236,37 @@ export default function Sidebar({
             setActiveScreen('home');
             if (window.innerWidth < 768) setIsSidebarOpen(false);
           }}
-          className={`shrink-0 h-[64px] flex items-center gap-3 px-4 border-b ${ui.border} cursor-pointer transition-colors ${ui.hoverBg} select-none`}
+          className={`shrink-0 h-[64px] flex items-center gap-3 px-4 border-b ${
+            isDark ? 'border-white/10 hover:bg-white/5' : 'border-slate-200/80 hover:bg-black/5'
+          } cursor-pointer transition-colors select-none relative z-10`}
         >
-          <div className={`w-8 h-8 rounded-lg flex shrink-0 items-center justify-center font-bold text-[13px] shadow-sm transition-all ${
-            isDark ? 'bg-indigo-600 text-white' : 'bg-indigo-600 text-white'
-          }`}>
-            환
+          <div className="w-9 h-9 rounded-xl flex shrink-0 items-center justify-center font-black text-[14px] shadow-sm bg-gradient-to-tr from-slate-900 to-slate-700 text-white dark:from-white/25 dark:to-white/10 dark:text-white ring-1 ring-white/20">
+            좋
           </div>
           {!isSlim && (
             <>
               <div className="flex flex-col flex-1 overflow-hidden justify-center">
-                <span className={`text-[14.5px] font-black leading-tight truncate ${ui.textPrimary}`}>환영합니다.</span>
+                <span className={`text-[14.5px] font-black leading-tight tracking-tight truncate ${
+                  isDark ? 'text-white' : 'text-slate-950'
+                }`}>
+                  좋은나무교회
+                </span>
                 <div className="flex items-center gap-1.5 mt-0.5">
-                  <span className={`text-[12px] font-bold leading-tight truncate ${ui.textSecondary}`}>{currentUserName}</span>
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                  <span className={`text-[12px] font-bold leading-tight truncate ${
+                    isDark ? 'text-slate-300' : 'text-slate-700'
+                  }`}>
+                    {currentUserName} 성도님
+                  </span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                 </div>
               </div>
-              <IconChevronUpDown className={`w-4 h-4 shrink-0 ${ui.iconBase}`} />
+              <IconChevronUpDown className={`w-4 h-4 shrink-0 ${isDark ? 'text-slate-400' : 'text-slate-500'}`} />
             </>
           )}
         </div>
 
-        {/* 네비게이션 메뉴 목록 */}
-        <div className="flex-1 overflow-y-auto py-4 px-3 space-y-4 hide-scrollbar">
+        {/* 네비게이션 메뉴 목록 (라이트: 딥 블랙 / 다크: 퓨어 화이트 100% 선명도 보장) */}
+        <div className="flex-1 overflow-y-auto py-3 px-2.5 space-y-3.5 hide-scrollbar relative z-10">
           {MENU_GROUPS.map((group, idx) => {
             const isGroupExpanded = expandedGroup === group.title;
             return (
@@ -191,10 +276,16 @@ export default function Sidebar({
                     setExpandedGroup(expandedGroup === group.title ? null : group.title); 
                     if (isSlim) setIsSlim(false); 
                   }} 
-                  className={`w-full flex items-center justify-between px-2 py-1.5 mb-1 transition-colors rounded-md focus:outline-none ${!isSlim ? ui.hoverBg : ''}`}
+                  className={`w-full flex items-center justify-between px-2.5 py-1 mb-0.5 transition-colors rounded-md focus:outline-none cursor-pointer ${
+                    isDark ? 'hover:bg-white/5' : 'hover:bg-black/5'
+                  }`}
                 >
                   {!isSlim ? (
-                    <span className={`text-[12px] font-bold tracking-widest ${ui.textSecondary}`}>{group.title}</span>
+                    <span className={`text-[10.5px] font-mono font-black tracking-widest uppercase ${
+                      isDark ? 'text-slate-400' : 'text-slate-700'
+                    }`}>
+                      {group.title}
+                    </span>
                   ) : (
                     <span className="w-full text-center text-[10px] font-bold text-transparent select-none">-</span>
                   )}
@@ -212,12 +303,44 @@ export default function Sidebar({
                             if (window.innerWidth < 768) setIsSidebarOpen(false); 
                           }} 
                           title={isSlim ? item.label : undefined} 
-                          className={`w-full flex items-center gap-3 rounded-xl text-[14px] font-medium transition-colors duration-200 focus:outline-none cursor-pointer ${
+                          className={`w-full flex items-center gap-3 rounded-xl transition-all duration-200 focus:outline-none cursor-pointer ${
                             isSlim ? 'justify-center p-3' : 'px-3 py-2.5'
-                          } ${isActive ? `${ui.activeBg}${ui.activeText} shadow-xs font-bold` : `${ui.textPrimary}${ui.hoverBg}`}`}
+                          } ${
+                            isActive 
+                              ? isDark
+                                ? 'bg-white/20 border border-white/30 backdrop-blur-md shadow-md text-white font-black animate-menu-sway-active'
+                                : 'bg-slate-900 border border-slate-950 backdrop-blur-md shadow-md text-white font-black animate-menu-sway-active'
+                              : isDark
+                                ? 'hover:bg-white/10'
+                                : 'hover:bg-white/60'
+                          }`}
                         >
-                          <Icon className={`shrink-0 w-[18px] h-[18px] ${isActive ? ui.activeText : ui.iconBase}`} />
-                          {!isSlim && <span className="truncate">{item.label}</span>}
+                          {/* 선택 시 아이콘이 1.15배 확대되며 살랑거림 */}
+                          <Icon 
+                            className={`shrink-0 transition-transform duration-300 ${
+                              isActive 
+                                ? isDark
+                                  ? 'w-[21px] h-[21px] text-white scale-110 drop-shadow-[0_0_8px_rgba(255,255,255,0.7)]'
+                                  : 'w-[21px] h-[21px] text-white scale-110'
+                                : isDark
+                                  ? 'w-[18px] h-[18px] text-slate-200'
+                                  : 'w-[18px] h-[18px] text-slate-800'
+                            }`} 
+                          />
+                          {!isSlim && (
+                            /* 선택 시 글자가 14.5px 볼드로 커지고 선명한 대비 보장 */
+                            <span 
+                              className={`truncate tracking-tight transition-all duration-200 ${
+                                isActive 
+                                  ? 'text-[14.5px] font-black text-white' 
+                                  : isDark
+                                    ? 'text-[13.5px] font-bold text-slate-100 hover:text-white' 
+                                    : 'text-[13.5px] font-black text-slate-950 hover:text-black'
+                              }`}
+                            >
+                              {item.label}
+                            </span>
+                          )}
                         </button>
                       );
                     })}
@@ -229,19 +352,33 @@ export default function Sidebar({
         </div>
 
         {/* 하단 시스템 액션 바 */}
-        <div className={`shrink-0 p-4 border-t ${ui.border} flex flex-col gap-2.5`}>
+        <div className={`shrink-0 p-3.5 border-t ${
+          isDark ? 'border-white/10 bg-black/20' : 'border-slate-200/80 bg-white/30'
+        } backdrop-blur-md flex flex-col gap-2 relative z-10`}>
           {canAccessAdmin && (
             <button 
               onClick={() => { 
                 setActiveScreen('adminConsole'); 
                 if (window.innerWidth < 768) setIsSidebarOpen(false); 
               }} 
-              className={`w-full flex items-center gap-2.5 rounded-xl text-[14px] font-medium transition-colors duration-200 cursor-pointer ${
-                isSlim ? 'justify-center p-3' : 'px-3 py-2.5'
-              } ${activeScreen === 'adminConsole' ? `${ui.activeBg}${ui.activeText} shadow-xs font-bold` : `${ui.textPrimary}${ui.hoverBg}`}`}
+              className={`w-full flex items-center gap-2.5 rounded-xl text-[13.5px] transition-colors duration-200 cursor-pointer ${
+                isSlim ? 'justify-center p-3' : 'px-3 py-2'
+              } ${
+                activeScreen === 'adminConsole' 
+                  ? isDark
+                    ? 'bg-white/20 border border-white/30 text-white font-black text-[14px] shadow-sm animate-menu-sway-active'
+                    : 'bg-slate-900 border border-slate-950 text-white font-black text-[14px] shadow-sm animate-menu-sway-active'
+                  : isDark
+                    ? 'text-slate-100 hover:bg-white/10 font-bold'
+                    : 'text-slate-950 hover:bg-white/60 font-black'
+              }`}
             >
-              <IconShieldAdmin className={`shrink-0 w-[18px] h-[18px] ${activeScreen === 'adminConsole' ? ui.activeText : 'text-indigo-400'}`} />
-              {!isSlim && <span className="font-bold">관리자 페이지</span>}
+              <IconShieldAdmin className={`shrink-0 w-[18px] h-[18px] ${
+                activeScreen === 'adminConsole'
+                  ? 'text-white'
+                  : (isDark ? 'text-slate-300' : 'text-slate-800')
+              }`} />
+              {!isSlim && <span>관리자 페이지</span>}
             </button>
           )}
 
@@ -250,25 +387,37 @@ export default function Sidebar({
               setActiveScreen('guidebook'); 
               if (window.innerWidth < 768) setIsSidebarOpen(false); 
             }} 
-            className={`w-full flex items-center gap-2.5 rounded-xl text-[14px] font-medium transition-colors duration-200 cursor-pointer ${
-              isSlim ? 'justify-center p-3' : 'px-3 py-2.5'
-            } ${activeScreen === 'guidebook' ? `${ui.activeBg}${ui.activeText} shadow-xs font-bold` : `${ui.textPrimary}${ui.hoverBg}`}`}
+            className={`w-full flex items-center gap-2.5 rounded-xl text-[13.5px] transition-colors duration-200 cursor-pointer ${
+              isSlim ? 'justify-center p-3' : 'px-3 py-2'
+            } ${
+              activeScreen === 'guidebook' 
+                ? isDark
+                  ? 'bg-white/20 border border-white/30 text-white font-black text-[14px] shadow-sm animate-menu-sway-active'
+                  : 'bg-slate-900 border border-slate-950 text-white font-black text-[14px] shadow-sm animate-menu-sway-active'
+                : isDark
+                  ? 'text-slate-100 hover:bg-white/10 font-bold'
+                  : 'text-slate-950 hover:bg-white/60 font-black'
+            }`}
           >
-            <IconBookGuide className={`shrink-0 w-[18px] h-[18px] ${activeScreen === 'guidebook' ? ui.activeText : ui.iconBase}`} />
+            <IconBookGuide className={`shrink-0 w-[18px] h-[18px] ${
+              activeScreen === 'guidebook'
+                ? 'text-white'
+                : (isDark ? 'text-slate-300' : 'text-slate-800')
+            }`} />
             {!isSlim && <span>가이드북</span>}
           </button>
 
           {setIsDarkMode && (
-            <div className="flex justify-center mb-1">
+            <div className="flex justify-center py-0.5">
               <button 
                 onClick={() => setIsDarkMode(!isDarkMode)} 
-                title="다크 모드 변경" 
-                className={`relative w-16 h-8 rounded-full shadow-inner flex items-center cursor-pointer transition-colors duration-300 ${
-                  isDark ? 'bg-black/30 border border-white/10' : 'bg-slate-200/70 border border-slate-300'
+                title="다크 모드 토글" 
+                className={`relative w-14 h-7 rounded-full shadow-inner flex items-center cursor-pointer transition-colors duration-300 ${
+                  isDark ? 'bg-slate-800/80 border border-white/20' : 'bg-slate-300 border border-slate-400'
                 }`}
               >
-                <div className={`absolute w-6 h-6 rounded-full flex items-center justify-center shadow-sm transition-transform duration-300 ${
-                  isDark ? 'translate-x-9 bg-[#2A3441]' : 'translate-x-1 bg-white'
+                <div className={`absolute w-5 h-5 rounded-full flex items-center justify-center shadow-md transition-transform duration-300 ${
+                  isDark ? 'translate-x-8 bg-indigo-500 text-white' : 'translate-x-1 bg-white text-slate-800'
                 }`}>
                   {isDark ? <IconMoon /> : <IconSun />}
                 </div>
@@ -285,9 +434,9 @@ export default function Sidebar({
               } 
             }} 
             title={isSlim ? '로그아웃' : undefined} 
-            className={`w-full flex items-center gap-2.5 rounded-xl text-[13.5px] font-bold transition-colors cursor-pointer ${
-              isSlim ? 'justify-center p-3' : 'px-3 py-2.5'
-            } ${isDark ? 'text-rose-400 hover:bg-rose-500/10' : 'text-rose-500 hover:bg-rose-50'}`}
+            className={`w-full flex items-center gap-2.5 rounded-xl text-[13px] font-black transition-colors cursor-pointer ${
+              isSlim ? 'justify-center p-3' : 'px-3 py-2'
+            } ${isDark ? 'text-rose-400 hover:bg-rose-500/10' : 'text-rose-600 hover:bg-rose-50'}`}
           >
             <IconLogOut className="shrink-0 w-[16px] h-[16px]" />
             {!isSlim && <span>로그아웃</span>}
