@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 168 150" width="168" height="150">
+    <ellipse cx="84" cy="138" rx="68" ry="9" fill="#2D1A0E" opacity="0.35"/>
+    <!-- 후면 베이커리 석조 가옥 -->
+    <polygon points="32,74 84,100 84,58 32,32" fill="#F5E8D3" stroke="#2D1A0E" stroke-width="2"/>
+    <polygon points="84,100 136,74 136,32 84,58" fill="#CBB697" stroke="#2D1A0E" stroke-width="2"/>
+    <polygon points="84,58 136,32 84,10 32,32" fill="#EADBC5" stroke="#2D1A0E" stroke-width="2"/>
+    <!-- 전면 목재 가판대 -->
+    <polygon points="84,122 148,90 98,66 34,98" fill="#854D0E" stroke="#2D1A0E" stroke-width="2"/>
+    <polygon points="34,98 84,122 84,132 34,108" fill="#5C2E0B" stroke="#2D1A0E" stroke-width="2"/>
+    <polygon points="84,122 148,90 148,100 84,132" fill="#3D1E07" stroke="#2D1A0E" stroke-width="2"/>
+    <!-- 목재 기둥 -->
+    <line x1="44" y1="102" x2="44" y2="65" stroke="#5C2E0B" stroke-width="3"/>
+    <line x1="84" y1="122" x2="84" y2="82" stroke="#5C2E0B" stroke-width="3"/>
+    <line x1="138" y1="95" x2="138" y2="60" stroke="#5C2E0B" stroke-width="3"/>
+    <!-- 주황 & 노랑 줄무늬 물결 차양막 -->
+    <polygon points="30,48 84,74 150,42 98,20" fill="#F59E0B" stroke="#2D1A0E" stroke-width="2"/>
+    <polygon points="42,54 84,74 96,68 54,48" fill="#FDE68A"/>
+    <polygon points="106,63 150,42 138,36 94,57" fill="#FDE68A"/>
+    <!-- 황금 빵 바구니 & 점토 화덕 -->
+    <circle cx="68" cy="106" r="6" fill="#D97706" stroke="#2D1A0E" stroke-width="1.2"/>
+    <circle cx="66" cy="104" r="3" fill="#FEF3C7"/>
+    <circle cx="71" cy="105" r="3" fill="#FEF3C7"/>
+    <ellipse cx="118" cy="90" rx="8" ry="6" fill="#78716C" stroke="#2D1A0E" stroke-width="1.5"/>
+    <circle cx="118" cy="88" r="3" fill="#EF4444"/>
+  </svg>

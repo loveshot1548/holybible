@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 84 90" width="84" height="90">
+    <ellipse cx="42" cy="80" rx="36" ry="6" fill="#29180C" opacity="0.35"/>
+    <!-- 주름진 흑염소 털 천막 -->
+    <path d="M 8,72 Q 42,12 76,72 Q 42,84 8,72 Z" fill="#452310" stroke="#24140B" stroke-width="2"/>
+    <path d="M 42,14 Q 58,45 76,72 L 42,78 Z" fill="#2E170B" stroke="#24140B" stroke-width="1.5"/>
+    <!-- 천막 입구 삼각 개구부 -->
+    <polygon points="34,75 42,40 50,75" fill="#170B05"/>
+    <!-- 버팀목 밧줄 및 말뚝 -->
+    <line x1="42" y1="14" x2="4" y2="76" stroke="#24140B" stroke-width="1.5"/>
+    <line x1="42" y1="14" x2="80" y2="76" stroke="#24140B" stroke-width="1.5"/>
+    <circle cx="28" cy="78" r="3" fill="#EF4444"/>
+    <circle cx="28" cy="76" r="1.5" fill="#FBBF24"/>
+  </svg>

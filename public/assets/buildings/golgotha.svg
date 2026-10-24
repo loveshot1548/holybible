@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 168 160" width="168" height="160">
+    <defs>
+      <linearGradient id="rockSun" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#78716C"/><stop offset="100%" stop-color="#44403C"/></linearGradient>
+      <linearGradient id="rockShade" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#44403C"/><stop offset="100%" stop-color="#1C1917"/></linearGradient>
+    </defs>
+    <ellipse cx="84" cy="148" rx="74" ry="11" fill="#1C1917" opacity="0.45"/>
+    <!-- 거친 암반 1단 -->
+    <polygon points="84,138 158,102 142,70 84,86 20,66 8,100" fill="url(#rockSun)" stroke="#1C1917" stroke-width="2.5"/>
+    <polygon points="84,138 158,102 152,112 84,146 12,108 8,100" fill="url(#rockShade)" stroke="#1C1917" stroke-width="2"/>
+    <!-- 상부 암반 2단 절벽 -->
+    <polygon points="84,88 144,60 84,38 24,65" fill="#A8A29E" stroke="#1C1917" stroke-width="2"/>
+    <polygon points="24,65 84,88 84,98 24,75" fill="url(#rockSun)" stroke="#1C1917" stroke-width="2"/>
+    <polygon points="84,88 144,60 144,70 84,98" fill="url(#rockShade)" stroke="#1C1917" stroke-width="2"/>
+    <!-- 암반 크랙 균열선 -->
+    <path d="M 50,75 L 68,85 L 75,80 M 105,70 L 122,82 L 135,76" stroke="#1C1917" stroke-width="1.8" fill="none"/>
+    <!-- 중앙 그리스도 십자가 -->
+    <rect x="81" y="8" width="7" height="60" fill="#451A03" stroke="#1C1917" stroke-width="1.8"/>
+    <rect x="65" y="22" width="39" height="7" fill="#451A03" stroke="#1C1917" stroke-width="1.8"/>
+    <rect x="79" y="11" width="11" height="6" fill="#FEF3C7" stroke="#1C1917" stroke-width="1.2"/>
+    <!-- 좌우 강도 십자가 -->
+    <rect x="49" y="32" width="5.5" height="42" fill="#5C2E0B" stroke="#1C1917" stroke-width="1.5"/>
+    <rect x="38" y="41" width="28" height="5.5" fill="#5C2E0B" stroke="#1C1917" stroke-width="1.5"/>
+    <rect x="113" y="32" width="5.5" height="42" fill="#5C2E0B" stroke="#1C1917" stroke-width="1.5"/>
+    <rect x="102" y="41" width="28" height="5.5" fill="#5C2E0B" stroke="#1C1917" stroke-width="1.5"/>
+  </svg>

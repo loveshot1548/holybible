@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 168 156" width="168" height="156">
+    <ellipse cx="84" cy="146" rx="72" ry="10" fill="#2D1A0E" opacity="0.35"/>
+    <polygon points="84,136 158,100 84,64 10,100" fill="#F1F5F9" stroke="#2D1A0E" stroke-width="2.2"/>
+    <polygon points="10,100 84,136 84,145 10,109" fill="#CBD5E1" stroke="#2D1A0E" stroke-width="2.2"/>
+    <polygon points="84,136 158,100 158,109 84,145" fill="#94A3B8" stroke="#2D1A0E" stroke-width="2.2"/>
+    <!-- 본당 벽체 -->
+    <polygon points="84,110 144,82 144,38 84,66" fill="#E2E8F0" stroke="#2D1A0E" stroke-width="2.2"/>
+    <polygon points="24,82 84,110 84,66 24,38" fill="#FFFFFF" stroke="#2D1A0E" stroke-width="2.2"/>
+    <!-- 삼각 박공 페디먼트 -->
+    <polygon points="24,38 84,66 84,22" fill="#F8FAFC" stroke="#2D1A0E" stroke-width="2.2"/>
+    <polygon points="84,66 144,38 84,22" fill="#CBD5E1" stroke="#2D1A0E" stroke-width="2.2"/>
+    <circle cx="84" cy="42" r="5" fill="#FBBF24" stroke="#2D1A0E" stroke-width="1.2"/>
+    <!-- 대리석 기둥 4개 -->
+    
+      <rect x="34.5" y="56" width="7" height="42" fill="#FFFFFF" stroke="#2D1A0E" stroke-width="1.4" rx="1.5"/>
+    
+      <rect x="54.5" y="56" width="7" height="42" fill="#FFFFFF" stroke="#2D1A0E" stroke-width="1.4" rx="1.5"/>
+    
+      <rect x="106.5" y="56" width="7" height="42" fill="#FFFFFF" stroke="#2D1A0E" stroke-width="1.4" rx="1.5"/>
+    
+      <rect x="126.5" y="56" width="7" height="42" fill="#FFFFFF" stroke="#2D1A0E" stroke-width="1.4" rx="1.5"/>
+    
+  </svg>

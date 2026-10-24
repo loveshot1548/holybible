@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 252 230" width="252" height="230">
+    <defs>
+      <linearGradient id="tMarble" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#FFFFFF"/><stop offset="100%" stop-color="#E2D9C8"/></linearGradient>
+      <linearGradient id="tShadow" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#D8C8B0"/><stop offset="100%" stop-color="#A89274"/></linearGradient>
+      <linearGradient id="tGold" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#FDE68A"/><stop offset="50%" stop-color="#F59E0B"/><stop offset="100%" stop-color="#B45309"/></linearGradient>
+      <linearGradient id="colGrad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#FFFFFF"/><stop offset="50%" stop-color="#F5F0E6"/><stop offset="100%" stop-color="#C7B89E"/></linearGradient>
+    </defs>
+    <!-- 바닥 접촉 그림자 -->
+    <ellipse cx="126" cy="215" rx="105" ry="14" fill="#24140B" opacity="0.4"/>
+    <!-- 1단 기단 몰딩 -->
+    <polygon points="126,170 236,125 126,80 16,125" fill="url(#tMarble)" stroke="#2D1A0E" stroke-width="2.5"/>
+    <polygon points="16,125 126,170 126,182 16,137" fill="#D8C8B0" stroke="#2D1A0E" stroke-width="2.5"/>
+    <polygon points="126,170 236,125 236,137 126,182" fill="url(#tShadow)" stroke="#2D1A0E" stroke-width="2.5"/>
+    <!-- 기단 조적선 -->
+    <path d="M 40,131 L 126,166 M 70,143 L 126,166 M 126,170 L 210,135" stroke="#9C886C" stroke-width="1.2" fill="none"/>
+    <!-- 2단 열주 안뜰 테라스 -->
+    <polygon points="126,140 210,103 126,68 42,103" fill="url(#tMarble)" stroke="#2D1A0E" stroke-width="2"/>
+    <polygon points="42,103 126,140 126,150 42,113" fill="#D8C8B0" stroke="#2D1A0E" stroke-width="2"/>
+    <polygon points="126,140 210,103 210,113 126,150" fill="url(#tShadow)" stroke="#2D1A0E" stroke-width="2"/>
+    <!-- 대리석 원통 열주 회랑 7개 -->
+    
+      <rect x="54" y="92" width="8" height="38" fill="url(#colGrad)" stroke="#2D1A0E" stroke-width="1.2" rx="2"/>
+      <rect x="53" y="88" width="10" height="5" fill="url(#tGold)" stroke="#2D1A0E" stroke-width="1"/>
+      <rect x="53" y="127" width="10" height="4" fill="#C7B89E" stroke="#2D1A0E" stroke-width="1"/>
+    
+      <rect x="76" y="92" width="8" height="38" fill="url(#colGrad)" stroke="#2D1A0E" stroke-width="1.2" rx="2"/>
+      <rect x="75" y="88" width="10" height="5" fill="url(#tGold)" stroke="#2D1A0E" stroke-width="1"/>
+      <rect x="75" y="127" width="10" height="4" fill="#C7B89E" stroke="#2D1A0E" stroke-width="1"/>
+    
+      <rect x="98" y="92" width="8" height="38" fill="url(#colGrad)" stroke="#2D1A0E" stroke-width="1.2" rx="2"/>
+      <rect x="97" y="88" width="10" height="5" fill="url(#tGold)" stroke="#2D1A0E" stroke-width="1"/>
+      <rect x="97" y="127" width="10" height="4" fill="#C7B89E" stroke="#2D1A0E" stroke-width="1"/>
+    
+      <rect x="122" y="92" width="8" height="38" fill="url(#colGrad)" stroke="#2D1A0E" stroke-width="1.2" rx="2"/>
+      <rect x="121" y="88" width="10" height="5" fill="url(#tGold)" stroke="#2D1A0E" stroke-width="1"/>
+      <rect x="121" y="127" width="10" height="4" fill="#C7B89E" stroke="#2D1A0E" stroke-width="1"/>
+    
+      <rect x="146" y="92" width="8" height="38" fill="url(#colGrad)" stroke="#2D1A0E" stroke-width="1.2" rx="2"/>
+      <rect x="145" y="88" width="10" height="5" fill="url(#tGold)" stroke="#2D1A0E" stroke-width="1"/>
+      <rect x="145" y="127" width="10" height="4" fill="#C7B89E" stroke="#2D1A0E" stroke-width="1"/>
+    
+      <rect x="168" y="92" width="8" height="38" fill="url(#colGrad)" stroke="#2D1A0E" stroke-width="1.2" rx="2"/>
+      <rect x="167" y="88" width="10" height="5" fill="url(#tGold)" stroke="#2D1A0E" stroke-width="1"/>
+      <rect x="167" y="127" width="10" height="4" fill="#C7B89E" stroke="#2D1A0E" stroke-width="1"/>
+    
+      <rect x="190" y="92" width="8" height="38" fill="url(#colGrad)" stroke="#2D1A0E" stroke-width="1.2" rx="2"/>
+      <rect x="189" y="88" width="10" height="5" fill="url(#tGold)" stroke="#2D1A0E" stroke-width="1"/>
+      <rect x="189" y="127" width="10" height="4" fill="#C7B89E" stroke="#2D1A0E" stroke-width="1"/>
+    
+    <!-- 3단 지성소 헤이칼 본관 -->
+    <polygon points="78,118 174,78 174,28 78,68" fill="url(#tShadow)" stroke="#2D1A0E" stroke-width="2.5"/>
+    <polygon points="78,118 78,68 126,48 126,98" fill="url(#tMarble)" stroke="#2D1A0E" stroke-width="2.5"/>
+    <!-- 지성소 돌출 황금 파사드 & 코니스 -->
+    <polygon points="74,68 126,46 178,25 126,12" fill="url(#tGold)" stroke="#2D1A0E" stroke-width="2.5"/>
+    <polygon points="74,68 126,46 126,55 74,77" fill="#D97706" stroke="#2D1A0E" stroke-width="2"/>
+    <polygon points="126,46 178,25 178,34 126,55" fill="#92400E" stroke="#2D1A0E" stroke-width="2"/>
+    <!-- 니카노르 청동 대문 & 아치형 돌출 몰딩 -->
+    <path d="M 94,110 L 94,82 Q 102,74 110,82 L 110,110 Z" fill="#451A03" stroke="#2D1A0E" stroke-width="2"/>
+    <rect x="97" y="85" width="10" height="23" fill="#78350F" stroke="#F59E0B" stroke-width="1"/>
+    <circle cx="100" cy="97" r="1.5" fill="#FBBF24"/>
+    <circle cx="104" cy="97" r="1.5" fill="#FBBF24"/>
+    <!-- 제단과 솟아오르는 불길 -->
+    <polygon points="145,130 165,121 155,116 135,125" fill="#78350F" stroke="#2D1A0E" stroke-width="1.5"/>
+    <polygon points="135,125 145,130 145,140 135,135" fill="#5C2E0B" stroke="#2D1A0E" stroke-width="1.5"/>
+    <polygon points="145,130 165,121 165,131 145,140" fill="#3D1E07" stroke="#2D1A0E" stroke-width="1.5"/>
+    <circle cx="150" cy="120" r="5" fill="#EF4444"/>
+    <circle cx="150" cy="117" r="3" fill="#FBBF24"/>
+  </svg>

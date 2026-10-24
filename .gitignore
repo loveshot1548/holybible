@@ -1,0 +1,11 @@
+# 의존성 및 빌드 결과물 깃 제외
+node_modules/
+build/
+
+# 원본 거대 데이터 및 이전 분할 폴더 깃 제외
+public/data/matthew_henry.json
+public/data/commentaries.json
+data/matthew_henry.json
+data/commentaries.json
+public/data/matthew_henry_by_book/
+public/data/commentaries_by_book/

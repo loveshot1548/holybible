@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 84 120" width="84" height="120">
+    <defs>
+      <linearGradient id="tileGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#F97316"/><stop offset="100%" stop-color="#C2410C"/></linearGradient>
+    </defs>
+    <ellipse cx="42" cy="110" rx="36" ry="6" fill="#2D1A0E" opacity="0.35"/>
+    <polygon points="42,98 76,78 76,38 42,56" fill="#CBB697" stroke="#2D1A0E" stroke-width="2"/>
+    <polygon points="8,78 42,98 42,56 8,38" fill="#F5E8D3" stroke="#2D1A0E" stroke-width="2"/>
+    <!-- 입체 오렌지 기와지붕 돌출 처마 -->
+    <polygon points="4,40 42,62 42,32 8,14" fill="url(#tileGrad)" stroke="#2D1A0E" stroke-width="2.2"/>
+    <polygon points="42,62 80,40 50,14 42,32" fill="#9A3412" stroke="#2D1A0E" stroke-width="2.2"/>
+    <!-- 지붕 기와 골 줄눈 텍스처 -->
+    <line x1="12" y1="21" x2="16" y2="46" stroke="#EA580C" stroke-width="1.5"/>
+    <line x1="22" y1="26" x2="26" y2="51" stroke="#EA580C" stroke-width="1.5"/>
+    <line x1="32" y1="31" x2="36" y2="56" stroke="#EA580C" stroke-width="1.5"/>
+    <!-- 아치 창문 -->
+    <rect x="20" y="68" width="8" height="11" fill="#1C1917" rx="3" stroke="#2D1A0E" stroke-width="1.2"/>
+    <rect x="22" y="70" width="4" height="4" fill="#FDE68A"/>
+  </svg>

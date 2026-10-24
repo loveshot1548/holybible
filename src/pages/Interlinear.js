@@ -1,0 +1,2955 @@
+// src/pages/Interlinear.js
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { supabase } from '../lib/supabase';
+import { getCrossReferences } from '../lib/tskHelper';
+import { analyzeHebrewSyntaxFromWords } from '../lib/hebrewSyntaxEngine';
+import { tokenizeGrammarCode } from '../lib/biblicalGrammarWiki';
+import GrammarWikiModal from '../lib/GrammarWikiModal';
+
+// =====================================================================
+// 📜 성경 66권 정경 메타데이터 & 구속사 연대기 마스터 맵
+// =====================================================================
+export const BIBLE_66_BOOKS = [
+  // 구약 39권
+  { ko: "창세기", en: "Genesis", isOT: true, maxChap: 50, section: "모세오경", era: "B.C. 1446년경 (창조~족장 시대)", empire: "원역사 / 애굽 중왕국" },
+  { ko: "출애굽기", en: "Exodus", isOT: true, maxChap: 40, section: "모세오경", era: "B.C. 1446년경 (출애굽과 광야 여정)", empire: "애굽 신왕국(18왕조)" },
+  { ko: "레위기", en: "Leviticus", isOT: true, maxChap: 27, section: "모세오경", era: "B.C. 1445년경 (시내산 율법 수여)", empire: "애굽 신왕국" },
+  { ko: "민수기", en: "Numbers", isOT: true, maxChap: 36, section: "모세오경", era: "B.C. 1445-1406 (40년 광야 방랑)", empire: "가나안 진입기" },
+  { ko: "신명기", en: "Deuteronomy", isOT: true, maxChap: 34, section: "모세오경", era: "B.C. 1406년경 (모압 평지 고별 설교)", empire: "고대 근동 정복기" },
+  { ko: "여호수아", en: "Joshua", isOT: true, maxChap: 24, section: "역사서", era: "B.C. 1406-1375 (가나안 정복과 분배)", empire: "가나안 도시국가기" },
+  { ko: "사사기", en: "Judges", isOT: true, maxChap: 21, section: "역사서", era: "B.C. 1375-1050 (사사 통치 암흑기)", empire: "블레셋 / 가나안 족속" },
+  { ko: "룻기", en: "Ruth", isOT: true, maxChap: 4, section: "역사서", era: "B.C. 1100년경 (사사 시대 말기)", empire: "사사 시대" },
+  { ko: "사무엘상", en: "1 Samuel", isOT: true, maxChap: 31, section: "역사서", era: "B.C. 1050-1010 (왕정 수립과 사울 통치)", empire: "통일왕국 태동기" },
+  { ko: "사무엘하", en: "2 Samuel", isOT: true, maxChap: 24, section: "역사서", era: "B.C. 1010-970 (다윗 왕조의 번영)", empire: "이스라엘 통일왕국" },
+  { ko: "열왕기상", en: "1 Kings", isOT: true, maxChap: 22, section: "역사서", era: "B.C. 970-853 (솔로몬과 분열왕국 초기)", empire: "남북 분열왕국기" },
+  { ko: "열왕기하", en: "2 Kings", isOT: true, maxChap: 25, section: "역사서", era: "B.C. 853-586 (북이스라엘/남유다 멸망)", empire: "앗수르 / 신바벨론" },
+  { ko: "역대상", en: "1 Chronicles", isOT: true, maxChap: 29, section: "역사서", era: "B.C. 450년경 기록 (다윗 언약 계승)", empire: "페르시아(바사) 제국" },
+  { ko: "역대하", en: "2 Chronicles", isOT: true, maxChap: 36, section: "역사서", era: "B.C. 450년경 기록 (솔로몬 성전~귀환령)", empire: "페르시아 제국" },
+  { ko: "에스라", en: "Ezra", isOT: true, maxChap: 10, section: "역사서", era: "B.C. 538-450 (1·2차 포로 귀환 및 성전)", empire: "페르시아 제국 (고레스/아닥사스다)" },
+  { ko: "느헤미야", en: "Nehemiah", isOT: true, maxChap: 13, section: "역사서", era: "B.C. 445-420 (3차 귀환과 성벽 재건)", empire: "페르시아 제국" },
+  { ko: "에스더", en: "Esther", isOT: true, maxChap: 10, section: "역사서", era: "B.C. 483-473 (페르시아 수산궁 구원)", empire: "페르시아 제국 (아하수에로 1세)" },
+  { ko: "욥기", en: "Job", isOT: true, maxChap: 42, section: "시가서", era: "B.C. 2000년경 배경 (족장 시대 고난)", empire: "우르 제3왕조 / 족장 시대" },
+  { ko: "시편", en: "Psalms", isOT: true, maxChap: 150, section: "시가서", era: "B.C. 1410-430 (모세부터 포로 귀환기까지)", empire: "통일왕국 / 포로후기" },
+  { ko: "잠언", en: "Proverbs", isOT: true, maxChap: 31, section: "시가서", era: "B.C. 970-700 (솔로몬과 히스기야 시대)", empire: "이스라엘 왕정기" },
+  { ko: "전도서", en: "Ecclesiastes", isOT: true, maxChap: 12, section: "시가서", era: "B.C. 935년경 (솔로몬 노년의 지혜)", empire: "이스라엘 왕정기" },
+  { ko: "아가", en: "Song of Solomon", isOT: true, maxChap: 8, section: "시가서", era: "B.C. 960년경 (솔로몬 청년기 언약적 사랑)", empire: "이스라엘 왕정기" },
+  { ko: "이사야", en: "Isaiah", isOT: true, maxChap: 66, section: "선지서", era: "B.C. 740-681 (남유다 4대 왕기 예언)", empire: "앗수르 제국 발흥기" },
+  { ko: "예레미야", en: "Jeremiah", isOT: true, maxChap: 52, section: "선지서", era: "B.C. 627-580 (예루살렘 함락 눈물의 선지자)", empire: "신바벨론 제국 (느부갓네살)" },
+  { ko: "예레미야애가", en: "Lamentations", isOT: true, maxChap: 5, section: "선지서", era: "B.C. 586년경 (예루살렘 파괴 비가)", empire: "신바벨론 제국" },
+  { ko: "에스겔", en: "Ezekiel", isOT: true, maxChap: 48, section: "선지서", era: "B.C. 593-571 (그발 강가 바벨론 포로지)", empire: "신바벨론 제국" },
+  { ko: "다니엘", en: "Daniel", isOT: true, maxChap: 12, section: "선지서", era: "B.C. 605-536 (바벨론/페르시아 궁정 예언)", empire: "바벨론 / 메대-페르시아" },
+  { ko: "호세아", en: "Hosea", isOT: true, maxChap: 14, section: "선지서", era: "B.C. 755-715 (북이스라엘 말기 언약적 사랑)", empire: "앗수르 침공기" },
+  { ko: "요엘", en: "Joel", isOT: true, maxChap: 3, section: "선지서", era: "B.C. 835년경 (메뚜기 재앙과 여호와의 날)", empire: "남유다 요아스 왕조" },
+  { ko: "아모스", en: "Amos", isOT: true, maxChap: 9, section: "선지서", era: "B.C. 760-750 (여로보암 2세 번영기 정의 선포)", empire: "남북 왕국 전성기" },
+  { ko: "오바댜", en: "Obadiah", isOT: true, maxChap: 1, section: "선지서", era: "B.C. 586년경 (에돔을 향한 심판 선고)", empire: "신바벨론 제국기" },
+  { ko: "요나", en: "Jonah", isOT: true, maxChap: 4, section: "선지서", era: "B.C. 780-760 (앗수르 수도 니느웨 회개)", empire: "앗수르 제국" },
+  { ko: "미가", en: "Micah", isOT: true, maxChap: 7, section: "선지서", era: "B.C. 735-700 (베들레헴 탄생 예언)", empire: "앗수르 위협기" },
+  { ko: "나훔", en: "Nahum", isOT: true, maxChap: 3, section: "선지서", era: "B.C. 663-612 (니느웨의 최후 몰락)", empire: "앗수르 제국 멸망기" },
+  { ko: "하박국", en: "Habakkuk", isOT: true, maxChap: 3, section: "선지서", era: "B.C. 607년경 (의인은 믿음으로 살리라)", empire: "갈대아(바벨론) 발흥기" },
+  { ko: "스바냐", en: "Zephaniah", isOT: true, maxChap: 3, section: "선지서", era: "B.C. 630년경 (요시야 종교개혁 배경)", empire: "신바벨론 제국 전야" },
+  { ko: "학개", en: "Haggai", isOT: true, maxChap: 2, section: "선지서", era: "B.C. 520년 (제2성전 재건 촉구)", empire: "페르시아 제국 (다리오 1세)" },
+  { ko: "스가랴", en: "Zechariah", isOT: true, maxChap: 14, section: "선지서", era: "B.C. 520-480 (메시아 왕국과 종말론적 승리)", empire: "페르시아 제국" },
+  { ko: "말라기", en: "Malachi", isOT: true, maxChap: 4, section: "선지서", era: "B.C. 430년경 (구약의 마지막 예언자)", empire: "페르시아 제국 (중간기 직전)" },
+
+  // 신약 27권
+  { ko: "마태복음", en: "Matthew", isOT: false, maxChap: 28, section: "복음서", era: "A.D. 55-65년경 (유대인을 위한 메시아)", empire: "로마 제국 (네로/클라우디우스)" },
+  { ko: "마가복음", en: "Mark", isOT: false, maxChap: 16, section: "복음서", era: "A.D. 50-60년경 (고난받는 종 예수)", empire: "로마 제국" },
+  { ko: "누가복음", en: "Luke", isOT: false, maxChap: 24, section: "복음서", era: "A.D. 60-62년경 (인자로 오신 구주)", empire: "로마 제국" },
+  { ko: "요한복음", en: "John", isOT: false, maxChap: 21, section: "복음서", era: "A.D. 85-90년경 (말씀이 육신이 되심)", empire: "로마 제국 (도미티아누스)" },
+  { ko: "사도행전", en: "Acts", isOT: false, maxChap: 28, section: "역사서", era: "A.D. 62-64년경 (성령의 행전과 복음 확산)", empire: "로마 제국" },
+  { ko: "로마서", en: "Romans", isOT: false, maxChap: 16, section: "서신서", era: "A.D. 57년경 (고린도 집필, 이신칭의)", empire: "로마 제국" },
+  { ko: "고린도전서", en: "1 Corinthians", isOT: false, maxChap: 16, section: "서신서", era: "A.D. 55년경 (에베소 집필, 교회 회복)", empire: "로마 제국" },
+  { ko: "고린도후서", en: "2 Corinthians", isOT: false, maxChap: 13, section: "서신서", era: "A.D. 56년경 (마게도냐 집필, 사도권 변호)", empire: "로마 제국" },
+  { ko: "갈라디아서", en: "Galatians", isOT: false, maxChap: 6, section: "서신서", era: "A.D. 48-49년경 (안디옥 집필, 오직 은혜)", empire: "로마 제국" },
+  { ko: "에베소서", en: "Ephesians", isOT: false, maxChap: 6, section: "서신서", era: "A.D. 60-62년경 (로마 옥중, 교회론 완성)", empire: "로마 제국" },
+  { ko: "빌립보서", en: "Philippians", isOT: false, maxChap: 4, section: "서신서", era: "A.D. 61-62년경 (로마 옥중, 주 안의 기쁨)", empire: "로마 제국" },
+  { ko: "골로새서", en: "Colossians", isOT: false, maxChap: 4, section: "서신서", era: "A.D. 60-62년경 (로마 옥중, 만유의 으뜸 그리스도)", empire: "로마 제국" },
+  { ko: "데살로니가전서", en: "1 Thessalonians", isOT: false, maxChap: 5, section: "서신서", era: "A.D. 51년경 (고린도 집필, 재림의 소망)", empire: "로마 제국" },
+  { ko: "데살로니가후서", en: "2 Thessalonians", isOT: false, maxChap: 3, section: "서신서", era: "A.D. 51-52년경 (주의 날과 근면한 삶)", empire: "로마 제국" },
+  { ko: "디모데전서", en: "1 Timothy", isOT: false, maxChap: 6, section: "서신서", era: "A.D. 63-65년경 (마게도냐 집필, 목회 규범)", empire: "로마 제국" },
+  { ko: "디모데후서", en: "2 Timothy", isOT: false, maxChap: 4, section: "서신서", era: "A.D. 66-67년경 (로마 지하감옥, 바울의 유언)", empire: "로마 제국 (네로 박해기)" },
+  { ko: "디도서", en: "Titus", isOT: false, maxChap: 3, section: "서신서", era: "A.D. 63-65년경 (그레데 교회 목회 지침)", empire: "로마 제국" },
+  { ko: "빌레몬서", en: "Philemon", isOT: false, maxChap: 1, section: "서신서", era: "A.D. 60-62년경 (오네시모 용서와 형제애)", empire: "로마 제국" },
+  { ko: "히브리서", en: "Hebrews", isOT: false, maxChap: 13, section: "서신서", era: "A.D. 67-69년경 (대제사장 그리스도의 우월성)", empire: "로마 제국 (성전 멸망 직전)" },
+  { ko: "야고보서", en: "James", isOT: false, maxChap: 5, section: "서신서", era: "A.D. 45-48년경 (행함이 있는 참된 믿음)", empire: "로마 제국" },
+  { ko: "베드로전서", en: "1 Peter", isOT: false, maxChap: 5, section: "서신서", era: "A.D. 64년경 (로마 집필, 고난 속의 산 소망)", empire: "로마 제국 (네로 박해기)" },
+  { ko: "베드로후서", en: "2 Peter", isOT: false, maxChap: 3, section: "서신서", era: "A.D. 66-67년경 (거짓 교사 경계와 주의 재림)", empire: "로마 제국" },
+  { ko: "요한일서", en: "1 John", isOT: false, maxChap: 5, section: "서신서", era: "A.D. 85-95년경 (에베소 집필, 사랑과 진리)", empire: "로마 제국" },
+  { ko: "요한이서", en: "2 John", isOT: false, maxChap: 1, section: "서신서", era: "A.D. 85-95년경 (진리 안에서의 사랑과 경계)", empire: "로마 제국" },
+  { ko: "요한삼서", en: "3 John", isOT: false, maxChap: 1, section: "서신서", era: "A.D. 85-95년경 (진리를 영접하는 환대)", empire: "로마 제국" },
+  { ko: "유다서", en: "Jude", isOT: false, maxChap: 1, section: "서신서", era: "A.D. 65-80년경 (믿음의 도를 위한 힘써 싸움)", empire: "로마 제국" },
+  { ko: "요한계시록", en: "Revelation", isOT: false, maxChap: 22, section: "서신서", era: "A.D. 95년경 (밧모섬 유배, 어린양의 최종 승리)", empire: "로마 제국 (도미티아누스)" }
+];
+
+export const BOOK_SECTION_LOOKUP = {};
+BIBLE_66_BOOKS.forEach(b => { BOOK_SECTION_LOOKUP[b.ko] = b.section; });
+
+// =====================================================================
+// 📖 영한·한영 신학 어휘 사전 & 성경적 용례 마스터 매핑
+// =====================================================================
+const BIBLICAL_ENG_KOR_LEXICON = {
+  "god": { kor: "하나님, 참 신", orig: "אֱלֹהִים (Elohim) / θεός (Theos)", strongs: "H430 / G2316", pos: "명사", theology: "유일무이하신 천지만물의 창조주이자 구속주 하나님" },
+  "lord": { kor: "주, 여호와", orig: "יְהוָה (YHWH) / κύριος (Kyrios)", strongs: "H3068 / G2962", pos: "명사", theology: "언약의 주권자 여호와, 만유의 주재이신 예수 그리스도" },
+  "beginning": { kor: "태초, 시작", orig: "רֵאשִׁית (Reshit) / ἀρχή (Arche)", strongs: "H7225 / G746", pos: "명사", theology: "시간과 물질 창조의 절대적 출발점이자 그리스도 안에서의 새 창조" },
+  "created": { kor: "창조하셨다", orig: "בָּרָא (Bara) / κτίζω (Ktizo)", strongs: "H1254 / G2936", pos: "동사", theology: "무(無)로부터의 절대적 신적 창조. 하나님만이 주어가 되시는 고유 행위" },
+  "heavens": { kor: "하늘들, 궁창", orig: "שָׁמַיִם (Shamayim) / οὐρανός (Ouranos)", strongs: "H8064 / G3772", pos: "명사", theology: "하나님의 보좌와 영광이 깃든 영역이자 광대한 우주 공간" },
+  "earth": { kor: "땅, 지구, 세상", orig: "אֶרֶץ (Erets) / γῆ (Ge)", strongs: "H776 / G1093", pos: "명사", theology: "인간을 위해 지으신 삶의 터전이자 장차 새 하늘과 새 땅으로 갱신될 피조세계" },
+  "spirit": { kor: "영, 성령, 숨결", orig: "רוּחַ (Ruach) / πνεῦμα (Pneuma)", strongs: "H7307 / G4151", pos: "명사", theology: "생명을 불어넣으시는 하나님의 창조적 영" },
+  "covenant": { kor: "언약, 약조", orig: "בְּרִית (Berit) / διαθήκη (Diatheke)", strongs: "H1285 / G1242", pos: "명사", theology: "하나님께서 피로써 백성과 맺으신 불변의 구속사적 약속" },
+  "grace": { kor: "은혜, 은총", orig: "חֵן (Chen) / χάρις (Charis)", strongs: "H2580 / G5485", pos: "명사", theology: "자격 없는 죄인에게 거저 주시는 하나님의 주권적 구원의 선물" },
+  "faith": { kor: "믿음, 신뢰, 충성", orig: "אֱמוּנָה (Emunah) / πίστις (Pistis)", strongs: "H530 / G4102", pos: "명사", theology: "보이지 않는 하나님과 그리스도의 구속 사역을 전인격적으로 의지함" },
+  "righteousness": { kor: "의, 공의, 의로움", orig: "צְדָקָה (Tsedaqah) / δικαιοσύνη (Dikaiosyne)", strongs: "H6666 / G1343", pos: "명사", theology: "하나님의 거룩한 기준에 부합함, 그리스도로부터 성도에게 전가된 완전한 의" },
+  "salvation": { kor: "구원, 건지심", orig: "יְשׁוּעָה (Yeshuah) / σωτηρία (Soteria)", strongs: "H3444 / G4991", pos: "명사", theology: "죄와 사망의 권세에서 그리스도의 십자가 대속으로 해방되는 전인적 구원" },
+  "holy": { kor: "거룩한, 성결한", orig: "קָדוֹשׁ (Qadosh) / ἅγιος (Hagios)", strongs: "H6918 / G40", pos: "형용사", theology: "세속과 구별된 하나님의 초월적 속성이며 성도에게 요구되는 영적 상태" },
+  "peace": { kor: "평안, 평화, 샬롬", orig: "שָׁלוֹם (Shalom) / εἰρήνη (Eirene)", strongs: "H7965 / G1515", pos: "명사", theology: "하나님과의 관계 회복에서 오는 온전한 안식과 번영" },
+  "light": { kor: "빛, 광명", orig: "אוֹר (Or) / φῶς (Phos)", strongs: "H216 / G5457", pos: "명사", theology: "어둠을 물리치시는 하나님의 영광, 진리, 예수 그리스도의 임재" },
+  "darkness": { kor: "어둠, 흑암", orig: "חֹשֶׁךְ (Choshek) / σκοτία (Skotia)", strongs: "H2822 / G4653", pos: "명사", theology: "빛과 질서가 없는 혼돈의 상태, 영적 무지와 죄의 세력" },
+  "flesh": { kor: "육체, 육신", orig: "בָּשָׂר (Basar) / σάρξ (Sarx)", strongs: "H1320 / G4561", pos: "명사", theology: "연약한 인간 본성 또는 하나님을 거스르는 타락한 정욕" },
+  "blood": { kor: "피, 보혈", orig: "דָּם (Dam) / αἷμα (Haima)", strongs: "H1818 / G129", pos: "명사", theology: "생명의 근원이자 죄 사함을 위한 언약적 대속의 표징" },
+  "sin": { kor: "죄, 허물", orig: "חַטָּאת (Chattat) / ἁμαρτία (Hamartia)", strongs: "H2403 / G266", pos: "명사", theology: "하나님의 법과 거룩한 과녁에서 벗어남" },
+  "repent": { kor: "회개하다, 돌이키다", orig: "שׁוּב (Shuv) / μετανοέω (Metanoeo)", strongs: "H7725 / G3340", pos: "동사", theology: "생각과 삶의 방향을 전인격적으로 하나님께로 돌이킴" },
+  "love": { kor: "사랑, 인애, 아가페", orig: "חֶסֶד (Chesed) / ἀγάπη (Agape)", strongs: "H2617 / G26", pos: "명사/동사", theology: "자기를 내어주시는 하나님의 무조건적이고 영원한 언약적 사랑" },
+  "word": { kor: "말씀, 로고스, 사건", orig: "דָּבָר (Davar) / λόγος (Logos)", strongs: "H1697 / G3056", pos: "명사", theology: "천지를 창조하시고 육신이 되어 우리 가운데 거하신 살아있는 하나님의 말씀" }
+};
+
+const FALLBACK_ENGLISH_TRANSLATION_MAP = {
+  'break away': '배반하다, 반역하다', 'moab': '모압', 'properly': '후(後)에, 뒤에',
+  'ahaziah': '아하시야', 'ahab': '아합', 'die': '죽다, 사망하다', 'fall': '떨어지다, 넘어지다',
+  'sick': '병들다, 앓다', 'send': '보내다, 파견하다', 'messengers': '사자들, 전령들',
+  'inquire': '묻다, 구하다', 'baalzebub': '바알세붑', 'ekron': '에그론', 'recover': '낫다, 회복하다',
+  'disease': '병, 질병', 'angel': '사자, 천사', 'arise': '일어나다', 'go up': '올라가다',
+  'meet': '만나다', 'king': '왕, 군왕', 'samaria': '사마리아', 'god': '하나님, 신'
+};
+
+const ENG_STOP_WORDS = new Set(['the', 'and', 'of', 'to', 'in', 'a', 'is', 'that', 'for', 'it', 'with', 'as', 'was', 'on', 'be', 'at', 'by', 'from', 'or', 'an']);
+
+async function fetchKoreanTranslation(text, targetLang = 'ko') {
+  if (!text || typeof text !== 'string') return '';
+  const rawParagraphs = text.split(/\r?\n\s*\r?\n/).map(p => p.trim()).filter(Boolean);
+  const chunks = rawParagraphs.length > 0 ? rawParagraphs : [text.trim()];
+
+  const translatedChunks = await Promise.all(
+    chunks.map(async (para) => {
+      if (!para) return '';
+      try {
+        const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${targetLang}&dt=t&q=${encodeURIComponent(para.slice(0, 2200))}`;
+        const res = await fetch(url);
+        if (!res.ok) return para;
+        const data = await res.json();
+        return data[0]?.map(chunk => chunk[0]).join('') || para;
+      } catch {
+        return para;
+      }
+    })
+  );
+
+  return translatedChunks.filter(Boolean).join('\n\n');
+}
+
+async function fetchEnglishWordLexicon(queryWord) {
+  const raw = (queryWord || '').trim();
+  if (!raw) return null;
+
+  const isKoreanQuery = /[가-힣]/.test(raw);
+  const cleanEng = raw.toLowerCase().replace(/[^a-z]/g, '');
+
+  if (!isKoreanQuery && BIBLICAL_ENG_KOR_LEXICON[cleanEng]) {
+    return {
+      word: cleanEng,
+      ...BIBLICAL_ENG_KOR_LEXICON[cleanEng],
+      isTheological: true
+    };
+  }
+
+  if (isKoreanQuery) {
+    const matchedEntry = Object.entries(BIBLICAL_ENG_KOR_LEXICON).find(([_, v]) => v.kor.includes(raw));
+    if (matchedEntry) {
+      return {
+        word: `${raw} ➔ ${matchedEntry[0]}`,
+        ...matchedEntry[1],
+        isTheological: true
+      };
+    }
+  }
+
+  try {
+    const sl = isKoreanQuery ? 'ko' : 'en';
+    const tl = isKoreanQuery ? 'en' : 'ko';
+    const targetQ = isKoreanQuery ? raw : (cleanEng || raw);
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${tl}&dt=t&dt=bd&q=${encodeURIComponent(targetQ)}`;
+    const res = await fetch(url);
+    if (!res.ok) return { word: targetQ, kor: targetQ, pos: '어휘', theology: null };
+    const data = await res.json();
+
+    const translatedText = data[0]?.map(c => c[0]).join('') || targetQ;
+    let posStr = isKoreanQuery ? '한영 사전' : '영한 사전';
+    let definitions = [];
+
+    if (data[1] && Array.isArray(data[1])) {
+      posStr = data[1].map(p => p[0]).join(', ');
+      data[1].forEach(posGroup => {
+        if (posGroup[1] && Array.isArray(posGroup[1])) {
+          definitions.push(`[${posGroup[0]}] ${posGroup[1].slice(0, 5).join(', ')}`);
+        }
+      });
+    }
+
+    return {
+      word: targetQ,
+      kor: translatedText,
+      pos: posStr,
+      details: definitions.join('\n'),
+      theology: null,
+      isTheological: false
+    };
+  } catch {
+    return { word: raw, kor: raw, pos: '단어', theology: null };
+  }
+}
+
+// =====================================================================
+// 🌟 원어 조판 & 텍스트 정제 엔진
+// =====================================================================
+let cachedMasterStrongs = null;
+
+export const decodeHtmlEntities = (text) => {
+  if (!text || typeof text !== 'string') return text || '';
+  return text
+    .replace(/&#x27;/gi, "'")
+    .replace(/&#39;/gi, "'")
+    .replace(/&apos;/gi, "'")
+    .replace(/&quot;/gi, '"')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(parseInt(dec, 10)));
+};
+
+export const stripHebrewVowels = (text) => {
+  if (!text || typeof text !== 'string') return text || '';
+  return text.replace(/[\u0591-\u05C7]/g, '');
+};
+
+export const cleanTypography = (text, isOT, mode = 'vowels') => {
+  if (!text || typeof text !== 'string') return '';
+  if (!isOT) return text;
+  if (mode === 'consonants') return stripHebrewVowels(text);
+  if (mode === 'vowels') return text.replace(/[\u0591-\u05AF]/g, '');
+  return text;
+};
+
+export const assembleLiteralTranslation = (wordsList) => {
+  if (!wordsList || !Array.isArray(wordsList) || wordsList.length === 0) return '';
+  const orderedWords = [...wordsList].sort((a, b) => (a.word_order || 0) - (b.word_order || 0));
+  const englishTokens = orderedWords
+    .map(w => w.eng)
+    .filter(e => e && e !== 'n/a' && e !== '-');
+
+  if (englishTokens.length === 0) return '';
+  return englishTokens.join(' ').replace(/\s+/g, ' ').trim();
+};
+
+export const getTheologicalGrammarInsight = (grammarRaw, isOT) => {
+  if (!grammarRaw || typeof grammarRaw !== 'string') return null;
+  const raw = grammarRaw.trim();
+
+  if (isOT && raw.includes('.')) {
+    const parts = raw.split('.');
+    if (parts[0] === 'verb') {
+      const stem = parts[1];
+      const aspect = parts[2];
+
+      const STEM_THEOLOGY = {
+        'qal': { title: '칼 (Qal) 어간 — 단순 능동 (Simple Active)', desc: '동사의 가장 본래적인 단순 능동태로 주어의 행동을 사실 그대로 선포합니다.' },
+        'nif': { title: '니팔 (Niphal) 어간 — 단순 수동 / 신적 수동태 (Divine Passive)', desc: '단순 수동 혹은 재귀형으로, 하나님의 주권적 개입을 암시합니다.' },
+        'piel': { title: '피엘 (Piel) 어간 — 강조 능동 / 강화 (Intensive Active)', desc: '강렬하고 집중적인 반복과 철저한 완결을 뜻합니다.' },
+        'pual': { title: '푸알 (Pual) 어간 — 강조 수동 (Intensive Passive)', desc: '피엘의 수동태로 대상에게 온전히 행동의 결과가 임한 상태입니다.' },
+        'hif': { title: '히필 (Hiphil) 어간 — 사역 능동 / 원인 유발 (Causative Active)', desc: '주어가 대상에게 그 상태나 행동을 필연적으로 일으키는 사역형입니다.' },
+        'hof': { title: '호팔 (Hophal) 어간 — 사역 수동 (Causative Passive)', desc: '사역의 원인 제공자에 의해 불가항력적으로 이끌려감을 선포합니다.' },
+        'hit': { title: '히트파엘 (Hitpael) 어간 — 재귀 반복 / 전인격적 반응 (Reflexive Intensive)', desc: '언약 백성이 하나님 앞에서 전인격적으로 회개하고 자복하는 태도를 묘사합니다.' }
+      };
+
+      const ASPECT_THEOLOGY = {
+        'perf': '완료형(Qatal): 이미 완결된 확정적 사건이자 언약적 성취를 선언합니다.',
+        'impf': '미완료형(Yiqtol): 계속해서 전개되거나 장차 이루어질 진행을 뜻합니다.',
+        'wayq': '바이크톨(Wayyiqtol, 연속과거): 섭리 속에서 구속사적 사건들이 이어져 감을 묘사합니다.',
+        'ptca': '능동분사: 지속되고 있는 하나님의 통치를 표현합니다.',
+        'ptcp': '수동분사: 지속되는 수동적 상태를 나타냅니다.',
+        'infc': '연계부정사: 목적이나 결과를 이끄는 부정사입니다.'
+      };
+
+      const stemInfo = STEM_THEOLOGY[stem] || { title: `동사 어간: ${stem}`, desc: '히브리어 동사 형태론' };
+      return { stemTitle: stemInfo.title, stemDesc: stemInfo.desc, aspectDesc: ASPECT_THEOLOGY[aspect] || '', category: 'HEBREW_BINYAN' };
+    }
+  }
+
+  if (!isOT && (raw.includes('-') || raw.startsWith('V'))) {
+    const parts = raw.split('-');
+    if (parts[0] === 'V' && parts[1]) {
+      const details = parts[1];
+      const tenseChar = details[0];
+      const voiceChar = details[1];
+
+      const TENSE_THEOLOGY = {
+        'A': { title: '부정과거 (Aorist) — 단회적·결정적 사건 (Once-for-all Action)', desc: '그리스도의 십자가 대속과 같이 영단번에 완성된 사건을 선포합니다.' },
+        'R': { title: '완료 (Perfect) — 영구히 유효한 완성 (State of Completion)', desc: '과거에 완료된 사건의 영적 효력이 현재까지 유효함을 선언합니다.' },
+        'P': { title: '현재 (Present) — 끊임없는 지속적 진행 (Linear Action)', desc: '삶 속에서 쉬지 않고 지속되는 성령의 역사를 나타냅니다.' },
+        'I': { title: '미완료 (Imperfect) — 과거의 생생한 지속 과정 (Continuous Past)', desc: '과거의 한 시점에서 지속되었던 과정을 생생하게 묘사합니다.' },
+        'F': { title: '미래 (Future) — 종말론적 확실한 약속 (Eschatological Certainty)', desc: '하나님의 신실하심에 근거한 절대적 성취의 확신입니다.' }
+      };
+
+      const VOICE_THEOLOGY = {
+        'P': '신적 수동태 (Passivum Divinum): 인간의 행위가 아니라 하나님께서 주권적으로 역사하셨음을 고백합니다.',
+        'M': '중간태 (Middle Voice): 주어가 자기 자신과 깊은 인격적 연관을 맺고 행함을 뜻합니다.',
+        'A': '능동태 (Active Voice): 주체의 확고한 의지적 결단에 의해 행동이 실행됨을 뜻합니다.'
+      };
+
+      const tenseInfo = TENSE_THEOLOGY[tenseChar];
+      if (tenseInfo) {
+        return { stemTitle: tenseInfo.title, stemDesc: tenseInfo.desc, aspectDesc: VOICE_THEOLOGY[voiceChar] || '', category: 'GREEK_TENSE' };
+      }
+    }
+  }
+
+  return null;
+};
+
+export const decodeExhaustiveMorphology = (rawCode) => {
+  if (!rawCode || typeof rawCode !== 'string') return { label: '일반어휘', type: 'other', caseType: '', isVerb: false };
+  const code = rawCode.trim();
+
+  if (code.includes('-') || ['CONJ', 'PREP', 'ADV', 'PRT', 'INJ'].includes(code)) {
+    if (code === 'CONJ') return { label: '접속사', type: 'particle', caseType: '', isVerb: false };
+    if (code === 'PREP') return { label: '전치사', type: 'particle', caseType: '', isVerb: false };
+    if (code === 'ADV') return { label: '부사', type: 'particle', caseType: '', isVerb: false };
+    if (code === 'PRT') return { label: '불변사', type: 'particle', caseType: '', isVerb: false };
+
+    const parts = code.split('-');
+    const pos = parts[0];
+    const details = parts[1] || '';
+
+    if (pos === 'P') {
+      const person = details[0] ? `${details[0]}인칭` : '';
+      const caseChar = details[1] || '';
+      const numChar = details[2] || '';
+      const caseMap = { N: '주격', G: '소유격', D: '여격', A: '대격' };
+      const numMap = { S: '단수', P: '복수' };
+      return { label: `인칭대명사(${caseMap[caseChar] || ''}) · ${person} ${numMap[numChar] || ''}`.trim(), type: 'noun', caseType: caseChar, isVerb: false };
+    }
+
+    if (['R', 'D', 'C', 'X', 'I', 'F'].includes(pos)) {
+      const pName = { R: '관계대명사', D: '지시대명사', C: '상호대명사', X: '부정대명사', I: '의문대명사', F: '재귀대명사' }[pos] || '대명사';
+      const caseChar = details[0] || '';
+      const caseMap = { N: '주격', G: '소유격', D: '여격', A: '대격' };
+      const gChar = details[2] === 'M' ? '남성' : details[2] === 'F' ? '여성' : '중성';
+      const nChar = details[1] === 'S' ? '단수' : '복수';
+      return { label: `${pName}(${caseMap[caseChar] || ''}) · ${gChar} ${nChar}`.trim(), type: 'noun', caseType: caseChar, isVerb: false };
+    }
+
+    if (pos === 'V') {
+      const tense = { P: '현재', I: '미완료', F: '미래', A: '부정과거', R: '완료', L: '과거완료' }[details[0]] || '';
+      const voice = { A: '능동태', M: '중간태', P: '수동태', D: '디포(D)' }[details[1]] || '';
+      const mood = { I: '직설법', S: '접속법', M: '명령법', N: '부정사', P: '분사', O: '희구법' }[details[2]] || '';
+      if (details[2] === 'P') {
+        const cChar = details[4] || '';
+        const caseMap = { N: '주격', G: '소유격', D: '여격', A: '대격' };
+        return { label: `동사 · ${tense} ${voice} 분사(${caseMap[cChar] || ''})`, type: 'verb', caseType: cChar, isVerb: true };
+      }
+      const person = details[3] ? `${details[3]}인칭` : '';
+      const num = details[4] === 'S' ? '단수' : details[4] === 'P' ? '복수' : '';
+      return { label: `동사 · ${tense} ${voice} ${mood} ${person} ${num}`.replace(/\s+/g, ' ').trim(), type: 'verb', caseType: '', isVerb: true };
+    }
+
+    if (['N', 'A', 'T'].includes(pos)) {
+      const posMap = { N: '명사', A: '형용사', T: '관사' };
+      const caseChar = details[0] || '';
+      const caseMap = { N: '주격 (~이/가)', G: '소유격 (~의)', D: '여격 (~에게/에)', A: '대격 (~을/를)', V: '호격' };
+      const gMap = { M: '남성', F: '여성', N: '중성' };
+      const nMap = { S: '단수', P: '복수' };
+      const cStr = caseMap[caseChar] || '';
+      const gnStr = `${gMap[details[2]] || ''} ${nMap[details[1]] || ''}`;
+      return { label: `${posMap[pos]} · ${cStr} · ${gnStr}`.trim(), type: pos === 'N' ? 'noun' : 'modifier', caseType: caseChar, isVerb: false };
+    }
+  }
+
+  if (code.includes('.')) {
+    const parts = code.split('.');
+    const mainType = parts[0];
+
+    if (mainType === 'verb') {
+      const stemMap = { qal: '칼(기본)', nif: '니팔(수동)', piel: '피엘(강조)', pual: '푸알(강조수동)', hif: '히필(사역)', hof: '호팔(사역수동)', hit: '히트파엘(재귀)' };
+      const aspectMap = { perf: '완료(Qatal)', impf: '미완료(Yiqtol)', wayq: '바이크톨(연속과거)', ptca: '능동분사', ptcp: '수동분사', infc: '연계부정사', infa: '절대부정사', impv: '명령형' };
+      const stemStr = stemMap[parts[1]] || parts[1];
+      const aspectStr = aspectMap[parts[2]] || parts[2] || '';
+      return { label: `동사 · ${stemStr} ${aspectStr}`.trim(), type: 'verb', caseType: '', isVerb: true };
+    }
+
+    if (mainType === 'subs' || mainType === 'nmpr') {
+      const gMap = { m: '남성', f: '여성', c: '공성', u: '공성' };
+      const nMap = { sg: '단수', pl: '복수', du: '쌍수' };
+      const stateMap = { a: '절대형', c: '연계형(~의)', d: '한정형' };
+      const stateStr = stateMap[parts[3]] ? `(${stateMap[parts[3]]})` : '';
+      return { 
+        label: `${mainType === 'nmpr' ? '고유명사' : '명사'}${stateStr} · ${gMap[parts[1]] || ''} ${nMap[parts[2]] || ''}`.trim(), 
+        type: 'noun', 
+        caseType: parts[3] === 'c' ? 'CONSTRUCT' : '',
+        isVerb: false
+      };
+    }
+
+    if (mainType === 'prep') return { label: '전치사', type: 'particle', caseType: '', isVerb: false };
+    if (mainType === 'conj') return { label: '접속사', type: 'particle', caseType: '', isVerb: false };
+    if (mainType === 'art') return { label: '정관사', type: 'particle', caseType: '', isVerb: false };
+    if (mainType === 'prde') return { label: '지시대명사', type: 'noun', caseType: '', isVerb: false };
+    if (mainType === 'prps') return { label: '인칭대명사', type: 'noun', caseType: '', isVerb: false };
+    if (mainType === 'prin') return { label: '의문대명사', type: 'noun', caseType: '', isVerb: false };
+    if (mainType === 'advb') return { label: '부사', type: 'particle', caseType: '', isVerb: false };
+    if (mainType === 'nega') return { label: '부정사(부정불변사)', type: 'particle', caseType: '', isVerb: false };
+    if (mainType === 'intj') return { label: '감탄사', type: 'particle', caseType: '', isVerb: false };
+  }
+
+  return { label: code.slice(0, 16), type: 'other', caseType: '', isVerb: false };
+};
+
+export const applyContextualCaseEnding = (baseKor, caseType, isOT, rawGrammar) => {
+  if (!baseKor || baseKor === '원어 어휘') return baseKor;
+  let word = baseKor.trim();
+
+  if (!isOT) {
+    if (caseType === 'G' && !word.endsWith('의')) return `${word}의`;
+    if (caseType === 'D' && !word.endsWith('에게') && !word.endsWith('에')) return `${word}에게`;
+    if (caseType === 'A') {
+      const lastChar = word.charCodeAt(word.length - 1);
+      const hasBatchim = (lastChar - 0xac00) % 28 > 0;
+      if (!word.endsWith('을') && !word.endsWith('를')) return `${word}${hasBatchim ? '을' : '를'}`;
+    }
+  }
+
+  if (isOT) {
+    if (caseType === 'CONSTRUCT' && !word.endsWith('의') && !word.includes('의')) return `${word}의`;
+    if (rawGrammar && rawGrammar.includes('he') && word.includes('애굽')) return '애굽으로 (방향격)';
+  }
+
+  return word;
+};
+
+export const parseUnabridgedAcademicLexicon = (rawDesc, masterEntry, isOT) => {
+  const desc = rawDesc || masterEntry?.desc || '';
+  let etymology = '', meaning = '', usage = '';
+
+  const etymMatch = desc.match(/\[어원 및 파생\]\s*([^\[]+)/);
+  if (etymMatch && etymMatch[1]) etymology = etymMatch[1].trim();
+
+  const meaningMatch = desc.match(/\[원어 의미\]\s*([^\[]+)/);
+  if (meaningMatch && meaningMatch[1]) meaning = meaningMatch[1].trim();
+
+  const usageMatch = desc.match(/\[주요 번역\]\s*([^\[]+)/);
+  if (usageMatch && usageMatch[1]) usage = usageMatch[1].trim();
+
+  return {
+    sourceName: isOT ? "BDB & Strong's Full" : "Thayer's & Strong's Full",
+    rawFull: desc || '영문 사전 원전 데이터가 없습니다.',
+    etymology: etymology || masterEntry?.etym || '원어 고유 어근(Primitive Root)',
+    meaning: meaning || masterEntry?.eng || '원문 문맥적 기본 정의',
+    usage: usage || masterEntry?.usage || '주요 성경 번역 용례 (Occurrences)'
+  };
+};
+
+export const speakAudio = (text, langCode = 'he-IL') => {
+  try {
+    if (!('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    const clean = (text || '').replace(/[\u0591-\u05AF]/g, '');
+    const utterance = new SpeechSynthesisUtterance(clean);
+    utterance.lang = langCode;
+    utterance.rate = 0.85;
+    window.speechSynthesis.speak(utterance);
+  } catch (_) {}
+};
+
+export const renderParagraphBlocks = (rawContent, textColorClass = '') => {
+  if (!rawContent) return null;
+  const decoded = decodeHtmlEntities(rawContent);
+  const paras = decoded.split(/\r?\n\s*\r?\n/).map(p => p.trim()).filter(Boolean);
+
+  if (paras.length <= 1) {
+    return <p className={`leading-[1.8] break-keep ${textColorClass}`}>{decoded}</p>;
+  }
+
+  return paras.map((para, idx) => (
+    <p key={idx} className={`leading-[1.85] break-keep mb-2 last:mb-0 text-[12.5px] sm:text-[13px] ${textColorClass}`}>
+      {para}
+    </p>
+  ));
+};
+
+// =====================================================================
+// 🎨 SVG 아이콘 컴포넌트 세트
+// =====================================================================
+const IconMenu = () => (
+  <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" className="w-5 h-5">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+  </svg>
+);
+
+const IconBack = () => (
+  <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" className="w-5 h-5">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+  </svg>
+);
+
+const IconVolume = () => (
+  <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" className="w-3.5 h-3.5 shrink-0">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.757 3.63 8.25 4.51 8.25H6.75z" />
+  </svg>
+);
+
+export default function Interlinear({
+  isDarkMode, setActiveScreen, setIsSidebarOpen, isSidebarOpen,
+  bibles, getArr
+}) {
+  // ── 1. 권 / 장 / 절 네비게이션 상태 ──
+  const [selectedBookIndex, setSelectedBookIndex] = useState(() => {
+    try {
+      const jump = JSON.parse(localStorage.getItem('interlinear_jump') || '{}');
+      if (jump?.book) {
+        const idx = BIBLE_66_BOOKS.findIndex(b => b.ko === jump.book || b.en === jump.book);
+        if (idx !== -1) return idx;
+      }
+    } catch (_) {}
+    return 0;
+  });
+  const [chapter, setChapter] = useState(() => {
+    try {
+      const jump = JSON.parse(localStorage.getItem('interlinear_jump') || '{}');
+      if (jump?.chapter) return Number(jump.chapter);
+    } catch (_) {}
+    return 1;
+  });
+  const [verse, setVerse] = useState(() => {
+    try {
+      const jump = JSON.parse(localStorage.getItem('interlinear_jump') || '{}');
+      if (jump?.verse) {
+        const v = Number(jump.verse);
+        localStorage.removeItem('interlinear_jump');
+        return v;
+      }
+    } catch (_) {}
+    return 1;
+  });
+
+  // ── 2. 성경 역본 모드 ('krv' | 'literal' | 'easy' | 'web' | 'parallel' | 'trilingual') ──
+  const [bibleVersion, setBibleVersion] = useState(() => {
+    try {
+      return localStorage.getItem('interlinear_bible_version') || 'parallel';
+    } catch (_) {
+      return 'parallel';
+    }
+  });
+  const [easyBibleDb, setEasyBibleDb] = useState({});
+  const [webBibleDb, setWebBibleDb] = useState({});
+
+  const handleVersionChange = (ver) => {
+    setBibleVersion(ver);
+    try {
+      localStorage.setItem('interlinear_bible_version', ver);
+    } catch (_) {}
+  };
+
+  // WEB 영어성경 심층 학습 서브 모드
+  const [webStudyMode, setWebStudyMode] = useState('word');
+  const [bilingualSearchInput, setBilingualSearchInput] = useState('');
+  const [translatedClauses, setTranslatedClauses] = useState([]);
+  const [isClauseTranslating, setIsClauseTranslating] = useState(false);
+
+  // ── 3. 원어 조판 모드 ('vowels' | 'consonants' | 'full' | 'phonetic') ──
+  const [typographyMode, setTypographyMode] = useState('vowels');
+  const [workflowMode, setWorkflowMode] = useState('all');
+  const [playingAudioType, setPlayingAudioType] = useState(null);
+
+  // ── 4. 원어 인터리니어 어절 및 3중 교차 하이라이트 상태 ──
+  const [words, setWords] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [dictLoaded, setDictLoaded] = useState(false);
+
+  const [activeWordOrder, setActiveWordOrder] = useState(null);
+  const [selectedWordDetail, setSelectedWordDetail] = useState(null);
+  const [modalTab, setModalTab] = useState('concordance');
+
+  const [selectedWebLexiconWord, setSelectedWebLexiconWord] = useState(null);
+  const [isWebLexiconLoading, setIsWebLexiconLoading] = useState(false);
+  const [selectedGrammarWikiKey, setSelectedGrammarWikiKey] = useState(null);
+
+  const [concordanceTotalCount, setConcordanceTotalCount] = useState(0);
+  const [concordanceDistribution, setConcordanceDistribution] = useState({});
+  const [concordanceList, setConcordanceList] = useState([]);
+  const [isConcordanceLoading, setIsConcordanceLoading] = useState(false);
+
+  const [translatedMap, setTranslatedMap] = useState({});
+  const [translatingKeys, setTranslatingKeys] = useState({});
+
+  const handleToggleTranslation = async (key, rawText) => {
+    if (translatedMap[key]) {
+      setTranslatedMap(prev => ({ ...prev, [key]: null }));
+      return;
+    }
+    setTranslatingKeys(prev => ({ ...prev, [key]: true }));
+    const result = await fetchKoreanTranslation(rawText);
+    setTranslatedMap(prev => ({ ...prev, [key]: result }));
+    setTranslatingKeys(prev => ({ ...prev, [key]: false }));
+  };
+
+  const [customNotesMap, setCustomNotesMap] = useState({});
+  const [customInputTrans, setCustomInputTrans] = useState('');
+  const [customInputMemo, setCustomInputMemo] = useState('');
+
+  // ── 5. 10대 학술 아코디언 개폐 상태 ──
+  const [openPanels, setOpenPanels] = useState({
+    tsk: false, hebrewSyntax: true, lxx: false, targumPeshitta: false, josephus: false,
+    geo: false, commentary: true, matthewHenry: true, netNotes: false, easton: false
+  });
+  const togglePanel = (key) => setOpenPanels(prev => ({ ...prev, [key]: !prev[key] }));
+
+  const handleWorkflowModeChange = (mode) => {
+    setWorkflowMode(mode);
+    if (mode === 'qt') {
+      setOpenPanels({
+        tsk: true, hebrewSyntax: false, lxx: false, targumPeshitta: false, josephus: false,
+        geo: true, commentary: false, matthewHenry: true, netNotes: false, easton: false
+      });
+    } else if (mode === 'exegesis') {
+      setOpenPanels({
+        tsk: true, hebrewSyntax: true, lxx: false, targumPeshitta: false, josephus: false,
+        geo: false, commentary: true, matthewHenry: false, netNotes: false, easton: true
+      });
+    } else if (mode === 'academic') {
+      setOpenPanels({
+        tsk: false, hebrewSyntax: false, lxx: true, targumPeshitta: true, josephus: true,
+        geo: false, commentary: false, matthewHenry: false, netNotes: true, easton: false
+      });
+    } else {
+      setOpenPanels({
+        tsk: true, hebrewSyntax: true, lxx: true, targumPeshitta: true, josephus: true,
+        geo: true, commentary: true, matthewHenry: true, netNotes: true, easton: true
+      });
+    }
+  };
+
+  const scrollToPanel = (panelKey) => {
+    setOpenPanels(prev => ({ ...prev, [panelKey]: true }));
+    setTimeout(() => {
+      const el = document.getElementById(`panel-${panelKey}`);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
+  };
+
+  const [isLibraryOpen, setIsLibraryOpen] = useState(false);
+
+  // ── 6. 10대 학술 코퍼스 데이터베이스 상태 ──
+  const [crossRefs, setCrossRefs] = useState([]);
+  const [isTskLoading, setIsTskLoading] = useState(false);
+  const [lxxDatabase, setLxxDatabase] = useState({});
+  const [currentLxxParallel, setCurrentLxxParallel] = useState(null);
+  const [josephusDb, setJosephusDb] = useState({});
+  const [currentJosephus, setCurrentJosephus] = useState(null);
+  const [geoDb, setGeoDb] = useState({});
+  const [currentGeoData, setCurrentGeoData] = useState(null);
+  const [commentaryDb, setCommentaryDb] = useState({});
+  const [currentCommentary, setCurrentCommentary] = useState(null);
+
+  const [matthewHenryDb, setMatthewHenryDb] = useState({});
+  const [currentMatthewHenry, setCurrentMatthewHenry] = useState(null);
+  const [netNotesDb, setNetNotesDb] = useState({});
+  const [currentNetNote, setCurrentNetNote] = useState(null);
+  const [eastonDb, setEastonDb] = useState({});
+  const [currentEaston, setCurrentEaston] = useState(null);
+  const [targumPeshittaDb, setTargumPeshittaDb] = useState({});
+  const [currentTargumPeshitta, setCurrentTargumPeshitta] = useState(null);
+  const [currentHebrewSyntax, setCurrentHebrewSyntax] = useState(null);
+
+  // ── 7. 현재 도서 메타데이터 및 본문 텍스트 연산 ──
+  const currentBookMeta = BIBLE_66_BOOKS[selectedBookIndex] || BIBLE_66_BOOKS[0];
+  const isOT = currentBookMeta.isOT;
+
+  const safeGetArr = getArr || ((a) => Array.isArray(a) ? a : []);
+  const currentBookData = useMemo(() => {
+    const list = safeGetArr(bibles);
+    return list.find(b => b?.name === currentBookMeta.en || b?.name === currentBookMeta.ko) || {};
+  }, [bibles, currentBookMeta, safeGetArr]);
+
+  const chaptersCount = currentBookData?.chapters?.length || currentBookMeta.maxChap;
+  const versesCount = currentBookData?.chapters?.[chapter - 1]?.length || 35;
+
+  const getKrvVerseByNum = useCallback((vNum) => {
+    if (!currentBookData?.chapters?.[chapter - 1]) return '';
+    const v = currentBookData.chapters[chapter - 1][vNum - 1];
+    const raw = v ? (typeof v === 'string' ? v : v.text || v.content || '') : '';
+    return decodeHtmlEntities(raw);
+  }, [currentBookData, chapter]);
+
+  const koVerseText = useMemo(() => {
+    return getKrvVerseByNum(verse) || `${currentBookMeta.ko} ${chapter}장 ${verse}절`;
+  }, [getKrvVerseByNum, verse, currentBookMeta.ko, chapter]);
+
+  const easyVerseText = useMemo(() => {
+    const key = `${currentBookMeta.ko}-${chapter}-${verse}`;
+    return easyBibleDb[key] || '';
+  }, [currentBookMeta.ko, chapter, verse, easyBibleDb]);
+
+  const getWebVerseByNum = useCallback((vNum) => {
+    const keyKo = `${currentBookMeta.ko}-${chapter}-${vNum}`;
+    const keyEn = `${currentBookMeta.en}-${chapter}-${vNum}`;
+    return webBibleDb[keyKo] || webBibleDb[keyEn] || '';
+  }, [currentBookMeta, chapter, webBibleDb]);
+
+  const webVerseText = useMemo(() => {
+    return getWebVerseByNum(verse);
+  }, [getWebVerseByNum, verse]);
+
+  const enVerseText = useMemo(() => {
+    if (!words || words.length === 0) return '';
+    return decodeHtmlEntities(words.map(w => w.eng).filter(e => e && e !== 'n/a' && e !== '-').join(' '));
+  }, [words]);
+
+  const literalVerseText = useMemo(() => {
+    return assembleLiteralTranslation(words, isOT);
+  }, [words, isOT]);
+
+  // 문단(Paragraph) 맥락 데이터 (이전 절 V-1 ~ 현재 절 V ~ 다음 절 V+2)
+  const paragraphContextVerses = useMemo(() => {
+    const startV = Math.max(1, verse - 1);
+    const endV = Math.min(versesCount, verse + 2);
+    const list = [];
+    for (let v = startV; v <= endV; v++) {
+      list.push({
+        vNum: v,
+        isCurrent: v === verse,
+        krv: getKrvVerseByNum(v),
+        easy: easyBibleDb[`${currentBookMeta.ko}-${chapter}-${v}`] || '',
+        web: getWebVerseByNum(v)
+      });
+    }
+    return list;
+  }, [verse, versesCount, getKrvVerseByNum, easyBibleDb, currentBookMeta.ko, chapter, getWebVerseByNum]);
+
+  // WEB 영어 문장/절(Clause) 단위 자동 분해 및 1:1 한글 직독직해 생성
+  useEffect(() => {
+    if (webStudyMode !== 'clauses') return;
+    const targetEng = webVerseText || enVerseText;
+    if (!targetEng) {
+      setTranslatedClauses([]);
+      return;
+    }
+
+    let cancelled = false;
+    const rawClauses = targetEng
+      .split(/(?<=[,;:.!?])\s+/)
+      .map(s => s.trim())
+      .filter(Boolean);
+
+    setIsClauseTranslating(true);
+    Promise.all(
+      rawClauses.map(async (clause) => {
+        const ko = await fetchKoreanTranslation(clause, 'ko');
+        return { eng: clause, kor: ko };
+      })
+    ).then(results => {
+      if (!cancelled) {
+        setTranslatedClauses(results);
+        setIsClauseTranslating(false);
+      }
+    });
+
+    return () => { cancelled = true; };
+  }, [webStudyMode, webVerseText, enVerseText]);
+
+  // =====================================================================
+  // 🔗 한·영·원어 3중 교차 하이라이트 매칭기 (Tri-Lingual Matcher)
+  // =====================================================================
+  const activeWordObj = useMemo(() => {
+    if (activeWordOrder === null) return null;
+    return words.find(w => w.word_order === activeWordOrder) || null;
+  }, [words, activeWordOrder]);
+
+  const findMatchingWordOrderForEnglishToken = useCallback((engToken) => {
+    const clean = (engToken || '').toLowerCase().replace(/[^a-z]/g, '');
+    if (!clean || clean.length < 2 || ENG_STOP_WORDS.has(clean)) return null;
+
+    for (const w of words) {
+      const glossTokens = (w.eng || '')
+        .toLowerCase()
+        .split(/[^a-z]+/)
+        .filter(t => t.length >= 2 && !ENG_STOP_WORDS.has(t));
+
+      if (glossTokens.some(gt => gt === clean || (clean.length >= 4 && (gt.startsWith(clean.slice(0, 4)) || clean.startsWith(gt.slice(0, 4)))))) {
+        return w.word_order;
+      }
+    }
+    return null;
+  }, [words]);
+
+  const findMatchingWordOrderForKoreanToken = useCallback((korToken) => {
+    const clean = (korToken || '').replace(/[^가-힣]/g, '');
+    if (!clean || clean.length < 1) return null;
+
+    for (const w of words) {
+      const roots = `${w.korContextual || ''} ${w.korLemma || ''}`
+        .split(/[,/()\s~]+/)
+        .map(r => r.replace(/(하다|되다|이다|으로|에게|에서|을|를|이|가|은|는|의)$/g, '').trim())
+        .filter(r => r.length >= 1);
+
+      for (const rt of roots) {
+        if (rt.length >= 2 && clean.includes(rt)) return w.word_order;
+        if (rt.length === 1 && clean.startsWith(rt)) return w.word_order;
+      }
+    }
+    return null;
+  }, [words]);
+
+  const handleSpeakFullVerse = (type) => {
+    if (!('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+
+    if (playingAudioType === type) {
+      setPlayingAudioType(null);
+      return;
+    }
+
+    let textToSpeak = '';
+    let lang = 'ko-KR';
+
+    if (type === 'orig') {
+      textToSpeak = words.map(w => w.inflected).join(' ').replace(/[\u0591-\u05AF]/g, '');
+      lang = isOT ? 'he-IL' : 'el-GR';
+    } else if (type === 'web') {
+      textToSpeak = webVerseText || enVerseText;
+      lang = 'en-US';
+    } else if (type === 'krv') {
+      textToSpeak = koVerseText;
+      lang = 'ko-KR';
+    }
+
+    if (!textToSpeak.trim()) return;
+
+    const utterance = new SpeechSynthesisUtterance(textToSpeak);
+    utterance.lang = lang;
+    utterance.rate = type === 'orig' ? 0.82 : 0.95;
+    utterance.onend = () => setPlayingAudioType(null);
+    utterance.onerror = () => setPlayingAudioType(null);
+
+    setPlayingAudioType(type);
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const handleWordClickInWeb = async (rawWord, matchedOrder = null) => {
+    const clean = rawWord.trim().replace(/^[^a-zA-Z가-힣]+|[^a-zA-Z가-힣]+$/g, '');
+    if (!clean || clean.length < 1) return;
+
+    if (matchedOrder !== null) {
+      setActiveWordOrder(matchedOrder);
+    } else {
+      const autoOrder = findMatchingWordOrderForEnglishToken(clean);
+      if (autoOrder !== null) setActiveWordOrder(autoOrder);
+    }
+
+    setIsWebLexiconLoading(true);
+    setSelectedWebLexiconWord({ word: clean, kor: '사전 데이터 조회 중...', pos: '조회 중...' });
+    const data = await fetchEnglishWordLexicon(clean);
+    setSelectedWebLexiconWord(data);
+    setIsWebLexiconLoading(false);
+  };
+
+  // 한글 본문 인터랙티브 렌더러
+  const renderInteractiveKoreanText = (text) => {
+    if (!text) return null;
+    const tokens = text.split(/(\s+)/);
+
+    return tokens.map((token, idx) => {
+      if (/^\s+$/.test(token)) return <span key={idx}>{token}</span>;
+      const matchedOrder = findMatchingWordOrderForKoreanToken(token);
+      const isHighlighted = matchedOrder !== null && activeWordOrder === matchedOrder;
+      const matchedWord = matchedOrder !== null ? words.find(w => w.word_order === matchedOrder) : null;
+
+      return (
+        <span
+          key={idx}
+          onMouseEnter={() => { if (matchedOrder !== null) setActiveWordOrder(matchedOrder); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (matchedWord) {
+              setActiveWordOrder(matchedWord.word_order);
+            }
+          }}
+          className={`rounded px-1 py-0.5 transition-all ${
+            matchedOrder !== null ? 'cursor-pointer' : ''
+          } ${
+            isHighlighted
+              ? 'bg-amber-400 text-stone-950 font-black ring-2 ring-amber-500 shadow-sm inline'
+              : matchedOrder !== null
+              ? 'hover:bg-amber-500/20 underline decoration-dotted decoration-amber-500/50 underline-offset-4'
+              : ''
+          }`}
+          title={matchedWord ? `[원어: ${matchedWord.inflected}] [영: ${matchedWord.eng}] (${matchedWord.strongs})` : undefined}
+        >
+          {token}
+        </span>
+      );
+    });
+  };
+
+  // WEB 영어 본문 인터랙티브 렌더러
+  const renderInteractiveWebText = (text) => {
+    if (!text) return "WEB 본문 로딩 중...";
+    const tokens = text.split(/(\s+|[.,;!?()[\]"]+)/);
+
+    return tokens.map((token, idx) => {
+      const isWord = /^[a-zA-Z'-]+$/.test(token.trim());
+      if (!isWord) return <span key={idx}>{token}</span>;
+
+      const matchedOrder = findMatchingWordOrderForEnglishToken(token);
+      const isHighlighted = matchedOrder !== null && activeWordOrder === matchedOrder;
+      const matchedWord = matchedOrder !== null ? words.find(w => w.word_order === matchedOrder) : null;
+
+      return (
+        <span
+          key={idx}
+          onMouseEnter={() => { if (matchedOrder !== null) setActiveWordOrder(matchedOrder); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleWordClickInWeb(token, matchedOrder);
+          }}
+          className={`cursor-pointer rounded px-1 py-0.5 transition-all ${
+            isHighlighted
+              ? 'bg-sky-400 text-slate-950 font-black ring-2 ring-sky-300 shadow-sm inline'
+              : 'hover:bg-blue-500/20 hover:text-blue-700 dark:hover:text-blue-300 underline decoration-dotted decoration-blue-400/50 underline-offset-4'
+          }`}
+          title={matchedWord ? `[원어: ${matchedWord.inflected}] [한글: ${matchedWord.korContextual}] — 클릭 시 영한사전 오픈` : "터치하여 영한 사전 및 성경적 뜻풀이 보기"}
+        >
+          {token}
+        </span>
+      );
+    });
+  };
+
+  // ── 9. 기초 학술 DB 로드 ──
+  useEffect(() => {
+    fetch('/data/easy_bible.json').then(r => r.ok ? r.json() : {}).then(d => setEasyBibleDb(d || {})).catch(() => {});
+    fetch('/data/web_bible.json').then(r => r.ok ? r.json() : {}).then(d => setWebBibleDb(d || {})).catch(() => {});
+    fetch('/data/lxx_quotes.json').then(r => r.ok ? r.json() : {}).then(d => setLxxDatabase(d || {})).catch(() => {});
+    fetch('/data/josephus.json').then(r => r.ok ? r.json() : {}).then(d => setJosephusDb(d || {})).catch(() => {});
+    fetch('/data/bible_geodata.json').then(r => r.ok ? r.json() : {}).then(d => setGeoDb(d || {})).catch(() => {});
+    fetch('/data/net_notes.json').then(r => r.ok ? r.json() : {}).then(d => setNetNotesDb(d || {})).catch(() => {});
+    fetch('/data/easton_dict.json').then(r => r.ok ? r.json() : {}).then(d => setEastonDb(d || {})).catch(() => {});
+    fetch('/data/targum_peshitta.json').then(r => r.ok ? r.json() : {}).then(d => setTargumPeshittaDb(d || {})).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const bookName = currentBookMeta.ko;
+    const chapterNum = chapter;
+    if (!bookName) return;
+
+    fetch(`/data/commentaries_by_chapter/${bookName}_${chapterNum}.json`)
+      .then(r => r.ok ? r.json() : {})
+      .then(d => setCommentaryDb(d || {}))
+      .catch(() => setCommentaryDb({}));
+
+    fetch(`/data/matthew_henry_by_chapter/${bookName}_${chapterNum}.json`)
+      .then(r => r.ok ? r.json() : {})
+      .then(d => setMatthewHenryDb(d || {}))
+      .catch(() => setMatthewHenryDb({}));
+  }, [currentBookMeta.ko, chapter]);
+
+  const handlePrevVerse = useCallback(() => {
+    if (verse > 1) setVerse(v => v - 1);
+    else if (chapter > 1) { setChapter(c => c - 1); setVerse(1); }
+    else if (selectedBookIndex > 0) { setSelectedBookIndex(idx => idx - 1); setChapter(1); setVerse(1); }
+  }, [verse, chapter, selectedBookIndex]);
+
+  const handleNextVerse = useCallback(() => {
+    if (verse < versesCount) setVerse(v => v + 1);
+    else if (chapter < chaptersCount) { setChapter(c => c + 1); setVerse(1); }
+    else if (selectedBookIndex < BIBLE_66_BOOKS.length - 1) { setSelectedBookIndex(idx => idx + 1); setChapter(1); setVerse(1); }
+  }, [verse, versesCount, chapter, chaptersCount, selectedBookIndex]);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
+      if (selectedWordDetail || isLibraryOpen || selectedGrammarWikiKey || selectedWebLexiconWord) return;
+      if (e.key === 'ArrowLeft') { e.preventDefault(); handlePrevVerse(); }
+      else if (e.key === 'ArrowRight') { e.preventDefault(); handleNextVerse(); }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handlePrevVerse, handleNextVerse, selectedWordDetail, isLibraryOpen, selectedGrammarWikiKey, selectedWebLexiconWord]);
+
+  useEffect(() => {
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+    setPlayingAudioType(null);
+
+    const key = `${currentBookMeta.ko}-${chapter}-${verse}`;
+    setCurrentLxxParallel(lxxDatabase[key] || null);
+    setCurrentJosephus(josephusDb[key] || null);
+    setCurrentGeoData(geoDb[key] || null);
+    setCurrentCommentary(commentaryDb[key] || null);
+    setCurrentMatthewHenry(matthewHenryDb[key] || null);
+    setCurrentNetNote(netNotesDb[key] || null);
+    setCurrentTargumPeshitta(targumPeshittaDb[key] || null);
+
+    const foundEastonKey = Object.keys(eastonDb).find(k => {
+      if ((koVerseText || '').includes(k)) return true;
+      const lowerK = k.toLowerCase();
+      if ((enVerseText || '').toLowerCase().split(/\s+/).some(w => w.replace(/[^a-z]/g, '') === lowerK)) return true;
+      if ((webVerseText || '').toLowerCase().split(/\s+/).some(w => w.replace(/[^a-z]/g, '') === lowerK)) return true;
+      return false;
+    });
+    setCurrentEaston(foundEastonKey ? { word: foundEastonKey, ...eastonDb[foundEastonKey] } : null);
+  }, [currentBookMeta.ko, chapter, verse, lxxDatabase, josephusDb, geoDb, commentaryDb, matthewHenryDb, netNotesDb, eastonDb, targumPeshittaDb, koVerseText, enVerseText, webVerseText]);
+
+  useEffect(() => {
+    if (isOT && words && words.length > 0) {
+      const dynamicSyntax = analyzeHebrewSyntaxFromWords(words);
+      setCurrentHebrewSyntax(dynamicSyntax);
+    } else {
+      setCurrentHebrewSyntax(null);
+    }
+  }, [isOT, words]);
+
+  useEffect(() => {
+    let isMounted = true;
+    setIsTskLoading(true);
+
+    getCrossReferences(currentBookMeta.ko, chapter, verse)
+      .then(refs => {
+        if (isMounted) { setCrossRefs(refs || []); setIsTskLoading(false); }
+      })
+      .catch(() => {
+        if (isMounted) { setCrossRefs([]); setIsTskLoading(false); }
+      });
+
+    return () => { isMounted = false; };
+  }, [currentBookMeta.ko, chapter, verse]);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('custom_lexicon_notes');
+      if (saved) setCustomNotesMap(JSON.parse(saved));
+    } catch (_) {}
+  }, []);
+
+  // 🛠️ [버그 수정 완료] 사이드바의 <nav>를 숨기지 않고, 모달이 열렸을 때만 하단 플로팅 독바만 안전하게 가림
+  useEffect(() => {
+    const isAnyModalOpen = Boolean(selectedWordDetail || isLibraryOpen || selectedGrammarWikiKey || selectedWebLexiconWord);
+    if (!isAnyModalOpen) return;
+
+    const navSelectors = ['#bottom-nav', '.floating-bottom-nav'];
+    const hiddenEls = [];
+    navSelectors.forEach(sel => {
+      document.querySelectorAll(sel).forEach(el => {
+        if (!el.closest('.interlinear-modal-portal')) {
+          el.style.setProperty('display', 'none', 'important');
+          hiddenEls.push(el);
+        }
+      });
+    });
+
+    return () => {
+      hiddenEls.forEach(el => el.style.removeProperty('display'));
+    };
+  }, [selectedWordDetail, isLibraryOpen, selectedGrammarWikiKey, selectedWebLexiconWord]);
+
+  useEffect(() => {
+    if (cachedMasterStrongs) {
+      setDictLoaded(true);
+      return;
+    }
+    fetch('/data/strongs_korean_master.json')
+      .then(async (res) => {
+        if (!res.ok) return fetch('/data/strongs_korean.json').then(r => r.json());
+        return res.json();
+      })
+      .then(data => {
+        cachedMasterStrongs = data || {};
+        setDictLoaded(true);
+      })
+      .catch(() => {
+        cachedMasterStrongs = {};
+        setDictLoaded(true);
+      });
+  }, []);
+
+  // ── 10. Supabase 원어 인터리니어 어절 및 사전 결합 파이프라인 ──
+  useEffect(() => {
+    if (!dictLoaded) return;
+    let isMounted = true;
+
+    const fetchInterlinearData = async () => {
+      if (!supabase) return;
+      setIsLoading(true);
+      setActiveWordOrder(null);
+      setSelectedWordDetail(null);
+      setConcordanceList([]);
+
+      try {
+        const { data: wordsData, error: wordsError } = await supabase
+          .from('interlinear_bible')
+          .select('*')
+          .eq('book', currentBookMeta.ko)
+          .eq('chapter', chapter)
+          .eq('verse', verse)
+          .order('word_order', { ascending: true });
+
+        if (wordsError || !wordsData || wordsData.length === 0) {
+          if (isMounted) setWords([]);
+          setIsLoading(false);
+          return;
+        }
+
+        const strongIds = Array.from(new Set(wordsData.map(w => w.strongs_id).filter(Boolean)));
+        let dictMap = new Map();
+
+        if (strongIds.length > 0) {
+          const { data: dictRows } = await supabase
+            .from('strongs_dictionary')
+            .select('*')
+            .in('strongs_id', strongIds);
+
+          if (dictRows && dictRows.length > 0) {
+            dictRows.forEach(row => dictMap.set(row.strongs_id, row));
+          }
+        }
+
+        if (!isMounted) return;
+
+        const enrichedWords = wordsData.map(w => {
+          const sId = (w.strongs_id || '').trim();
+          const masterEntry = cachedMasterStrongs?.[sId] || {};
+          const dbDict = dictMap.get(sId) || {};
+          const morphInfo = decodeExhaustiveMorphology(w.grammar);
+          const theologyInsight = getTheologicalGrammarInsight(w.grammar, isOT);
+
+          const inflectedWord = (w.original_word || '').trim();
+          const lemmaWord = (masterEntry.original || dbDict.original_word || inflectedWord).trim();
+          const isInflectedDifferent = lemmaWord && inflectedWord && lemmaWord !== inflectedWord;
+
+          let lemmaMeaning = masterEntry.korean || dbDict.meaning || '';
+          const rawEngGloss = (w.gloss || w.korean_trans || masterEntry.eng || '').toLowerCase().trim();
+
+          if (!lemmaMeaning || /^[a-z\s,.[\]()'-]+$/i.test(lemmaMeaning)) {
+            if (FALLBACK_ENGLISH_TRANSLATION_MAP[rawEngGloss]) {
+              lemmaMeaning = FALLBACK_ENGLISH_TRANSLATION_MAP[rawEngGloss];
+            } else if (w.korean_trans && /[가-힣]/.test(w.korean_trans)) {
+              lemmaMeaning = w.korean_trans;
+            } else {
+              lemmaMeaning = masterEntry.korean || '원어 어휘';
+            }
+          }
+
+          const contextualKorean = applyContextualCaseEnding(lemmaMeaning, morphInfo.caseType, isOT, w.grammar);
+          let finalPron = masterEntry.pron || (w.pronunciation ? `[${w.pronunciation.replace(/[[\]]/g, '')}]` : '');
+          const cleanEng = (masterEntry.eng || w.gloss || w.korean_trans || 'n/a').replace(/[[\]]/g, '').toLowerCase();
+          const rawDescriptionText = dbDict.description || masterEntry.desc || w.dictionary_info || '';
+          const unabridgedLexicon = parseUnabridgedAcademicLexicon(rawDescriptionText, masterEntry, isOT);
+          const userCustomNote = customNotesMap[sId] || null;
+
+          return {
+            id: w.id || w.word_order,
+            word_order: w.word_order,
+            inflected: inflectedWord,
+            lemma: lemmaWord,
+            isInflectedDifferent,
+            korContextual: decodeHtmlEntities(userCustomNote?.translation || contextualKorean),
+            korLemma: decodeHtmlEntities(lemmaMeaning),
+            original_word: inflectedWord,
+            pron: finalPron,
+            kor: decodeHtmlEntities(userCustomNote?.translation || contextualKorean),
+            eng: decodeHtmlEntities(cleanEng),
+            grammarRaw: w.grammar || '',
+            grammarDecoded: morphInfo.label,
+            grammarType: morphInfo.type,
+            isVerb: morphInfo.isVerb,
+            theologyInsight: theologyInsight,
+            strongs: sId || (isOT ? 'H0000' : 'G0000'),
+            note: decodeHtmlEntities(masterEntry.note || ''),
+            lexicon: unabridgedLexicon,
+            userCustomNote: userCustomNote
+          };
+        });
+
+        const uniqueMap = new Map();
+        enrichedWords.forEach(w => {
+          if (!uniqueMap.has(w.word_order)) uniqueMap.set(w.word_order, w);
+        });
+
+        if (isMounted) {
+          const sortedList = Array.from(uniqueMap.values()).sort((a, b) => a.word_order - b.word_order);
+          setWords(sortedList);
+          if (sortedList.length > 0) {
+            setActiveWordOrder(sortedList[0].word_order);
+          }
+        }
+      } catch (err) {
+        if (isMounted) setWords([]);
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    };
+
+    fetchInterlinearData();
+    return () => { isMounted = false; };
+  }, [currentBookMeta, chapter, verse, isOT, dictLoaded, customNotesMap]);
+
+  const handleSelectWord = useCallback(async (word, openModalImmediately = true) => {
+    setActiveWordOrder(word.word_order);
+    if (!openModalImmediately) return;
+
+    setSelectedWordDetail(word);
+    setConcordanceList([]);
+    setConcordanceTotalCount(0);
+    setConcordanceDistribution({});
+    setIsConcordanceLoading(true);
+
+    const note = customNotesMap[word.strongs];
+    setCustomInputTrans(note?.translation || '');
+    setCustomInputMemo(note?.memo || '');
+
+    if (supabase && word.strongs && !word.strongs.endsWith('0000')) {
+      try {
+        const listPromise = supabase
+          .from('interlinear_bible')
+          .select('book, chapter, verse, original_word, korean_trans', { count: 'exact' })
+          .eq('strongs_id', word.strongs)
+          .order('id', { ascending: true })
+          .limit(60);
+
+        const distPromise = supabase
+          .from('interlinear_bible')
+          .select('book')
+          .eq('strongs_id', word.strongs);
+
+        const [listRes, distRes] = await Promise.all([listPromise, distPromise]);
+
+        if (!listRes.error && listRes.data) {
+          setConcordanceTotalCount(listRes.count || listRes.data.length);
+          setConcordanceList(listRes.data);
+        }
+
+        if (!distRes.error && distRes.data) {
+          const fullDist = {};
+          distRes.data.forEach(item => {
+            const sec = BOOK_SECTION_LOOKUP[item.book] || (word.strongs.startsWith('H') ? '구약 기타' : '신약 기타');
+            fullDist[sec] = (fullDist[sec] || 0) + 1;
+          });
+          setConcordanceDistribution(fullDist);
+        }
+      } catch (e) {
+        console.error("Concordance error:", e);
+      } finally {
+        setIsConcordanceLoading(false);
+      }
+    } else {
+      setIsConcordanceLoading(false);
+    }
+  }, [customNotesMap]);
+
+  const handleJumpToConcordanceVerse = useCallback((targetBook, targetChapter, targetVerse) => {
+    const bookIdx = BIBLE_66_BOOKS.findIndex(b => b.ko === targetBook || b.en === targetBook);
+    if (bookIdx !== -1) {
+      setSelectedBookIndex(bookIdx);
+      setChapter(Number(targetChapter));
+      setVerse(Number(targetVerse));
+      setSelectedWordDetail(null);
+      setIsLibraryOpen(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, []);
+
+  const handleSaveCustomLexiconNote = useCallback(() => {
+    if (!selectedWordDetail || !selectedWordDetail.strongs) return;
+    const sId = selectedWordDetail.strongs;
+
+    const updatedMap = {
+      ...customNotesMap,
+      [sId]: {
+        strongs: sId,
+        lemma: selectedWordDetail.lemma,
+        book: currentBookMeta.ko,
+        chapter,
+        verse,
+        translation: customInputTrans.trim(),
+        memo: customInputMemo.trim(),
+        updatedAt: new Date().toISOString()
+      }
+    };
+
+    setCustomNotesMap(updatedMap);
+    localStorage.setItem('custom_lexicon_notes', JSON.stringify(updatedMap));
+    alert(`[${selectedWordDetail.lemma} (${sId})] 연구자 번역 및 주석 메모가 영구 저장되었습니다.`);
+  }, [selectedWordDetail, customNotesMap, customInputTrans, customInputMemo, currentBookMeta.ko, chapter, verse]);
+
+  const handleCopyComprehensiveReport = useCallback(() => {
+    let report = `# 📖 [원어 강해 종합 학술 리포트] ${currentBookMeta.ko} ${chapter}장 ${verse}절\n`;
+    report += `> **연대 및 역사적 배경:** ${currentBookMeta.era} | ${currentBookMeta.empire}\n\n`;
+    report += `### 📜 정경 본문 대조\n`;
+    report += `- **개역개정:** ${koVerseText}\n`;
+    if (literalVerseText) report += `- **원어 어순 직역:** ${literalVerseText}\n`;
+    if (easyVerseText) report += `- **쉬운성경:** ${easyVerseText}\n`;
+    if (webVerseText) report += `- **WEB Bible:** ${webVerseText}\n`;
+    if (enVerseText) report += `- **영어 직역:** "${enVerseText}"\n\n`;
+
+    report += `### 🔍 단어별 1:1 형태론 및 3개 국어 매칭:\n`;
+    words.forEach(w => {
+      report += `- **${w.inflected}** (${w.lemma}) [${w.strongs}] ⇄ **${w.eng}** ⇄ **${w.korContextual}** | *${w.grammarDecoded}*\n`;
+    });
+    report += `\n`;
+
+    if (currentHebrewSyntax) {
+      report += `### 📜 BHS 히브리어 구문론:\n`;
+      currentHebrewSyntax.clauseHierarchy.forEach(c => {
+        report += `- **${c.unit}** ➔ ${c.role} (${c.pauseType})\n`;
+      });
+      report += `- 강해: ${currentHebrewSyntax.cantillationExegesis}\n\n`;
+    }
+
+    if (currentCommentary) {
+      report += `### 📖 반즈/JFB 주석 요약:\n- ${currentCommentary.exegesis?.slice(0, 300)}...\n\n`;
+    }
+
+    if (currentMatthewHenry) {
+      report += `### 🌿 매튜 헨리 묵상 강해 요약:\n- ${currentMatthewHenry.devotionalExegesis?.slice(0, 300)}...\n\n`;
+    }
+
+    navigator.clipboard.writeText(decodeHtmlEntities(report));
+    alert("📋 학술 서식이 포함된 종합 리포트가 클립보드에 복사되었습니다!");
+  }, [currentBookMeta, chapter, verse, koVerseText, literalVerseText, easyVerseText, webVerseText, enVerseText, words, currentHebrewSyntax, currentCommentary, currentMatthewHenry]);
+
+  const handleInsertToQT = useCallback((word) => {
+    const today = new Date().toISOString().split('T')[0];
+    try {
+      const allQt = JSON.parse(localStorage.getItem('qt_daily') || '{}');
+      const todayData = allQt[today] || {};
+      const lemmaNotice = word.isInflectedDifferent ? `(원형: ${word.lemma})` : '';
+      const customTransNotice = word.userCustomNote?.translation ? ` [나의 번역: ${word.userCustomNote.translation}]` : '';
+      const customMemoNotice = word.userCustomNote?.memo ? `\n   ↳ 💡 연구 메모: ${word.userCustomNote.memo}` : '';
+      const theologyNotice = word.theologyInsight ? ` [문법 강해: ${word.theologyInsight.stemTitle}]` : '';
+
+      const insightText = `\n[원어묵상] ${word.inflected} ${lemmaNotice} ⇄ ${word.eng} ⇄ ${word.korContextual} [${word.strongs}] (${word.grammarDecoded})${theologyNotice}${customTransNotice}${customMemoNotice}\n`;
+
+      allQt[today] = { ...todayData, qtMeditation: (todayData.qtMeditation || '') + insightText };
+      localStorage.setItem('qt_daily', JSON.stringify(allQt));
+      alert(`[${word.inflected}] 원어 묵상 및 연구자 주석이 오늘 QT 일지에 기록되었습니다.`);
+    } catch (_) {}
+  }, []);
+
+  const handleInsertToSermon = useCallback((word) => {
+    const today = new Date().toISOString().split('T')[0];
+    try {
+      const allDaily = JSON.parse(localStorage.getItem('days_data') || '{}');
+      const todayData = allDaily[today] || {};
+      const lemmaNotice = word.isInflectedDifferent ? `(원형: ${word.lemma} - ${word.korLemma})` : '';
+      const customMemoBlock = word.userCustomNote?.memo
+        ? `<br/>  ↳ <b>✍ 연구자 강해 메모</b>: <i>${word.userCustomNote.memo}</i>`
+        : '';
+      const theologyNotice = word.theologyInsight
+        ? `<br/>  ↳ <b>${word.theologyInsight.stemTitle}</b>: <i>${word.theologyInsight.stemDesc}</i>`
+        : '';
+
+      const insightHtml = `<p><b>[원어강해] ${word.inflected} ${lemmaNotice} [${word.strongs}]</b>: ${word.korContextual} (${word.eng}) — <i>${word.grammarDecoded}</i>${theologyNotice}${customMemoBlock}</p>`;
+
+      allDaily[today] = { ...todayData, sermonNotes: (todayData.sermonNotes || '') + insightHtml };
+      localStorage.setItem('days_data', JSON.stringify(allDaily));
+      alert(`[${word.inflected}] 원어 강해 주석이 설교노트에 반영되었습니다.`);
+    } catch (_) {}
+  }, []);
+
+  const isDark = isDarkMode;
+  const theme = {
+    bg: isDark ? 'bg-[#0B0F17]' : 'bg-[#F9F9F6]',
+    panel: isDark ? 'bg-[#121824] border-slate-800' : 'bg-white border-stone-200/90 shadow-2xs',
+    textMain: isDark ? 'text-slate-100' : 'text-stone-900',
+    textSub: isDark ? 'text-slate-400' : 'text-stone-600',
+    border: isDark ? 'border-slate-800' : 'border-stone-200',
+
+    literal: isDark ? 'bg-emerald-950/25 border-emerald-800/60 text-emerald-200' : 'bg-emerald-50/80 border-emerald-200 text-emerald-950',
+    tsk: isDark ? 'bg-sky-950/20 border-sky-900/60 text-sky-200' : 'bg-sky-50/70 border-sky-200/80 text-sky-950',
+    bhs: isDark ? 'bg-amber-950/20 border-amber-900/60 text-amber-200' : 'bg-amber-50/70 border-amber-200/80 text-amber-950',
+    lxx: isDark ? 'bg-stone-900/40 border-stone-700 text-stone-200' : 'bg-stone-100/80 border-stone-300/80 text-stone-950',
+    aramaic: isDark ? 'bg-orange-950/20 border-orange-900/60 text-orange-200' : 'bg-orange-50/70 border-orange-200/80 text-orange-950',
+    josephus: isDark ? 'bg-yellow-950/20 border-yellow-900/50 text-yellow-200' : 'bg-yellow-50/60 border-yellow-200/80 text-yellow-950',
+    geo: isDark ? 'bg-teal-950/20 border-teal-900/60 text-teal-200' : 'bg-teal-50/70 border-teal-200/80 text-teal-950',
+    comm: isDark ? 'bg-indigo-950/20 border-indigo-900/60 text-indigo-200' : 'bg-indigo-50/70 border-indigo-200/80 text-indigo-950',
+    mh: isDark ? 'bg-emerald-950/20 border-emerald-900/60 text-emerald-200' : 'bg-emerald-50/70 border-emerald-200/80 text-emerald-950',
+    net: isDark ? 'bg-rose-950/20 border-rose-900/60 text-rose-200' : 'bg-rose-50/70 border-rose-200/80 text-rose-950',
+    easton: isDark ? 'bg-purple-950/20 border-purple-900/60 text-purple-200' : 'bg-purple-50/70 border-purple-200/80 text-purple-950'
+  };
+
+  const originalFontStyle = isOT
+    ? { fontFamily: "'SBL Hebrew', 'Taamey Frank CLM', 'Ezra SIL', serif", direction: 'rtl' }
+    : { fontFamily: "'SBL Greek', 'Cardo', 'Times New Roman', serif", direction: 'ltr' };
+
+  return (
+    <div className={`flex-1 flex flex-col w-full max-w-full h-full pointer-events-auto ${theme.bg} relative font-sans overflow-x-hidden overflow-y-hidden select-none`}>
+      
+      {/* ── 1. 상단 슬림 네비게이션 헤더 (모바일 삐져나감 0% 최적화) ── */}
+      <header className={`w-full max-w-full px-2.5 sm:px-4 py-2 border-b z-[60] sticky top-0 shrink-0 flex items-center justify-between gap-1.5 ${
+        isDark ? 'bg-[#101622] border-slate-800' : 'bg-white border-stone-200 shadow-2xs'
+      }`}>
+        <div className="flex items-center gap-1 min-w-0 flex-1">
+          <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className={`${theme.textMain} p-1 md:hidden opacity-80 cursor-pointer shrink-0`}><IconMenu/></button>
+          <button onClick={() => setActiveScreen('home')} className={`${theme.textMain} p-1 opacity-80 cursor-pointer shrink-0`}><IconBack/></button>
+          <h1 className={`text-[14px] sm:text-[16px] font-black tracking-tight truncate ${theme.textMain}`}>
+            원어 성경 연구
+          </h1>
+          <span className={`text-[9.5px] sm:text-[10.5px] font-mono px-1.5 py-0.5 rounded border font-bold shrink-0 ${
+            isOT
+              ? (isDark ? 'bg-amber-950/40 text-amber-300 border-amber-900/60' : 'bg-amber-50 text-amber-800 border-amber-200')
+              : (isDark ? 'bg-blue-950/40 text-blue-300 border-blue-900/60' : 'bg-blue-50 text-blue-800 border-blue-200')
+          }`}>
+            {isOT ? '구약·RTL' : '신약·LTR'}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-1 shrink-0">
+          <button
+            type="button"
+            onClick={() => setIsLibraryOpen(true)}
+            className={`px-2 py-1 rounded-lg text-[10.5px] sm:text-[11px] font-bold border cursor-pointer flex items-center gap-1 shrink-0 ${
+              isDark ? 'bg-slate-800 border-slate-700 text-slate-200' : 'bg-stone-100 border-stone-200 text-stone-800'
+            }`}
+          >
+            📚 <span className="hidden xs:inline">서재</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              try {
+                localStorage.setItem('interlinear_jump', JSON.stringify({
+                  book: currentBookMeta.ko,
+                  chapter,
+                  verse
+                }));
+              } catch (_) {}
+              setActiveScreen('interlinear_kids');
+            }}
+            className={`px-2 py-1 rounded-lg text-[10.5px] sm:text-[11px] font-black border cursor-pointer flex items-center gap-1 transition-all shadow-2xs shrink-0 ${
+              isDark
+                ? 'bg-amber-950/40 border-amber-800 text-amber-300 hover:bg-amber-900/60'
+                : 'bg-amber-100 border-amber-300 text-amber-900 hover:bg-amber-200'
+            }`}
+            title="어린이 눈높이 원어 탐험관으로 전환"
+          >
+            <span>🎒</span> <span>키즈</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleCopyComprehensiveReport}
+            className={`px-2 py-1 rounded-lg text-[10.5px] sm:text-[11px] font-bold border cursor-pointer flex items-center gap-1 shrink-0 ${
+              isDark ? 'bg-slate-800 border-slate-700 text-slate-200' : 'bg-stone-100 border-stone-200 text-stone-800'
+            }`}
+            title="종합 학술 리포트 클립보드 복사"
+          >
+            📋 <span className="hidden sm:inline">리포트</span>
+          </button>
+        </div>
+      </header>
+
+      {/* ── 2. 메인 스크롤 뷰포트 (overflow-x-hidden 엄격 적용) ── */}
+      <main className="flex-1 overflow-y-auto overflow-x-hidden px-2.5 sm:px-4 pt-2.5 pb-44 w-full max-w-5xl mx-auto hide-scrollbar space-y-3">
+        
+        {/* ── A. 권/장/절 12칸 정밀 그리드 네비게이터 (모바일 확장 오버플로우 완벽 차단) ── */}
+        <div className={`w-full max-w-full p-2.5 sm:p-3 rounded-2xl border flex flex-col gap-2 overflow-hidden ${theme.panel}`}>
+          
+          {/* 1열: 성경 권(6칸) | 장(3칸) | 절(3칸) */}
+          <div className="grid grid-cols-12 gap-1.5 items-center w-full">
+            <div className="col-span-6 min-w-0">
+              <select
+                value={selectedBookIndex}
+                onChange={(e) => { setSelectedBookIndex(Number(e.target.value)); setChapter(1); setVerse(1); }}
+                className={`w-full min-w-0 px-2.5 py-1.5 rounded-xl border text-[13px] sm:text-[14px] font-black truncate outline-none cursor-pointer ${
+                  isDark ? 'bg-slate-900/90 border-slate-700 text-white' : 'bg-stone-50 border-stone-200 text-stone-900'
+                }`}
+              >
+                <optgroup label="구약 성경 (39권)">
+                  {BIBLE_66_BOOKS.slice(0, 39).map((b, idx) => (
+                    <option key={b.ko} value={idx} className="text-black">{b.ko} ({b.en})</option>
+                  ))}
+                </optgroup>
+                <optgroup label="신약 성경 (27권)">
+                  {BIBLE_66_BOOKS.slice(39).map((b, idx) => (
+                    <option key={b.ko} value={idx + 39} className="text-black">{b.ko} ({b.en})</option>
+                  ))}
+                </optgroup>
+              </select>
+            </div>
+
+            <div className="col-span-3 min-w-0">
+              <select
+                value={chapter}
+                onChange={(e) => { setChapter(Number(e.target.value)); setVerse(1); }}
+                className={`w-full min-w-0 px-2 py-1.5 rounded-xl border text-[13px] sm:text-[14px] font-black outline-none cursor-pointer text-center ${
+                  isDark ? 'bg-slate-900/90 border-slate-700 text-amber-300' : 'bg-stone-50 border-stone-200 text-stone-900'
+                }`}
+              >
+                {Array.from({ length: chaptersCount }, (_, i) => <option key={i+1} value={i+1} className="text-black">{i+1}장</option>)}
+              </select>
+            </div>
+
+            <div className="col-span-3 min-w-0">
+              <select
+                value={verse}
+                onChange={(e) => setVerse(Number(e.target.value))}
+                className={`w-full min-w-0 px-2 py-1.5 rounded-xl border text-[13px] sm:text-[14px] font-black outline-none cursor-pointer text-center ${
+                  isDark ? 'bg-slate-900/90 border-slate-700 text-amber-300' : 'bg-stone-50 border-stone-200 text-stone-900'
+                }`}
+              >
+                {Array.from({ length: versesCount }, (_, i) => <option key={i+1} value={i+1} className="text-black">{i+1}절</option>)}
+              </select>
+            </div>
+          </div>
+
+          {/* 2열: [◀ 이전 절] + 역사적 연대 배지 + [다음 절 ▶] */}
+          <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-dashed border-stone-200 dark:border-slate-800">
+            <button
+              type="button"
+              onClick={handlePrevVerse}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border cursor-pointer shrink-0 active:scale-95 transition-transform ${
+                isDark ? 'bg-slate-800 border-slate-700 text-slate-200' : 'bg-stone-100 border-stone-200 text-stone-800'
+              }`}
+            >
+              ◀ 이전 절
+            </button>
+
+            <div className="min-w-0 flex-1 text-center truncate text-[10.5px] sm:text-[11px] font-serif text-stone-500 dark:text-slate-400">
+              ⏳ {currentBookMeta.era} <span className="hidden md:inline">| 🏛 {currentBookMeta.empire}</span>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleNextVerse}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border cursor-pointer shrink-0 active:scale-95 transition-transform ${
+                isDark ? 'bg-slate-800 border-slate-700 text-slate-200' : 'bg-stone-100 border-stone-200 text-stone-800'
+              }`}
+            >
+              다음 절 ▶
+            </button>
+          </div>
+        </div>
+
+        {/* ── B. 다중 역본 & 한·영·원어 3중 교차 매칭 통합 스튜디오 ── */}
+        <div className={`w-full max-w-full p-3 sm:p-4 rounded-2xl border space-y-3 overflow-hidden ${theme.panel}`}>
+          
+          {/* 1) 구절 타이틀 + 3개국어 전체 낭독 버튼 */}
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <h2 className={`text-[15px] sm:text-[17px] font-black ${theme.textMain} shrink-0`}>
+              📖 {currentBookMeta.ko} {chapter}:{verse}
+            </h2>
+
+            <div className="flex items-center gap-1 flex-wrap">
+              <button
+                type="button"
+                onClick={() => handleSpeakFullVerse('orig')}
+                className={`px-2 py-1 rounded-lg text-[10.5px] font-bold border transition-all flex items-center gap-1 cursor-pointer ${
+                  playingAudioType === 'orig'
+                    ? 'bg-amber-600 text-white border-amber-600 animate-pulse'
+                    : 'bg-stone-100 dark:bg-slate-800 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-700'
+                }`}
+              >
+                <IconVolume />
+                <span>{playingAudioType === 'orig' ? '정지' : isOT ? '히브리어' : '헬라어'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleSpeakFullVerse('web')}
+                className={`px-2 py-1 rounded-lg text-[10.5px] font-bold border transition-all flex items-center gap-1 cursor-pointer ${
+                  playingAudioType === 'web'
+                    ? 'bg-blue-600 text-white border-blue-600 animate-pulse'
+                    : 'bg-stone-100 dark:bg-slate-800 text-blue-800 dark:text-blue-300 border-blue-300 dark:border-blue-700'
+                }`}
+              >
+                <IconVolume />
+                <span>{playingAudioType === 'web' ? '정지' : 'WEB영어'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleSpeakFullVerse('krv')}
+                className={`px-2 py-1 rounded-lg text-[10.5px] font-bold border transition-all flex items-center gap-1 cursor-pointer ${
+                  playingAudioType === 'krv'
+                    ? 'bg-emerald-600 text-white border-emerald-600 animate-pulse'
+                    : 'bg-stone-100 dark:bg-slate-800 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700'
+                }`}
+              >
+                <IconVolume />
+                <span>{playingAudioType === 'krv' ? '정지' : '한국어'}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* 2) 6대 역본·매칭 뷰 스위처 (가로 스크롤 트랙으로 모바일 삐져나감 완벽 방지) */}
+          <div className="w-full max-w-full overflow-x-auto hide-scrollbar pb-0.5">
+            <div className={`inline-flex min-w-full sm:min-w-0 p-1 rounded-xl border text-[11px] font-bold gap-1 ${
+              isDark ? 'bg-black/40 border-slate-800' : 'bg-stone-100 border-stone-200'
+            }`}>
+              {[
+                { id: 'parallel', label: '🔗 동시대조 (3중매칭)' },
+                { id: 'trilingual', label: '🧬 3중 어절표' },
+                { id: 'web', label: '🇺🇸 WEB 영한스튜디오' },
+                { id: 'krv', label: '개역개정' },
+                { id: 'literal', label: '원어직역' },
+                { id: 'easy', label: '쉬운성경' }
+              ].map((v) => (
+                <button
+                  key={v.id}
+                  type="button"
+                  onClick={() => handleVersionChange(v.id)}
+                  className={`flex-1 sm:flex-initial px-2.5 py-1.5 rounded-lg transition-all cursor-pointer whitespace-nowrap text-center ${
+                    bibleVersion === v.id
+                      ? (isDark ? 'bg-amber-500 text-slate-950 shadow-xs font-black' : 'bg-white text-stone-900 shadow-2xs font-black')
+                      : theme.textSub
+                  }`}
+                >
+                  {v.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 3) 🌟 [모바일 최적화] 한·영·원어 3단 미니 벤토(Bento) 브릿지 카드 */}
+          {activeWordObj && (
+            <div className={`w-full max-w-full p-2.5 sm:p-3 rounded-xl border space-y-2 overflow-hidden ${
+              isDark ? 'bg-gradient-to-r from-amber-950/30 via-slate-900 to-sky-950/30 border-amber-500/40' : 'bg-gradient-to-r from-amber-50/90 via-white to-sky-50/90 border-amber-300'
+            }`}>
+              <div className="flex items-center justify-between gap-1">
+                <span className="px-2 py-0.5 rounded bg-amber-500 text-slate-950 text-[10px] font-mono font-black shrink-0">
+                  🔗 3중 매칭 어절 #{activeWordObj.word_order} ({activeWordObj.strongs})
+                </span>
+                <span className="text-[10.5px] font-bold text-stone-500 dark:text-slate-400 truncate">
+                  {activeWordObj.grammarDecoded}
+                </span>
+              </div>
+
+              {/* 3칸 대칭 미니 벤토: [원어] ⇄ [영어] ⇄ [한글] */}
+              <div className="grid grid-cols-3 gap-1.5 text-center">
+                <div
+                  onClick={() => speakAudio(activeWordObj.inflected, isOT ? 'he-IL' : 'el-GR')}
+                  className="p-2 rounded-lg bg-white/80 dark:bg-black/40 border border-amber-300/60 dark:border-amber-800/60 cursor-pointer min-w-0 overflow-hidden"
+                >
+                  <span className="text-[9.5px] font-mono text-amber-700 dark:text-amber-400 block truncate">
+                    🏛️ 원어 {activeWordObj.pron}
+                  </span>
+                  <span style={originalFontStyle} className="text-base sm:text-lg font-black text-stone-900 dark:text-white block truncate mt-0.5">
+                    {cleanTypography(activeWordObj.inflected, isOT, typographyMode)}
+                  </span>
+                </div>
+
+                <div
+                  onClick={() => handleWordClickInWeb(activeWordObj.eng, activeWordObj.word_order)}
+                  className="p-2 rounded-lg bg-white/80 dark:bg-black/40 border border-sky-300/60 dark:border-sky-800/60 cursor-pointer min-w-0 overflow-hidden"
+                >
+                  <span className="text-[9.5px] font-mono text-sky-700 dark:text-sky-400 block truncate">
+                    🇺🇸 영어 (터치사전)
+                  </span>
+                  <span className="text-xs sm:text-sm font-serif font-black text-sky-900 dark:text-sky-200 block truncate mt-1 underline decoration-dotted">
+                    {activeWordObj.eng}
+                  </span>
+                </div>
+
+                <div
+                  onClick={() => handleSelectWord(activeWordObj, true)}
+                  className="p-2 rounded-lg bg-white/80 dark:bg-black/40 border border-emerald-300/60 dark:border-emerald-800/60 cursor-pointer min-w-0 overflow-hidden"
+                >
+                  <span className="text-[9.5px] font-mono text-emerald-700 dark:text-emerald-400 block truncate">
+                    🇰🇷 한글 문맥뜻
+                  </span>
+                  <span className="text-xs sm:text-sm font-black text-emerald-900 dark:text-emerald-200 block truncate mt-1">
+                    {activeWordObj.korContextual}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-1.5 pt-0.5">
+                <button
+                  type="button"
+                  onClick={() => speakAudio(activeWordObj.inflected, isOT ? 'he-IL' : 'el-GR')}
+                  className="px-2.5 py-1 rounded-lg bg-stone-200/80 dark:bg-slate-800 text-[10.5px] font-bold flex items-center gap-1 cursor-pointer"
+                >
+                  <IconVolume /> 발음듣기
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleInsertToQT(activeWordObj)}
+                  className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10.5px] font-bold cursor-pointer"
+                >
+                  🌿 QT에 담기
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSelectWord(activeWordObj, true)}
+                  className="px-3 py-1 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-[10.5px] font-black cursor-pointer shadow-2xs"
+                >
+                  🔍 원어사전 열기
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* 4) 역본별 본문 텍스트 렌더링 */}
+          <div className="text-left space-y-2 w-full max-w-full overflow-hidden">
+            {bibleVersion === 'krv' && (
+              <p className={`text-[15px] sm:text-[16px] font-serif font-medium leading-[1.85] break-keep ${theme.textMain}`}>
+                {renderInteractiveKoreanText(koVerseText)}
+              </p>
+            )}
+
+            {bibleVersion === 'literal' && (
+              <div className="p-3 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/40">
+                <span className="text-[10px] font-bold font-mono text-emerald-700 dark:text-emerald-400 block mb-1">
+                  [원어 어순 직역본 - LITERAL INTERLINEAR]
+                </span>
+                <p className={`text-[15px] sm:text-[16px] font-serif font-medium leading-[1.85] break-keep ${theme.textMain}`}>
+                  {renderInteractiveWebText(literalVerseText || koVerseText)}
+                </p>
+              </div>
+            )}
+
+            {bibleVersion === 'easy' && (
+              <p className={`text-[15px] sm:text-[16px] font-sans font-medium leading-[1.85] break-keep ${theme.textMain}`}>
+                {renderInteractiveKoreanText(easyVerseText || koVerseText)}
+              </p>
+            )}
+
+            {/* 3중 어절 대조 매트릭스 뷰 */}
+            {bibleVersion === 'trilingual' && (
+              <div className="p-3 rounded-xl border border-amber-500/30 bg-amber-50/20 dark:bg-slate-900/50 space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-[10.5px] font-mono font-black text-amber-700 dark:text-amber-300">
+                    🧬 원어 · 영어 · 한글 어절 1:1 직결표
+                  </span>
+                  <span className="text-[10px] text-stone-400">터치 시 사전 오픈</span>
+                </div>
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-1.5" dir={isOT ? 'rtl' : 'ltr'}>
+                  {words.map((w) => {
+                    const isAct = activeWordOrder === w.word_order;
+                    return (
+                      <div
+                        key={w.id}
+                        onClick={() => handleSelectWord(w, true)}
+                        onMouseEnter={() => setActiveWordOrder(w.word_order)}
+                        className={`p-2 rounded-xl border text-center cursor-pointer transition-all min-w-0 overflow-hidden ${
+                          isAct
+                            ? 'bg-amber-500/20 border-amber-500 ring-2 ring-amber-400'
+                            : 'bg-white dark:bg-slate-900 border-stone-200 dark:border-slate-800'
+                        }`}
+                      >
+                        <div style={originalFontStyle} className="text-base sm:text-lg font-bold text-stone-900 dark:text-white truncate">
+                          {cleanTypography(w.inflected, isOT, typographyMode)}
+                        </div>
+                        <div className="text-[10px] font-mono text-sky-600 dark:text-sky-400 font-bold mt-0.5 truncate" dir="ltr">
+                          {w.eng}
+                        </div>
+                        <div className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300 mt-0.5 truncate" dir="ltr">
+                          {w.korContextual}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* WEB 영어성경 ‘단어 · 문장(절) · 문단’ 3단계 한영/영한 스튜디오 */}
+            {bibleVersion === 'web' && (
+              <div className="space-y-3 p-2.5 sm:p-3 rounded-xl border border-blue-200 dark:border-blue-900/50 bg-blue-50/30 dark:bg-blue-950/15 overflow-hidden">
+                
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-blue-200/70 dark:border-blue-900/40">
+                  <div className="flex items-center gap-1 overflow-x-auto hide-scrollbar">
+                    {[
+                      { id: 'word', label: '🔤 단어·3중매칭' },
+                      { id: 'clauses', label: '📑 문장·절 직독직해' },
+                      { id: 'paragraph', label: '📜 전후 문단 맥락' }
+                    ].map(sm => (
+                      <button
+                        key={sm.id}
+                        type="button"
+                        onClick={() => setWebStudyMode(sm.id)}
+                        className={`px-2.5 py-1 rounded-lg text-[10.5px] font-black cursor-pointer transition-all whitespace-nowrap shrink-0 ${
+                          webStudyMode === sm.id
+                            ? 'bg-blue-600 text-white shadow-2xs'
+                            : 'bg-white/80 dark:bg-slate-800 text-stone-600 dark:text-slate-300'
+                        }`}
+                      >
+                        {sm.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* 모바일 100% 반응형 한영/영한 양방향 사전 검색창 */}
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      if (bilingualSearchInput.trim()) {
+                        handleWordClickInWeb(bilingualSearchInput.trim());
+                      }
+                    }}
+                    className="flex items-center gap-1 w-full sm:w-60"
+                  >
+                    <input
+                      type="text"
+                      value={bilingualSearchInput}
+                      onChange={(e) => setBilingualSearchInput(e.target.value)}
+                      placeholder="한글(은혜) / 영어(grace) 검색..."
+                      className="flex-1 min-w-0 px-2.5 py-1 rounded-lg text-[11px] bg-white dark:bg-slate-900 border border-blue-300 dark:border-slate-700 outline-none select-text"
+                    />
+                    <button
+                      type="submit"
+                      className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[10.5px] font-bold cursor-pointer shrink-0"
+                    >
+                      사전검색
+                    </button>
+                  </form>
+                </div>
+
+                {webStudyMode === 'word' && (
+                  <div className="space-y-2">
+                    <p className={`text-[14.5px] sm:text-[16px] font-serif leading-[1.85] break-words ${isDark ? 'text-slate-100' : 'text-stone-900'}`}>
+                      {renderInteractiveWebText(webVerseText || enVerseText)}
+                    </p>
+                    <p className={`text-[13.5px] font-serif leading-[1.75] pt-1.5 border-t border-dashed border-blue-200 dark:border-slate-800 break-keep ${theme.textSub}`}>
+                      <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 mr-1.5">[한글대조]</span>
+                      {renderInteractiveKoreanText(koVerseText)}
+                    </p>
+                  </div>
+                )}
+
+                {webStudyMode === 'clauses' && (
+                  <div className="space-y-2">
+                    <span className="text-[10.5px] font-mono font-bold text-blue-700 dark:text-blue-300 block">
+                      📑 구절·문장 단위 영한 1:1 직독직해
+                    </span>
+                    {isClauseTranslating ? (
+                      <div className="py-4 text-center text-xs text-stone-400">문장 구조 분해 및 직독직해 생성 중...</div>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {translatedClauses.map((cl, idx) => (
+                          <div key={idx} className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-blue-200/70 dark:border-slate-800 flex flex-col gap-1">
+                            <div className="flex items-start justify-between gap-2">
+                              <span className="font-serif font-bold text-[13.5px] sm:text-[14px] text-blue-950 dark:text-blue-200 break-words flex-1 min-w-0">
+                                <b className="font-mono text-[10px] text-blue-500 mr-1.5">#{idx + 1}</b>
+                                {renderInteractiveWebText(cl.eng)}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => speakAudio(cl.eng, 'en-US')}
+                                className="text-stone-400 hover:text-blue-500 p-1 cursor-pointer shrink-0"
+                              >
+                                <IconVolume />
+                              </button>
+                            </div>
+                            <p className="text-[12.5px] font-medium text-emerald-800 dark:text-emerald-300 pl-3 border-l-2 border-emerald-500/40 break-keep">
+                              ↳ {cl.kor}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {webStudyMode === 'paragraph' && (
+                  <div className="space-y-2">
+                    <span className="text-[10.5px] font-mono font-bold text-blue-700 dark:text-blue-300 block">
+                      📜 {currentBookMeta.ko} {chapter}장 전후 문단 영·한 대조
+                    </span>
+                    <div className="space-y-2">
+                      {paragraphContextVerses.map(pv => (
+                        <div
+                          key={pv.vNum}
+                          onClick={() => setVerse(pv.vNum)}
+                          className={`p-2.5 sm:p-3 rounded-xl border transition-all cursor-pointer space-y-1 ${
+                            pv.isCurrent
+                              ? 'bg-white dark:bg-slate-900 border-blue-500 ring-1 ring-blue-400 shadow-xs'
+                              : 'bg-white/60 dark:bg-slate-900/40 border-stone-200 dark:border-slate-800 opacity-80 hover:opacity-100'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-mono font-black text-blue-600 dark:text-blue-400">
+                              {currentBookMeta.en} {chapter}:{pv.vNum} {pv.isCurrent ? ' (현재 절)' : ''}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); speakAudio(pv.web, 'en-US'); }}
+                              className="text-stone-400 hover:text-blue-500 p-0.5 cursor-pointer"
+                            >
+                              <IconVolume />
+                            </button>
+                          </div>
+                          <p className="text-[13px] sm:text-[13.5px] font-serif leading-relaxed text-stone-900 dark:text-slate-100 break-words">
+                            {pv.isCurrent ? renderInteractiveWebText(pv.web || enVerseText) : (pv.web || 'Loading...')}
+                          </p>
+                          <p className="text-[12px] sm:text-[12.5px] font-serif leading-relaxed text-stone-600 dark:text-slate-300 pt-1 border-t border-dashed border-stone-200 dark:border-slate-800 break-keep">
+                            {pv.isCurrent ? renderInteractiveKoreanText(pv.krv) : pv.krv}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 동시대조 (한·영·원어 3중 하이라이트) */}
+            {bibleVersion === 'parallel' && (
+              <div className="space-y-1.5 pt-0.5">
+                <div className={`p-2.5 rounded-xl border text-left ${isDark ? 'bg-slate-900/40 border-slate-800' : 'bg-stone-50 border-stone-200'}`}>
+                  <span className="text-[9.5px] font-bold text-amber-600 dark:text-amber-400 block mb-0.5">
+                    [개역개정 — 어절 터치 시 영어·원어 동시 점등]
+                  </span>
+                  <p className={`text-[14px] sm:text-[15px] font-serif font-medium leading-[1.8] break-keep ${theme.textMain}`}>
+                    {renderInteractiveKoreanText(koVerseText)}
+                  </p>
+                </div>
+
+                {easyVerseText && (
+                  <div className={`p-2.5 rounded-xl border text-left ${isDark ? 'bg-amber-950/15 border-amber-900/40' : 'bg-amber-50/50 border-amber-200'}`}>
+                    <span className="text-[9.5px] font-bold text-emerald-700 dark:text-emerald-400 block mb-0.5">[쉬운성경]</span>
+                    <p className={`text-[13.5px] sm:text-[14px] leading-[1.75] break-keep ${theme.textMain}`}>
+                      {renderInteractiveKoreanText(easyVerseText)}
+                    </p>
+                  </div>
+                )}
+
+                <div className={`p-2.5 rounded-xl border text-left ${isDark ? 'bg-blue-950/15 border-blue-900/40' : 'bg-blue-50/50 border-blue-200'}`}>
+                  <div className="flex justify-between items-center mb-0.5">
+                    <span className="text-[9.5px] font-bold text-blue-700 dark:text-blue-400">[World English Bible - WEB]</span>
+                    <span className="text-[9px] text-blue-500 font-bold">영단어 터치 시 영한사전 오픈</span>
+                  </div>
+                  <p className={`text-[13.5px] sm:text-[14px] font-serif leading-[1.75] break-words ${theme.textMain}`}>
+                    {renderInteractiveWebText(webVerseText || enVerseText)}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 5) 원어 원문 뷰어 (자음/모음/악센트/발음 4단 스위처) */}
+          <div className="pt-3 border-t border-stone-200 dark:border-slate-800 text-left w-full max-w-full overflow-hidden">
+            <div className="flex flex-wrap items-center justify-between gap-1.5 mb-2 pb-1.5 border-b border-stone-200/60 dark:border-slate-800">
+              <span className={`text-[10.5px] sm:text-[11px] font-mono font-bold uppercase tracking-wider ${theme.textSub}`}>
+                {isOT ? 'BHS 히브리어 원문 (RTL)' : 'NA28 헬라어 원문 (LTR)'}
+              </span>
+
+              <div className={`flex items-center p-0.5 rounded-lg border text-[10px] sm:text-[10.5px] font-bold overflow-x-auto hide-scrollbar ${
+                isDark ? 'bg-black/40 border-slate-800 text-slate-300' : 'bg-stone-100 border-stone-200 text-stone-700'
+              }`}>
+                <button
+                  type="button"
+                  onClick={() => setTypographyMode('vowels')}
+                  className={`px-2 py-0.5 rounded transition-all cursor-pointer whitespace-nowrap ${
+                    typographyMode === 'vowels'
+                      ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-sky-400 font-bold shadow-2xs'
+                      : 'hover:text-stone-900 dark:hover:text-white'
+                  }`}
+                >
+                  모음부호
+                </button>
+
+                {isOT && (
+                  <button
+                    type="button"
+                    onClick={() => setTypographyMode('consonants')}
+                    className={`px-2 py-0.5 rounded transition-all cursor-pointer whitespace-nowrap ${
+                      typographyMode === 'consonants'
+                        ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-sky-400 font-bold shadow-2xs'
+                        : 'hover:text-stone-900 dark:hover:text-white'
+                    }`}
+                  >
+                    자음만
+                  </button>
+                )}
+
+                {isOT && (
+                  <button
+                    type="button"
+                    onClick={() => setTypographyMode('full')}
+                    className={`px-2 py-0.5 rounded transition-all cursor-pointer whitespace-nowrap ${
+                      typographyMode === 'full'
+                        ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-sky-400 font-bold shadow-2xs'
+                        : 'hover:text-stone-900 dark:hover:text-white'
+                    }`}
+                  >
+                    악센트
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setTypographyMode('phonetic')}
+                  className={`px-2 py-0.5 rounded transition-all cursor-pointer whitespace-nowrap ${
+                    typographyMode === 'phonetic'
+                      ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-sky-400 font-bold shadow-2xs'
+                      : 'hover:text-stone-900 dark:hover:text-white'
+                  }`}
+                >
+                  한글독음
+                </button>
+              </div>
+            </div>
+
+            {isLoading ? (
+              <div className="py-4 text-center text-xs text-stone-400 font-mono">원어 형태소 파싱 중...</div>
+            ) : typographyMode === 'phonetic' ? (
+              <div className="p-3 rounded-xl bg-stone-50 dark:bg-slate-900/60 border border-stone-200 dark:border-slate-800 text-left">
+                <span className="text-[10px] font-bold text-sky-600 dark:text-sky-400 font-mono block mb-1">
+                  [원어 한글 음역 낭독문 - PHONETIC READING]
+                </span>
+                <p className={`text-[14.5px] sm:text-[16px] font-serif leading-relaxed font-medium break-keep ${theme.textMain}`}>
+                  {words.map(w => w.pron ? w.pron.replace(/[[\]]/g, '') : w.eng).join(' ')}
+                </p>
+              </div>
+            ) : (
+              <div
+                className={`w-full flex flex-wrap gap-x-2 gap-y-2 items-baseline ${
+                  isOT ? 'justify-start text-right' : 'justify-start text-left'
+                }`}
+                dir={isOT ? 'rtl' : 'ltr'}
+              >
+                {words.map((w) => {
+                  const isHighlighted = activeWordOrder === w.word_order;
+                  const renderedText = cleanTypography(w.inflected, isOT, typographyMode);
+
+                  return (
+                    <span
+                      key={w.id}
+                      onMouseEnter={() => setActiveWordOrder(w.word_order)}
+                      onClick={() => handleSelectWord(w, true)}
+                      style={originalFontStyle}
+                      className={`text-[21px] sm:text-[25px] font-bold px-2 py-0.5 rounded-lg transition-all cursor-pointer ${
+                        isHighlighted
+                          ? 'bg-amber-400 text-stone-950 ring-2 ring-amber-500 shadow-md'
+                          : `${theme.textMain} hover:bg-stone-200/50 dark:hover:bg-slate-800`
+                      }`}
+                    >
+                      {renderedText}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── C. 단어별 1:1 형태론 분해 그리드 (min-w-0 & overflow-hidden으로 모바일 삐져나감 방지) ── */}
+        {!isLoading && words.length > 0 && (
+          <div className="space-y-1.5 text-left w-full max-w-full overflow-hidden">
+            <div className="flex justify-between items-center px-1">
+              <span className={`text-[12px] font-bold uppercase tracking-tight ${theme.textMain}`}>
+                단어별 1:1 형태론 분해 ({words.length}개 어절)
+              </span>
+              <span className="text-[10px] font-mono text-stone-400">터치하여 원어 사전 열기</span>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 w-full" dir={isOT ? 'rtl' : 'ltr'}>
+              {words.map((word) => {
+                const isSelected = activeWordOrder === word.word_order;
+                const displayInflected = cleanTypography(word.inflected, isOT, typographyMode);
+                const displayLemma = cleanTypography(word.lemma, isOT, typographyMode);
+                const grammarTokens = tokenizeGrammarCode(word.grammarRaw, isOT);
+
+                return (
+                  <div
+                    key={word.id}
+                    onMouseEnter={() => setActiveWordOrder(word.word_order)}
+                    onClick={() => handleSelectWord(word, true)}
+                    className={`min-w-0 overflow-hidden rounded-xl p-2.5 border transition-all cursor-pointer flex flex-col justify-between ${
+                      isSelected
+                        ? 'border-amber-500 ring-2 ring-amber-500/90 bg-amber-50/70 dark:bg-amber-950/30 shadow-md'
+                        : `${theme.panel} hover:border-stone-400 dark:hover:border-slate-600`
+                    }`}
+                  >
+                    <div className={`mb-1 min-w-0 ${isOT ? 'text-right' : 'text-left'}`}>
+                      <div className={`flex items-center ${isOT ? 'justify-between flex-row-reverse' : 'justify-between'} gap-1 min-w-0`}>
+                        <span
+                          style={originalFontStyle}
+                          className={`text-[19px] sm:text-[22px] font-bold ${theme.textMain} block leading-snug truncate`}
+                          dir={isOT ? 'rtl' : 'ltr'}
+                        >
+                          {displayInflected}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); speakAudio(word.inflected, isOT ? 'he-IL' : 'el-GR'); }}
+                          className="p-0.5 text-stone-400 hover:text-stone-800 dark:hover:text-white cursor-pointer shrink-0"
+                          title="원어 발음 듣기"
+                        >
+                          <IconVolume />
+                        </button>
+                      </div>
+
+                      <span className={`text-[10px] font-mono font-medium block mt-0.5 truncate ${theme.textSub}`} dir="ltr">
+                        {word.pron}
+                      </span>
+
+                      {word.isInflectedDifferent && (
+                        <span className="text-[9px] font-mono text-stone-500 dark:text-stone-400 block truncate mt-0.5" dir="ltr">
+                          원형: <b style={originalFontStyle} className="text-stone-800 dark:text-stone-200">{displayLemma}</b>
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="w-full h-px bg-stone-200 dark:bg-slate-800 my-1"></div>
+
+                    <div className="flex-1 flex flex-col mb-1.5 text-left min-w-0" dir="ltr">
+                      <div className="flex items-center justify-between gap-1 min-w-0">
+                        <span className={`text-[12px] sm:text-[12.5px] font-bold ${theme.textMain} truncate block`}>
+                          {word.korContextual}
+                        </span>
+                        <span className="text-[9px] font-mono text-stone-400 shrink-0">
+                          {word.strongs}
+                        </span>
+                      </div>
+
+                      <span className="text-[10px] font-mono text-sky-600 dark:text-sky-400 truncate font-semibold mt-0.5">
+                        🇺🇸 {word.eng}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap gap-1 min-w-0" dir="ltr">
+                      {grammarTokens.map((tok, tIdx) => (
+                        <button
+                          key={tIdx}
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedGrammarWikiKey(tok.key);
+                          }}
+                          className={`text-[9px] px-1.5 py-0.5 rounded border font-semibold cursor-pointer transition-all truncate max-w-full ${
+                            isDark ? 'bg-slate-800 border-slate-700 text-slate-300' : 'bg-stone-100 border-stone-200 text-stone-700'
+                          }`}
+                        >
+                          {tok.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ── D. 10대 학술 연구 코퍼스 (워크플로우 프리셋 + 가용 사료 리본 통합 배치) ── */}
+        <div className={`w-full max-w-full p-3 sm:p-4 rounded-2xl border space-y-2.5 overflow-hidden ${theme.panel}`}>
+          
+          {/* 코퍼스 상단 헤더 & 목적별 프리셋 스위치 */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-stone-200 dark:border-slate-800">
+            <span className={`text-[12px] font-bold uppercase tracking-tight ${theme.textMain} shrink-0`}>
+              🏛️ 10대 학술 연구 코퍼스 (Exegetical Corpus)
+            </span>
+
+            <div className="flex items-center gap-1 overflow-x-auto hide-scrollbar">
+              {[
+                { id: 'all', label: '전체열기' },
+                { id: 'qt', label: '🌱 QT모드' },
+                { id: 'exegesis', label: '📖 강해·설교' },
+                { id: 'academic', label: '🏛️ 사본비평' }
+              ].map(m => (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => handleWorkflowModeChange(m.id)}
+                  className={`py-1 px-2 rounded-lg text-[10.5px] font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+                    workflowMode === m.id
+                      ? 'bg-amber-600 text-white shadow-2xs dark:bg-amber-500 dark:text-stone-900'
+                      : 'bg-stone-100 dark:bg-slate-800 text-stone-500 dark:text-slate-400'
+                  }`}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 가용 사료 원터치 점프 칩 */}
+          <div className="flex items-center gap-1 overflow-x-auto hide-scrollbar py-0.5">
+            <span className="text-[9.5px] font-mono font-bold text-stone-400 shrink-0 mr-1">바로가기:</span>
+            {crossRefs.length > 0 && (
+              <button onClick={() => scrollToPanel('tsk')} className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-100 dark:bg-sky-950/60 text-sky-800 dark:text-sky-300 border border-sky-300 dark:border-sky-800 shrink-0 cursor-pointer">
+                🔗 TSK ({crossRefs.length})
+              </button>
+            )}
+            {currentHebrewSyntax && (
+              <button onClick={() => scrollToPanel('hebrewSyntax')} className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800 shrink-0 cursor-pointer">
+                📜 BHS 구문론
+              </button>
+            )}
+            {currentLxxParallel && (
+              <button onClick={() => scrollToPanel('lxx')} className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-stone-200 dark:bg-stone-800 text-stone-800 dark:text-stone-200 border border-stone-300 dark:border-stone-700 shrink-0 cursor-pointer">
+                🏛️ 70인역
+              </button>
+            )}
+            {currentTargumPeshitta && (
+              <button onClick={() => scrollToPanel('targumPeshitta')} className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 dark:bg-orange-950/60 text-orange-800 dark:text-orange-300 border border-orange-300 dark:border-orange-800 shrink-0 cursor-pointer">
+                🏺 타르굼
+              </button>
+            )}
+            {currentJosephus && (
+              <button onClick={() => scrollToPanel('josephus')} className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-yellow-100 dark:bg-yellow-950/60 text-yellow-800 dark:text-yellow-300 border border-yellow-300 dark:border-yellow-800 shrink-0 cursor-pointer">
+                ⚔️ 요세푸스
+              </button>
+            )}
+            {currentGeoData && (
+              <button onClick={() => scrollToPanel('geo')} className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-100 dark:bg-teal-950/60 text-teal-800 dark:text-teal-300 border border-teal-300 dark:border-teal-800 shrink-0 cursor-pointer">
+                📍 {currentGeoData.placeKo}
+              </button>
+            )}
+            {currentCommentary && (
+              <button onClick={() => scrollToPanel('commentary')} className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 dark:bg-indigo-950/60 text-indigo-800 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-800 shrink-0 cursor-pointer">
+                📖 반즈주석
+              </button>
+            )}
+            {currentMatthewHenry && (
+              <button onClick={() => scrollToPanel('matthewHenry')} className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 shrink-0 cursor-pointer">
+                🌿 매튜헨리
+              </button>
+            )}
+            {currentNetNote && (
+              <button onClick={() => scrollToPanel('netNotes')} className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-800 shrink-0 cursor-pointer">
+                🔍 사본비평
+              </button>
+            )}
+            {currentEaston && (
+              <button onClick={() => scrollToPanel('easton')} className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 border border-purple-300 dark:border-purple-800 shrink-0 cursor-pointer">
+                📚 {currentEaston.word}
+              </button>
+            )}
+          </div>
+
+          <div className="space-y-2 text-left">
+            
+            {/* 1. TSK 상호교차참조 */}
+            <div id="panel-tsk" className={`rounded-xl border ${theme.tsk} overflow-hidden`}>
+              <button
+                type="button"
+                onClick={() => togglePanel('tsk')}
+                className="w-full p-2.5 flex items-center justify-between font-serif font-bold text-[12px] sm:text-[12.5px] cursor-pointer gap-2"
+              >
+                <span className="truncate">🔗 1. 정경 상호교차참조 (TSK)</span>
+                <span className="text-[10.5px] font-mono font-semibold shrink-0">
+                  {crossRefs.length}개 {openPanels.tsk ? '▲' : '▼'}
+                </span>
+              </button>
+              {openPanels.tsk && (
+                <div className="p-2.5 pt-0 border-t border-sky-200/50 dark:border-sky-800/40">
+                  {isTskLoading ? (
+                    <div className="text-[11px] text-stone-400 py-1">교차참조 탐색 중...</div>
+                  ) : crossRefs.length === 0 ? (
+                    <div className="text-[11px] text-stone-400 py-1">직결된 교차참조 구절이 없습니다.</div>
+                  ) : (
+                    <div className="flex flex-wrap gap-1 pt-1.5">
+                      {crossRefs.map((ref, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => {
+                            const bIdx = BIBLE_66_BOOKS.findIndex(b => b.ko === ref.targetBook);
+                            if (bIdx !== -1) {
+                              setSelectedBookIndex(bIdx);
+                              setChapter(ref.targetChapter);
+                              setVerse(ref.targetVerse);
+                              window.scrollTo({ top: 0, behavior: 'smooth' });
+                            }
+                          }}
+                          className={`px-2 py-0.8 rounded-md text-[10.5px] font-medium border cursor-pointer ${
+                            isDark ? 'bg-sky-950/40 border-sky-800 text-sky-200' : 'bg-white border-sky-200 text-sky-900 shadow-2xs'
+                          }`}
+                        >
+                          📖 {ref.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* 2. BHS 히브리어 구문론 */}
+            {currentHebrewSyntax && (
+              <div id="panel-hebrewSyntax" className={`rounded-xl border ${theme.bhs} overflow-hidden`}>
+                <button
+                  type="button"
+                  onClick={() => togglePanel('hebrewSyntax')}
+                  className="w-full p-2.5 flex items-center justify-between font-serif font-bold text-[12px] sm:text-[12.5px] cursor-pointer gap-2"
+                >
+                  <span className="truncate">📜 2. BHS 히브리어 구문론 끊어읽기</span>
+                  <span className="text-[10px] font-mono font-semibold shrink-0">Atnach {openPanels.hebrewSyntax ? '▲' : '▼'}</span>
+                </button>
+                {openPanels.hebrewSyntax && (
+                  <div className="p-2.5 pt-0 border-t border-amber-200/60 dark:border-amber-800/40 space-y-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-xs pt-1.5">
+                      {currentHebrewSyntax.clauseHierarchy.map((c, idx) => (
+                        <div key={idx} className={`p-2 rounded-lg border text-right ${isDark ? 'bg-[#121824] border-slate-700' : 'bg-white border-amber-200/90 shadow-2xs'}`} dir="rtl">
+                          <div className="flex justify-between items-center mb-0.5 gap-1">
+                            <span style={originalFontStyle} className="font-bold text-[15px] sm:text-[16px] text-stone-900 dark:text-stone-100">{c.unit}</span>
+                            <span className="text-[9.5px] font-mono px-1.5 py-0.2 rounded bg-amber-100 dark:bg-slate-800 text-amber-900 dark:text-amber-300 font-semibold shrink-0" dir="ltr">{c.pauseType}</span>
+                          </div>
+                          <p className="text-[11px] font-medium text-left text-stone-600 dark:text-slate-400" dir="ltr">{c.role}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-[11.5px] leading-relaxed font-serif text-stone-800 dark:text-slate-300 pt-0.5 break-keep">
+                      💡 {decodeHtmlEntities(currentHebrewSyntax.cantillationExegesis)}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 3. 70인역(LXX) 대조 */}
+            {currentLxxParallel && (
+              <div id="panel-lxx" className={`rounded-xl border ${theme.lxx} overflow-hidden`}>
+                <button
+                  type="button"
+                  onClick={() => togglePanel('lxx')}
+                  className="w-full p-2.5 flex items-center justify-between font-serif font-bold text-[12px] sm:text-[12.5px] cursor-pointer gap-2"
+                >
+                  <span className="truncate">🏛️ 3. 70인역(LXX) 인용 대조 ({currentLxxParallel.otRef})</span>
+                  <span className="text-[10px] font-mono font-semibold shrink-0">{openPanels.lxx ? '▲' : '▼'}</span>
+                </button>
+                {openPanels.lxx && (
+                  <div className="p-2.5 pt-0 border-t border-stone-200 dark:border-slate-800 space-y-1.5 pt-1.5">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-1.5 text-xs">
+                      <div className={`p-2 rounded-lg border ${isDark ? 'bg-[#121824] border-slate-700' : 'bg-white border-stone-200'}`}>
+                        <span className="text-[9px] font-bold block text-stone-400 mb-0.5">[신약 GNT]</span>
+                        <p style={{ fontFamily: "'SBL Greek', serif" }} className="text-[14px] font-bold text-stone-900 dark:text-stone-100 break-words">{currentLxxParallel.ntText || "인용"}</p>
+                      </div>
+                      <div className={`p-2 rounded-lg border ${isDark ? 'bg-[#121824] border-slate-700' : 'bg-white border-stone-200'}`}>
+                        <span className="text-[9px] font-bold block text-stone-400 mb-0.5">[구약 LXX]</span>
+                        <p style={{ fontFamily: "'SBL Greek', serif" }} className="text-[14px] font-bold text-stone-900 dark:text-stone-100 break-words">{currentLxxParallel.lxxText}</p>
+                      </div>
+                      <div className={`p-2 rounded-lg border text-right ${isDark ? 'bg-[#121824] border-slate-700' : 'bg-white border-stone-200'}`} dir="rtl">
+                        <span className="text-[9px] font-bold block text-left text-stone-400 mb-0.5" dir="ltr">[구약 MT]</span>
+                        <p style={{ fontFamily: "'SBL Hebrew', serif" }} className="text-[15.5px] font-bold text-stone-900 dark:text-stone-100 break-words">{currentLxxParallel.mtText || "인용"}</p>
+                      </div>
+                    </div>
+                    <p className="text-[11.5px] font-serif leading-relaxed text-stone-800 dark:text-slate-300 break-keep">
+                      {decodeHtmlEntities(currentLxxParallel.differenceAnalysis)}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 4. 고대 아람어 타르굼 & 시리아 페시타 */}
+            {currentTargumPeshitta && (
+              <div id="panel-targumPeshitta" className={`rounded-xl border ${theme.aramaic} overflow-hidden`}>
+                <button
+                  type="button"
+                  onClick={() => togglePanel('targumPeshitta')}
+                  className="w-full p-2.5 flex items-center justify-between font-serif font-bold text-[12px] sm:text-[12.5px] cursor-pointer gap-2"
+                >
+                  <span className="truncate">🏺 4. 고대 아람어 타르굼 & 시리아 페시타</span>
+                  <span className="text-[10px] font-mono font-semibold shrink-0">{openPanels.targumPeshitta ? '▲' : '▼'}</span>
+                </button>
+                {openPanels.targumPeshitta && (
+                  <div className="p-2.5 pt-0 border-t border-orange-200/60 dark:border-orange-800/40 space-y-1.5 pt-1.5">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5 text-xs">
+                      {currentTargumPeshitta.targumAramaic && (
+                        <div className={`p-2.5 rounded-lg border text-right ${isDark ? 'bg-[#121824] border-slate-700' : 'bg-white border-orange-200/80'}`} dir="rtl">
+                          <span className="text-[9px] font-bold text-orange-800 dark:text-orange-300 block mb-0.5" dir="ltr">아람어 타르굼 역본</span>
+                          <p style={{ fontFamily: "'SBL Hebrew', serif" }} className="text-[15.5px] font-bold text-stone-900 dark:text-stone-100 leading-relaxed break-words">
+                            {currentTargumPeshitta.targumAramaic}
+                          </p>
+                          {currentTargumPeshitta.targumKo && (
+                            <p className="text-[11px] text-stone-700 dark:text-slate-300 text-left mt-1 pt-1 border-t border-stone-100 dark:border-slate-800 break-keep" dir="ltr">
+                              {decodeHtmlEntities(currentTargumPeshitta.targumKo)}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                      {currentTargumPeshitta.peshittaSyriac && (
+                        <div className={`p-2.5 rounded-lg border text-right ${isDark ? 'bg-[#121824] border-slate-700' : 'bg-white border-orange-200/80'}`} dir="rtl">
+                          <span className="text-[9px] font-bold text-orange-800 dark:text-orange-300 block mb-0.5" dir="ltr">시리아 페시타 역본</span>
+                          <p style={{ fontFamily: "'Estrangelo Edessa', serif" }} className="text-[17px] font-bold text-stone-900 dark:text-stone-100 leading-loose break-words">
+                            {currentTargumPeshitta.peshittaSyriac}
+                          </p>
+                          {currentTargumPeshitta.peshittaKo && (
+                            <p className="text-[11px] text-stone-700 dark:text-slate-300 text-left mt-1 pt-1 border-t border-stone-100 dark:border-slate-800 break-keep" dir="ltr">
+                              {decodeHtmlEntities(currentTargumPeshitta.peshittaKo)}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 5. 요세푸스 사료 패널 */}
+            {currentJosephus && (
+              <div id="panel-josephus" className={`rounded-xl border ${theme.josephus} overflow-hidden`}>
+                <button
+                  type="button"
+                  onClick={() => togglePanel('josephus')}
+                  className="w-full p-2.5 flex items-center justify-between font-serif font-bold text-[12px] sm:text-[12.5px] cursor-pointer gap-2"
+                >
+                  <span className="truncate">⚔️ 5. 요세푸스 1세기 유대 역사 사료</span>
+                  <span className="text-[10px] font-mono font-semibold shrink-0">{openPanels.josephus ? '▲' : '▼'}</span>
+                </button>
+                {openPanels.josephus && (
+                  <div className="p-2.5 pt-0 border-t border-yellow-200/60 dark:border-yellow-800/40 space-y-1 pt-1.5">
+                    <span className="text-[12px] font-bold block text-yellow-950 dark:text-yellow-200">
+                      ⚔️ {decodeHtmlEntities(currentJosephus.historicalEvent)}
+                    </span>
+                    <p className="text-[12px] leading-relaxed font-serif text-stone-800 dark:text-slate-200 break-keep">
+                      {decodeHtmlEntities(currentJosephus.summary)}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 6. 성경 역사 지리학 */}
+            {currentGeoData && (
+              <div id="panel-geo" className={`rounded-xl border ${theme.geo} overflow-hidden`}>
+                <div className="p-2.5 flex items-center justify-between font-serif font-bold text-[12px] sm:text-[12.5px] gap-2">
+                  <span onClick={() => togglePanel('geo')} className="cursor-pointer flex-1 truncate">
+                    🗺️ 6. 성경 역사 지리학 ({currentGeoData.placeKo})
+                  </span>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${currentGeoData.lat},${currentGeoData.lng}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[10px] px-2 py-0.5 rounded font-bold border border-teal-300 dark:border-teal-700 bg-white dark:bg-slate-800 text-teal-800 dark:text-teal-300 hover:underline"
+                    >
+                      📍 위성 지도 ↗
+                    </a>
+                    <span onClick={() => togglePanel('geo')} className="cursor-pointer opacity-60">{openPanels.geo ? '▲' : '▼'}</span>
+                  </div>
+                </div>
+                {openPanels.geo && (
+                  <div className="p-2.5 pt-0 border-t border-teal-200/60 dark:border-teal-800/40 space-y-1 pt-1.5">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-bold text-[12.5px] text-teal-950 dark:text-teal-200">{currentGeoData.placeKo} ({currentGeoData.placeEn})</span>
+                      <span className="text-[10.5px] text-stone-500">| {currentGeoData.region}</span>
+                    </div>
+                    <p className="text-[11.5px] leading-relaxed font-serif text-stone-800 dark:text-slate-200 break-keep">
+                      {decodeHtmlEntities(currentGeoData.historicalSignificance)}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 7. 반즈 & JFB 학술 주석 */}
+            {currentCommentary && (
+              <div id="panel-commentary" className={`rounded-xl border ${theme.comm} overflow-hidden`}>
+                <div className="p-2.5 flex items-center justify-between font-serif font-bold text-[12px] sm:text-[12.5px] gap-2">
+                  <span onClick={() => togglePanel('commentary')} className="cursor-pointer flex-1 truncate">
+                    📖 7. 학술 강해 주석 ({currentCommentary.commentator})
+                  </span>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleToggleTranslation(`comm_${chapter}_${verse}`, currentCommentary.exegesis)}
+                      className={`px-2 py-0.5 rounded text-[10px] font-bold border transition-all cursor-pointer ${
+                        translatedMap[`comm_${chapter}_${verse}`]
+                          ? 'bg-indigo-600 text-white border-indigo-600'
+                          : 'bg-white dark:bg-slate-800 text-indigo-900 dark:text-indigo-200 border-indigo-200 dark:border-indigo-800'
+                      }`}
+                    >
+                      {translatingKeys[`comm_${chapter}_${verse}`] ? '번역 중...' : translatedMap[`comm_${chapter}_${verse}`] ? '원문' : '🌐 한국어 번역'}
+                    </button>
+                    <span onClick={() => togglePanel('commentary')} className="cursor-pointer opacity-60">{openPanels.commentary ? '▲' : '▼'}</span>
+                  </div>
+                </div>
+                {openPanels.commentary && (
+                  <div className="p-3 pt-0 border-t border-indigo-200/60 dark:border-indigo-800/40 space-y-2 pt-2">
+                    <div className="space-y-1 text-left">
+                      {renderParagraphBlocks(
+                        translatedMap[`comm_${chapter}_${verse}`] || currentCommentary.exegesis,
+                        theme.textMain
+                      )}
+                    </div>
+                    {currentCommentary.theologicalNote && (
+                      <div className="pt-2 border-t border-dashed border-indigo-200 dark:border-indigo-800/40 text-left">
+                        <span className="text-[10px] font-bold uppercase tracking-wider block text-indigo-800 dark:text-indigo-300 mb-0.5">
+                          [교리 및 구속사적 의미]
+                        </span>
+                        {renderParagraphBlocks(currentCommentary.theologicalNote, "text-stone-700 dark:text-slate-300 text-[12px]")}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 8. 매튜 헨리 묵상 강해 */}
+            {currentMatthewHenry && (
+              <div id="panel-matthewHenry" className={`rounded-xl border ${theme.mh} overflow-hidden`}>
+                <div className="p-2.5 flex items-center justify-between font-serif font-bold text-[12px] sm:text-[12.5px] gap-2">
+                  <span onClick={() => togglePanel('matthewHenry')} className="cursor-pointer flex-1 truncate">
+                    🌿 8. 매튜 헨리 구속사적 묵상 강해
+                  </span>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleToggleTranslation(`mh_${chapter}_${verse}`, currentMatthewHenry.devotionalExegesis)}
+                      className={`px-2 py-0.5 rounded text-[10px] font-bold border transition-all cursor-pointer ${
+                        translatedMap[`mh_${chapter}_${verse}`]
+                          ? 'bg-emerald-600 text-white border-emerald-600'
+                          : 'bg-white dark:bg-slate-800 text-emerald-900 dark:text-emerald-200 border-emerald-200 dark:border-emerald-800'
+                      }`}
+                    >
+                      {translatingKeys[`mh_${chapter}_${verse}`] ? '번역 중...' : translatedMap[`mh_${chapter}_${verse}`] ? '원문' : '🌐 한국어 번역'}
+                    </button>
+                    <span onClick={() => togglePanel('matthewHenry')} className="cursor-pointer opacity-60">{openPanels.matthewHenry ? '▲' : '▼'}</span>
+                  </div>
+                </div>
+                {openPanels.matthewHenry && (
+                  <div className="p-3 pt-0 border-t border-emerald-200/60 dark:border-emerald-800/40 space-y-2 pt-2">
+                    <div className="space-y-1 text-left">
+                      {renderParagraphBlocks(
+                        translatedMap[`mh_${chapter}_${verse}`] || currentMatthewHenry.devotionalExegesis,
+                        theme.textMain
+                      )}
+                    </div>
+                    {currentMatthewHenry.practicalApplication && (
+                      <div className="pt-2 border-t border-dashed border-emerald-200 dark:border-emerald-800/40 text-left">
+                        <span className="text-[10px] font-bold uppercase tracking-wider block text-emerald-800 dark:text-emerald-300 mb-0.5">
+                          [삶의 실천과 순종 권면]
+                        </span>
+                        {renderParagraphBlocks(currentMatthewHenry.practicalApplication, "text-stone-700 dark:text-slate-300 text-[12px]")}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 9. NET Bible 본문 비평 각주 */}
+            {currentNetNote && (
+              <div id="panel-netNotes" className={`rounded-xl border ${theme.net} overflow-hidden`}>
+                <div className="p-2.5 flex items-center justify-between font-serif font-bold text-[12px] sm:text-[12.5px] gap-2">
+                  <span onClick={() => togglePanel('netNotes')} className="cursor-pointer flex-1 truncate">
+                    🔍 9. NET Bible 사본/원문 비평 각주
+                  </span>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleToggleTranslation(`net_${chapter}_${verse}`, currentNetNote.note)}
+                      className={`px-2 py-0.5 rounded text-[10px] font-bold border transition-all cursor-pointer ${
+                        translatedMap[`net_${chapter}_${verse}`]
+                          ? 'bg-rose-600 text-white border-rose-600'
+                          : 'bg-white dark:bg-slate-800 text-rose-900 dark:text-rose-200 border-rose-200 dark:border-rose-800'
+                      }`}
+                    >
+                      {translatingKeys[`net_${chapter}_${verse}`] ? '번역 중...' : translatedMap[`net_${chapter}_${verse}`] ? '원문' : '🌐 한국어 번역'}
+                    </button>
+                    <span onClick={() => togglePanel('netNotes')} className="cursor-pointer opacity-60">{openPanels.netNotes ? '▲' : '▼'}</span>
+                  </div>
+                </div>
+                {openPanels.netNotes && (
+                  <div className="p-3 pt-0 border-t border-rose-200/60 dark:border-rose-800/40 space-y-1 pt-2">
+                    <span className="font-bold text-[12px] block text-stone-900 dark:text-slate-100">📌 {decodeHtmlEntities(currentNetNote.title)}</span>
+                    <div className="text-left">
+                      {renderParagraphBlocks(
+                        translatedMap[`net_${chapter}_${verse}`] || currentNetNote.note,
+                        theme.textMain
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 10. 이스톤 성경 백과사전 패널 */}
+            {currentEaston && (
+              <div id="panel-easton" className={`rounded-xl border ${theme.easton} overflow-hidden`}>
+                <div className="p-2.5 flex items-center justify-between font-serif font-bold text-[12px] sm:text-[12.5px] gap-2">
+                  <span onClick={() => togglePanel('easton')} className="cursor-pointer flex-1 truncate">
+                    📚 10. 이스톤 성경 백과사전 [{currentEaston.word}]
+                  </span>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleToggleTranslation(`easton_${chapter}_${verse}`, currentEaston.definition)}
+                      className={`px-2 py-0.5 rounded text-[10px] font-bold border transition-all cursor-pointer ${
+                        translatedMap[`easton_${chapter}_${verse}`]
+                          ? 'bg-purple-600 text-white border-purple-600'
+                          : 'bg-white dark:bg-slate-800 text-purple-900 dark:text-purple-200 border-purple-200 dark:border-purple-800'
+                      }`}
+                    >
+                      {translatingKeys[`easton_${chapter}_${verse}`] ? '번역 중...' : translatedMap[`easton_${chapter}_${verse}`] ? '원문' : '🌐 한국어 번역'}
+                    </button>
+                    <span onClick={() => togglePanel('easton')} className="cursor-pointer opacity-60">
+                      {openPanels.easton ? '▲' : '▼'}
+                    </span>
+                  </div>
+                </div>
+                {openPanels.easton && (
+                  <div className="p-3 pt-0 border-t border-purple-200/60 dark:border-purple-800/40 space-y-1 pt-2">
+                    <div className="text-left">
+                      {renderParagraphBlocks(
+                        translatedMap[`easton_${chapter}_${verse}`] || currentEaston.definition,
+                        theme.textMain
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+          </div>
+        </div>
+
+      </main>
+
+      {/* ── 7. WEB 영단어/한영 양방향 사전 모달 ── */}
+      {selectedWebLexiconWord && (
+        <div className="interlinear-modal-portal fixed inset-0 z-[999999] bg-black/75 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-3 animate-fade-in select-none">
+          <div className={`w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl border p-4 shadow-2xl flex flex-col max-h-[82vh] overflow-hidden ${
+            isDark ? 'bg-[#0F141F] border-slate-700 text-white' : 'bg-white border-stone-300 text-stone-900'
+          }`}>
+            <div className="flex justify-between items-center border-b pb-2.5 border-stone-200 dark:border-slate-800">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="text-[11px] font-mono font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider truncate">
+                  📖 WEB English-Korean Lexicon
+                </span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 font-semibold shrink-0">
+                  {selectedWebLexiconWord.pos}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => speakAudio(selectedWebLexiconWord.word, 'en-US')}
+                  className="px-2 py-0.5 rounded text-[11px] font-bold border border-stone-300 dark:border-slate-700 cursor-pointer flex items-center gap-1"
+                >
+                  <IconVolume /> 발음
+                </button>
+                <button
+                  onClick={() => setSelectedWebLexiconWord(null)}
+                  className="text-xs font-bold text-stone-400 hover:text-stone-900 dark:hover:text-white p-1 cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            <div className="p-3 my-2.5 rounded-xl bg-blue-50/60 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/40 text-left space-y-1">
+              <div className="flex items-baseline justify-between gap-2 flex-wrap">
+                <h3 className="text-xl sm:text-2xl font-bold font-serif text-blue-950 dark:text-blue-100">
+                  {selectedWebLexiconWord.word}
+                </h3>
+                <span className="text-sm font-bold text-blue-800 dark:text-blue-300">
+                  {selectedWebLexiconWord.kor}
+                </span>
+              </div>
+              {selectedWebLexiconWord.orig && (
+                <div className="text-xs font-mono text-amber-700 dark:text-amber-300 pt-1 border-t border-blue-200/50 dark:border-blue-800/40">
+                  🏛️ 대응 원어: <b>{selectedWebLexiconWord.orig}</b> ({selectedWebLexiconWord.strongs})
+                </div>
+              )}
+            </div>
+
+            <div className="overflow-y-auto space-y-2 text-xs text-left hide-scrollbar flex-1">
+              {isWebLexiconLoading ? (
+                <div className="py-6 text-center text-stone-400 font-medium">영한·한영 사전 뜻풀이 인출 중...</div>
+              ) : (
+                <>
+                  {selectedWebLexiconWord.theology && (
+                    <div className="p-2.5 rounded-xl border bg-amber-50/70 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800/40">
+                      <span className="font-bold text-amber-900 dark:text-amber-300 block mb-0.5 text-[10.5px]">
+                        ✨ 성경적 의미 및 구속사적 용례
+                      </span>
+                      <p className="text-[12px] leading-relaxed text-stone-800 dark:text-slate-200 break-keep">
+                        {selectedWebLexiconWord.theology}
+                      </p>
+                    </div>
+                  )}
+
+                  {selectedWebLexiconWord.details && (
+                    <div className="p-2.5 rounded-xl border bg-stone-50 dark:bg-slate-900 border-stone-200 dark:border-slate-800">
+                      <span className="font-bold text-stone-500 dark:text-slate-400 block mb-0.5 text-[10.5px]">
+                        📚 품사별 사전 정의
+                      </span>
+                      <pre className="whitespace-pre-wrap font-sans text-[11.5px] leading-relaxed text-stone-700 dark:text-slate-300">
+                        {selectedWebLexiconWord.details}
+                      </pre>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            <div className="pt-2.5 border-t border-stone-200 dark:border-slate-800 mt-2">
+              <button
+                type="button"
+                onClick={() => setSelectedWebLexiconWord(null)}
+                className="w-full py-2 rounded-xl bg-stone-900 hover:bg-black dark:bg-slate-200 dark:text-stone-900 text-white font-bold text-xs cursor-pointer"
+              >
+                닫기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 8. 원어 단어 심층 렉시콘 모달 (모바일 탭바 가로 스크롤 대응) ── */}
+      {selectedWordDetail && (
+        <div className="interlinear-modal-portal fixed inset-0 z-[999999] bg-black/75 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-3 animate-fade-in select-none">
+          <div className={`w-full sm:max-w-xl rounded-t-3xl sm:rounded-2xl border p-3.5 sm:p-5 shadow-2xl flex flex-col max-h-[88vh] overflow-hidden ${
+            isDark ? 'bg-[#0F141F] border-slate-700 text-white' : 'bg-white border-stone-300 text-stone-900'
+          }`}>
+            
+            <div className="border-b pb-2.5 border-stone-200 dark:border-slate-800 flex justify-between items-center shrink-0 gap-2">
+              <span className="text-[11px] font-mono text-stone-500 dark:text-slate-400 font-bold uppercase tracking-wider truncate">
+                {selectedWordDetail.strongs} · {selectedWordDetail.lexicon?.sourceName}
+              </span>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => speakAudio(selectedWordDetail.inflected, isOT ? 'he-IL' : 'el-GR')}
+                  className="px-2 py-0.5 rounded text-[11px] font-bold border border-stone-300 dark:border-slate-700 cursor-pointer"
+                >
+                  <IconVolume />
+                </button>
+                <button onClick={() => setSelectedWordDetail(null)} className="text-xs font-bold text-stone-400 hover:text-stone-900 dark:hover:text-white p-1 cursor-pointer">
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            <div className={`p-2.5 rounded-xl border my-2 flex justify-between items-baseline gap-2 ${
+              isDark ? 'bg-slate-900 border-slate-800 text-white' : 'bg-stone-50 border-stone-200'
+            }`}>
+              <div className="min-w-0">
+                <span style={originalFontStyle} className="text-2xl font-bold block truncate">{selectedWordDetail.inflected}</span>
+                <span className="text-xs font-mono text-stone-500 dark:text-slate-400 block truncate">{selectedWordDetail.pron}</span>
+              </div>
+              <div className="text-right min-w-0">
+                <span className="text-[14px] font-bold block truncate">{selectedWordDetail.korContextual}</span>
+                <span className="text-xs text-sky-600 dark:text-sky-400 font-mono block truncate">🇺🇸 {selectedWordDetail.eng} | 원형: {selectedWordDetail.korLemma}</span>
+              </div>
+            </div>
+
+            <div className="flex gap-1 border-b border-stone-200 dark:border-slate-800 pb-2 mb-2 shrink-0 text-[11px] font-bold overflow-x-auto hide-scrollbar">
+              {[
+                { id: 'concordance', label: `📊 전권 용례 (${concordanceTotalCount})` },
+                { id: 'full_lexicon', label: '🏛️ BDB/Thayer' },
+                { id: 'korean', label: '🇰🇷 문법/구속사' },
+                { id: 'custom_study', label: '✍️ 나의 번역' }
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setModalTab(tab.id)}
+                  className={`px-2.5 py-1 rounded-md transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+                    modalTab === tab.id
+                      ? 'bg-amber-600 text-white font-bold shadow-2xs dark:bg-amber-500 dark:text-stone-900'
+                      : 'text-stone-500 hover:text-stone-900 dark:hover:text-white'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="overflow-y-auto hide-scrollbar space-y-2 flex-1 text-xs text-left">
+              {modalTab === 'concordance' && (
+                <div className="space-y-2">
+                  {Object.keys(concordanceDistribution).length > 0 && (
+                    <div className={`p-2.5 rounded-xl border ${isDark ? 'bg-slate-900/60 border-slate-800' : 'bg-stone-50 border-stone-200'}`}>
+                      <div className="flex justify-between items-center text-[10.5px] font-bold mb-1.5">
+                        <span className="text-amber-800 dark:text-amber-300">📊 성경 66권 권역별 출현 빈도</span>
+                        <span className="text-stone-400 font-mono">전체 {concordanceTotalCount}회</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {Object.entries(concordanceDistribution).map(([secName, count]) => (
+                          <span
+                            key={secName}
+                            className={`px-2 py-0.5 rounded-md text-[10.5px] font-semibold border flex items-center gap-1 ${
+                              isDark ? 'bg-slate-800 border-slate-700 text-slate-200' : 'bg-white border-stone-300 text-stone-800 shadow-2xs'
+                            }`}
+                          >
+                            <span>{secName}</span>
+                            <b className="text-amber-600 dark:text-amber-400 font-mono">{count}회</b>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {isConcordanceLoading ? (
+                    <div className="py-6 text-center text-stone-400">성경 66권에서 용례 인출 중...</div>
+                  ) : (
+                    concordanceList.map((item, idx) => (
+                      <div
+                        key={idx}
+                        onClick={() => handleJumpToConcordanceVerse(item.book, item.chapter, item.verse)}
+                        className={`p-2 rounded-lg border flex items-center justify-between cursor-pointer transition-all gap-2 ${
+                          isDark ? 'border-slate-800 hover:bg-slate-800' : 'border-stone-200 bg-white hover:bg-stone-50'
+                        }`}
+                      >
+                        <span className="font-bold text-stone-800 dark:text-slate-200 shrink-0">{item.book} {item.chapter}:{item.verse}</span>
+                        <span style={originalFontStyle} className="font-bold text-[15px] truncate">{cleanTypography(item.original_word, isOT, typographyMode)}</span>
+                        <span className="text-stone-500 truncate max-w-[110px] shrink-0">{item.korean_trans}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+
+              {modalTab === 'full_lexicon' && (
+                <div className="space-y-1.5">
+                  <div className={`p-2.5 rounded-lg border ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-stone-50 border-stone-200'}`}>
+                    <span className="text-[10px] font-bold text-stone-400 block uppercase">[어원 및 파생]</span>
+                    <p className="mt-0.5 font-mono break-words">{decodeHtmlEntities(selectedWordDetail.lexicon?.etymology)}</p>
+                  </div>
+                  <div className={`p-2.5 rounded-lg border ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-stone-50 border-stone-200'}`}>
+                    <span className="text-[10px] font-bold text-stone-400 block uppercase">[원어 본래 정의]</span>
+                    <p className="mt-0.5 font-mono break-words">{decodeHtmlEntities(selectedWordDetail.lexicon?.meaning)}</p>
+                  </div>
+                  <div className={`p-2.5 rounded-lg border ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-stone-50 border-stone-200'}`}>
+                    <span className="text-[10px] font-bold text-stone-400 block uppercase">[원전 전문]</span>
+                    <pre className="whitespace-pre-wrap font-mono text-[11px] leading-relaxed mt-0.5 break-words">{decodeHtmlEntities(selectedWordDetail.lexicon?.rawFull)}</pre>
+                  </div>
+                </div>
+              )}
+
+              {modalTab === 'korean' && (
+                <div className="space-y-1.5">
+                  <div className={`p-2.5 rounded-lg border ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-stone-50 border-stone-200'}`}>
+                    <span className="text-[10px] font-bold text-stone-400 block">형태론 분석</span>
+                    <span className="text-sm font-bold block mt-0.5">{selectedWordDetail.grammarDecoded}</span>
+                  </div>
+                  {selectedWordDetail.theologyInsight && (
+                    <div className={`p-2.5 rounded-lg border space-y-1 bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800/40 text-amber-950 dark:text-amber-200`}>
+                      <span className="font-bold block">📜 {selectedWordDetail.theologyInsight.stemTitle}</span>
+                      <p className="leading-relaxed break-keep">{selectedWordDetail.theologyInsight.stemDesc}</p>
+                      {selectedWordDetail.theologyInsight.aspectDesc && (
+                        <p className="text-[11px] pt-1 border-t border-dashed border-amber-300 dark:border-amber-700/50 font-semibold break-keep">
+                          ↳ {selectedWordDetail.theologyInsight.aspectDesc}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  {selectedWordDetail.note && (
+                    <div className={`p-2.5 rounded-lg border bg-stone-50 dark:bg-slate-900 border-stone-200 dark:border-slate-800`}>
+                      <span className="font-bold block text-[11px] text-stone-900 dark:text-slate-100">📖 구속사적 의미</span>
+                      <p className="text-[11.5px] leading-relaxed text-stone-700 dark:text-slate-300 break-keep">{decodeHtmlEntities(selectedWordDetail.note)}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {modalTab === 'custom_study' && (
+                <div className="space-y-2">
+                  <input
+                    type="text"
+                    value={customInputTrans}
+                    onChange={(e) => setCustomInputTrans(e.target.value)}
+                    placeholder="나만의 한국어 번역어..."
+                    className={`w-full p-2 rounded-lg border text-xs font-bold outline-none select-text ${
+                      isDark ? 'border-slate-700 bg-slate-900' : 'border-stone-300 bg-white'
+                    }`}
+                  />
+                  <textarea
+                    rows={3}
+                    value={customInputMemo}
+                    onChange={(e) => setCustomInputMemo(e.target.value)}
+                    placeholder="심층 신학 연구 메모..."
+                    className={`w-full p-2 rounded-lg border text-xs outline-none resize-none select-text ${
+                      isDark ? 'border-slate-700 bg-slate-900' : 'border-stone-300 bg-white'
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSaveCustomLexiconNote}
+                    className="w-full py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs cursor-pointer shadow-xs"
+                  >
+                    💾 영구 저장
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="pt-2.5 border-t border-stone-200 dark:border-slate-800 mt-2 flex gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => handleInsertToQT(selectedWordDetail)}
+                className="flex-1 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] shadow-2xs active:scale-95 transition-all flex items-center justify-center gap-1 cursor-pointer"
+              >
+                <span>🌿</span> QT 묵상에 삽입
+              </button>
+              <button
+                type="button"
+                onClick={() => handleInsertToSermon(selectedWordDetail)}
+                className="flex-1 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[11px] shadow-2xs active:scale-95 transition-all flex items-center justify-center gap-1 cursor-pointer"
+              >
+                <span>📖</span> 설교노트에 삽입
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* ── 9. 나의 연구 서재 모달 ── */}
+      {isLibraryOpen && (
+        <div className="interlinear-modal-portal fixed inset-0 z-[999999] bg-black/75 backdrop-blur-xs flex items-center justify-center p-3 select-none">
+          <div className={`w-full max-w-md rounded-2xl border p-4 shadow-2xl flex flex-col max-h-[80vh] ${
+            isDark ? 'bg-[#0F141F] border-slate-700 text-white' : 'bg-white border-stone-300 text-stone-900'
+          }`}>
+            <div className="flex justify-between items-center border-b pb-2 mb-2 border-stone-200 dark:border-slate-800">
+              <h3 className="font-bold text-sm">📚 나의 원어 연구 서재</h3>
+              <button onClick={() => setIsLibraryOpen(false)} className="text-xs font-bold text-stone-400 p-1 cursor-pointer">✕</button>
+            </div>
+            <div className="flex-1 overflow-y-auto space-y-1.5 text-xs hide-scrollbar text-left">
+              {Object.keys(customNotesMap).length === 0 ? (
+                <div className="py-8 text-center text-stone-400">저장된 연구 메모가 없습니다.</div>
+              ) : (
+                Object.values(customNotesMap).map((item, idx) => (
+                  <div
+                    key={idx}
+                    onClick={() => {
+                      if (item.book && item.chapter && item.verse) {
+                        handleJumpToConcordanceVerse(item.book, item.chapter, item.verse);
+                      }
+                    }}
+                    className={`p-2.5 rounded-lg border cursor-pointer ${
+                      isDark ? 'border-slate-800 hover:bg-slate-800' : 'border-stone-200 hover:bg-stone-50'
+                    }`}
+                  >
+                    <div className="flex justify-between font-bold">
+                      <span>{item.lemma} ({item.strongs})</span>
+                      <span className="font-mono text-stone-400">{item.book} {item.chapter}:{item.verse} ➔</span>
+                    </div>
+                    {item.translation && <p className="text-stone-700 dark:text-slate-300 mt-0.5 font-medium">번역: "{item.translation}"</p>}
+                    {item.memo && <p className="text-stone-500 dark:text-slate-400 mt-0.5">↳ {item.memo}</p>}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 10. 문법 대백과 모달 ── */}
+      {selectedGrammarWikiKey && (
+        <GrammarWikiModal
+          encyclopediaKey={selectedGrammarWikiKey}
+          onClose={() => setSelectedGrammarWikiKey(null)}
+          isDarkMode={isDarkMode}
+        />
+      )}
+
+    </div>
+  );
+}
