@@ -71,7 +71,7 @@ const GALAXY_THEMES = {
 // =====================================================================
 // 📜 성경 66권 정경 순서 및 장수 (총 1,189장: 구약 929장 / 신약 260장)
 // =====================================================================
-const BIBLE_66_CANON = [
+export const BIBLE_66_CANON = [
   { ko: '창세기', en: 'Genesis', abbr: '창', chaps: 50, isOT: true, sector: '모세오경' },
   { ko: '출애굽기', en: 'Exodus', abbr: '출', chaps: 40, isOT: true, sector: '모세오경' },
   { ko: '레위기', en: 'Leviticus', abbr: '레', chaps: 27, isOT: true, sector: '모세오경' },
@@ -198,7 +198,6 @@ const CANON_BOOKS_WITH_OFFSET = BIBLE_66_CANON.map((b, idx) => {
 });
 const TOTAL_BIBLE_CHAPTERS = accChaps; // 1,189장
 
-// 글자 수가 긴 성경 이름('예레미야애가', '데살로니가전서', '요한계시록' 등)부터 우선 매칭하도록 역순 정렬 (접두어 충돌 원천 차단)
 const SORTED_KO_BOOK_NAMES = Object.keys(KO_TO_EN_BOOK).sort((a, b) => b.length - a.length);
 const SORTED_ABBR_KEYS = Object.keys(ABBR_TO_KO_BOOK).sort((a, b) => b.length - a.length);
 
@@ -350,9 +349,6 @@ const CATEGORY_META = {
   user_sync: { label: '나의 묵상·강해', color: '#FB7185', badgeBg: 'bg-rose-400 text-slate-950' }
 };
 
-// =====================================================================
-// 🧬 학술적 정경 위치 및 LXX DB 기반 4대 카테고리 자동 판별기
-// =====================================================================
 const classifyBiblicalArcCategory = (fromBookKo, fromChap, fromVerse, toBookKo, toChap, toVerse, lxxDb = {}) => {
   const ntKey = `${toBookKo}-${toChap}-${toVerse}`;
   if (lxxDb && lxxDb[ntKey]) return 'quote';
@@ -373,9 +369,6 @@ const classifyBiblicalArcCategory = (fromBookKo, fromChap, fromVerse, toBookKo, 
   return 'theme';
 };
 
-// =====================================================================
-// 🏛️ 검증된 정경 아크 네트워크 빌더 (가짜 키워드 짜깁기 루프 완전 제거)
-// =====================================================================
 const buildVerifiedBiblicalArcNetwork = () => {
   const arcs = [];
   const seenPairs = new Set();
@@ -441,15 +434,15 @@ const ORIGINAL_LANGUAGE_ROOTS = [
 ];
 
 // =====================================================================
-// 🔬 정밀 성경 구절 추출 엔진 (접두어 충돌 차단 & 가짜 시편 23:1 생성 제거)
+// 🔬 정밀 성경 구절 추출 엔진 (외부 페이지에서도 공유 가능하도록 export)
 // =====================================================================
-function extractAllBibleRefsFromText(rawStr) {
+export function extractAllBibleRefsFromText(rawStr) {
   if (!rawStr || typeof rawStr !== 'string') return [];
   const clean = rawStr.replace(/<[^>]*>?/gm, ' ');
   const matchesWithPos = [];
 
   const fullNamesPattern = SORTED_KO_BOOK_NAMES.join('|');
-  const fullRegex = new RegExp(`(${fullNamesPattern})\\s*(\\d+)\\s*(?:장|:)\\s*(\\d+)?`, 'g');
+  const fullRegex = new RegExp(`(${fullNamesPattern})\\s*(\\d+)\\s*(?:장|편|:)?\\s*(\\d+)?`, 'g');
   let m;
   while ((m = fullRegex.exec(clean)) !== null) {
     const bookKo = m[1];
@@ -459,7 +452,7 @@ function extractAllBibleRefsFromText(rawStr) {
   }
 
   const abbrPattern = SORTED_ABBR_KEYS.join('|');
-  const abbrRegex = new RegExp(`(?:^|[\\s(\\[])(${abbrPattern})\\s*(\\d+)\\s*(?:장|:)\\s*(\\d+)?`, 'g');
+  const abbrRegex = new RegExp(`(?:^|[\\s(\\[])(${abbrPattern})\\s*(\\d+)\\s*(?:장|편|:)\\s*(\\d+)?`, 'g');
   while ((m = abbrRegex.exec(clean)) !== null) {
     const bookKo = ABBR_TO_KO_BOOK[m[1]];
     if (!bookKo) continue;
@@ -475,13 +468,18 @@ function extractAllBibleRefsFromText(rawStr) {
     const key = `${item.bookKo}-${item.chapter}-${item.verse}`;
     if (!seen.has(key)) {
       seen.add(key);
-      results.push({ bookKo: item.bookKo, chapter: item.chapter, verse: item.verse });
+      results.push({
+        bookKo: item.bookKo,
+        chapter: item.chapter,
+        verse: item.verse,
+        label: `${item.bookKo} ${item.chapter}:${item.verse}`
+      });
     }
   }
   return results;
 }
 
-function extractBibleRefInfo(rawStr) {
+export function extractBibleRefInfo(rawStr) {
   const allRefs = extractAllBibleRefsFromText(rawStr);
   if (allRefs.length > 0) return allRefs[0];
 
@@ -489,7 +487,7 @@ function extractBibleRefInfo(rawStr) {
     for (const koName of SORTED_KO_BOOK_NAMES) {
       if (rawStr.includes(koName)) {
         const after = rawStr.slice(rawStr.indexOf(koName) + koName.length);
-        const m = after.match(/(\d+)\s*(?:장|:)?\s*(\d+)?/);
+        const m = after.match(/(\d+)\s*(?:장|편|:)?\s*(\d+)?/);
         const ch = m && m[1] ? parseInt(m[1], 10) : 1;
         const vs = m && m[2] ? parseInt(m[2], 10) : 1;
         return { bookKo: koName, chapter: ch, verse: clampValidVerse(koName, ch, vs) };
@@ -530,7 +528,13 @@ export default function BibleKnowledgeGalaxy({
   setActiveScreen,
   setCurrentChapId,
   setBibleViewMode,
-  setTargetVerse
+  setTargetVerse,
+  // 🌟 [팝업(Modal) 전용 확장 Props] QT, 예배노트, 맥체인에서 인라인 팝업으로 열릴 때 사용
+  isModalPopup = false,
+  initialMode = 'arc',
+  initialRefQuery = '',
+  onClosePopup = null,
+  onInsertInsight = null
 }) {
   const store = useAppStore();
   const {
@@ -546,7 +550,7 @@ export default function BibleKnowledgeGalaxy({
   const canvasRef = useRef(null);
   const arcBgBufferRef = useRef(null);
 
-  const [viewMode, setViewMode] = useState('arc');
+  const [viewMode, setViewMode] = useState(initialMode || 'arc');
 
   // 🌈 구속사 아크(Arc) & OpenBible.info 장별 샤딩 상태
   const [arcCategoryFilter, setArcCategoryFilter] = useState('all');
@@ -832,7 +836,7 @@ export default function BibleKnowledgeGalaxy({
   }, [dailyData, syncTick]);
 
   // =====================================================================
-  // 🌈 전체 아크 통합 엔진 (억지 단일 구절 매칭 차단 & 정경 순서 100% 보장)
+  // 🌈 전체 아크 통합 엔진
   // =====================================================================
   const allFullArcs = useMemo(() => {
     const dynamicArcs = [...customUserArcs, ...dynamicTskArcs];
@@ -867,7 +871,6 @@ export default function BibleKnowledgeGalaxy({
         targetChap = refs[1].chapter;
         targetVerse = refs[1].verse;
       } else {
-        // 노트에 1개 구절만 있을 때는 같은 책+같은 장이 랜드마크에 정확히 존재할 때만 연결
         const exactLandmark = LANDMARK_ARCS.find(
           ([fb, fc, , tb, tc]) =>
             (fb === primary.bookKo && fc === primary.chapter) ||
@@ -959,7 +962,6 @@ export default function BibleKnowledgeGalaxy({
       );
     });
 
-    // 70인역(LXX) 구약 ➔ 신약 직접 인용 DB 정밀 연동
     Object.entries(lxxQuotesDb || {}).forEach(([ntKey, item], idx) => {
       const ntParts = ntKey.split('-');
       if (ntParts.length < 3 || !item?.otRef) return;
@@ -1056,7 +1058,7 @@ export default function BibleKnowledgeGalaxy({
   }, [viewMode, applyResponsiveCameraReset]);
 
   // =====================================================================
-  // 🌌 2D / 3D 은하계(Galaxy) 네트워크 빌더 (99+편 설교 코퍼스 전수 파싱 & 성경 간 교차참조 링크 연결)
+  // 🌌 2D / 3D 은하계(Galaxy) 네트워크 빌더
   // =====================================================================
   const galaxyData = useMemo(() => {
     const nodes = [];
@@ -1168,7 +1170,6 @@ export default function BibleKnowledgeGalaxy({
       });
     });
 
-    // 🌟 성경 66권 상호 간의 구속사 교차참조 링크 연결 (은하계에서 성경 클릭 시 연결된 신/구약 성경이 함께 빛남)
     const seenBookLinks = new Set();
     LANDMARK_ARCS.forEach(([fb, , , tb, , , cat]) => {
       const srcId = BOOK_NODE_MAP[fb];
@@ -1189,7 +1190,6 @@ export default function BibleKnowledgeGalaxy({
     const outerBuckets = {};
     CANON_SECTORS.forEach(s => { outerBuckets[s.id] = []; });
 
-    // 📚 설교 코퍼스 전수 파싱 (index 객체, sermons 배열, items 배열 모두 호환)
     let sTotal = 0;
     const seenSermonKeys = new Set();
     const pushSermonStar = (sermon, fallbackRef = '') => {
@@ -1239,7 +1239,6 @@ export default function BibleKnowledgeGalaxy({
       }
     }
 
-    // 사용자 QT 및 강해 노트 정밀 매핑 (성경 구절이 실제로 존재하는 노트만 매핑)
     Object.entries(mergedDailyRecords).forEach(([dateKey, dVal]) => {
       if (!dVal) return;
       if (dVal.qtTitle || dVal.qtMeditation || dVal.qtApplication || dVal.qtReference) {
@@ -1432,6 +1431,43 @@ export default function BibleKnowledgeGalaxy({
 
     return { nodes, links };
   }, [rawSermons, mergedDailyRecords, bibleNotes, generalNotes, readVerses, customGalaxyNodes]);
+
+  // 🌟 [핵심] QT / 예배노트 / 맥체인에서 initialRefQuery(예: "창세기 15:6" 또는 "롬 8:28")를 넘기며 팝업을 열었을 때
+  // 해당 성경과 장(Chapter)으로 아크 필터와 은하계 노드를 즉시 포커싱!
+  useEffect(() => {
+    if (initialMode) {
+      setViewMode(initialMode);
+    }
+    if (!initialRefQuery) return;
+    const parsedRef = extractBibleRefInfo(initialRefQuery);
+    if (!parsedRef) return;
+
+    // 1) 아크 뷰일 때 해당 성경으로 핀셋 필터 적용
+    setArcFromBookFilter(parsedRef.bookKo);
+    setArcFromChapFilter('ALL');
+    setScrubbedBookKo(null);
+
+    // 해당 장과 일치하는 아크가 있으면 우선 선택, 없으면 해당 성경의 첫 아크 선택
+    const exactChapArc = allFullArcs.find(
+      a =>
+        (a.fromBook === parsedRef.bookKo && a.fromChap === parsedRef.chapter) ||
+        (a.toBook === parsedRef.bookKo && a.toChap === parsedRef.chapter)
+    );
+    const anyBookArc = allFullArcs.find(
+      a => a.fromBook === parsedRef.bookKo || a.toBook === parsedRef.bookKo
+    );
+    if (exactChapArc) setSelectedArc(exactChapArc);
+    else if (anyBookArc) setSelectedArc(anyBookArc);
+
+    // 2) 2D / 3D 은하계 뷰일 때 해당 성경 별(Node)을 즉시 선택 및 previewChap 세팅
+    const targetBookNode = galaxyData.nodes.find(
+      n => n.type === 'book' && n.bookName === parsedRef.bookKo
+    );
+    if (targetBookNode) {
+      setSelectedNode({ ...targetBookNode, chapter: parsedRef.chapter, verse: parsedRef.verse });
+      setPreviewChap(parsedRef.chapter || 1);
+    }
+  }, [initialRefQuery, initialMode, allFullArcs.length, galaxyData.nodes.length]);
 
   const relatedOriginalRoots = useMemo(() => {
     if (!selectedNode) return ORIGINAL_LANGUAGE_ROOTS.slice(0, 4);
@@ -1996,7 +2032,6 @@ export default function BibleKnowledgeGalaxy({
         const tgt = posMap.get(link.target);
         if (!src || !tgt) return;
 
-        // 성경 간 교차참조 링크(isCrossRefLink)는 특정 성경 노드를 선택했을 때만 선명하게 표시하여 평소 시각적 복잡도 방지
         const isHighlightedLink = st.selectedNode && (link.source === st.selectedNode.id || link.target === st.selectedNode.id);
         if (link.isCrossRefLink && !isHighlightedLink) return;
         if (st.selectedNode && !isHighlightedLink) return;
@@ -2405,17 +2440,8 @@ export default function BibleKnowledgeGalaxy({
     const targetChapId = `${enBook}-${chap}`;
     const validV = clampValidVerse(bookKo, chap, verseNum);
 
-    try {
-      localStorage.setItem('bible_jump_target', targetChapId);
-      localStorage.setItem('bible_jump_verse', String(validV));
-    } catch (_) {}
-
-    if (typeof setCurrentChapId === 'function') {
-      setCurrentChapId(targetChapId);
-      if (typeof setBibleViewMode === 'function') setBibleViewMode('read');
-      if (typeof setTargetVerse === 'function') setTargetVerse(validV);
-      setActiveScreen('bible');
-    } else {
+    // 팝업 모드일 때는 페이지를 이동하지 않고 즉석 인라인 리더 모달을 열어 흐름 유지!
+    if (isModalPopup || typeof setCurrentChapId !== 'function') {
       const bObj = BIBLE_BOOK_LOOKUP[enBook] || BIBLE_BOOK_LOOKUP[bookKo];
       const chapArr = bObj?.chapters?.[Math.max(0, chap - 1)] || [];
       setReaderModalData({
@@ -2429,7 +2455,18 @@ export default function BibleKnowledgeGalaxy({
           text: String(t).replace(/&#x27;/g, "'").replace(/&quot;/g, '"').trim()
         }))
       });
+      return;
     }
+
+    try {
+      localStorage.setItem('bible_jump_target', targetChapId);
+      localStorage.setItem('bible_jump_verse', String(validV));
+    } catch (_) {}
+
+    setCurrentChapId(targetChapId);
+    if (typeof setBibleViewMode === 'function') setBibleViewMode('read');
+    if (typeof setTargetVerse === 'function') setTargetVerse(validV);
+    if (typeof setActiveScreen === 'function') setActiveScreen('bible');
   };
 
   const handleOpenInlineReader = (bookKo, chap = 1, verseNum = 1, e) => {
@@ -2486,7 +2523,8 @@ export default function BibleKnowledgeGalaxy({
         verse: clampValidVerse(bookKo, chap, verse)
       }));
     } catch (_) {}
-    setActiveScreen('interlinear');
+    if (onClosePopup) onClosePopup();
+    if (typeof setActiveScreen === 'function') setActiveScreen('interlinear');
   };
 
   const handleSaveNewKnowledgeNode = () => {
@@ -2841,7 +2879,7 @@ export default function BibleKnowledgeGalaxy({
                 onClick={() => handleJumpToBibleChapter(selectedNode.bookName, previewChap, 1)}
                 className="py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black text-xs shadow-md cursor-pointer"
               >
-                🚀 통독365로 열기
+                🚀 {isModalPopup ? `${previewChap}장 전문 보기` : '통독365로 열기'}
               </button>
             </div>
           </div>
@@ -2962,7 +3000,7 @@ export default function BibleKnowledgeGalaxy({
       `}</style>
       
       {toastMsg && (
-        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-[120] px-4 py-2 rounded-full bg-slate-900/95 text-white text-xs font-bold border border-cyan-400/40 shadow-2xl flex items-center gap-2 animate-fade-in">
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-[1200] px-4 py-2 rounded-full bg-slate-900/95 text-white text-xs font-bold border border-cyan-400/40 shadow-2xl flex items-center gap-2 animate-fade-in">
           <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
           <span>{toastMsg}</span>
         </div>
@@ -2973,11 +3011,16 @@ export default function BibleKnowledgeGalaxy({
         <div className="flex flex-wrap items-center justify-between gap-1.5">
           <div className="flex items-center gap-1.5 flex-1 min-w-[170px]">
             <button
-              onClick={() => setActiveScreen('home')}
-              className="h-8 sm:h-9 px-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center gap-1 shrink-0"
-              style={{ borderColor: theme.panelBorder, color: theme.textMain }}
+              onClick={() => {
+                if (isModalPopup && onClosePopup) onClosePopup();
+                else if (typeof setActiveScreen === 'function') setActiveScreen('home');
+              }}
+              className={`h-8 sm:h-9 px-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center gap-1 shrink-0 ${
+                isModalPopup ? 'bg-rose-500/20 border-rose-400/50 text-rose-200 hover:bg-rose-500/30' : ''
+              }`}
+              style={!isModalPopup ? { borderColor: theme.panelBorder, color: theme.textMain } : undefined}
             >
-              ◀ <span className="hidden md:inline">홈</span>
+              {isModalPopup ? '✕ 팝업 닫기' : <>◀ <span className="hidden md:inline">홈</span></>}
             </button>
 
             <div 
@@ -3100,6 +3143,18 @@ export default function BibleKnowledgeGalaxy({
                   {cat.label}
                 </button>
               ))}
+              {arcFromBookFilter !== 'ALL' && (
+                <button
+                  onClick={() => {
+                    setArcFromBookFilter('ALL');
+                    setArcFromChapFilter('ALL');
+                    setScrubbedBookKo(null);
+                  }}
+                  className="px-2.5 py-1 rounded-full text-[11px] font-black bg-amber-500/20 text-amber-300 border border-amber-400/50 cursor-pointer shrink-0"
+                >
+                  📍 {arcFromBookFilter} 필터 해제 ✕
+                </button>
+              )}
               <button
                 onClick={() => setIsAutoTourPlaying(!isAutoTourPlaying)}
                 className={`px-2.5 py-1 rounded-full text-[11px] font-black transition-all cursor-pointer border shrink-0 whitespace-nowrap ml-auto ${
@@ -3258,6 +3313,21 @@ export default function BibleKnowledgeGalaxy({
                         <div className="flex items-center justify-between gap-2 pt-0.5 text-[10px] sm:text-[10.5px] font-bold text-slate-300">
                           <span className="truncate">💡 {currentDisplayArc.desc}</span>
                           <div className="flex items-center gap-1 shrink-0">
+                            {onInsertInsight && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const fTxt = spotlightFromVerses?.[0]?.text || '';
+                                  const tTxt = spotlightToVerses?.[0]?.text || '';
+                                  const formatted = `\n[🌈 신구약 구속사 대조: ${currentDisplayArc.fromBook} ${currentDisplayArc.fromChap}:${currentDisplayArc.fromVerse} ➔ ${currentDisplayArc.toBook} ${currentDisplayArc.toChap}:${currentDisplayArc.toVerse}]\n• 구약: "${fTxt}"\n• 신약: "${tTxt}"\n• 구속사적 의미: ${currentDisplayArc.desc}\n`;
+                                  onInsertInsight(formatted);
+                                  showToast('✍️ 현재 묵상·설교 노트에 신구약 대조 강해가 삽입되었습니다!');
+                                }}
+                                className="px-2.5 py-1 rounded-lg bg-emerald-400 hover:bg-emerald-300 text-slate-950 text-[10px] font-black cursor-pointer shadow-xs"
+                              >
+                                ✍️ 노트에 대조 삽입
+                              </button>
+                            )}
                             <button
                               type="button"
                               onClick={(e) => handleOpenParallelComparisonReader(currentDisplayArc, e)}
@@ -3388,16 +3458,18 @@ export default function BibleKnowledgeGalaxy({
                       <span className="text-[11px] font-black text-amber-300">
                         📜 {readerModalData.left.bookKo} {readerModalData.left.chap}:{readerModalData.left.targetVerse}
                       </span>
-                      <button
-                        onClick={() => {
-                          const { bookKo, chap, targetVerse } = readerModalData.left;
-                          setReaderModalData(null);
-                          handleJumpToBibleChapter(bookKo, chap, targetVerse);
-                        }}
-                        className="text-[9.5px] font-black text-cyan-300 underline cursor-pointer"
-                      >
-                        통독365 이동➔
-                      </button>
+                      {!isModalPopup && (
+                        <button
+                          onClick={() => {
+                            const { bookKo, chap, targetVerse } = readerModalData.left;
+                            setReaderModalData(null);
+                            handleJumpToBibleChapter(bookKo, chap, targetVerse);
+                          }}
+                          className="text-[9.5px] font-black text-cyan-300 underline cursor-pointer"
+                        >
+                          통독365 이동➔
+                        </button>
+                      )}
                     </div>
                     <p className="text-xs font-serif text-white leading-relaxed break-keep">
                       {readerModalData.left.targetText}
@@ -3409,16 +3481,18 @@ export default function BibleKnowledgeGalaxy({
                       <span className="text-[11px] font-black text-cyan-300">
                         ✝️ {readerModalData.right.bookKo} {readerModalData.right.chap}:{readerModalData.right.targetVerse}
                       </span>
-                      <button
-                        onClick={() => {
-                          const { bookKo, chap, targetVerse } = readerModalData.right;
-                          setReaderModalData(null);
-                          handleJumpToBibleChapter(bookKo, chap, targetVerse);
-                        }}
-                        className="text-[9.5px] font-black text-cyan-300 underline cursor-pointer"
-                      >
-                        통독365 이동➔
-                      </button>
+                      {!isModalPopup && (
+                        <button
+                          onClick={() => {
+                            const { bookKo, chap, targetVerse } = readerModalData.right;
+                            setReaderModalData(null);
+                            handleJumpToBibleChapter(bookKo, chap, targetVerse);
+                          }}
+                          className="text-[9.5px] font-black text-cyan-300 underline cursor-pointer"
+                        >
+                          통독365 이동➔
+                        </button>
+                      )}
                     </div>
                     <p className="text-xs font-serif text-white leading-relaxed break-keep">
                       {readerModalData.right.targetText}
@@ -3500,21 +3574,23 @@ export default function BibleKnowledgeGalaxy({
                     </h3>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <button
-                      onClick={() => {
-                        const { bookKo, chap, targetVerse } = readerModalData;
-                        setReaderModalData(null);
-                        handleJumpToBibleChapter(bookKo, chap, targetVerse);
-                      }}
-                      className="px-3 py-1.5 rounded-xl bg-cyan-500 text-slate-950 font-black text-xs cursor-pointer"
-                    >
-                      통독365 본문으로 이동 ➔
-                    </button>
+                    {!isModalPopup && (
+                      <button
+                        onClick={() => {
+                          const { bookKo, chap, targetVerse } = readerModalData;
+                          setReaderModalData(null);
+                          handleJumpToBibleChapter(bookKo, chap, targetVerse);
+                        }}
+                        className="px-3 py-1.5 rounded-xl bg-cyan-500 text-slate-950 font-black text-xs cursor-pointer"
+                      >
+                        통독365 본문으로 이동 ➔
+                      </button>
+                    )}
                     <button
                       onClick={() => setReaderModalData(null)}
                       className="px-2.5 py-1.5 rounded-xl bg-white/10 text-slate-300 hover:text-white text-xs font-bold cursor-pointer"
                     >
-                      ✕
+                      ✕ 닫기
                     </button>
                   </div>
                 </div>
@@ -3787,13 +3863,24 @@ export default function BibleKnowledgeGalaxy({
 
       {/* 모바일 필터 시트 */}
       {(selectedNode || isMobileFilterSheetOpen) && (
-        <div className="lg:hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end justify-center p-2 animate-fade-in">
+        <div 
+          className="lg:hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end justify-center p-2 animate-fade-in"
+          onClick={() => {
+            setSelectedNode(null);
+            setIsMobileFilterSheetOpen(false);
+          }}
+        >
           <div 
-            className="w-full max-w-xl p-4 rounded-2xl border backdrop-blur-xl shadow-2xl text-left max-h-[75vh] overflow-y-auto hide-scrollbar space-y-2"
+            className="w-full max-w-xl p-4 rounded-2xl border backdrop-blur-xl shadow-2xl text-left max-h-[78vh] overflow-y-auto hide-scrollbar space-y-2"
             style={{ backgroundColor: theme.panelBg, borderColor: theme.panelBorder, color: theme.textMain }}
+            onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex justify-end">
+            <div className="flex items-center justify-between pb-1 border-b border-white/10">
+              <span className="text-[11px] font-mono font-bold text-amber-400 uppercase">
+                🧭 성경 아크 & 은하계 탐색기
+              </span>
               <button
+                type="button"
                 onClick={() => {
                   setSelectedNode(null);
                   setIsMobileFilterSheetOpen(false);
@@ -3808,6 +3895,42 @@ export default function BibleKnowledgeGalaxy({
         </div>
       )}
 
+    </div>
+  );
+}
+
+// =====================================================================
+// 🚀 [어디서든 한 줄로 띄우는 성경 아크 & 은하계 올인원 팝업 포털]
+// QT.js, Sermon.js, Mcheyne.js에서 페이지 이탈 없이 즉시 호출 가능!
+// =====================================================================
+export function BibleGalaxyArcModal({
+  isOpen,
+  onClose,
+  initialMode = 'arc',
+  initialRefQuery = '',
+  onInsertInsight = null,
+  setActiveScreen = null
+}) {
+  if (!isOpen) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-[99999] bg-black/80 backdrop-blur-md flex items-center justify-center p-1.5 sm:p-4 animate-fade-in select-none"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-[1380px] h-[92dvh] rounded-3xl overflow-hidden border border-cyan-400/35 shadow-[0_24px_80px_rgba(0,0,0,0.85)] flex flex-col relative bg-[#05080F]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <BibleKnowledgeGalaxy
+          isModalPopup={true}
+          initialMode={initialMode}
+          initialRefQuery={initialRefQuery}
+          onClosePopup={onClose}
+          onInsertInsight={onInsertInsight}
+          setActiveScreen={setActiveScreen}
+        />
+      </div>
     </div>
   );
 }

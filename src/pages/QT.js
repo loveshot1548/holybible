@@ -2,6 +2,10 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import CryptoJS from 'crypto-js';
+import {
+  BibleGalaxyArcModal,
+  extractAllBibleRefsFromText
+} from '../pages/BibleKnowledgeGalaxy';
 
 // =====================================================================
 // 🔐 [보안 표준화] 군사급 AES-256 종단간 암호화 (구버전 Base64 호환)
@@ -46,12 +50,15 @@ const decryptField = (cipherText) => {
   return cipherText;
 };
 
-// 성경 구절 정밀 정규식 추출기
+// 성경 구절 정밀 정규식 추출기 (기존 정규식 + 정경 66권 정밀 파서 통합)
 const extractBibleReferences = (text) => {
   if (!text) return [];
+  const extracted = typeof extractAllBibleRefsFromText === 'function'
+    ? extractAllBibleRefsFromText(text).map(item => item.label)
+    : [];
   const regex = /([가-힣]+(?:서|기|상|하|전|후|일|이|삼)?)\s?(\d+)(?:장|:)\s?(?:(\d+)(?:절)?)?/g;
-  const matches = [...text.matchAll(regex)];
-  return Array.from(new Set(matches.map(m => m[0].trim())));
+  const matches = [...text.matchAll(regex)].map(m => m[0].trim());
+  return Array.from(new Set([...extracted, ...matches]));
 };
 
 const StrokeWidth = "1.8";
@@ -137,6 +144,27 @@ export default function DailyQT({
   const [showFullCalendar, setShowFullCalendar] = useState(false);
   const [actionToast, setActionToast] = useState(null);
 
+  // 🌈 [신규 고도화] 페이지 넘어감 없이 신·구약 아크 대조 및 은하계 연관을 띄우는 팝업 상태
+  const [galaxyModalConfig, setGalaxyModalConfig] = useState({
+    isOpen: false,
+    mode: 'arc', // 'arc' | '2d' | '3d'
+    refQuery: ''
+  });
+
+  const openGalaxyPopup = useCallback((mode = 'arc', refStr = '') => {
+    const fallbackRef =
+      refStr ||
+      currDay?.qtReference ||
+      globalSharedQt?.[date]?.reference ||
+      currDay?.qtGoldenVerse ||
+      '창세기 1:1';
+    setGalaxyModalConfig({
+      isOpen: true,
+      mode,
+      refQuery: fallbackRef
+    });
+  }, [currDay?.qtReference, currDay?.qtGoldenVerse, globalSharedQt, date]);
+
   const audioRef = useRef(null);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
 
@@ -204,17 +232,18 @@ export default function DailyQT({
   const [linkedRefs, setLinkedRefs] = useState([]);
   const [activeBacklink, setActiveBacklink] = useState(null);
 
+  // 본문 입력란(qtReference) + 황금구절 + 질문 + 묵상 + 적용 + 한줄은혜 전체에서 실시간 구절 감지
   useEffect(() => {
-    const combinedText = `${currDay?.qtGoldenVerse || ''} ${currDay?.qtGraceLine || ''} ${currDay?.qtMeditation || ''} ${currDay?.qtApplication || ''} ${currDay?.qtAppQuestion || ''}`;
+    const combinedText = `${currDay?.qtReference || globalSharedQt?.[date]?.reference || ''} ${currDay?.qtGoldenVerse || ''} ${currDay?.qtGraceLine || ''} ${currDay?.qtMeditation || ''} ${currDay?.qtApplication || ''} ${currDay?.qtAppQuestion || ''}`;
     const detected = extractBibleReferences(combinedText);
     setLinkedRefs(detected);
-  }, [currDay?.qtGoldenVerse, currDay?.qtGraceLine, currDay?.qtMeditation, currDay?.qtApplication, currDay?.qtAppQuestion]);
+  }, [currDay?.qtReference, globalSharedQt, date, currDay?.qtGoldenVerse, currDay?.qtGraceLine, currDay?.qtMeditation, currDay?.qtApplication, currDay?.qtAppQuestion]);
 
   const relatedEntries = useMemo(() => {
     if (!activeBacklink) return [];
     return Object.entries(dailyData || {}).filter(([dKey, dVal]) => {
       if (dKey === date) return false;
-      const fullText = `${dVal.qtGoldenVerse || ''} ${dVal.qtMeditation || ''} ${dVal.sermonNotes || ''} ${dVal.qtGraceLine || ''}`;
+      const fullText = `${dVal.qtReference || ''} ${dVal.qtGoldenVerse || ''} ${dVal.qtMeditation || ''} ${dVal.sermonNotes || ''} ${dVal.qtGraceLine || ''}`;
       return fullText.includes(activeBacklink);
     }).sort((a, b) => new Date(b[0]) - new Date(a[0]));
   }, [activeBacklink, dailyData, date]);
@@ -345,10 +374,22 @@ export default function DailyQT({
     } catch (e) {}
   };
 
-  const showToast = (msg) => {
+  const showToast = useCallback((msg) => {
     setActionToast(msg);
     setTimeout(() => setActionToast(null), 2500);
-  };
+  }, []);
+
+  // ✍️ 아크 팝업에서 찾은 신·구약 대조 인사이트를 내 QT 묵상란에 원터치 삽입
+  const handleInsertArcInsightToQt = useCallback((insightText) => {
+    if (!updateDay) return;
+    const prevMed = currDay?.qtMeditation || '';
+    const nextMed = prevMed ? `${prevMed}\n${insightText}` : insightText.trim();
+    updateDay({
+      qtMeditation: nextMed,
+      checks: { ...(currDay?.checks || {}), QTin: true }
+    });
+    showToast("🌈 신·구약 구속사 대조 해설이 나의 묵상 노트에 기록되었습니다!");
+  }, [currDay, updateDay, showToast]);
 
   const inlineActionSendToTracker = () => {
     const textToPush = currDay.qtActionItem || currDay.qtGraceLine || currDay.qtMeditation || 'QT 적용 실천';
@@ -412,6 +453,18 @@ export default function DailyQT({
   return (
     <div className={`flex-1 flex flex-col h-full relative font-sans overflow-hidden select-none animate-fade-in ${isDark ? 'bg-[#0F1115]' : 'bg-[#FBFBF9]'}`}>
       
+      {/* ===================================================================== */}
+      {/* 🌈 성경 아크(신·구약 대조) & 은하계(Galaxy) 인라인 팝업 모달 */}
+      {/* ===================================================================== */}
+      <BibleGalaxyArcModal
+        isOpen={galaxyModalConfig.isOpen}
+        onClose={() => setGalaxyModalConfig(prev => ({ ...prev, isOpen: false }))}
+        initialMode={galaxyModalConfig.mode}
+        initialRefQuery={galaxyModalConfig.refQuery}
+        onInsertInsight={handleInsertArcInsightToQt}
+        setActiveScreen={setActiveScreen}
+      />
+
       {/* 백링크 패널 */}
       {activeBacklink && (
         <div className={`absolute top-0 right-0 h-full w-full max-w-[340px] z-[200] shadow-[-10px_0_40px_rgba(0,0,0,0.2)] flex flex-col transition-transform animate-fade-in ${isDark ? 'bg-[#09090B]/95 backdrop-blur-3xl border-l border-white/10' : 'bg-white/95 backdrop-blur-3xl border-l border-slate-200'}`}>
@@ -420,8 +473,27 @@ export default function DailyQT({
               <span className={`p-1.5 rounded-md ${isDark ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-50 text-indigo-600'}`}>🔗</span>
               <h3 className={`text-[14px] font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{activeBacklink} 묵상 기록</h3>
             </div>
-            <button onClick={() => setActiveBacklink(null)} className={`p-1.5 rounded-full hover:bg-slate-500/20 transition-colors ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>✕</button>
+            <button onClick={() => setActiveBacklink(null)} className={`p-1.5 rounded-full hover:bg-slate-500/20 transition-colors cursor-pointer ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>✕</button>
           </div>
+
+          {/* 백링크 드로어 안에서도 아크/은하계를 즉시 팝업으로 띄우는 버튼 */}
+          <div className={`px-4 py-2.5 border-b grid grid-cols-2 gap-1.5 ${isDark ? 'border-white/10 bg-white/[0.02]' : 'border-slate-100 bg-slate-50/70'}`}>
+            <button
+              type="button"
+              onClick={() => openGalaxyPopup('arc', activeBacklink)}
+              className="py-1.5 px-2 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-[11px] flex items-center justify-center gap-1 cursor-pointer shadow-2xs"
+            >
+              🌈 신구약 아크 대조
+            </button>
+            <button
+              type="button"
+              onClick={() => openGalaxyPopup('2d', activeBacklink)}
+              className="py-1.5 px-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-[11px] flex items-center justify-center gap-1 cursor-pointer shadow-2xs"
+            >
+              🌌 은하계 연관 보기
+            </button>
+          </div>
+
           <div className="flex-1 overflow-y-auto p-4 space-y-3.5 hide-scrollbar pointer-events-auto">
             {relatedEntries.length === 0 ? (
               <div className={`py-10 flex flex-col items-center gap-2 text-[12px] font-medium ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
@@ -474,7 +546,29 @@ export default function DailyQT({
           <h1 className={`text-[15px] sm:text-[16px] font-bold tracking-tight ml-0.5 ${isDark ? 'text-white' : 'text-stone-800'} whitespace-nowrap`}>매일 QT</h1>
         </div>
 
-        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+        <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto hide-scrollbar">
+          {/* 🌈 성경 아크 신·구약 대조 팝업 직행 버튼 */}
+          <button
+            type="button"
+            onClick={() => openGalaxyPopup('arc')}
+            title="페이지 이동 없이 현재 QT 본문의 신·구약 아크 대조를 팝업으로 봅니다"
+            className="px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-full text-[10.5px] sm:text-[11px] font-black bg-amber-400 hover:bg-amber-300 text-slate-950 shadow-xs flex items-center gap-1 cursor-pointer whitespace-nowrap shrink-0 active:scale-95 transition-all"
+          >
+            <span>🌈</span>
+            <span>아크 대조</span>
+          </button>
+
+          {/* 🌌 성경 은하계 연관 팝업 직행 버튼 */}
+          <button
+            type="button"
+            onClick={() => openGalaxyPopup('2d')}
+            title="페이지 이동 없이 현재 QT 본문의 은하계 연관도를 팝업으로 봅니다"
+            className="px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-full text-[10.5px] sm:text-[11px] font-black bg-cyan-500 hover:bg-cyan-400 text-slate-950 shadow-xs flex items-center gap-1 cursor-pointer whitespace-nowrap shrink-0 active:scale-95 transition-all"
+          >
+            <span>🌌</span>
+            <span>은하계</span>
+          </button>
+
           <button 
             onClick={toggleBGM}
             title="고요한 피아노 찬양 선율 듣기"
@@ -547,7 +641,7 @@ export default function DailyQT({
         </div>
       )}
 
-      {/* 서브 탭 바 */}
+      {/* 서브 탭 바 (원본 100% 유지) */}
       <div className={`flex w-full px-2 sm:px-4 border-b ${isDark ? 'border-white/10 bg-black/20' : 'border-stone-200/70 bg-stone-100/60'} shrink-0 relative z-20 backdrop-blur-md gap-2`}>
         <button
           onClick={() => setQtSubView('myQt')}
@@ -605,13 +699,13 @@ export default function DailyQT({
                 className={`w-full px-3 py-2 rounded-lg text-[14px] font-bold outline-none border transition-all ${isDark ? 'bg-black/30 border-white/10 text-white focus:border-stone-400' : 'bg-stone-50 border-stone-200 text-stone-900 focus:border-stone-400'}`} 
               />
               
-              <div className="flex gap-1.5 ignore-draw items-center">
+              <div className="flex flex-wrap sm:flex-nowrap gap-1.5 ignore-draw items-center">
                 <input 
                   type="text" 
                   value={currDay.qtReference || globalSharedQt?.[date]?.reference || ''} 
                   onChange={e => updateDay && updateDay({qtReference: e.target.value, checks: { ...(currDay.checks || {}), 'QTin': true }})} 
                   placeholder="성경 본문 (예: 신명기 17:14-20)" 
-                  className={`flex-1 min-w-0 px-3 py-2 rounded-lg text-[13px] font-medium outline-none border transition-all ${isDark ? 'bg-black/30 border-white/10 text-white focus:border-stone-400' : 'bg-stone-50 border-stone-200 text-stone-900 focus:border-stone-400'}`} 
+                  className={`flex-1 min-w-[160px] px-3 py-2 rounded-lg text-[13px] font-medium outline-none border transition-all ${isDark ? 'bg-black/30 border-white/10 text-white focus:border-stone-400' : 'bg-stone-50 border-stone-200 text-stone-900 focus:border-stone-400'}`} 
                 />
                 <button 
                   onClick={() => findBibleText && findBibleText(currDay.qtReference || globalSharedQt?.[date]?.reference)} 
@@ -621,9 +715,25 @@ export default function DailyQT({
                 >
                   <IconSearch /> 찾기
                 </button>
+                <button 
+                  type="button"
+                  onClick={() => openGalaxyPopup('arc', currDay.qtReference || globalSharedQt?.[date]?.reference)} 
+                  className="shrink-0 px-2.5 py-2 rounded-lg text-[11.5px] font-black bg-amber-400 hover:bg-amber-300 text-slate-950 transition-all flex items-center gap-1 cursor-pointer shadow-xs active:scale-95"
+                  title="현재 본문의 신·구약 교차참조 아크 팝업 열기"
+                >
+                  🌈 아크 대조
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => openGalaxyPopup('2d', currDay.qtReference || globalSharedQt?.[date]?.reference)} 
+                  className="shrink-0 px-2.5 py-2 rounded-lg text-[11.5px] font-black bg-cyan-500 hover:bg-cyan-400 text-slate-950 transition-all flex items-center gap-1 cursor-pointer shadow-xs active:scale-95"
+                  title="현재 본문의 성경 은하계 연관 팝업 열기"
+                >
+                  🌌 은하계
+                </button>
               </div>
 
-              {/* 🌟 오늘의 황금 구절 (릴스 버튼 제거 완료) */}
+              {/* 🌟 오늘의 황금 구절 */}
               <div className="pt-1 ignore-draw">
                 <div className={`p-2.5 rounded-lg border flex flex-col gap-1 text-left ${isDark ? 'bg-black/25 border-white/10' : 'bg-stone-50/70 border-stone-200/80'}`}>
                   <span className="text-[10.5px] font-bold opacity-80 flex items-center gap-1 font-serif text-amber-500 dark:text-amber-400">
@@ -639,21 +749,58 @@ export default function DailyQT({
                 </div>
               </div>
 
+              {/* 🌈 [핵심 고도화] 타이핑으로 감지된 성경 구절마다 [신구약 아크 대조] + [은하계] + [과거 묵상 보기] 동시 지원 */}
               {linkedRefs.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 pt-0.5 animate-fade-in ignore-draw">
-                  {linkedRefs.map(ref => (
-                    <button 
-                      key={ref}
-                      onClick={() => setActiveBacklink(ref)}
-                      className={`px-2.5 py-1 rounded-md text-[11px] font-bold border flex items-center gap-1 transition-all active:scale-95 cursor-pointer shadow-xs ${
-                        activeBacklink === ref 
-                          ? (isDark ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-300' : 'bg-indigo-50 border-indigo-200 text-indigo-700')
-                          : (isDark ? 'bg-black/40 border-white/10 text-slate-400 hover:text-white' : 'bg-white border-slate-200 text-slate-600 hover:text-slate-900')
-                      }`}
-                    >
-                      🔗 {ref} 과거 묵상 보기
-                    </button>
-                  ))}
+                <div className={`ignore-draw p-2.5 rounded-xl border transition-all animate-fade-in ${
+                  isDark ? 'bg-slate-950/75 border-cyan-500/30 text-white' : 'bg-stone-100/90 border-stone-200 text-stone-800'
+                }`}>
+                  <div className="flex items-center justify-between gap-2 mb-1.5">
+                    <span className="text-[10.5px] font-black text-amber-600 dark:text-amber-300 flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
+                      감지된 성경 구절 즉석 팝업 연동 ({linkedRefs.length}건)
+                    </span>
+                    <span className="text-[9.5px] opacity-60">클릭 시 페이지 이동 없이 팝업 오픈</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {linkedRefs.map(ref => (
+                      <div 
+                        key={ref}
+                        className={`inline-flex items-center gap-1 p-1 pl-2 rounded-lg border text-[11px] font-bold ${
+                          isDark ? 'bg-black/50 border-white/15 text-slate-200' : 'bg-white border-stone-300/80 text-stone-800 shadow-2xs'
+                        }`}
+                      >
+                        <span className="mr-0.5">📖 {ref}</span>
+                        <button
+                          type="button"
+                          onClick={() => openGalaxyPopup('arc', ref)}
+                          className="px-1.5 py-0.5 rounded bg-amber-400 hover:bg-amber-300 text-slate-950 text-[10px] font-black cursor-pointer active:scale-95 transition-transform"
+                          title={`${ref} 신·구약 아크 대조 팝업 열기`}
+                        >
+                          🌈 신구약 대조
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openGalaxyPopup('2d', ref)}
+                          className="px-1.5 py-0.5 rounded bg-cyan-400 hover:bg-cyan-300 text-slate-950 text-[10px] font-black cursor-pointer active:scale-95 transition-transform"
+                          title={`${ref} 성경 은하계 연관 팝업 열기`}
+                        >
+                          🌌 은하계
+                        </button>
+                        <button 
+                          type="button"
+                          onClick={() => setActiveBacklink(ref)}
+                          className={`px-1.5 py-0.5 rounded text-[10px] font-bold cursor-pointer transition-colors ${
+                            activeBacklink === ref 
+                              ? 'bg-indigo-600 text-white' 
+                              : (isDark ? 'bg-white/10 text-slate-300 hover:text-white' : 'bg-stone-100 text-stone-600 hover:text-stone-900')
+                          }`}
+                          title={`${ref} 과거 나의 묵상 기록 보기`}
+                        >
+                          🔗 과거묵상
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
@@ -744,9 +891,18 @@ export default function DailyQT({
             <div className={`p-3 sm:p-4 rounded-xl border backdrop-blur-xl space-y-4 ${isDark ? 'bg-[#181A20]/60 border-white/10' : 'bg-white/80 border-stone-200/80 shadow-xs'}`}>
               
               <div className="flex flex-col gap-1.5">
-                <label className={`text-[13.5px] font-bold flex items-center gap-1.5 ${isDark ? 'text-white' : 'text-stone-800'}`}>
-                  <IconTarget className="text-stone-600 dark:text-stone-300" /> 적용 질문 (Question Time)
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className={`text-[13.5px] font-bold flex items-center gap-1.5 ${isDark ? 'text-white' : 'text-stone-800'}`}>
+                    <IconTarget className="text-stone-600 dark:text-stone-300" /> 적용 질문 (Question Time)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => openGalaxyPopup('arc')}
+                    className="ignore-draw px-2 py-0.5 rounded-md text-[10.5px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-300 border border-amber-500/30 cursor-pointer hover:bg-amber-500/25"
+                  >
+                    🌈 신·구약 아크 대조
+                  </button>
+                </div>
 
                 {isTrainingMode && (
                   <div className="ignore-draw flex flex-col gap-1.5 pb-1 animate-fade-in">
@@ -769,9 +925,18 @@ export default function DailyQT({
               </div>
 
               <div className="flex flex-col gap-1.5 pt-2 border-t border-stone-200 dark:border-white/10">
-                <label className={`text-[13.5px] font-bold flex items-center gap-1.5 mt-0.5 ${isDark ? 'text-white' : 'text-stone-800'}`}>
-                  <IconBook className="text-stone-600 dark:text-stone-300" /> 묵상하기 (내 죄 보기)
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className={`text-[13.5px] font-bold flex items-center gap-1.5 mt-0.5 ${isDark ? 'text-white' : 'text-stone-800'}`}>
+                    <IconBook className="text-stone-600 dark:text-stone-300" /> 묵상하기 (내 죄 보기)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => openGalaxyPopup('2d')}
+                    className="ignore-draw px-2 py-0.5 rounded-md text-[10.5px] font-bold bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border border-cyan-500/30 cursor-pointer hover:bg-cyan-500/25"
+                  >
+                    🌌 은하계 연관 보기
+                  </button>
+                </div>
 
                 {isTrainingMode && (
                   <div className="ignore-draw flex flex-col gap-1.5 pb-1 animate-fade-in">
@@ -816,7 +981,7 @@ export default function DailyQT({
                 />
               </div>
 
-              {/* 한줄 은혜 및 실천 목표 (릴스 버튼 제거 완료) */}
+              {/* 한줄 은혜 및 실천 목표 */}
               <div className="pt-2.5 space-y-1.5 ignore-draw border-t border-stone-200 dark:border-white/15">
                 <span className={`font-bold text-[12px] flex items-center gap-1 ${isDark ? 'text-stone-300' : 'text-stone-600'}`}>
                   <IconTarget /> 한줄 은혜 및 실천 목표 (트래커 자동 연동)
@@ -843,7 +1008,7 @@ export default function DailyQT({
                 />
               </div>
 
-              {/* [Phase 4: 원스트림 인라인 연동 허브] */}
+              {/* [Phase 4: 원스트림 인라인 연동 허브 (원본 3버튼 100% 유지)] */}
               <div className={`ignore-draw p-3 rounded-xl border flex flex-col gap-2.5 mt-2 ${isDark ? 'bg-stone-900/60 border-white/10' : 'bg-stone-50/70 border-stone-200'}`}>
                 <div className="flex justify-between items-center border-b pb-1.5 border-stone-200 dark:border-white/10">
                   <span className={`text-[11.5px] font-bold tracking-wider flex items-center gap-1.5 ${isDark ? 'text-stone-300' : 'text-stone-700'}`}>
@@ -997,9 +1162,15 @@ export default function DailyQT({
         </CanvasEngine>
       )}
 
-      {/* 서브 뷰 2: 공동체 QT 나눔 광장 */}
+      {/* 서브 뷰 2: 공동체 QT 나눔 광장 (원본 100% 유지 + 아크/은하계 팝업 연동) */}
       {qtSubView === 'community' && (
-        <CommunityQtSquareInner authUser={authUser} isDarkMode={isDarkMode} date={date} bibles={bibles} />
+        <CommunityQtSquareInner
+          authUser={authUser}
+          isDarkMode={isDarkMode}
+          date={date}
+          bibles={bibles}
+          onOpenGalaxyPopup={openGalaxyPopup}
+        />
       )}
 
     </div>
@@ -1007,7 +1178,7 @@ export default function DailyQT({
 }
 
 // =====================================================================
-// 💡 공동체 QT 나눔 광장
+// 💡 공동체 QT 나눔 광장 (기존 코드 100% 보존)
 // =====================================================================
 const FULL_BIBLE_MAP_QT = {
   "창": "Genesis", "창세기": "Genesis", "출": "Exodus", "출애굽기": "Exodus",
@@ -1046,7 +1217,7 @@ const FULL_BIBLE_MAP_QT = {
   "요삼": "3 John", "요한삼서": "3 John", "유": "Jude", "유다서": "Jude", "계": "Revelation", "요한계시록": "Revelation"
 };
 
-function CommunityQtSquareInner({ authUser, isDarkMode, date, bibles = [] }) {
+function CommunityQtSquareInner({ authUser, isDarkMode, date, bibles = [], onOpenGalaxyPopup }) {
   const [posts, setPosts] = useState([]);
   const [comments, setComments] = useState({});
   const [commentInputs, setCommentInputs] = useState({});
@@ -1159,7 +1330,7 @@ function CommunityQtSquareInner({ authUser, isDarkMode, date, bibles = [] }) {
             const verseText = foundBook.chapters[chapNum - 1][verseNum - 1];
             if (verseText) {
               e.preventDefault();
-              const cleanVerse = verseText.replace(/|'|\x1B/gi, '').trim();
+              const cleanVerse = verseText.replace(/ |'|\x1B/gi, '').trim();
               const replacement = `\n[${bookRaw} ${chapNum}:${verseNum}] "${cleanVerse}"\n`;
               const startIdx = beforeText.length - match[0].length;
               const nextVal = val.substring(0, startIdx) + replacement + val.substring(cursorPos);
@@ -1390,9 +1561,26 @@ function CommunityQtSquareInner({ authUser, isDarkMode, date, bibles = [] }) {
                   </div>
                 </div>
 
-                <div className="px-2 py-1 rounded bg-stone-50 dark:bg-black/30 border border-stone-200/50 dark:border-white/5 text-[11px] font-medium text-stone-600 dark:text-stone-300 flex items-center justify-between">
-                  <span>📖 {post.qt_reference}</span>
-                  <span className="truncate max-w-[55%] text-stone-500 dark:text-stone-400">{post.qt_title}</span>
+                <div className="px-2 py-1 rounded bg-stone-50 dark:bg-black/30 border border-stone-200/50 dark:border-white/5 text-[11px] font-medium text-stone-600 dark:text-stone-300 flex items-center justify-between gap-2">
+                  <span className="truncate">📖 {post.qt_reference} — {post.qt_title}</span>
+                  {onOpenGalaxyPopup && (
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => onOpenGalaxyPopup('arc', post.qt_reference)}
+                        className="px-1.5 py-0.5 rounded bg-amber-400 text-slate-950 text-[9.5px] font-black cursor-pointer"
+                      >
+                        🌈 아크
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onOpenGalaxyPopup('2d', post.qt_reference)}
+                        className="px-1.5 py-0.5 rounded bg-cyan-400 text-slate-950 text-[9.5px] font-black cursor-pointer"
+                      >
+                        🌌 은하계
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {post.is_pastor_notice ? (

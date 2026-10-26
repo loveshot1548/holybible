@@ -4,6 +4,10 @@ import { supabase } from '../lib/supabase';
 import { getCrossReferences } from '../lib/tskHelper';
 import { analyzeHebrewSyntaxFromWords } from '../lib/hebrewSyntaxEngine';
 import CryptoJS from 'crypto-js';
+import {
+  BibleGalaxyArcModal,
+  extractAllBibleRefsFromText
+} from '../pages/BibleKnowledgeGalaxy';
 
 // =====================================================================
 // 🔐 [보안 표준화] 군사급 AES-256 종단간 암호화
@@ -46,6 +50,17 @@ const decryptField = (cipherText) => {
   }
 
   return cipherText;
+};
+
+// 성경 구절 정밀 정규식 추출기 (타이핑 노트 실시간 감지용)
+const extractBibleReferences = (text) => {
+  if (!text) return [];
+  const extracted = typeof extractAllBibleRefsFromText === 'function'
+    ? extractAllBibleRefsFromText(text).map(item => item.label)
+    : [];
+  const regex = /([가-힣]+(?:서|기|상|하|전|후|일|이|삼)?)\s?(\d+)(?:장|:)\s?(?:(\d+)(?:절)?)?/g;
+  const matches = [...text.matchAll(regex)].map(m => m[0].trim());
+  return Array.from(new Set([...extracted, ...matches]));
 };
 
 // =====================================================================
@@ -335,9 +350,17 @@ const renderStroke = (ctx, stroke, isDark) => {
 };
 
 // =====================================================================
-// 🏛️ [맥체인 전용 고성능 필기 & 타이핑 노트 패널]
+// 🏛️ [맥체인 전용 고성능 필기 & 타이핑 노트 패널 + 아크/은하계 실시간 구절 감지]
 // =====================================================================
-const McheyneTranscriptionNotePanel = ({ currentPlanKey, planTitle, isDark, noteContent, setNoteContent, updateDay }) => {
+const McheyneTranscriptionNotePanel = ({
+  currentPlanKey,
+  planTitle,
+  isDark,
+  noteContent,
+  setNoteContent,
+  updateDay,
+  onOpenGalaxyPopup
+}) => {
   const [panelTab, setPanelTab] = useState('handwriting'); // 'handwriting' | 'typing'
   const [paperStyle, setPaperStyle] = useState('line'); // 'dot', 'line', 'grid', 'blank'
 
@@ -361,6 +384,11 @@ const McheyneTranscriptionNotePanel = ({ currentPlanKey, planTitle, isDark, note
   const [currentTool, setCurrentTool] = useState('pen');
   const [strokeColor, setStrokeColor] = useState('#1E293B');
   const [strokeWidth, setStrokeWidth] = useState(3.0);
+
+  // 타이핑 노트에 입력된 성경 구절 실시간 감지
+  const detectedTypingRefs = useMemo(() => {
+    return extractBibleReferences(`${planTitle || ''} ${noteContent || ''}`);
+  }, [planTitle, noteContent]);
 
   // 플랜 또는 날짜 변경 시 해당 필기 복원
   useEffect(() => {
@@ -586,8 +614,29 @@ const McheyneTranscriptionNotePanel = ({ currentPlanKey, planTitle, isDark, note
           </button>
         </div>
 
-        {/* 용지 선택기 */}
+        {/* 용지 선택기 & 아크/은하계 팝업 버튼 */}
         <div className="flex items-center gap-1">
+          {onOpenGalaxyPopup && (
+            <>
+              <button
+                type="button"
+                onClick={() => onOpenGalaxyPopup('arc', detectedTypingRefs[0] || planTitle)}
+                className="px-2 py-1 rounded-lg text-[10px] font-black bg-amber-400 hover:bg-amber-300 text-slate-950 cursor-pointer shadow-2xs"
+                title="현재 필사 중인 말씀의 신·구약 아크 대조 팝업"
+              >
+                🌈 아크
+              </button>
+              <button
+                type="button"
+                onClick={() => onOpenGalaxyPopup('2d', detectedTypingRefs[0] || planTitle)}
+                className="px-2 py-1 rounded-lg text-[10px] font-black bg-cyan-400 hover:bg-cyan-300 text-slate-950 cursor-pointer shadow-2xs"
+                title="현재 필사 중인 말씀의 은하계 연관 팝업"
+              >
+                🌌 은하계
+              </button>
+            </>
+          )}
+
           <div className={`flex p-0.5 rounded-lg border text-[10px] font-bold ${
             isDark ? 'bg-black/30 border-slate-700' : 'bg-stone-200/70 border-stone-300'
           }`}>
@@ -674,6 +723,34 @@ const McheyneTranscriptionNotePanel = ({ currentPlanKey, planTitle, isDark, note
         </div>
       )}
 
+      {/* 타이핑 탭에서 감지된 성경 구절 칩 바 */}
+      {panelTab === 'typing' && detectedTypingRefs.length > 0 && onOpenGalaxyPopup && (
+        <div className={`px-2.5 py-1.5 border-b flex items-center gap-1.5 overflow-x-auto hide-scrollbar shrink-0 ${
+          isDark ? 'bg-[#151B27] border-slate-700/60' : 'bg-amber-50/60 border-stone-200'
+        }`}>
+          <span className="text-[10px] font-black text-amber-600 dark:text-amber-400 shrink-0">⚡ 감지구절:</span>
+          {detectedTypingRefs.map((refStr) => (
+            <div key={refStr} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-black/10 dark:bg-white/10 text-[10.5px] font-bold shrink-0">
+              <span>{refStr}</span>
+              <button
+                type="button"
+                onClick={() => onOpenGalaxyPopup('arc', refStr)}
+                className="px-1.5 py-0.2 rounded bg-amber-400 text-slate-950 text-[9.5px] font-black cursor-pointer"
+              >
+                🌈대조
+              </button>
+              <button
+                type="button"
+                onClick={() => onOpenGalaxyPopup('2d', refStr)}
+                className="px-1.5 py-0.2 rounded bg-cyan-400 text-slate-950 text-[9.5px] font-black cursor-pointer"
+              >
+                🌌은하
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* 3. 본문 뷰포트 (손필기 캔버스 vs 텍스트 타이핑) */}
       <div className="flex-1 relative overflow-hidden" style={getPaperBg()}>
         {panelTab === 'handwriting' ? (
@@ -695,7 +772,7 @@ const McheyneTranscriptionNotePanel = ({ currentPlanKey, planTitle, isDark, note
                 setNoteContent(e.target.value);
                 if (updateDay) updateDay({ mcheyneNote: e.target.value });
               }}
-              placeholder={`[${planTitle || '맥체인'}] 말씀을 묵상하며 이곳에 자유롭게 타이핑 필사나 묵상 노트를 적으세요.\n\n(원어 인스펙터에서 '묵상 노트에 주석 삽입'을 누르면 이곳에 정밀 강해가 기록됩니다.)`}
+              placeholder={`[${planTitle || '맥체인'}] 말씀을 묵상하며 이곳에 자유롭게 타이핑 필사나 묵상 노트를 적으세요.\n\n(원어 인스펙터나 신·구약 아크 대조 팝업에서 '노트에 삽입'을 누르면 이곳에 정밀 강해가 자동 기록됩니다.)`}
               className={`w-full h-full bg-transparent outline-none resize-none text-[14px] leading-[2.1] font-medium border-none ${
                 isDark ? 'text-slate-100 placeholder:text-slate-500' : 'text-stone-900 placeholder:text-stone-400'
               }`}
@@ -738,6 +815,13 @@ export default function Mcheyne({
   const [partnerActivity, setPartnerActivity] = useState(false);
   const isMoHana = (authUser?.name || authUser) === '모하나';
   const MY_NAME = "정신동";
+
+  // 🌈 [신규 고도화] 성경 아크(신·구약 대조) & 은하계(Galaxy) 인라인 팝업 상태
+  const [galaxyModalConfig, setGalaxyModalConfig] = useState({
+    isOpen: false,
+    mode: 'arc', // 'arc' | '2d' | '3d'
+    refQuery: ''
+  });
 
   // 📖 성경 번역본 모드: 'krv'(개역개정) | 'easy'(쉬운성경) | 'web'(World English Bible) | 'parallel'(동시대조)
   const [bibleVersion, setBibleVersion] = useState(() => {
@@ -921,6 +1005,25 @@ export default function Mcheyne({
 
   const safeCleanText = (txt) => cleanText ? cleanText(txt) || txt : txt || '';
 
+  // 🌈 현재 맥체인 플랜 기준 아크/은하계 팝업 오픈 핸들러
+  const openGalaxyPopup = useCallback((mode = 'arc', customRefStr = '') => {
+    const koBookName = BIBLE_66_MAP[mBookD?.name]?.ko || mBookD?.name || mp?.book || '창세기';
+    const defaultRef = `${koBookName} ${mChaps[0] || 1}:1`;
+    setGalaxyModalConfig({
+      isOpen: true,
+      mode,
+      refQuery: customRefStr || defaultRef
+    });
+  }, [mBookD, mp, mChaps]);
+
+  // ✍️ 아크 팝업에서 찾은 신·구약 대조 인사이트를 맥체인 노트에 즉시 삽입
+  const handleInsertArcInsightToMcheyne = useCallback((insightText) => {
+    const updatedNote = (noteContent || '') + insightText;
+    setNoteContent(updatedNote);
+    if (updateDay) updateDay({ mcheyneNote: updatedNote });
+    setViewMode('split');
+  }, [noteContent, updateDay]);
+
   const getDisplayVersesForChapter = useCallback((chNum) => {
     const allVerses = (getArr ? getArr(mBookD?.chapters) : mBookD?.chapters || [])[chNum - 1] || [];
     if (!mVerseRange || !mVerseRange[chNum]) {
@@ -1007,7 +1110,7 @@ export default function Mcheyne({
     }
   }, [ymdStr, date, updateDay, currDay, mChaps, authUser]);
 
-  // 원어 연구 인스펙터 오픈[cite: 16]
+  // 원어 연구 인스펙터 오픈
   const openVerseInspector = useCallback(async (chNum, vNum, verseText) => {
     const rawBookName = mBookD?.name || mp?.book || '창세기';
     const bookInfo = BIBLE_66_MAP[rawBookName] || { ko: rawBookName, isOT: true, section: '구약' };
@@ -1135,7 +1238,7 @@ export default function Mcheyne({
     }
   }, [customNotesMap]);
 
-  // 원어 연구실 점프[cite: 16]
+  // 원어 연구실 점프
   const handleJumpToInterlinearStudio = () => {
     if (!inspectorTarget) return;
     try {
@@ -1151,7 +1254,7 @@ export default function Mcheyne({
     }
   };
 
-  // 🌟 맥체인 필사 노트에 주석 즉시 삽입 (성경통독과 동일)[cite: 16]
+  // 🌟 맥체인 필사 노트에 주석 즉시 삽입 (성경통독과 동일)
   const handleInsertWordToMcheyneNote = (word) => {
     const lemmaNotice = word.isInflectedDifferent ? ` (원형: ${word.lemma})` : '';
     const customMemoNotice = word.userCustomNote?.memo ? `\n   ↳ ✍️ 연구 메모: ${word.userCustomNote.memo}` : '';
@@ -1163,7 +1266,7 @@ export default function Mcheyne({
     alert(`[${word.inflected}] 원어 강해가 맥체인 노트에 기록되었습니다.`);
   };
 
-  // 이 장 전체 완독 토글[cite: 16]
+  // 이 장 전체 완독 토글
   const handleToggleWholeChapter = (chNum) => {
     const isCurrentlyRead = isChapterAllRead(chNum);
     const nextState = !isCurrentlyRead;
@@ -1216,6 +1319,18 @@ export default function Mcheyne({
   return (
     <div className={`flex-1 flex flex-col h-full relative overflow-hidden font-sans select-none animate-fade-in ${theme.bg}`}>
       
+      {/* ===================================================================== */}
+      {/* 🌈 성경 아크(신·구약 대조) & 은하계(Galaxy) 인라인 팝업 모달 */}
+      {/* ===================================================================== */}
+      <BibleGalaxyArcModal
+        isOpen={galaxyModalConfig.isOpen}
+        onClose={() => setGalaxyModalConfig(prev => ({ ...prev, isOpen: false }))}
+        initialMode={galaxyModalConfig.mode}
+        initialRefQuery={galaxyModalConfig.refQuery}
+        onInsertInsight={handleInsertArcInsightToMcheyne}
+        setActiveScreen={setActiveScreen}
+      />
+
       {/* 1. 상단 글로벌 헤더 */}
       <div className={`relative z-20 px-2 sm:px-3 py-1.5 sm:py-2 flex items-center justify-between border-b shrink-0 ${
         isDark ? 'border-slate-800 bg-[#101622]' : 'border-stone-200 bg-white shadow-2xs'
@@ -1231,7 +1346,7 @@ export default function Mcheyne({
         </button>
       </div>
       
-      {/* 2. 본문 타이틀 & 집중모드 & 2단 필사 토글[cite: 16] */}
+      {/* 2. 본문 타이틀 & 집중모드 & 2단 필사 토글 */}
       <div className={`px-2 sm:px-3 py-1.5 border-b ${theme.border} shrink-0 z-10 flex items-center justify-between flex-wrap gap-1.5 ${
         isDark ? 'bg-slate-900/50' : 'bg-white/70 backdrop-blur-md'
       }`}>
@@ -1285,7 +1400,7 @@ export default function Mcheyne({
               </button>
             </div>
 
-            {/* 본문 집중 / 2단 필사 토글 (통독과 동일)[cite: 16] */}
+            {/* 본문 집중 / 2단 필사 토글 (통독과 동일) */}
             <div className={`flex gap-1 ${isDark ? 'bg-black/30 border-slate-800' : 'bg-stone-100 border-stone-200'} p-0.5 rounded-lg border`}>
               <button 
                 onClick={() => setViewMode('single')}
@@ -1314,7 +1429,7 @@ export default function Mcheyne({
           </div>
       </div>
 
-      {/* 3. 배속/낭독 & 유튜브 검색 & 녹음 재생기 & 플랜 탭바[cite: 16] */}
+      {/* 3. 배속/낭독 & 유튜브 검색 & 녹음 재생기 & 플랜 탭바 */}
       <div className={`w-full flex-col shrink-0 ${isFocusMode ? 'hidden' : 'flex'}`}>
           <div className={`px-2 sm:px-3 py-1 border-b ${theme.border} relative z-10 w-full ${isDark ? 'bg-slate-900/30' : 'bg-stone-50/50'}`}>
             <div className="flex flex-col gap-1">
@@ -1364,6 +1479,24 @@ export default function Mcheyne({
                 >
                   <IconBook /> 원어 성경
                 </button>
+
+                {/* 🌈 현재 플랜 본문 아크 대조 & 은하계 팝업 버튼 */}
+                <button
+                  type="button"
+                  onClick={() => openGalaxyPopup('arc')}
+                  className="h-6.5 px-2.5 rounded-lg text-[10.5px] font-black bg-amber-400 hover:bg-amber-300 text-slate-950 shadow-2xs flex items-center gap-1 cursor-pointer active:scale-95 transition-all"
+                  title="페이지 이동 없이 현재 맥체인 본문의 신·구약 아크 대조 팝업 열기"
+                >
+                  🌈 아크 대조
+                </button>
+                <button
+                  type="button"
+                  onClick={() => openGalaxyPopup('2d')}
+                  className="h-6.5 px-2.5 rounded-lg text-[10.5px] font-black bg-cyan-500 hover:bg-cyan-400 text-slate-950 shadow-2xs flex items-center gap-1 cursor-pointer active:scale-95 transition-all"
+                  title="페이지 이동 없이 현재 맥체인 본문의 성경 은하계 팝업 열기"
+                >
+                  🌌 은하계
+                </button>
               </div>
 
               {audioUrl && (
@@ -1387,7 +1520,7 @@ export default function Mcheyne({
           </div>
       </div>
 
-      {/* 4. 본문 메인 레이아웃 (🌟 어설픈 다꾸 제거, 유려한 리딩 뷰 + 우측 고성능 필사 스케치북)[cite: 16] */}
+      {/* 4. 본문 메인 레이아웃 (좌측 리딩 뷰 + 우측 고성능 필사 스케치북) */}
       <div className={`flex-1 px-2 sm:px-3 md:px-4 pt-1.5 pb-20 grid gap-3 h-full relative z-10 overflow-hidden ${
         viewMode === 'split' ? 'grid-cols-1 md:grid-cols-2 max-w-[1500px]' : 'grid-cols-1 max-w-4xl'
       } mx-auto w-full`}>
@@ -1398,15 +1531,26 @@ export default function Mcheyne({
               {(getArr ? getArr(mChaps) : mChaps || []).map(ch => {
                 const displayVerses = getDisplayVersesForChapter(ch);
                 const chRead = isChapterAllRead(ch);
+                const koBookNameForChap = BIBLE_66_MAP[mBookD?.name]?.ko || mBookD?.name || mp?.book || '창세기';
 
                 return ( 
                   <div key={ch} className="mb-4 p-2 sm:p-3 rounded-xl border border-stone-200/80 dark:border-slate-800 bg-stone-50/40 dark:bg-black/20">
                       
-                      {/* 이 장 전체 완독 체크 버튼 */}
-                      <div className="flex items-center justify-between mb-2 border-b border-stone-200 dark:border-slate-800 pb-1.5">
-                        <h4 className={`font-bold text-[14px] sm:text-[15px] flex items-center gap-1.5 ${theme.textMain}`}>
-                            <IconBook /> 제 {ch} 장
-                        </h4>
+                      {/* 이 장 전체 완독 체크 버튼 & 장별 아크/은하계 팝업 버튼 */}
+                      <div className="flex items-center justify-between mb-2 border-b border-stone-200 dark:border-slate-800 pb-1.5 flex-wrap gap-1.5">
+                        <div className="flex items-center gap-2">
+                          <h4 className={`font-bold text-[14px] sm:text-[15px] flex items-center gap-1.5 ${theme.textMain}`}>
+                              <IconBook /> 제 {ch} 장
+                          </h4>
+                          <button
+                            type="button"
+                            onClick={() => openGalaxyPopup('arc', `${koBookNameForChap} ${ch}:1`)}
+                            className="px-2 py-0.5 rounded-md text-[10px] font-black bg-amber-400/20 hover:bg-amber-400/35 text-amber-700 dark:text-amber-300 border border-amber-400/40 cursor-pointer"
+                            title={`${koBookNameForChap} ${ch}장 신·구약 아크 대조 팝업`}
+                          >
+                            🌈 {ch}장 아크 대조
+                          </button>
+                        </div>
                         
                         <button
                           type="button"
@@ -1500,7 +1644,8 @@ export default function Mcheyne({
                                             </div>
                                           )}
 
-                                          <span className="inline-flex items-center ml-2 align-middle select-none">
+                                          {/* 🌟 각 절 우측: [📖 원어] + [🌈 아크] + [🌌 은하계] 인라인 팝업 버튼 */}
+                                          <span className="inline-flex items-center gap-1 ml-2 align-middle select-none">
                                             <button
                                               type="button"
                                               onClick={(e) => {
@@ -1511,6 +1656,28 @@ export default function Mcheyne({
                                               title="원어 분해 및 10대 학술 사료"
                                             >
                                               <span>📖</span> 원어
+                                            </button>
+                                            <button
+                                              type="button"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                openGalaxyPopup('arc', `${koBookName} ${ch}:${vNum}`);
+                                              }}
+                                              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-sans font-bold bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/60 dark:hover:bg-amber-900/80 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 shadow-2xs cursor-pointer active:scale-95 transition-all"
+                                              title={`${koBookName} ${ch}:${vNum} 신·구약 아크 대조 팝업 열기`}
+                                            >
+                                              <span>🌈</span> 아크
+                                            </button>
+                                            <button
+                                              type="button"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                openGalaxyPopup('2d', `${koBookName} ${ch}:${vNum}`);
+                                              }}
+                                              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-sans font-bold bg-cyan-50 hover:bg-cyan-100 dark:bg-cyan-950/60 dark:hover:bg-cyan-900/80 text-cyan-800 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800 shadow-2xs cursor-pointer active:scale-95 transition-all"
+                                              title={`${koBookName} ${ch}:${vNum} 성경 은하계 연관 팝업 열기`}
+                                            >
+                                              <span>🌌</span> 은하계
                                             </button>
                                           </span>
                                       </div>
@@ -1560,7 +1727,7 @@ export default function Mcheyne({
           </div>
         </div>
 
-        {/* 🌟 [핵심 변경] 우측: 2단 필사 전용 손필기 & 타이핑 노트 패널[cite: 16] */}
+        {/* 우측: 2단 필사 전용 손필기 & 타이핑 노트 패널 */}
         {viewMode === 'split' && (
           <div className="flex flex-col h-full relative z-[45] pointer-events-auto min-h-[450px]">
             <McheyneTranscriptionNotePanel
@@ -1570,13 +1737,14 @@ export default function Mcheyne({
               noteContent={noteContent}
               setNoteContent={setNoteContent}
               updateDay={updateDay}
+              onOpenGalaxyPopup={openGalaxyPopup}
             />
           </div>
         )}
       </div>
 
       {/* ===================================================================== */}
-      {/* 🏛️ [원어 연구 인스펙터 모달 - 10대 학술 코퍼스 전수 연동][cite: 16]             */}
+      {/* 🏛️ [원어 연구 인스펙터 모달 - 10대 학술 코퍼스 전수 연동]             */}
       {/* ===================================================================== */}
       {inspectorTarget && (
         <div className="mcheyne-modal-portal fixed inset-0 z-[999999] bg-black/75 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-3 animate-fade-in select-none">
@@ -1585,12 +1753,23 @@ export default function Mcheyne({
           }`}>
             
             <div className="border-b pb-2.5 border-stone-200 dark:border-slate-800 shrink-0 space-y-2">
-              <div className="flex justify-between items-center">
+              <div className="flex justify-between items-center flex-wrap gap-1.5">
                 <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
                   {inspectorTarget.book} {inspectorTarget.chapter}장 {inspectorTarget.verse}절 원어 강해
                 </span>
                 
                 <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const refStr = `${inspectorTarget.book} ${inspectorTarget.chapter}:${inspectorTarget.verse}`;
+                      setInspectorTarget(null);
+                      openGalaxyPopup('arc', refStr);
+                    }}
+                    className="px-2.5 py-1 rounded-lg text-[10.5px] font-black bg-amber-400 hover:bg-amber-300 text-slate-950 shadow-xs cursor-pointer flex items-center gap-1 transition-all active:scale-95"
+                  >
+                    <span>🌈</span> 신구약 아크 ➔
+                  </button>
                   <button
                     type="button"
                     onClick={handleJumpToInterlinearStudio}
@@ -1721,12 +1900,23 @@ export default function Mcheyne({
               {modalTab === 'scholarly' && (
                 <div className="space-y-2">
                   <div className="p-2.5 rounded-xl border bg-sky-50/70 border-sky-200 dark:bg-sky-950/20 dark:border-sky-900/60 text-sky-950 dark:text-sky-200">
-                    <span className="font-bold text-[11px] block mb-1">🔗 교차참조 (TSK) - {crossRefs.length}개</span>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-bold text-[11px]">🔗 교차참조 (TSK) - {crossRefs.length}개</span>
+                      <span className="text-[9.5px] opacity-75">클릭 시 아크 대조 오픈</span>
+                    </div>
                     <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto hide-scrollbar">
                       {crossRefs.map((ref, idx) => (
-                        <span key={idx} className="px-1.5 py-0.5 rounded text-[10px] font-mono border bg-white dark:bg-black/40 border-stone-200 dark:border-slate-700">
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => {
+                            setInspectorTarget(null);
+                            openGalaxyPopup('arc', ref.label);
+                          }}
+                          className="px-1.5 py-0.5 rounded text-[10px] font-mono border bg-white hover:bg-amber-100 dark:bg-black/40 dark:hover:bg-amber-950/50 border-stone-200 dark:border-slate-700 cursor-pointer transition-colors"
+                        >
                           {ref.label}
-                        </span>
+                        </button>
                       ))}
                     </div>
                   </div>
