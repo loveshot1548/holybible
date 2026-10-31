@@ -1,13 +1,125 @@
 // src/pages/Interlinear.js
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { supabase } from '../lib/supabase';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useAppStore } from '../store/useAppStore';
 import { getCrossReferences } from '../lib/tskHelper';
 import { analyzeHebrewSyntaxFromWords } from '../lib/hebrewSyntaxEngine';
 import { tokenizeGrammarCode } from '../lib/biblicalGrammarWiki';
 import GrammarWikiModal from '../lib/GrammarWikiModal';
+import { supabase } from '../lib/supabase';
+import bibleData from '../ko_ko.json';
 
 // =====================================================================
-// 📜 성경 66권 정경 메타데이터 & 구속사 연대기 마스터 맵
+// 🛡️ 모든 모바일/태블릿/PC 브라우저 100% 호환 도형 헬퍼 (둥근 사각형 & 정육각형)
+// =====================================================================
+function drawSafeRoundRect(ctx, x, y, w, h, r) {
+  const radius = Math.max(0, Math.min(r, w / 2, h / 2));
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.arcTo(x + w, y, x + w, y + h, radius);
+  ctx.arcTo(x + w, y + h, x, y + h, radius);
+  ctx.arcTo(x, y + h, x, y, radius);
+  ctx.arcTo(x, y, x + w, y, radius);
+  ctx.closePath();
+}
+
+function drawHexagonPath(ctx, cx, cy, radius) {
+  ctx.beginPath();
+  for (let i = 0; i < 6; i++) {
+    const angle = (Math.PI / 3) * i - Math.PI / 6;
+    const vx = cx + radius * Math.cos(angle);
+    const vy = cy + radius * Math.sin(angle);
+    if (i === 0) ctx.moveTo(vx, vy);
+    else ctx.lineTo(vx, vy);
+  }
+  ctx.closePath();
+}
+
+// =====================================================================
+// 🎨 TRACKTOR Segundo Cérebro 6대 시그니처 스페이스 테마 팔레트
+// =====================================================================
+const GALAXY_THEMES = {
+  oceano: {
+    id: 'oceano',
+    name: 'Oceano (트랙터 시안)',
+    bg: '#04080E',
+    gridDot: 'rgba(56, 189, 248, 0.08)',
+    orbitLine: 'rgba(45, 212, 191, 0.18)',
+    textMain: '#E2F1FF',
+    textSub: '#2DD4BF',
+    accent: '#00F5D4',
+    panelBg: 'rgba(7, 13, 22, 0.95)',
+    panelBorder: 'rgba(45, 212, 191, 0.28)',
+    swatches: ['#00F5D4', '#38BDF8', '#0284C7', '#6366F1', '#A855F7']
+  },
+  traktor: {
+    id: 'traktor',
+    name: 'Metálico Tracktor (골드)',
+    bg: '#090806',
+    gridDot: 'rgba(245, 158, 11, 0.08)',
+    orbitLine: 'rgba(245, 158, 11, 0.18)',
+    textMain: '#FFFBEB',
+    textSub: '#FBBF24',
+    accent: '#F59E0B',
+    panelBg: 'rgba(16, 13, 10, 0.95)',
+    panelBorder: 'rgba(245, 158, 11, 0.28)',
+    swatches: ['#F59E0B', '#FBBF24', '#EA580C', '#38BDF8', '#A855F7']
+  },
+  rubric: {
+    id: 'rubric',
+    name: 'Rubric (크림슨 앰버)',
+    bg: '#0A0607',
+    gridDot: 'rgba(244, 63, 94, 0.08)',
+    orbitLine: 'rgba(251, 113, 133, 0.18)',
+    textMain: '#FFF1F2',
+    textSub: '#FB7185',
+    accent: '#F43F5E',
+    panelBg: 'rgba(19, 10, 13, 0.95)',
+    panelBorder: 'rgba(244, 63, 94, 0.28)',
+    swatches: ['#FDBA74', '#FB923C', '#F43F5E', '#E11D48', '#EC4899']
+  },
+  neon: {
+    id: 'neon',
+    name: 'Neon (사이버 네온)',
+    bg: '#05040A',
+    gridDot: 'rgba(168, 85, 247, 0.09)',
+    orbitLine: 'rgba(236, 72, 153, 0.18)',
+    textMain: '#FAF5FF',
+    textSub: '#F472B6',
+    accent: '#22D3EE',
+    panelBg: 'rgba(13, 9, 22, 0.95)',
+    panelBorder: 'rgba(236, 72, 153, 0.28)',
+    swatches: ['#A3E635', '#FACC15', '#22D3EE', '#EC4899', '#A855F7']
+  },
+  bordo: {
+    id: 'bordo',
+    name: 'Bordô (로즈 골드)',
+    bg: '#0B0708',
+    gridDot: 'rgba(253, 164, 175, 0.07)',
+    orbitLine: 'rgba(244, 114, 182, 0.16)',
+    textMain: '#FFF1F2',
+    textSub: '#FDA4AF',
+    accent: '#FB7185',
+    panelBg: 'rgba(20, 12, 14, 0.95)',
+    panelBorder: 'rgba(251, 113, 133, 0.26)',
+    swatches: ['#FFE4E6', '#FDA4AF', '#FB7185', '#F43F5E', '#E11D48']
+  },
+  papel: {
+    id: 'papel',
+    name: 'Papel (아카데믹 다크웜)',
+    bg: '#0E0D0B',
+    gridDot: 'rgba(214, 211, 209, 0.08)',
+    orbitLine: 'rgba(217, 119, 6, 0.20)',
+    textMain: '#F5F5F4',
+    textSub: '#FBBF24',
+    accent: '#D97706',
+    panelBg: 'rgba(23, 21, 18, 0.95)',
+    panelBorder: 'rgba(217, 119, 6, 0.28)',
+    swatches: ['#F5F5F4', '#D97706', '#EA580C', '#0284C7', '#6366F1']
+  }
+};
+
+// =====================================================================
+// 📜 성경 66권 정경 순서 및 장수 (총 1,189장: 구약 929장 / 신약 260장)
 // =====================================================================
 export const BIBLE_66_BOOKS = [
   // 구약 39권
@@ -540,7 +652,7 @@ export default function Interlinear({
     return 1;
   });
 
-  // ── 2. 성경 역본 모드 ('krv' | 'literal' | 'easy' | 'web' | 'parallel' | 'trilingual') ──
+  // ── 2. 성경 역본 모드 ──
   const [bibleVersion, setBibleVersion] = useState(() => {
     try {
       return localStorage.getItem('interlinear_bible_version') || 'parallel';
@@ -558,13 +670,12 @@ export default function Interlinear({
     } catch (_) {}
   };
 
-  // WEB 영어성경 심층 학습 서브 모드
   const [webStudyMode, setWebStudyMode] = useState('word');
   const [bilingualSearchInput, setBilingualSearchInput] = useState('');
   const [translatedClauses, setTranslatedClauses] = useState([]);
   const [isClauseTranslating, setIsClauseTranslating] = useState(false);
 
-  // ── 3. 원어 조판 모드 ('vowels' | 'consonants' | 'full' | 'phonetic') ──
+  // ── 3. 원어 조판 모드 ──
   const [typographyMode, setTypographyMode] = useState('vowels');
   const [workflowMode, setWorkflowMode] = useState('all');
   const [playingAudioType, setPlayingAudioType] = useState(null);
@@ -717,7 +828,7 @@ export default function Interlinear({
     return assembleLiteralTranslation(words, isOT);
   }, [words, isOT]);
 
-  // 문단(Paragraph) 맥락 데이터 (이전 절 V-1 ~ 현재 절 V ~ 다음 절 V+2)
+  // 문단(Paragraph) 맥락 데이터
   const paragraphContextVerses = useMemo(() => {
     const startV = Math.max(1, verse - 1);
     const endV = Math.min(versesCount, verse + 2);
@@ -766,7 +877,7 @@ export default function Interlinear({
   }, [webStudyMode, webVerseText, enVerseText]);
 
   // =====================================================================
-  // 🔗 한·영·원어 3중 교차 하이라이트 매칭기 (Tri-Lingual Matcher)
+  // 🔗 한·영·원어 3중 교차 하이라이트 매칭기
   // =====================================================================
   const activeWordObj = useMemo(() => {
     if (activeWordOrder === null) return null;
@@ -933,7 +1044,7 @@ export default function Interlinear({
     });
   };
 
-  // ── 9. 기초 학술 DB 로드 ──
+  // 기초 학술 DB 로드
   useEffect(() => {
     fetch('/data/easy_bible.json').then(r => r.ok ? r.json() : {}).then(d => setEasyBibleDb(d || {})).catch(() => {});
     fetch('/data/web_bible.json').then(r => r.ok ? r.json() : {}).then(d => setWebBibleDb(d || {})).catch(() => {});
@@ -1038,7 +1149,7 @@ export default function Interlinear({
     } catch (_) {}
   }, []);
 
-  // 🛠️ [버그 수정 완료] 사이드바의 <nav>를 숨기지 않고, 모달이 열렸을 때만 하단 플로팅 독바만 안전하게 가림
+  // 🛠️ 모달 열렸을 때 하단 플로팅 독바 안전하게 숨기기
   useEffect(() => {
     const isAnyModalOpen = Boolean(selectedWordDetail || isLibraryOpen || selectedGrammarWikiKey || selectedWebLexiconWord);
     if (!isAnyModalOpen) return;
@@ -1079,7 +1190,7 @@ export default function Interlinear({
       });
   }, []);
 
-  // ── 10. Supabase 원어 인터리니어 어절 및 사전 결합 파이프라인 ──
+  // Supabase 원어 인터리니어 어절 및 사전 결합 파이프라인
   useEffect(() => {
     if (!dictLoaded) return;
     let isMounted = true;
@@ -1289,23 +1400,23 @@ export default function Interlinear({
   }, [selectedWordDetail, customNotesMap, customInputTrans, customInputMemo, currentBookMeta.ko, chapter, verse]);
 
   const handleCopyComprehensiveReport = useCallback(() => {
-    let report = `# 📖 [원어 강해 종합 학술 리포트] ${currentBookMeta.ko} ${chapter}장 ${verse}절\n`;
+    let report = `# [원어 강해 종합 학술 리포트] ${currentBookMeta.ko} ${chapter}장 ${verse}절\n`;
     report += `> **연대 및 역사적 배경:** ${currentBookMeta.era} | ${currentBookMeta.empire}\n\n`;
-    report += `### 📜 정경 본문 대조\n`;
+    report += `### 정경 본문 대조\n`;
     report += `- **개역개정:** ${koVerseText}\n`;
     if (literalVerseText) report += `- **원어 어순 직역:** ${literalVerseText}\n`;
     if (easyVerseText) report += `- **쉬운성경:** ${easyVerseText}\n`;
     if (webVerseText) report += `- **WEB Bible:** ${webVerseText}\n`;
     if (enVerseText) report += `- **영어 직역:** "${enVerseText}"\n\n`;
 
-    report += `### 🔍 단어별 1:1 형태론 및 3개 국어 매칭:\n`;
+    report += `### 단어별 1:1 형태론 및 3개 국어 매칭:\n`;
     words.forEach(w => {
       report += `- **${w.inflected}** (${w.lemma}) [${w.strongs}] ⇄ **${w.eng}** ⇄ **${w.korContextual}** | *${w.grammarDecoded}*\n`;
     });
     report += `\n`;
 
     if (currentHebrewSyntax) {
-      report += `### 📜 BHS 히브리어 구문론:\n`;
+      report += `### BHS 히브리어 구문론:\n`;
       currentHebrewSyntax.clauseHierarchy.forEach(c => {
         report += `- **${c.unit}** ➔ ${c.role} (${c.pauseType})\n`;
       });
@@ -1313,15 +1424,15 @@ export default function Interlinear({
     }
 
     if (currentCommentary) {
-      report += `### 📖 반즈/JFB 주석 요약:\n- ${currentCommentary.exegesis?.slice(0, 300)}...\n\n`;
+      report += `### 반즈/JFB 주석 요약:\n- ${currentCommentary.exegesis?.slice(0, 300)}...\n\n`;
     }
 
     if (currentMatthewHenry) {
-      report += `### 🌿 매튜 헨리 묵상 강해 요약:\n- ${currentMatthewHenry.devotionalExegesis?.slice(0, 300)}...\n\n`;
+      report += `### 매튜 헨리 묵상 강해 요약:\n- ${currentMatthewHenry.devotionalExegesis?.slice(0, 300)}...\n\n`;
     }
 
     navigator.clipboard.writeText(decodeHtmlEntities(report));
-    alert("📋 학술 서식이 포함된 종합 리포트가 클립보드에 복사되었습니다!");
+    alert("학술 서식이 포함된 종합 리포트가 클립보드에 복사되었습니다!");
   }, [currentBookMeta, chapter, verse, koVerseText, literalVerseText, easyVerseText, webVerseText, enVerseText, words, currentHebrewSyntax, currentCommentary, currentMatthewHenry]);
 
   const handleInsertToQT = useCallback((word) => {
@@ -1391,7 +1502,7 @@ export default function Interlinear({
   return (
     <div className={`flex-1 flex flex-col w-full max-w-full h-full pointer-events-auto ${theme.bg} relative font-sans overflow-x-hidden overflow-y-hidden select-none`}>
       
-      {/* ── 1. 상단 슬림 네비게이션 헤더 (모바일 삐져나감 0% 최적화) ── */}
+      {/* ── 1. 상단 슬림 네비게이션 헤더 ── */}
       <header className={`w-full max-w-full px-2.5 sm:px-4 py-2 border-b z-[60] sticky top-0 shrink-0 flex items-center justify-between gap-1.5 ${
         isDark ? 'bg-[#101622] border-slate-800' : 'bg-white border-stone-200 shadow-2xs'
       }`}>
@@ -1418,7 +1529,7 @@ export default function Interlinear({
               isDark ? 'bg-slate-800 border-slate-700 text-slate-200' : 'bg-stone-100 border-stone-200 text-stone-800'
             }`}
           >
-            📚 <span className="hidden xs:inline">서재</span>
+            <span>서재</span>
           </button>
 
           <button
@@ -1438,9 +1549,8 @@ export default function Interlinear({
                 ? 'bg-amber-950/40 border-amber-800 text-amber-300 hover:bg-amber-900/60'
                 : 'bg-amber-100 border-amber-300 text-amber-900 hover:bg-amber-200'
             }`}
-            title="어린이 눈높이 원어 탐험관으로 전환"
           >
-            <span>🎒</span> <span>키즈</span>
+            <span>키즈</span>
           </button>
 
           <button
@@ -1449,20 +1559,18 @@ export default function Interlinear({
             className={`px-2 py-1 rounded-lg text-[10.5px] sm:text-[11px] font-bold border cursor-pointer flex items-center gap-1 shrink-0 ${
               isDark ? 'bg-slate-800 border-slate-700 text-slate-200' : 'bg-stone-100 border-stone-200 text-stone-800'
             }`}
-            title="종합 학술 리포트 클립보드 복사"
           >
-            📋 <span className="hidden sm:inline">리포트</span>
+            <span>리포트</span>
           </button>
         </div>
       </header>
 
-      {/* ── 2. 메인 스크롤 뷰포트 (overflow-x-hidden 엄격 적용) ── */}
+      {/* ── 2. 메인 스크롤 뷰포트 ── */}
       <main className="flex-1 overflow-y-auto overflow-x-hidden px-2.5 sm:px-4 pt-2.5 pb-44 w-full max-w-5xl mx-auto hide-scrollbar space-y-3">
         
-        {/* ── A. 권/장/절 12칸 정밀 그리드 네비게이터 (모바일 확장 오버플로우 완벽 차단) ── */}
+        {/* ── A. 권/장/절 12칸 정밀 그리드 네비게이터 ── */}
         <div className={`w-full max-w-full p-2.5 sm:p-3 rounded-2xl border flex flex-col gap-2 overflow-hidden ${theme.panel}`}>
           
-          {/* 1열: 성경 권(6칸) | 장(3칸) | 절(3칸) */}
           <div className="grid grid-cols-12 gap-1.5 items-center w-full">
             <div className="col-span-6 min-w-0">
               <select
@@ -1510,7 +1618,6 @@ export default function Interlinear({
             </div>
           </div>
 
-          {/* 2열: [◀ 이전 절] + 역사적 연대 배지 + [다음 절 ▶] */}
           <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-dashed border-stone-200 dark:border-slate-800">
             <button
               type="button"
@@ -1523,7 +1630,7 @@ export default function Interlinear({
             </button>
 
             <div className="min-w-0 flex-1 text-center truncate text-[10.5px] sm:text-[11px] font-serif text-stone-500 dark:text-slate-400">
-              ⏳ {currentBookMeta.era} <span className="hidden md:inline">| 🏛 {currentBookMeta.empire}</span>
+              {currentBookMeta.era} <span className="hidden md:inline">| {currentBookMeta.empire}</span>
             </div>
 
             <button
@@ -1541,10 +1648,9 @@ export default function Interlinear({
         {/* ── B. 다중 역본 & 한·영·원어 3중 교차 매칭 통합 스튜디오 ── */}
         <div className={`w-full max-w-full p-3 sm:p-4 rounded-2xl border space-y-3 overflow-hidden ${theme.panel}`}>
           
-          {/* 1) 구절 타이틀 + 3개국어 전체 낭독 버튼 */}
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <h2 className={`text-[15px] sm:text-[17px] font-black ${theme.textMain} shrink-0`}>
-              📖 {currentBookMeta.ko} {chapter}:{verse}
+              {currentBookMeta.ko} {chapter}:{verse}
             </h2>
 
             <div className="flex items-center gap-1 flex-wrap">
@@ -1589,15 +1695,14 @@ export default function Interlinear({
             </div>
           </div>
 
-          {/* 2) 6대 역본·매칭 뷰 스위처 (가로 스크롤 트랙으로 모바일 삐져나감 완벽 방지) */}
           <div className="w-full max-w-full overflow-x-auto hide-scrollbar pb-0.5">
             <div className={`inline-flex min-w-full sm:min-w-0 p-1 rounded-xl border text-[11px] font-bold gap-1 ${
               isDark ? 'bg-black/40 border-slate-800' : 'bg-stone-100 border-stone-200'
             }`}>
               {[
-                { id: 'parallel', label: '🔗 동시대조 (3중매칭)' },
-                { id: 'trilingual', label: '🧬 3중 어절표' },
-                { id: 'web', label: '🇺🇸 WEB 영한스튜디오' },
+                { id: 'parallel', label: '동시대조 (3중매칭)' },
+                { id: 'trilingual', label: '3중 어절표' },
+                { id: 'web', label: 'WEB 영한스튜디오' },
                 { id: 'krv', label: '개역개정' },
                 { id: 'literal', label: '원어직역' },
                 { id: 'easy', label: '쉬운성경' }
@@ -1618,28 +1723,27 @@ export default function Interlinear({
             </div>
           </div>
 
-          {/* 3) 🌟 [모바일 최적화] 한·영·원어 3단 미니 벤토(Bento) 브릿지 카드 */}
+          {/* 3대 미니 벤토 브릿지 카드 */}
           {activeWordObj && (
             <div className={`w-full max-w-full p-2.5 sm:p-3 rounded-xl border space-y-2 overflow-hidden ${
               isDark ? 'bg-gradient-to-r from-amber-950/30 via-slate-900 to-sky-950/30 border-amber-500/40' : 'bg-gradient-to-r from-amber-50/90 via-white to-sky-50/90 border-amber-300'
             }`}>
               <div className="flex items-center justify-between gap-1">
                 <span className="px-2 py-0.5 rounded bg-amber-500 text-slate-950 text-[10px] font-mono font-black shrink-0">
-                  🔗 3중 매칭 어절 #{activeWordObj.word_order} ({activeWordObj.strongs})
+                  3중 매칭 어절 #{activeWordObj.word_order} ({activeWordObj.strongs})
                 </span>
                 <span className="text-[10.5px] font-bold text-stone-500 dark:text-slate-400 truncate">
                   {activeWordObj.grammarDecoded}
                 </span>
               </div>
 
-              {/* 3칸 대칭 미니 벤토: [원어] ⇄ [영어] ⇄ [한글] */}
               <div className="grid grid-cols-3 gap-1.5 text-center">
                 <div
                   onClick={() => speakAudio(activeWordObj.inflected, isOT ? 'he-IL' : 'el-GR')}
                   className="p-2 rounded-lg bg-white/80 dark:bg-black/40 border border-amber-300/60 dark:border-amber-800/60 cursor-pointer min-w-0 overflow-hidden"
                 >
                   <span className="text-[9.5px] font-mono text-amber-700 dark:text-amber-400 block truncate">
-                    🏛️ 원어 {activeWordObj.pron}
+                    원어 {activeWordObj.pron}
                   </span>
                   <span style={originalFontStyle} className="text-base sm:text-lg font-black text-stone-900 dark:text-white block truncate mt-0.5">
                     {cleanTypography(activeWordObj.inflected, isOT, typographyMode)}
@@ -1651,7 +1755,7 @@ export default function Interlinear({
                   className="p-2 rounded-lg bg-white/80 dark:bg-black/40 border border-sky-300/60 dark:border-sky-800/60 cursor-pointer min-w-0 overflow-hidden"
                 >
                   <span className="text-[9.5px] font-mono text-sky-700 dark:text-sky-400 block truncate">
-                    🇺🇸 영어 (터치사전)
+                    영어 사전
                   </span>
                   <span className="text-xs sm:text-sm font-serif font-black text-sky-900 dark:text-sky-200 block truncate mt-1 underline decoration-dotted">
                     {activeWordObj.eng}
@@ -1663,7 +1767,7 @@ export default function Interlinear({
                   className="p-2 rounded-lg bg-white/80 dark:bg-black/40 border border-emerald-300/60 dark:border-emerald-800/60 cursor-pointer min-w-0 overflow-hidden"
                 >
                   <span className="text-[9.5px] font-mono text-emerald-700 dark:text-emerald-400 block truncate">
-                    🇰🇷 한글 문맥뜻
+                    한글 뜻풀이
                   </span>
                   <span className="text-xs sm:text-sm font-black text-emerald-900 dark:text-emerald-200 block truncate mt-1">
                     {activeWordObj.korContextual}
@@ -1684,20 +1788,20 @@ export default function Interlinear({
                   onClick={() => handleInsertToQT(activeWordObj)}
                   className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10.5px] font-bold cursor-pointer"
                 >
-                  🌿 QT에 담기
+                  QT에 담기
                 </button>
                 <button
                   type="button"
                   onClick={() => handleSelectWord(activeWordObj, true)}
                   className="px-3 py-1 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-[10.5px] font-black cursor-pointer shadow-2xs"
                 >
-                  🔍 원어사전 열기
+                  원어사전 열기
                 </button>
               </div>
             </div>
           )}
 
-          {/* 4) 역본별 본문 텍스트 렌더링 */}
+          {/* 역본별 본문 렌더링 */}
           <div className="text-left space-y-2 w-full max-w-full overflow-hidden">
             {bibleVersion === 'krv' && (
               <p className={`text-[15px] sm:text-[16px] font-serif font-medium leading-[1.85] break-keep ${theme.textMain}`}>
@@ -1722,12 +1826,11 @@ export default function Interlinear({
               </p>
             )}
 
-            {/* 3중 어절 대조 매트릭스 뷰 */}
             {bibleVersion === 'trilingual' && (
               <div className="p-3 rounded-xl border border-amber-500/30 bg-amber-50/20 dark:bg-slate-900/50 space-y-2">
                 <div className="flex justify-between items-center">
                   <span className="text-[10.5px] font-mono font-black text-amber-700 dark:text-amber-300">
-                    🧬 원어 · 영어 · 한글 어절 1:1 직결표
+                    원어 · 영어 · 한글 어절 1:1 직결표
                   </span>
                   <span className="text-[10px] text-stone-400">터치 시 사전 오픈</span>
                 </div>
@@ -1761,16 +1864,15 @@ export default function Interlinear({
               </div>
             )}
 
-            {/* WEB 영어성경 ‘단어 · 문장(절) · 문단’ 3단계 한영/영한 스튜디오 */}
             {bibleVersion === 'web' && (
               <div className="space-y-3 p-2.5 sm:p-3 rounded-xl border border-blue-200 dark:border-blue-900/50 bg-blue-50/30 dark:bg-blue-950/15 overflow-hidden">
                 
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-blue-200/70 dark:border-blue-900/40">
                   <div className="flex items-center gap-1 overflow-x-auto hide-scrollbar">
                     {[
-                      { id: 'word', label: '🔤 단어·3중매칭' },
-                      { id: 'clauses', label: '📑 문장·절 직독직해' },
-                      { id: 'paragraph', label: '📜 전후 문단 맥락' }
+                      { id: 'word', label: '단어·3중매칭' },
+                      { id: 'clauses', label: '문장·절 직독직해' },
+                      { id: 'paragraph', label: '전후 문단 맥락' }
                     ].map(sm => (
                       <button
                         key={sm.id}
@@ -1787,7 +1889,6 @@ export default function Interlinear({
                     ))}
                   </div>
 
-                  {/* 모바일 100% 반응형 한영/영한 양방향 사전 검색창 */}
                   <form
                     onSubmit={(e) => {
                       e.preventDefault();
@@ -1801,7 +1902,7 @@ export default function Interlinear({
                       type="text"
                       value={bilingualSearchInput}
                       onChange={(e) => setBilingualSearchInput(e.target.value)}
-                      placeholder="한글(은혜) / 영어(grace) 검색..."
+                      placeholder="한글 / 영어 검색..."
                       className="flex-1 min-w-0 px-2.5 py-1 rounded-lg text-[11px] bg-white dark:bg-slate-900 border border-blue-300 dark:border-slate-700 outline-none select-text"
                     />
                     <button
@@ -1828,7 +1929,7 @@ export default function Interlinear({
                 {webStudyMode === 'clauses' && (
                   <div className="space-y-2">
                     <span className="text-[10.5px] font-mono font-bold text-blue-700 dark:text-blue-300 block">
-                      📑 구절·문장 단위 영한 1:1 직독직해
+                      문장·절 단위 영한 1:1 직독직해
                     </span>
                     {isClauseTranslating ? (
                       <div className="py-4 text-center text-xs text-stone-400">문장 구조 분해 및 직독직해 생성 중...</div>
@@ -1862,7 +1963,7 @@ export default function Interlinear({
                 {webStudyMode === 'paragraph' && (
                   <div className="space-y-2">
                     <span className="text-[10.5px] font-mono font-bold text-blue-700 dark:text-blue-300 block">
-                      📜 {currentBookMeta.ko} {chapter}장 전후 문단 영·한 대조
+                      {currentBookMeta.ko} {chapter}장 전후 문단 영·한 대조
                     </span>
                     <div className="space-y-2">
                       {paragraphContextVerses.map(pv => (
@@ -1901,12 +2002,11 @@ export default function Interlinear({
               </div>
             )}
 
-            {/* 동시대조 (한·영·원어 3중 하이라이트) */}
             {bibleVersion === 'parallel' && (
               <div className="space-y-1.5 pt-0.5">
                 <div className={`p-2.5 rounded-xl border text-left ${isDark ? 'bg-slate-900/40 border-slate-800' : 'bg-stone-50 border-stone-200'}`}>
                   <span className="text-[9.5px] font-bold text-amber-600 dark:text-amber-400 block mb-0.5">
-                    [개역개정 — 어절 터치 시 영어·원어 동시 점등]
+                    [개역개정]
                   </span>
                   <p className={`text-[14px] sm:text-[15px] font-serif font-medium leading-[1.8] break-keep ${theme.textMain}`}>
                     {renderInteractiveKoreanText(koVerseText)}
@@ -1935,7 +2035,7 @@ export default function Interlinear({
             )}
           </div>
 
-          {/* 5) 원어 원문 뷰어 (자음/모음/악센트/발음 4단 스위처) */}
+          {/* 원어 원문 뷰어 */}
           <div className="pt-3 border-t border-stone-200 dark:border-slate-800 text-left w-full max-w-full overflow-hidden">
             <div className="flex flex-wrap items-center justify-between gap-1.5 mb-2 pb-1.5 border-b border-stone-200/60 dark:border-slate-800">
               <span className={`text-[10.5px] sm:text-[11px] font-mono font-bold uppercase tracking-wider ${theme.textSub}`}>
@@ -2004,7 +2104,7 @@ export default function Interlinear({
             ) : typographyMode === 'phonetic' ? (
               <div className="p-3 rounded-xl bg-stone-50 dark:bg-slate-900/60 border border-stone-200 dark:border-slate-800 text-left">
                 <span className="text-[10px] font-bold text-sky-600 dark:text-sky-400 font-mono block mb-1">
-                  [원어 한글 음역 낭독문 - PHONETIC READING]
+                  [원어 한글 음역 낭독문]
                 </span>
                 <p className={`text-[14.5px] sm:text-[16px] font-serif leading-relaxed font-medium break-keep ${theme.textMain}`}>
                   {words.map(w => w.pron ? w.pron.replace(/[[\]]/g, '') : w.eng).join(' ')}
@@ -2042,7 +2142,7 @@ export default function Interlinear({
           </div>
         </div>
 
-        {/* ── C. 단어별 1:1 형태론 분해 그리드 (min-w-0 & overflow-hidden으로 모바일 삐져나감 방지) ── */}
+        {/* ── C. 단어별 1:1 형태론 분해 그리드 ── */}
         {!isLoading && words.length > 0 && (
           <div className="space-y-1.5 text-left w-full max-w-full overflow-hidden">
             <div className="flex justify-between items-center px-1">
@@ -2089,7 +2189,7 @@ export default function Interlinear({
                         </button>
                       </div>
 
-                      <span className={`text-[10px] font-mono font-medium block mt-0.5 truncate ${theme.textSub}`} dir="ltr">
+                      <span className={`text-[10px] font-mono text-stone-500 dark:text-slate-400 block mt-0.5 truncate ${theme.textSub}`} dir="ltr">
                         {word.pron}
                       </span>
 
@@ -2113,7 +2213,7 @@ export default function Interlinear({
                       </div>
 
                       <span className="text-[10px] font-mono text-sky-600 dark:text-sky-400 truncate font-semibold mt-0.5">
-                        🇺🇸 {word.eng}
+                        {word.eng}
                       </span>
                     </div>
 
@@ -2141,21 +2241,20 @@ export default function Interlinear({
           </div>
         )}
 
-        {/* ── D. 10대 학술 연구 코퍼스 (워크플로우 프리셋 + 가용 사료 리본 통합 배치) ── */}
+        {/* ── D. 10대 학술 연구 코퍼스 ── */}
         <div className={`w-full max-w-full p-3 sm:p-4 rounded-2xl border space-y-2.5 overflow-hidden ${theme.panel}`}>
           
-          {/* 코퍼스 상단 헤더 & 목적별 프리셋 스위치 */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-stone-200 dark:border-slate-800">
             <span className={`text-[12px] font-bold uppercase tracking-tight ${theme.textMain} shrink-0`}>
-              🏛️ 10대 학술 연구 코퍼스 (Exegetical Corpus)
+              10대 학술 연구 코퍼스
             </span>
 
             <div className="flex items-center gap-1 overflow-x-auto hide-scrollbar">
               {[
                 { id: 'all', label: '전체열기' },
-                { id: 'qt', label: '🌱 QT모드' },
-                { id: 'exegesis', label: '📖 강해·설교' },
-                { id: 'academic', label: '🏛️ 사본비평' }
+                { id: 'qt', label: 'QT모드' },
+                { id: 'exegesis', label: '강해·설교' },
+                { id: 'academic', label: '사본비평' }
               ].map(m => (
                 <button
                   key={m.id}
@@ -2173,57 +2272,56 @@ export default function Interlinear({
             </div>
           </div>
 
-          {/* 가용 사료 원터치 점프 칩 */}
           <div className="flex items-center gap-1 overflow-x-auto hide-scrollbar py-0.5">
             <span className="text-[9.5px] font-mono font-bold text-stone-400 shrink-0 mr-1">바로가기:</span>
             {crossRefs.length > 0 && (
               <button onClick={() => scrollToPanel('tsk')} className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-100 dark:bg-sky-950/60 text-sky-800 dark:text-sky-300 border border-sky-300 dark:border-sky-800 shrink-0 cursor-pointer">
-                🔗 TSK ({crossRefs.length})
+                TSK ({crossRefs.length})
               </button>
             )}
             {currentHebrewSyntax && (
               <button onClick={() => scrollToPanel('hebrewSyntax')} className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800 shrink-0 cursor-pointer">
-                📜 BHS 구문론
+                BHS 구문론
               </button>
             )}
             {currentLxxParallel && (
               <button onClick={() => scrollToPanel('lxx')} className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-stone-200 dark:bg-stone-800 text-stone-800 dark:text-stone-200 border border-stone-300 dark:border-stone-700 shrink-0 cursor-pointer">
-                🏛️ 70인역
+                70인역
               </button>
             )}
             {currentTargumPeshitta && (
               <button onClick={() => scrollToPanel('targumPeshitta')} className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 dark:bg-orange-950/60 text-orange-800 dark:text-orange-300 border border-orange-300 dark:border-orange-800 shrink-0 cursor-pointer">
-                🏺 타르굼
+                타르굼
               </button>
             )}
             {currentJosephus && (
               <button onClick={() => scrollToPanel('josephus')} className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-yellow-100 dark:bg-yellow-950/60 text-yellow-800 dark:text-yellow-300 border border-yellow-300 dark:border-yellow-800 shrink-0 cursor-pointer">
-                ⚔️ 요세푸스
+                요세푸스
               </button>
             )}
             {currentGeoData && (
               <button onClick={() => scrollToPanel('geo')} className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-100 dark:bg-teal-950/60 text-teal-800 dark:text-teal-300 border border-teal-300 dark:border-teal-800 shrink-0 cursor-pointer">
-                📍 {currentGeoData.placeKo}
+                {currentGeoData.placeKo}
               </button>
             )}
             {currentCommentary && (
               <button onClick={() => scrollToPanel('commentary')} className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 dark:bg-indigo-950/60 text-indigo-800 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-800 shrink-0 cursor-pointer">
-                📖 반즈주석
+                반즈주석
               </button>
             )}
             {currentMatthewHenry && (
               <button onClick={() => scrollToPanel('matthewHenry')} className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 shrink-0 cursor-pointer">
-                🌿 매튜헨리
+                매튜헨리
               </button>
             )}
             {currentNetNote && (
               <button onClick={() => scrollToPanel('netNotes')} className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-800 shrink-0 cursor-pointer">
-                🔍 사본비평
+                사본비평
               </button>
             )}
             {currentEaston && (
               <button onClick={() => scrollToPanel('easton')} className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 border border-purple-300 dark:border-purple-800 shrink-0 cursor-pointer">
-                📚 {currentEaston.word}
+                {currentEaston.word}
               </button>
             )}
           </div>
@@ -2237,7 +2335,7 @@ export default function Interlinear({
                 onClick={() => togglePanel('tsk')}
                 className="w-full p-2.5 flex items-center justify-between font-serif font-bold text-[12px] sm:text-[12.5px] cursor-pointer gap-2"
               >
-                <span className="truncate">🔗 1. 정경 상호교차참조 (TSK)</span>
+                <span className="truncate">1. 정경 상호교차참조 (TSK)</span>
                 <span className="text-[10.5px] font-mono font-semibold shrink-0">
                   {crossRefs.length}개 {openPanels.tsk ? '▲' : '▼'}
                 </span>
@@ -2267,7 +2365,7 @@ export default function Interlinear({
                             isDark ? 'bg-sky-950/40 border-sky-800 text-sky-200' : 'bg-white border-sky-200 text-sky-900 shadow-2xs'
                           }`}
                         >
-                          📖 {ref.label}
+                          {ref.label}
                         </button>
                       ))}
                     </div>
@@ -2284,7 +2382,7 @@ export default function Interlinear({
                   onClick={() => togglePanel('hebrewSyntax')}
                   className="w-full p-2.5 flex items-center justify-between font-serif font-bold text-[12px] sm:text-[12.5px] cursor-pointer gap-2"
                 >
-                  <span className="truncate">📜 2. BHS 히브리어 구문론 끊어읽기</span>
+                  <span className="truncate">2. BHS 히브리어 구문론 끊어읽기</span>
                   <span className="text-[10px] font-mono font-semibold shrink-0">Atnach {openPanels.hebrewSyntax ? '▲' : '▼'}</span>
                 </button>
                 {openPanels.hebrewSyntax && (
@@ -2316,7 +2414,7 @@ export default function Interlinear({
                   onClick={() => togglePanel('lxx')}
                   className="w-full p-2.5 flex items-center justify-between font-serif font-bold text-[12px] sm:text-[12.5px] cursor-pointer gap-2"
                 >
-                  <span className="truncate">🏛️ 3. 70인역(LXX) 인용 대조 ({currentLxxParallel.otRef})</span>
+                  <span className="truncate">3. 70인역(LXX) 인용 대조 ({currentLxxParallel.otRef})</span>
                   <span className="text-[10px] font-mono font-semibold shrink-0">{openPanels.lxx ? '▲' : '▼'}</span>
                 </button>
                 {openPanels.lxx && (
@@ -2351,7 +2449,7 @@ export default function Interlinear({
                   onClick={() => togglePanel('targumPeshitta')}
                   className="w-full p-2.5 flex items-center justify-between font-serif font-bold text-[12px] sm:text-[12.5px] cursor-pointer gap-2"
                 >
-                  <span className="truncate">🏺 4. 고대 아람어 타르굼 & 시리아 페시타</span>
+                  <span className="truncate">4. 고대 아람어 타르굼 & 시리아 페시타</span>
                   <span className="text-[10px] font-mono font-semibold shrink-0">{openPanels.targumPeshitta ? '▲' : '▼'}</span>
                 </button>
                 {openPanels.targumPeshitta && (
@@ -2397,13 +2495,13 @@ export default function Interlinear({
                   onClick={() => togglePanel('josephus')}
                   className="w-full p-2.5 flex items-center justify-between font-serif font-bold text-[12px] sm:text-[12.5px] cursor-pointer gap-2"
                 >
-                  <span className="truncate">⚔️ 5. 요세푸스 1세기 유대 역사 사료</span>
+                  <span className="truncate">5. 요세푸스 1세기 유대 역사 사료</span>
                   <span className="text-[10px] font-mono font-semibold shrink-0">{openPanels.josephus ? '▲' : '▼'}</span>
                 </button>
                 {openPanels.josephus && (
                   <div className="p-2.5 pt-0 border-t border-yellow-200/60 dark:border-yellow-800/40 space-y-1 pt-1.5">
                     <span className="text-[12px] font-bold block text-yellow-950 dark:text-yellow-200">
-                      ⚔️ {decodeHtmlEntities(currentJosephus.historicalEvent)}
+                      {decodeHtmlEntities(currentJosephus.historicalEvent)}
                     </span>
                     <p className="text-[12px] leading-relaxed font-serif text-stone-800 dark:text-slate-200 break-keep">
                       {decodeHtmlEntities(currentJosephus.summary)}
@@ -2418,7 +2516,7 @@ export default function Interlinear({
               <div id="panel-geo" className={`rounded-xl border ${theme.geo} overflow-hidden`}>
                 <div className="p-2.5 flex items-center justify-between font-serif font-bold text-[12px] sm:text-[12.5px] gap-2">
                   <span onClick={() => togglePanel('geo')} className="cursor-pointer flex-1 truncate">
-                    🗺️ 6. 성경 역사 지리학 ({currentGeoData.placeKo})
+                    6. 성경 역사 지리학 ({currentGeoData.placeKo})
                   </span>
                   <div className="flex items-center gap-1.5 shrink-0">
                     <a
@@ -2427,7 +2525,7 @@ export default function Interlinear({
                       rel="noreferrer"
                       className="text-[10px] px-2 py-0.5 rounded font-bold border border-teal-300 dark:border-teal-700 bg-white dark:bg-slate-800 text-teal-800 dark:text-teal-300 hover:underline"
                     >
-                      📍 위성 지도 ↗
+                      위성 지도 ↗
                     </a>
                     <span onClick={() => togglePanel('geo')} className="cursor-pointer opacity-60">{openPanels.geo ? '▲' : '▼'}</span>
                   </div>
@@ -2451,7 +2549,7 @@ export default function Interlinear({
               <div id="panel-commentary" className={`rounded-xl border ${theme.comm} overflow-hidden`}>
                 <div className="p-2.5 flex items-center justify-between font-serif font-bold text-[12px] sm:text-[12.5px] gap-2">
                   <span onClick={() => togglePanel('commentary')} className="cursor-pointer flex-1 truncate">
-                    📖 7. 학술 강해 주석 ({currentCommentary.commentator})
+                    7. 학술 강해 주석 ({currentCommentary.commentator})
                   </span>
                   <div className="flex items-center gap-1.5 shrink-0">
                     <button
@@ -2463,7 +2561,7 @@ export default function Interlinear({
                           : 'bg-white dark:bg-slate-800 text-indigo-900 dark:text-indigo-200 border-indigo-200 dark:border-indigo-800'
                       }`}
                     >
-                      {translatingKeys[`comm_${chapter}_${verse}`] ? '번역 중...' : translatedMap[`comm_${chapter}_${verse}`] ? '원문' : '🌐 한국어 번역'}
+                      {translatingKeys[`comm_${chapter}_${verse}`] ? '번역 중...' : translatedMap[`comm_${chapter}_${verse}`] ? '원문' : '한국어 번역'}
                     </button>
                     <span onClick={() => togglePanel('commentary')} className="cursor-pointer opacity-60">{openPanels.commentary ? '▲' : '▼'}</span>
                   </div>
@@ -2494,7 +2592,7 @@ export default function Interlinear({
               <div id="panel-matthewHenry" className={`rounded-xl border ${theme.mh} overflow-hidden`}>
                 <div className="p-2.5 flex items-center justify-between font-serif font-bold text-[12px] sm:text-[12.5px] gap-2">
                   <span onClick={() => togglePanel('matthewHenry')} className="cursor-pointer flex-1 truncate">
-                    🌿 8. 매튜 헨리 구속사적 묵상 강해
+                    8. 매튜 헨리 구속사적 묵상 강해
                   </span>
                   <div className="flex items-center gap-1.5 shrink-0">
                     <button
@@ -2506,7 +2604,7 @@ export default function Interlinear({
                           : 'bg-white dark:bg-slate-800 text-emerald-900 dark:text-emerald-200 border-emerald-200 dark:border-emerald-800'
                       }`}
                     >
-                      {translatingKeys[`mh_${chapter}_${verse}`] ? '번역 중...' : translatedMap[`mh_${chapter}_${verse}`] ? '원문' : '🌐 한국어 번역'}
+                      {translatingKeys[`mh_${chapter}_${verse}`] ? '번역 중...' : translatedMap[`mh_${chapter}_${verse}`] ? '원문' : '한국어 번역'}
                     </button>
                     <span onClick={() => togglePanel('matthewHenry')} className="cursor-pointer opacity-60">{openPanels.matthewHenry ? '▲' : '▼'}</span>
                   </div>
@@ -2537,7 +2635,7 @@ export default function Interlinear({
               <div id="panel-netNotes" className={`rounded-xl border ${theme.net} overflow-hidden`}>
                 <div className="p-2.5 flex items-center justify-between font-serif font-bold text-[12px] sm:text-[12.5px] gap-2">
                   <span onClick={() => togglePanel('netNotes')} className="cursor-pointer flex-1 truncate">
-                    🔍 9. NET Bible 사본/원문 비평 각주
+                    9. NET Bible 사본/원문 비평 각주
                   </span>
                   <div className="flex items-center gap-1.5 shrink-0">
                     <button
@@ -2549,14 +2647,14 @@ export default function Interlinear({
                           : 'bg-white dark:bg-slate-800 text-rose-900 dark:text-rose-200 border-rose-200 dark:border-rose-800'
                       }`}
                     >
-                      {translatingKeys[`net_${chapter}_${verse}`] ? '번역 중...' : translatedMap[`net_${chapter}_${verse}`] ? '원문' : '🌐 한국어 번역'}
+                      {translatingKeys[`net_${chapter}_${verse}`] ? '번역 중...' : translatedMap[`net_${chapter}_${verse}`] ? '원문' : '한국어 번역'}
                     </button>
                     <span onClick={() => togglePanel('netNotes')} className="cursor-pointer opacity-60">{openPanels.netNotes ? '▲' : '▼'}</span>
                   </div>
                 </div>
                 {openPanels.netNotes && (
                   <div className="p-3 pt-0 border-t border-rose-200/60 dark:border-rose-800/40 space-y-1 pt-2">
-                    <span className="font-bold text-[12px] block text-stone-900 dark:text-slate-100">📌 {decodeHtmlEntities(currentNetNote.title)}</span>
+                    <span className="font-bold text-[12px] block text-stone-900 dark:text-slate-100">{decodeHtmlEntities(currentNetNote.title)}</span>
                     <div className="text-left">
                       {renderParagraphBlocks(
                         translatedMap[`net_${chapter}_${verse}`] || currentNetNote.note,
@@ -2573,7 +2671,7 @@ export default function Interlinear({
               <div id="panel-easton" className={`rounded-xl border ${theme.easton} overflow-hidden`}>
                 <div className="p-2.5 flex items-center justify-between font-serif font-bold text-[12px] sm:text-[12.5px] gap-2">
                   <span onClick={() => togglePanel('easton')} className="cursor-pointer flex-1 truncate">
-                    📚 10. 이스톤 성경 백과사전 [{currentEaston.word}]
+                    10. 이스톤 성경 백과사전 [{currentEaston.word}]
                   </span>
                   <div className="flex items-center gap-1.5 shrink-0">
                     <button
@@ -2585,7 +2683,7 @@ export default function Interlinear({
                           : 'bg-white dark:bg-slate-800 text-purple-900 dark:text-purple-200 border-purple-200 dark:border-purple-800'
                       }`}
                     >
-                      {translatingKeys[`easton_${chapter}_${verse}`] ? '번역 중...' : translatedMap[`easton_${chapter}_${verse}`] ? '원문' : '🌐 한국어 번역'}
+                      {translatingKeys[`easton_${chapter}_${verse}`] ? '번역 중...' : translatedMap[`easton_${chapter}_${verse}`] ? '원문' : '한국어 번역'}
                     </button>
                     <span onClick={() => togglePanel('easton')} className="cursor-pointer opacity-60">
                       {openPanels.easton ? '▲' : '▼'}
@@ -2619,7 +2717,7 @@ export default function Interlinear({
             <div className="flex justify-between items-center border-b pb-2.5 border-stone-200 dark:border-slate-800">
               <div className="flex items-center gap-1.5 min-w-0">
                 <span className="text-[11px] font-mono font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider truncate">
-                  📖 WEB English-Korean Lexicon
+                  WEB English-Korean Lexicon
                 </span>
                 <span className="text-[10px] px-1.5 py-0.2 rounded bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 font-semibold shrink-0">
                   {selectedWebLexiconWord.pos}
@@ -2653,7 +2751,7 @@ export default function Interlinear({
               </div>
               {selectedWebLexiconWord.orig && (
                 <div className="text-xs font-mono text-amber-700 dark:text-amber-300 pt-1 border-t border-blue-200/50 dark:border-blue-800/40">
-                  🏛️ 대응 원어: <b>{selectedWebLexiconWord.orig}</b> ({selectedWebLexiconWord.strongs})
+                  대응 원어: <b>{selectedWebLexiconWord.orig}</b> ({selectedWebLexiconWord.strongs})
                 </div>
               )}
             </div>
@@ -2666,7 +2764,7 @@ export default function Interlinear({
                   {selectedWebLexiconWord.theology && (
                     <div className="p-2.5 rounded-xl border bg-amber-50/70 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800/40">
                       <span className="font-bold text-amber-900 dark:text-amber-300 block mb-0.5 text-[10.5px]">
-                        ✨ 성경적 의미 및 구속사적 용례
+                        성경적 의미 및 구속사적 용례
                       </span>
                       <p className="text-[12px] leading-relaxed text-stone-800 dark:text-slate-200 break-keep">
                         {selectedWebLexiconWord.theology}
@@ -2677,7 +2775,7 @@ export default function Interlinear({
                   {selectedWebLexiconWord.details && (
                     <div className="p-2.5 rounded-xl border bg-stone-50 dark:bg-slate-900 border-stone-200 dark:border-slate-800">
                       <span className="font-bold text-stone-500 dark:text-slate-400 block mb-0.5 text-[10.5px]">
-                        📚 품사별 사전 정의
+                        품사별 사전 정의
                       </span>
                       <pre className="whitespace-pre-wrap font-sans text-[11.5px] leading-relaxed text-stone-700 dark:text-slate-300">
                         {selectedWebLexiconWord.details}
@@ -2701,7 +2799,7 @@ export default function Interlinear({
         </div>
       )}
 
-      {/* ── 8. 원어 단어 심층 렉시콘 모달 (모바일 탭바 가로 스크롤 대응) ── */}
+      {/* ── 8. 원어 단어 심층 렉시콘 모달 ── */}
       {selectedWordDetail && (
         <div className="interlinear-modal-portal fixed inset-0 z-[999999] bg-black/75 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-3 animate-fade-in select-none">
           <div className={`w-full sm:max-w-xl rounded-t-3xl sm:rounded-2xl border p-3.5 sm:p-5 shadow-2xl flex flex-col max-h-[88vh] overflow-hidden ${
@@ -2735,16 +2833,16 @@ export default function Interlinear({
               </div>
               <div className="text-right min-w-0">
                 <span className="text-[14px] font-bold block truncate">{selectedWordDetail.korContextual}</span>
-                <span className="text-xs text-sky-600 dark:text-sky-400 font-mono block truncate">🇺🇸 {selectedWordDetail.eng} | 원형: {selectedWordDetail.korLemma}</span>
+                <span className="text-xs text-sky-600 dark:text-sky-400 font-mono block truncate">{selectedWordDetail.eng} | 원형: {selectedWordDetail.korLemma}</span>
               </div>
             </div>
 
             <div className="flex gap-1 border-b border-stone-200 dark:border-slate-800 pb-2 mb-2 shrink-0 text-[11px] font-bold overflow-x-auto hide-scrollbar">
               {[
-                { id: 'concordance', label: `📊 전권 용례 (${concordanceTotalCount})` },
-                { id: 'full_lexicon', label: '🏛️ BDB/Thayer' },
-                { id: 'korean', label: '🇰🇷 문법/구속사' },
-                { id: 'custom_study', label: '✍️ 나의 번역' }
+                { id: 'concordance', label: `전권 용례 (${concordanceTotalCount})` },
+                { id: 'full_lexicon', label: 'BDB/Thayer' },
+                { id: 'korean', label: '문법/구속사' },
+                { id: 'custom_study', label: '나의 번역' }
               ].map(tab => (
                 <button
                   key={tab.id}
@@ -2767,7 +2865,7 @@ export default function Interlinear({
                   {Object.keys(concordanceDistribution).length > 0 && (
                     <div className={`p-2.5 rounded-xl border ${isDark ? 'bg-slate-900/60 border-slate-800' : 'bg-stone-50 border-stone-200'}`}>
                       <div className="flex justify-between items-center text-[10.5px] font-bold mb-1.5">
-                        <span className="text-amber-800 dark:text-amber-300">📊 성경 66권 권역별 출현 빈도</span>
+                        <span className="text-amber-800 dark:text-amber-300">성경 66권 권역별 출현 빈도</span>
                         <span className="text-stone-400 font-mono">전체 {concordanceTotalCount}회</span>
                       </div>
                       <div className="flex flex-wrap gap-1">
@@ -2831,7 +2929,7 @@ export default function Interlinear({
                   </div>
                   {selectedWordDetail.theologyInsight && (
                     <div className={`p-2.5 rounded-lg border space-y-1 bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800/40 text-amber-950 dark:text-amber-200`}>
-                      <span className="font-bold block">📜 {selectedWordDetail.theologyInsight.stemTitle}</span>
+                      <span className="font-bold block">{selectedWordDetail.theologyInsight.stemTitle}</span>
                       <p className="leading-relaxed break-keep">{selectedWordDetail.theologyInsight.stemDesc}</p>
                       {selectedWordDetail.theologyInsight.aspectDesc && (
                         <p className="text-[11px] pt-1 border-t border-dashed border-amber-300 dark:border-amber-700/50 font-semibold break-keep">
@@ -2842,7 +2940,7 @@ export default function Interlinear({
                   )}
                   {selectedWordDetail.note && (
                     <div className={`p-2.5 rounded-lg border bg-stone-50 dark:bg-slate-900 border-stone-200 dark:border-slate-800`}>
-                      <span className="font-bold block text-[11px] text-stone-900 dark:text-slate-100">📖 구속사적 의미</span>
+                      <span className="font-bold block text-[11px] text-stone-900 dark:text-slate-100">구속사적 의미</span>
                       <p className="text-[11.5px] leading-relaxed text-stone-700 dark:text-slate-300 break-keep">{decodeHtmlEntities(selectedWordDetail.note)}</p>
                     </div>
                   )}
@@ -2874,7 +2972,7 @@ export default function Interlinear({
                     onClick={handleSaveCustomLexiconNote}
                     className="w-full py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs cursor-pointer shadow-xs"
                   >
-                    💾 영구 저장
+                    영구 저장
                   </button>
                 </div>
               )}
@@ -2886,14 +2984,14 @@ export default function Interlinear({
                 onClick={() => handleInsertToQT(selectedWordDetail)}
                 className="flex-1 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] shadow-2xs active:scale-95 transition-all flex items-center justify-center gap-1 cursor-pointer"
               >
-                <span>🌿</span> QT 묵상에 삽입
+                <span>QT 묵상에 삽입</span>
               </button>
               <button
                 type="button"
                 onClick={() => handleInsertToSermon(selectedWordDetail)}
                 className="flex-1 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[11px] shadow-2xs active:scale-95 transition-all flex items-center justify-center gap-1 cursor-pointer"
               >
-                <span>📖</span> 설교노트에 삽입
+                <span>설교노트에 삽입</span>
               </button>
             </div>
 
@@ -2908,7 +3006,7 @@ export default function Interlinear({
             isDark ? 'bg-[#0F141F] border-slate-700 text-white' : 'bg-white border-stone-300 text-stone-900'
           }`}>
             <div className="flex justify-between items-center border-b pb-2 mb-2 border-stone-200 dark:border-slate-800">
-              <h3 className="font-bold text-sm">📚 나의 원어 연구 서재</h3>
+              <h3 className="font-bold text-sm">나의 원어 연구 서재</h3>
               <button onClick={() => setIsLibraryOpen(false)} className="text-xs font-bold text-stone-400 p-1 cursor-pointer">✕</button>
             </div>
             <div className="flex-1 overflow-y-auto space-y-1.5 text-xs hide-scrollbar text-left">
