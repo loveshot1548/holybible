@@ -1687,15 +1687,19 @@ export default function BibleKnowledgeGalaxy({
 
   const getArcGeometry = useCallback((width, height) => {
     const isMobile = width < 640;
-    const padX = Math.max(24, Math.round(width * (isMobile ? 0.068 : 0.055)));
+    const padX = Math.max(16, Math.round(width * (isMobile ? 0.045 : 0.055)));
     const usableW = Math.max(120, width - padX * 2);
     const maxRadiusPossible = usableW / 2;
 
-    const topSafeMargin = isMobile ? 96 : 92;
-    const bottomSafeMargin = isMobile ? 190 : 182;
-    const baselineY = Math.max(topSafeMargin + 85, Math.min(height - bottomSafeMargin, height * (isMobile ? 0.54 : 0.60)));
-    const availableArchHeight = Math.max(70, baselineY - topSafeMargin);
-    const verticalScale = Math.max(0.28, Math.min(1.0, availableArchHeight / Math.max(1, maxRadiusPossible)));
+    // 모바일에서 상단 타이틀 여백을 줄이고, 하단 카드 영역(250px) 위로 반원 기준선을 끌어올림
+    const topSafeMargin = isMobile ? 54 : 88;
+    const bottomSafeMargin = isMobile ? 250 : 185;
+    const baselineY = Math.max(
+      topSafeMargin + (isMobile ? 110 : 95),
+      Math.min(height - bottomSafeMargin, height * (isMobile ? 0.44 : 0.58))
+    );
+    const availableArchHeight = Math.max(75, baselineY - topSafeMargin);
+    const verticalScale = Math.max(0.38, Math.min(1.0, availableArchHeight / Math.max(1, maxRadiusPossible)));
 
     return { padX, usableW, baselineY, verticalScale };
   }, []);
@@ -3750,24 +3754,24 @@ export default function BibleKnowledgeGalaxy({
 
               {viewMode === 'arc' && (
                 <>
-                  <div className="relative z-20 pt-2 sm:pt-3 px-3 flex flex-col items-center text-center pointer-events-none">
-                    <span className="text-[10px] sm:text-xs font-black tracking-widest text-[#EAB308] opacity-90">
+                  <div className="relative z-20 pt-1.5 sm:pt-3 px-3 flex flex-col items-center text-center pointer-events-none">
+                    <span className="hidden sm:inline text-[10px] sm:text-xs font-black tracking-widest text-[#EAB308] opacity-90">
                       CANONICAL CROSS-REFERENCE ARCHIVE • 구약과 신약의 정경적 조응
                     </span>
-                    <h2 className="text-base sm:text-xl font-black text-[#FACC15] tracking-tight mt-0.5 drop-shadow-md">
+                    <h2 className="text-[13px] sm:text-xl font-black text-[#FACC15] tracking-tight drop-shadow-md">
                       성경 66권 구속사 교차 참조 ({activeFilteredArcs.length.toLocaleString()}개 검증 아크)
                     </h2>
                   </div>
 
                   {/* 하단 SaaS 다크 글래스모피즘 구약 ⇄ 신약 1:1 스포트라이트 독(Dock) */}
                   {currentDisplayArc && (
-                    <div className="mt-auto relative z-20 pb-2 sm:pb-3 px-2 sm:px-3 flex flex-col items-center w-full max-w-3xl mx-auto pointer-events-auto">
-                      <div className="w-full rounded-2xl bg-slate-950/92 backdrop-blur-2xl text-white px-3 py-2.5 sm:px-4 sm:py-3 shadow-[0_16px_40px_rgba(0,0,0,0.75)] border border-amber-400/40 space-y-2">
-                        <div className="flex items-center justify-between border-b border-white/10 pb-1.5 gap-2">
-                          <span className="text-[10px] font-black px-2 py-0.5 rounded bg-amber-400 text-slate-950 shrink-0">
+                    <div className="mt-auto relative z-20 pb-1.5 sm:pb-3 px-2 sm:px-3 flex flex-col items-center w-full max-w-3xl mx-auto pointer-events-auto">
+                      <div className="w-full rounded-2xl bg-slate-950/92 backdrop-blur-2xl text-white px-2.5 py-2 sm:px-4 sm:py-3 shadow-[0_16px_40px_rgba(0,0,0,0.75)] border border-amber-400/40 space-y-1.5 sm:space-y-2 max-h-[38dvh] sm:max-h-none overflow-y-auto hide-scrollbar">
+                        <div className="flex items-center justify-between border-b border-white/10 pb-1 sm:pb-1.5 gap-1.5">
+                          <span className="text-[9.5px] sm:text-[10px] font-black px-1.5 sm:px-2 py-0.5 rounded bg-amber-400 text-slate-950 shrink-0 whitespace-nowrap">
                             {currentDisplayArc.badgeLabel}
                           </span>
-                          <span className="text-[11.5px] sm:text-xs font-black text-amber-200 truncate">
+                          <span className="text-[11px] sm:text-xs font-black text-amber-200 truncate">
                             {currentDisplayArc.title}
                           </span>
                           <div className="flex items-center gap-1 shrink-0">
@@ -3778,7 +3782,7 @@ export default function BibleKnowledgeGalaxy({
                                 const prevIdx = (idx - 1 + activeFilteredArcs.length) % activeFilteredArcs.length;
                                 setSelectedArc(activeFilteredArcs[prevIdx]);
                               }}
-                              className="px-2 py-0.5 rounded bg-white/10 hover:bg-white/20 text-white text-[11px] font-black cursor-pointer"
+                              className="px-1.5 sm:px-2 py-0.5 rounded bg-white/10 hover:bg-white/20 text-white text-[10.5px] sm:text-[11px] font-black cursor-pointer"
                             >
                               ◀
                             </button>
@@ -3789,20 +3793,20 @@ export default function BibleKnowledgeGalaxy({
                                 const nextIdx = (idx + 1) % activeFilteredArcs.length;
                                 setSelectedArc(activeFilteredArcs[nextIdx]);
                               }}
-                              className="px-2 py-0.5 rounded bg-white/10 hover:bg-white/20 text-white text-[11px] font-black cursor-pointer"
+                              className="px-1.5 sm:px-2 py-0.5 rounded bg-white/10 hover:bg-white/20 text-white text-[10.5px] sm:text-[11px] font-black cursor-pointer whitespace-nowrap"
                             >
                               다음 ▶
                             </button>
                           </div>
                         </div>
 
-                        {/* 구약(좌) vs 신약(우) 1:1 나란히 대조 카드 (개역 + 쉬운 + WEB + 원어 칩 통합) */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-left text-xs">
+                        {/* 구약(좌) vs 신약(우) 모바일·PC 공통 2열(grid-cols-2) 나란히 대조 카드 */}
+                        <div className="grid grid-cols-2 gap-1.5 sm:gap-2 text-left text-xs">
                           <div 
                             onClick={(e) => handleOpenParallelComparisonReader(currentDisplayArc, e)}
-                            className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-amber-400/35 cursor-pointer transition-all min-w-0 group space-y-1"
+                            className="p-2 sm:p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-amber-400/35 cursor-pointer transition-all min-w-0 group space-y-1"
                           >
-                            <div className="flex justify-between items-center font-black text-amber-300 text-[10.5px]">
+                            <div className="flex justify-between items-center font-black text-amber-300 text-[10px] sm:text-[10.5px] gap-1">
                               <span className="truncate">📜 {currentDisplayArc.fromBook} {currentDisplayArc.fromChap}:{currentDisplayArc.fromVerse}</span>
                               <button
                                 type="button"
@@ -3810,26 +3814,26 @@ export default function BibleKnowledgeGalaxy({
                                   e.stopPropagation();
                                   handleJumpToBibleChapter(currentDisplayArc.fromBook, currentDisplayArc.fromChap, currentDisplayArc.fromVerse);
                                 }}
-                                className="px-1.5 py-0.5 rounded bg-amber-400/20 hover:bg-amber-400/35 text-amber-200 text-[9px] font-black shrink-0"
+                                className="px-1.5 py-0.5 rounded bg-amber-400/20 hover:bg-amber-400/35 text-amber-200 text-[8.5px] sm:text-[9px] font-black shrink-0 whitespace-nowrap"
                               >
-                                본문열기➔
+                                열기➔
                               </button>
                             </div>
-                            <p className="text-[11px] font-serif text-slate-100 leading-snug break-keep max-h-14 overflow-y-auto hide-scrollbar">
+                            <p className="text-[10.5px] sm:text-[11px] font-serif text-slate-100 leading-snug break-keep line-clamp-2 sm:max-h-14 sm:overflow-y-auto hide-scrollbar">
                               {spotlightFromVerses?.[0]?.text || currentDisplayArc.desc}
                             </p>
                             {(versionMode === 'easy' || versionMode === 'parallel') && spotlightFromVerses?.[0]?.easyText && (
-                              <p className="text-[10px] text-emerald-300 leading-snug line-clamp-1">
+                              <p className="hidden sm:block text-[10px] text-emerald-300 leading-snug line-clamp-1">
                                 [쉬운] {spotlightFromVerses[0].easyText}
                               </p>
                             )}
                             {(versionMode === 'web' || versionMode === 'parallel') && spotlightFromVerses?.[0]?.webText && (
-                              <p className="text-[10px] font-serif text-sky-300 leading-snug line-clamp-1">
+                              <p className="hidden sm:block text-[10px] font-serif text-sky-300 leading-snug line-clamp-1">
                                 [WEB] {spotlightFromVerses[0].webText}
                               </p>
                             )}
                             {fromInterlinearWords && fromInterlinearWords.length > 0 && (
-                              <div className="flex flex-wrap gap-1 pt-0.5">
+                              <div className="hidden sm:flex flex-wrap gap-1 pt-0.5">
                                 {fromInterlinearWords.slice(0, 4).map((w, idx) => (
                                   <span key={idx} className="px-1.5 py-0.2 rounded bg-black/50 border border-amber-500/30 text-[9.5px] text-amber-200">
                                     <b>{w.original_word}</b> {w.korean_trans}
@@ -3841,9 +3845,9 @@ export default function BibleKnowledgeGalaxy({
 
                           <div 
                             onClick={(e) => handleOpenParallelComparisonReader(currentDisplayArc, e)}
-                            className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-cyan-400/35 cursor-pointer transition-all min-w-0 group space-y-1"
+                            className="p-2 sm:p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-cyan-400/35 cursor-pointer transition-all min-w-0 group space-y-1"
                           >
-                            <div className="flex justify-between items-center font-black text-cyan-300 text-[10.5px]">
+                            <div className="flex justify-between items-center font-black text-cyan-300 text-[10px] sm:text-[10.5px] gap-1">
                               <span className="truncate">✝️ {currentDisplayArc.toBook} {currentDisplayArc.toChap}:{currentDisplayArc.toVerse}</span>
                               <button
                                 type="button"
@@ -3851,26 +3855,26 @@ export default function BibleKnowledgeGalaxy({
                                   e.stopPropagation();
                                   handleJumpToBibleChapter(currentDisplayArc.toBook, currentDisplayArc.toChap, currentDisplayArc.toVerse);
                                 }}
-                                className="px-1.5 py-0.5 rounded bg-cyan-400/20 hover:bg-cyan-400/35 text-cyan-200 text-[9px] font-black shrink-0"
+                                className="px-1.5 py-0.5 rounded bg-cyan-400/20 hover:bg-cyan-400/35 text-cyan-200 text-[8.5px] sm:text-[9px] font-black shrink-0 whitespace-nowrap"
                               >
-                                본문열기➔
+                                열기➔
                               </button>
                             </div>
-                            <p className="text-[11px] font-serif text-slate-100 leading-snug break-keep max-h-14 overflow-y-auto hide-scrollbar">
+                            <p className="text-[10.5px] sm:text-[11px] font-serif text-slate-100 leading-snug break-keep line-clamp-2 sm:max-h-14 sm:overflow-y-auto hide-scrollbar">
                               {spotlightToVerses?.[0]?.text || currentDisplayArc.desc}
                             </p>
                             {(versionMode === 'easy' || versionMode === 'parallel') && spotlightToVerses?.[0]?.easyText && (
-                              <p className="text-[10px] text-emerald-300 leading-snug line-clamp-1">
+                              <p className="hidden sm:block text-[10px] text-emerald-300 leading-snug line-clamp-1">
                                 [쉬운] {spotlightToVerses[0].easyText}
                               </p>
                             )}
                             {(versionMode === 'web' || versionMode === 'parallel') && spotlightToVerses?.[0]?.webText && (
-                              <p className="text-[10px] font-serif text-sky-300 leading-snug line-clamp-1">
+                              <p className="hidden sm:block text-[10px] font-serif text-sky-300 leading-snug line-clamp-1">
                                 [WEB] {spotlightToVerses[0].webText}
                               </p>
                             )}
                             {toInterlinearWords && toInterlinearWords.length > 0 && (
-                              <div className="flex flex-wrap gap-1 pt-0.5">
+                              <div className="hidden sm:flex flex-wrap gap-1 pt-0.5">
                                 {toInterlinearWords.slice(0, 4).map((w, idx) => (
                                   <span key={idx} className="px-1.5 py-0.2 rounded bg-black/50 border border-cyan-500/30 text-[9.5px] text-cyan-200">
                                     <b>{w.original_word}</b> {w.korean_trans}
@@ -3881,7 +3885,7 @@ export default function BibleKnowledgeGalaxy({
                           </div>
                         </div>
 
-                        <div className="flex items-center justify-between gap-2 pt-0.5 text-[10px] sm:text-[10.5px] font-bold text-slate-300">
+                        <div className="flex items-center justify-between gap-1.5 pt-0.5 text-[10px] sm:text-[10.5px] font-bold text-slate-300">
                           <span className="truncate">💡 {currentDisplayArc.desc}</span>
                           <div className="flex items-center gap-1 shrink-0">
                             {onInsertInsight && (
@@ -3894,22 +3898,22 @@ export default function BibleKnowledgeGalaxy({
                                   onInsertInsight(formatted);
                                   showToast('✍️ 현재 묵상·설교 노트에 신구약 대조 강해가 삽입되었습니다!');
                                 }}
-                                className="px-2.5 py-1 rounded-lg bg-emerald-400 hover:bg-emerald-300 text-slate-950 text-[10px] font-black cursor-pointer shadow-xs"
+                                className="px-2 py-1 rounded-lg bg-emerald-400 hover:bg-emerald-300 text-slate-950 text-[9.5px] sm:text-[10px] font-black cursor-pointer shadow-xs whitespace-nowrap"
                               >
-                                ✍️ 노트에 대조 삽입
+                                ✍️ 노트삽입
                               </button>
                             )}
                             <button
                               type="button"
                               onClick={(e) => handleOpenParallelComparisonReader(currentDisplayArc, e)}
-                              className="px-2.5 py-1 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-950 text-[10px] font-black cursor-pointer shadow-xs"
+                              className="px-2 py-1 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-950 text-[9.5px] sm:text-[10px] font-black cursor-pointer shadow-xs whitespace-nowrap"
                             >
-                              ⚖️ 4대역본 나란히 대조
+                              ⚖️ 4대역본 대조
                             </button>
                             <button
                               type="button"
                               onClick={() => handleJumpToInterlinear(currentDisplayArc.fromBook, currentDisplayArc.fromChap, currentDisplayArc.fromVerse)}
-                              className="px-2 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-black cursor-pointer"
+                              className="px-2 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[9.5px] sm:text-[10px] font-black cursor-pointer whitespace-nowrap"
                             >
                               🔬 원어
                             </button>

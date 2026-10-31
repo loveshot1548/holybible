@@ -4,6 +4,81 @@ import CryptoJS from 'crypto-js';
 import { supabase } from '../../lib/supabase';
 
 // =====================================================================
+// ✒️ 엔터프라이즈 모노크롬 SVG 아이콘 세트 (Linear / Jira / Confluence 규격)
+// =====================================================================
+const SvgShield = () => (
+  <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" className="w-4 h-4 shrink-0">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+  </svg>
+);
+const SvgLock = () => (
+  <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3 h-3 shrink-0">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+  </svg>
+);
+const SvgRefresh = ({ spinning }) => (
+  <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className={`w-3.5 h-3.5 shrink-0 ${spinning ? 'animate-spin' : ''}`}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+  </svg>
+);
+const SvgCamera = () => (
+  <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5 shrink-0">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
+  </svg>
+);
+const SvgPrinter = () => (
+  <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5 shrink-0">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 00-1.913-.247M6.34 18H5.25A2.25 2.25 0 013 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 011.913-.247m10.5 0a48.536 48.536 0 00-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5zm-3 0h.008v.008H15V10.5z" />
+  </svg>
+);
+const SvgPlus = () => (
+  <svg fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-3.5 h-3.5 shrink-0">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+  </svg>
+);
+const SvgDownload = () => (
+  <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5 shrink-0">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+  </svg>
+);
+const SvgSearch = () => (
+  <svg fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor" className="w-3.5 h-3.5 shrink-0">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+  </svg>
+);
+const SvgCopy = () => (
+  <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5 shrink-0">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" />
+  </svg>
+);
+const SvgCheck = () => (
+  <svg fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-3.5 h-3.5 shrink-0">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+  </svg>
+);
+const SvgEdit = () => (
+  <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5 shrink-0">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+  </svg>
+);
+const SvgTrash = () => (
+  <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5 shrink-0">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+  </svg>
+);
+const SvgBell = () => (
+  <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5 shrink-0">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+  </svg>
+);
+const SvgClose = () => (
+  <svg fill="none" viewBox="0 0 24 24" strokeWidth={2.3} stroke="currentColor" className="w-4 h-4 shrink-0">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+  </svg>
+);
+
+// =====================================================================
 // 🔐 1. 군사급 AES-256 기본 암호화/복호화 및 정규식(Regex) 검증 엔진
 // =====================================================================
 const CHAT_SECRET_KEY = process.env.REACT_APP_CHAT_SECRET || 'tree-secret-key-2026';
@@ -138,11 +213,11 @@ const decryptRecordFromDB = (row) => {
 // 📊 2. 지라(Jira) 5단 파이프라인 / 5단계 신앙 위험도 / 6대 카테고리
 // =====================================================================
 const KANBAN_STAGES = [
-  { id: 'scheduled', label: '📅 상담 예정', short: '상담예정', badgeCls: 'bg-slate-100 text-slate-700 border-slate-300', dotColor: '#64748B', desc: '심방·상담 일정이 예약된 성도' },
-  { id: 'waiting', label: '⏳ 상담 대기·진행', short: '대기·진행', badgeCls: 'bg-sky-50 text-sky-700 border-sky-200', dotColor: '#0284C7', desc: '목자 1차 상담 기록 및 교역자 검토 대기' },
-  { id: 'intercession', label: '🙏 집중 중보', short: '집중중보', badgeCls: 'bg-purple-50 text-purple-700 border-purple-200', dotColor: '#9333EA', desc: '목자방·교역자 중보기도단에 상정된 카드' },
-  { id: 'admonition', label: '👑 목회 권면·오더', short: '권면·오더', badgeCls: 'bg-amber-50 text-amber-800 border-amber-300', dotColor: '#D97706', desc: '목사님 권면 및 후속 조치 오더 이행 중' },
-  { id: 'completed', label: '✅ 상담 완료', short: '상담완료', badgeCls: 'bg-emerald-50 text-emerald-700 border-emerald-200', dotColor: '#10B981', desc: '후속 피드백까지 종결된 상담 아카이브' }
+  { id: 'scheduled', label: '상담 예정', short: '상담예정', badgeCls: 'bg-zinc-100 text-zinc-700 border-zinc-300', dotColor: '#64748B', desc: '심방·상담 일정이 예약된 성도' },
+  { id: 'waiting', label: '상담 대기·진행', short: '대기·진행', badgeCls: 'bg-sky-50 text-sky-700 border-sky-200', dotColor: '#0284C7', desc: '목자 1차 상담 기록 및 교역자 검토 대기' },
+  { id: 'intercession', label: '집중 중보', short: '집중중보', badgeCls: 'bg-purple-50 text-purple-700 border-purple-200', dotColor: '#9333EA', desc: '목자방·교역자 중보기도단에 상정된 카드' },
+  { id: 'admonition', label: '목회 권면·오더', short: '권면·오더', badgeCls: 'bg-amber-50 text-amber-800 border-amber-300', dotColor: '#D97706', desc: '목사님 권면 및 후속 조치 오더 이행 중' },
+  { id: 'completed', label: '상담 완료', short: '상담완료', badgeCls: 'bg-emerald-50 text-emerald-700 border-emerald-200', dotColor: '#10B981', desc: '후속 피드백까지 종결된 상담 아카이브' }
 ];
 
 const RISK_LEVELS = [
@@ -154,12 +229,12 @@ const RISK_LEVELS = [
 ];
 
 const COUNSELING_CATEGORIES = [
-  { id: 'basic', label: '📖 기본신앙', desc: '예배·QT·기도·말씀 점검' },
-  { id: 'trial', label: '⚡ 영적시험·갈등', desc: '신앙 회의·관계 상처·낙심' },
-  { id: 'health', label: '🏥 건강·질병', desc: '입원·수술·육체적 연약함' },
-  { id: 'family', label: '🏠 가정·자녀', desc: '부부·자녀양육·가족구원' },
-  { id: 'career', label: '💼 직장·재정', desc: '이직·사업·경제적 환난' },
-  { id: 'settle', label: '🌱 새가족·정착', desc: '목장 적응·양육·직분' }
+  { id: 'basic', label: '기본신앙', desc: '예배·QT·기도·말씀 점검' },
+  { id: 'trial', label: '영적시험·갈등', desc: '신앙 회의·관계 상처·낙심' },
+  { id: 'health', label: '건강·질병', desc: '입원·수술·육체적 연약함' },
+  { id: 'family', label: '가정·자녀', desc: '부부·자녀양육·가족구원' },
+  { id: 'career', label: '직장·재정', desc: '이직·사업·경제적 환난' },
+  { id: 'settle', label: '새가족·정착', desc: '목장 적응·양육·직분' }
 ];
 
 const PASTOR_ORDER_TYPES = [
@@ -169,6 +244,13 @@ const PASTOR_ORDER_TYPES = [
   '담당목자 2차 밀착케어 및 안부연락',
   '양육과정·말씀처방 연결',
   '환우·경조사 교회 차원 위로/지원'
+];
+
+const PASTOR_DIRECTIVE_MACROS = [
+  '주중 전화 심방으로 안부를 묻고 함께 기도해 주시기 바랍니다.',
+  '금주 금요기도회 집중 중보기도 제목으로 상정하여 합심 기도하겠습니다.',
+  '담당 교역자와 동행 심방 일정을 조율하여 보고해 주시기 바랍니다.',
+  '목장 모임 시 따뜻한 위로와 격려로 공동체 안에 잘 정착하도록 도와주십시오.'
 ];
 
 const LOCAL_ENC_CACHE_KEY = 'goodtree_counseling_encrypted_v2';
@@ -198,21 +280,18 @@ function parseCounselingTextByRegex(rawText, defaultCell = '', defaultMember = '
 
   if (!clean) return result;
 
-  // 1) 성도명 & 직분 추출
   const nameMatch = clean.match(REGEX_PATTERNS.MEMBER_NAME);
   if (nameMatch) {
     result.memberName = nameMatch[1].trim();
     if (nameMatch[2]) result.memberOffice = nameMatch[2].trim();
   }
 
-  // 2) 소속 목장 추출
   const cellMatch = clean.match(REGEX_PATTERNS.CELL_NAME);
   if (cellMatch) {
     const rawCell = cellMatch[1].trim();
     result.cellName = rawCell.endsWith('목장') ? rawCell : `${rawCell} 목장`;
   }
 
-  // 3) 상담 일자 정규화 추출 (YYYY-MM-DD)
   const dateFullMatch = clean.match(REGEX_PATTERNS.DATE_NORMALIZE);
   if (dateFullMatch) {
     result.date = `${dateFullMatch[1]}-${String(dateFullMatch[2]).padStart(2, '0')}-${String(dateFullMatch[3]).padStart(2, '0')}`;
@@ -224,7 +303,6 @@ function parseCounselingTextByRegex(rawText, defaultCell = '', defaultMember = '
     }
   }
 
-  // 4) 신앙 위험도(1~5단계) 추출
   const riskMatch = clean.match(REGEX_PATTERNS.RISK_LEVEL);
   if (riskMatch) {
     if (riskMatch[1]) {
@@ -239,7 +317,6 @@ function parseCounselingTextByRegex(rawText, defaultCell = '', defaultMember = '
     }
   }
 
-  // 5) 카테고리 추출
   const catMatch = clean.match(REGEX_PATTERNS.CATEGORY);
   if (catMatch) {
     const cKw = catMatch[1];
@@ -251,13 +328,11 @@ function parseCounselingTextByRegex(rawText, defaultCell = '', defaultMember = '
     else result.category = 'basic';
   }
 
-  // 6) 섹션별 블록 정밀 분리 (1. 영적상태 / 2. 상담내용 / 3. 기도제목 / 4. 목자소견)
   const lines = clean.split('\n').map(l => l.trim()).filter(Boolean);
   let currentBucket = 'content';
   const buckets = { state: [], content: [], prayer: [], opinion: [] };
 
   lines.forEach((line) => {
-    // 메타데이터 줄은 본문 중복에서 제외
     if (
       /^(?:[•\-*▪■□]\s*)?(?:성\s*도\s*명|소\s*속\s*목\s*장|상\s*담\s*일\s*자|위\s*험\s*도|카\s*테\s*고\s*리)\s*[:：]/.test(line)
     ) {
@@ -305,7 +380,6 @@ function parseCounselingTextByRegex(rawText, defaultCell = '', defaultMember = '
 
 // 📷 이미지 Canvas 고대비 전처리(Binarization) + Tesseract.js 한국어 OCR 엔진 로더
 async function runPrecisionImageOcr(imageDataUrl, onProgress) {
-  // 1) 이미지 해상도 및 흑백 대비 향상 전처리
   const processedDataUrl = await new Promise((resolve) => {
     const img = new Image();
     img.onload = () => {
@@ -322,7 +396,6 @@ async function runPrecisionImageOcr(imageDataUrl, onProgress) {
         const d = imgData.data;
         for (let i = 0; i < d.length; i += 4) {
           const gray = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
-          // 대비(Contrast) 강화로 흐릿한 볼펜/연필 글씨 선명화
           const contrasted = gray < 165 ? Math.max(0, gray * 0.55) : Math.min(255, gray * 1.15);
           d[i] = d[i + 1] = d[i + 2] = contrasted;
         }
@@ -334,7 +407,6 @@ async function runPrecisionImageOcr(imageDataUrl, onProgress) {
     img.src = imageDataUrl;
   });
 
-  // 2) 브라우저 네이티브 TextDetector API 지원 시 우선 활용
   if ('TextDetector' in window) {
     try {
       onProgress && onProgress(45);
@@ -351,7 +423,6 @@ async function runPrecisionImageOcr(imageDataUrl, onProgress) {
     } catch (_) {}
   }
 
-  // 3) Tesseract.js 동적 로드 후 한국어+영어 정밀 OCR 수행
   if (!window.Tesseract) {
     onProgress && onProgress(25);
     await new Promise((resolve, reject) => {
@@ -417,7 +488,6 @@ export default function AdminCounselingTab({
       office.includes('전도사') ||
       office.includes('교역자');
 
-    // 실제 cells 테이블에서 본인이 담당 목자로 지정된 목장들 탐색
     const myLedCells = (cells || []).filter(
       c => (c.shepherd_name || '').trim() === name || (group && c.name === group)
     );
@@ -446,7 +516,7 @@ export default function AdminCounselingTab({
     };
   }, [authUser, cells]);
 
-  // ── 2. 성도 <-> 소속 목장 매핑 사전 (실제 DB 데이터 기반) ──
+  // ── 2. 성도 <-> 소속 목장 매핑 사전 ──
   const memberToCellMap = useMemo(() => {
     const map = new Map();
     (cellMembers || []).forEach(cm => {
@@ -463,7 +533,6 @@ export default function AdminCounselingTab({
     return map;
   }, [cells, cellMembers, users]);
 
-  // 실제 개설된 목장 목록만 추출 (목업 목장명 배제)
   const realCellList = useMemo(() => {
     const names = new Set();
     (cells || []).forEach(c => { if (c?.name) names.add(c.name); });
@@ -472,9 +541,9 @@ export default function AdminCounselingTab({
   }, [cells, currentUserInfo.group]);
 
   // ── 3. 워크스페이스 뷰 및 필터 상태 ──
-  // 'kanban' (Jira 5단 칸반) | 'confluence' (Confluence 3단 문서·오더) | 'pastor_pool' (교역자 보고 모음함) | 'shepherd_room' (목자방 공유함)
   const [workspaceView, setWorkspaceView] = useState('kanban');
-  const [groupByCellSwimlane, setGroupByCellSwimlane] = useState(false); // 대화면 목장별 스윔레인 그룹핑 토글
+  const [groupByCellSwimlane, setGroupByCellSwimlane] = useState(false);
+  const [mobileKanbanStageFilter, setMobileKanbanStageFilter] = useState('ALL'); // 모바일 전용 칸반 스테이지 탭
   const [selectedCellFilter, setSelectedCellFilter] = useState(() => {
     if (currentUserInfo.roleTier === 'SHEPHERD' && currentUserInfo.group) {
       return currentUserInfo.group;
@@ -484,11 +553,11 @@ export default function AdminCounselingTab({
   const [selectedRiskFilter, setSelectedRiskFilter] = useState('ALL');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+  const [copiedCardId, setCopiedCardId] = useState(null);
 
-  // ── 4. 상담 기록카드 상태 (목업 데이터 0% — 실제 Supabase + 암호화 캐시 연동) ──
+  // ── 4. 상담 기록카드 상태 ──
   const [records, setRecords] = useState(() => {
     try {
-      // 이전 버전 목업 데이터 키 완전 삭제
       localStorage.removeItem('goodtree_counseling_standardized_v1');
       const saved = localStorage.getItem(LOCAL_ENC_CACHE_KEY);
       if (saved) {
@@ -499,9 +568,8 @@ export default function AdminCounselingTab({
     return [];
   });
   const [isSyncing, setIsSyncing] = useState(false);
-  const [dbSyncStatus, setDbSyncStatus] = useState('准备'); // 'LIVE' | 'LOCAL_ENCRYPTED'
+  const [dbSyncStatus, setDbSyncStatus] = useState('READY'); // 'LIVE' | 'LOCAL_ENCRYPTED'
 
-  // Supabase 실시간 로드 및 양방향 동기화
   const fetchCounselingRecordsFromDB = useCallback(async () => {
     setIsSyncing(true);
     try {
@@ -521,7 +589,6 @@ export default function AdminCounselingTab({
         }
       }
 
-      // 만약 신규 테이블 생성 전이면 암호화 로컬 캐시 데이터를 유지
       if (!tableExists) {
         setDbSyncStatus('LOCAL_ENCRYPTED');
         try {
@@ -530,7 +597,6 @@ export default function AdminCounselingTab({
         } catch (_) {}
       }
 
-      // 기존 counseling_qna 테이블에 접수된 실제 성도 상담이 있으면 누락 없이 병합
       if (Array.isArray(counselingList) && counselingList.length > 0) {
         const existingIds = new Set(loadedRecords.map(r => String(r.id)));
         counselingList.forEach(qna => {
@@ -591,7 +657,6 @@ export default function AdminCounselingTab({
     };
   }, [fetchCounselingRecordsFromDB]);
 
-  // 개별 상담카드 암호화 저장 (Supabase Upsert + 암호화 로컬 캐시 동시 반영)
   const upsertSingleCard = useCallback(async (cardObj) => {
     const encryptedRow = encryptRecordForDB(cardObj);
     const decryptedCard = decryptRecordFromDB(encryptedRow);
@@ -625,16 +690,13 @@ export default function AdminCounselingTab({
   const [printModeType, setPrintModeType] = useState(null); // null | 'blank' | 'filled'
   const [isOcrModalOpen, setIsOcrModalOpen] = useState(false);
 
-  // 칸반 드래그앤드롭 상태
   const [draggedCardId, setDraggedCardId] = useState(null);
   const [dragOverStage, setDragOverStage] = useState(null);
 
-  // 목사님 권면 및 후속 오더 입력 상태
   const [newOrderType, setNewOrderType] = useState(PASTOR_ORDER_TYPES[0]);
   const [newOrderDirective, setNewOrderDirective] = useState('');
   const [newOrderDueDate, setNewOrderDueDate] = useState(() => new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10));
 
-  // 표준 상담기록카드 작성 폼 상태
   const createEmptyForm = useCallback(() => ({
     id: null,
     memberName: '',
@@ -661,7 +723,6 @@ export default function AdminCounselingTab({
 
   const [cardForm, setCardForm] = useState(createEmptyForm);
 
-  // 성도명 선택 시 소속 목장 및 직분 자동 매칭
   const handleSelectMemberInForm = (inputName) => {
     const trimmed = inputName.trim();
     const userObj = (users || []).find(u => (u.name || '').trim() === trimmed);
@@ -674,7 +735,6 @@ export default function AdminCounselingTab({
     }));
   };
 
-  // 📷 OCR 스캐너 상태
   const [ocrImagePreview, setOcrImagePreview] = useState(null);
   const [isOcrScanning, setIsOcrScanning] = useState(false);
   const [ocrProgress, setOcrProgress] = useState(0);
@@ -684,7 +744,6 @@ export default function AdminCounselingTab({
   // ── 6. 권한별·목장별·뷰별 정밀 필터링 ──
   const accessibleRecords = useMemo(() => {
     return records.filter(r => {
-      // 목자 권한일 경우: 본인 담당 목장 카드 OR 본인 작성 카드 OR 목자방에 공유된 카드만 열람 가능 (타 목장 비공개 상담 철저 보호)
       if (currentUserInfo.roleTier === 'SHEPHERD') {
         const isMyCell =
           currentUserInfo.myLedCellNames.includes(r.cellName) ||
@@ -703,7 +762,11 @@ export default function AdminCounselingTab({
       if (workspaceView === 'shepherd_room' && !r.isSharedWithShepherds) return false;
 
       if (selectedCellFilter !== 'ALL' && r.cellName !== selectedCellFilter) return false;
-      if (selectedRiskFilter !== 'ALL' && Number(r.riskLevel) !== Number(selectedRiskFilter)) return false;
+      if (selectedRiskFilter === 'HIGH_RISK') {
+        if (Number(r.riskLevel) < 4) return false;
+      } else if (selectedRiskFilter !== 'ALL' && Number(r.riskLevel) !== Number(selectedRiskFilter)) {
+        return false;
+      }
       if (selectedCategoryFilter !== 'ALL' && r.category !== selectedCategoryFilter) return false;
 
       if (!q) return true;
@@ -722,7 +785,6 @@ export default function AdminCounselingTab({
     return accessibleRecords.find(r => r.id === activeCardId) || filteredRecords[0] || null;
   }, [accessibleRecords, activeCardId, filteredRecords]);
 
-  // 현재 선택된 성도의 과거 누적 상담 이력
   const selectedMemberHistory = useMemo(() => {
     if (!activeCard?.memberName) return [];
     return accessibleRecords
@@ -737,7 +799,11 @@ export default function AdminCounselingTab({
     const pastorPoolCount = accessibleRecords.filter(r => r.isSubmittedToPastor).length;
     const shepherdRoomCount = accessibleRecords.filter(r => r.isSharedWithShepherds).length;
     const unreadOrdersForMe = accessibleRecords.filter(r => r.hasUnreadOrder).length;
-    return { total, highRisk, pastorPoolCount, shepherdRoomCount, unreadOrdersForMe };
+    const pendingOrdersCount = accessibleRecords.reduce(
+      (acc, cur) => acc + (cur.pastorOrders || []).filter(o => o.status !== 'done').length,
+      0
+    );
+    return { total, highRisk, pastorPoolCount, shepherdRoomCount, unreadOrdersForMe, pendingOrdersCount };
   }, [accessibleRecords]);
 
   // ── 8. 핵심 비즈니스 액션 핸들러 ──
@@ -753,7 +819,6 @@ export default function AdminCounselingTab({
     await upsertSingleCard({ ...target, riskLevel: Number(nextRisk) });
   };
 
-  // [목자방 공유] 토글 (목자들 간 중보 및 상담 사례 공유)
   const handleToggleShareShepherds = async (card) => {
     await upsertSingleCard({
       ...card,
@@ -761,7 +826,6 @@ export default function AdminCounselingTab({
     });
   };
 
-  // [사역자 모음함 보고 제출] 토글 (목자 ➔ 전도사·담임목사 보고)
   const handleToggleSubmitPastor = async (card) => {
     const nextState = !card.isSubmittedToPastor;
     const nowStr = new Date().toISOString().slice(0, 16).replace('T', ' ');
@@ -772,7 +836,6 @@ export default function AdminCounselingTab({
     });
   };
 
-  // 👑 [목사님 권면·조언 및 후속 조치 오더 발령] (목사 ➔ 담당 목장 목자에게 실시간 하달)
   const handleIssuePastorOrder = async () => {
     if (!activeCard) return;
     if (!newOrderDirective.trim()) return alert('권면 말씀 또는 후속 조치 오더 내용을 입력해 주세요.');
@@ -784,7 +847,7 @@ export default function AdminCounselingTab({
       orderType: newOrderType,
       directive: newOrderDirective.trim(),
       dueDate: newOrderDueDate,
-      status: 'pending', // 'pending'(접수대기) | 'in_progress'(조치중) | 'done'(피드백완료)
+      status: 'pending',
       feedbackNote: '',
       createdAt: new Date().toISOString().slice(0, 16).replace('T', ' ')
     };
@@ -792,7 +855,7 @@ export default function AdminCounselingTab({
     const updatedCard = {
       ...activeCard,
       stage: activeCard.stage === 'scheduled' || activeCard.stage === 'waiting' ? 'admonition' : activeCard.stage,
-      hasUnreadOrder: true, // 담당 목자에게 신규 오더 알림 배지 점등
+      hasUnreadOrder: true,
       pastorOrders: [newOrder, ...(activeCard.pastorOrders || [])]
     };
 
@@ -800,7 +863,6 @@ export default function AdminCounselingTab({
     setNewOrderDirective('');
   };
 
-  // 🌿 [담당 목자의 후속 조치 이행 상태 & 피드백 보고] (목자 ➔ 목사님께 피드백 완료 보고)
   const handleUpdateOrderFeedback = async (cardId, orderId, nextStatus, feedbackNote) => {
     const target = records.find(r => r.id === cardId);
     if (!target) return;
@@ -826,7 +888,6 @@ export default function AdminCounselingTab({
     });
   };
 
-  // 📝 표준 상담기록카드 저장
   const handleSaveStandardCard = async (e) => {
     if (e) e.preventDefault();
     if (!cardForm.memberName.trim()) return alert('상담 대상 성도명을 입력해 주세요.');
@@ -873,7 +934,51 @@ export default function AdminCounselingTab({
     setIsCardPopupOpen(false);
   };
 
-  // ── 9. 📷 정밀 OCR 이미지 스캔 및 정규식 자동 파싱 ──
+  // 상담 전문 클립보드 복사 핸들러
+  const handleCopyCardSummary = (card, e) => {
+    if (e) e.stopPropagation();
+    if (!card) return;
+    const rk = getRiskMeta(card.riskLevel);
+    const cat = getCatMeta(card.category);
+    const text = `[신앙상담 기록카드 - ${card.id}]\n• 성도: ${card.memberName} (${card.memberOffice} / ${card.cellName})\n• 일자/방식: ${card.date} (${card.method})\n• 분류/위험도: ${cat.label} / ${rk.label}\n• 요약: ${card.title}\n\n[1. 영적 현황]\n${card.spiritualState || '-'}\n\n[2. 상담 내용]\n${card.content || '-'}\n\n[3. 중보기도 제목]\n${card.prayerTopics || '-'}\n\n[4. 목자 소견]\n${card.shepherdOpinion || '-'}`;
+    navigator.clipboard?.writeText?.(text).catch(() => {});
+    setCopiedCardId(card.id);
+    setTimeout(() => setCopiedCardId(null), 1800);
+  };
+
+  // 상담 기록 CSV 추출 핸들러
+  const exportCounselingCSV = useCallback(() => {
+    if (filteredRecords.length === 0) return;
+    const headers = ['티켓ID', '상담일자', '성도명', '직분', '소속목장', '상담자', '방식', '단계', '위험도', '카테고리', '핵심요약', '영적상태', '상담내용', '기도제목', '목자소견', '오더건수'];
+    const rows = filteredRecords.map(r => [
+      r.id,
+      r.date,
+      `"${(r.memberName || '').replace(/"/g, '""')}"`,
+      r.memberOffice || '성도',
+      `"${(r.cellName || '').replace(/"/g, '""')}"`,
+      `"${(r.counselorName || '').replace(/"/g, '""')}"`,
+      r.method,
+      getStageMeta(r.stage).short,
+      getRiskMeta(r.riskLevel).short,
+      getCatMeta(r.category).label,
+      `"${(r.title || '').replace(/"/g, '""')}"`,
+      `"${(r.spiritualState || '').replace(/\n/g, ' ').replace(/"/g, '""')}"`,
+      `"${(r.content || '').replace(/\n/g, ' ').replace(/"/g, '""')}"`,
+      `"${(r.prayerTopics || '').replace(/\n/g, ' ').replace(/"/g, '""')}"`,
+      `"${(r.shepherdOpinion || '').replace(/\n/g, ' ').replace(/"/g, '""')}"`,
+      (r.pastorOrders || []).length
+    ]);
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `신앙상담기록_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [filteredRecords]);
+
+  // ── 9. OCR 이미지 스캔 ──
   const handleImageFileSelect = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -934,11 +1039,11 @@ export default function AdminCounselingTab({
   // 권한 미달 차단 게이트
   if (!currentUserInfo.hasAccess) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center bg-white rounded-xl border border-zinc-200 p-8 text-center select-none">
-        <div className="w-14 h-14 rounded-2xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center text-2xl mb-4 shadow-xs">
-          🔒
+      <div className="flex-1 flex flex-col items-center justify-center bg-white rounded-2xl border border-zinc-200 p-8 text-center select-none">
+        <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center mb-4 shadow-2xs">
+          <SvgLock />
         </div>
-        <h3 className="text-lg font-black text-zinc-900 tracking-tight">교역자(목사·전도사) 및 목자 전용 보안 구역</h3>
+        <h3 className="text-base font-black text-zinc-900 tracking-tight">교역자(목사·전도사) 및 목자 전용 보안 구역</h3>
         <p className="text-xs font-medium text-zinc-500 max-w-md mt-2 leading-relaxed">
           신앙 상담실은 AES-256 종단간 암호화로 보호되며, 담임목사·전도사·각 목장 목자 권한을 부여받은 리더십만 접근할 수 있습니다.
         </p>
@@ -947,7 +1052,7 @@ export default function AdminCounselingTab({
   }
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 w-full bg-white rounded-xl border border-zinc-200 shadow-2xs overflow-hidden font-sans select-none text-zinc-900 relative">
+    <div className="flex-1 flex flex-col min-h-0 w-full bg-white rounded-2xl border border-zinc-200/90 shadow-[0_1px_3px_rgba(0,0,0,0.03)] overflow-hidden font-sans select-none text-zinc-900 relative">
       
       {/* 🖨️ A4 고정 폼 인쇄 전용 CSS */}
       <style>{`
@@ -975,55 +1080,69 @@ export default function AdminCounselingTab({
       `}</style>
 
       {/* =========================================================================
-          [1] 상단 엔터프라이즈 헤더 (권한·암호화 상태 + OCR 스캔 + 표준양식 인쇄 + 새 상담카드)
+          [1] 상단 엔터프라이즈 헤더 (권한·암호화 상태 + KPI 요약 칩 + 액션 버튼)
           ========================================================================= */}
-      <div className="shrink-0 bg-zinc-50/90 border-b border-zinc-200 px-3.5 sm:px-5 py-3 flex flex-col gap-2.5">
+      <div className="shrink-0 bg-zinc-50/90 border-b border-zinc-200/90 px-4 sm:px-5 py-3 flex flex-col gap-2.5">
         
-        <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2.5">
           <div className="flex items-center gap-2.5 min-w-0">
-            <span className="px-2.5 py-1 rounded-lg bg-zinc-900 text-white text-[11px] font-black tracking-tight flex items-center gap-1.5 shrink-0">
-              <span>🛡️</span>
+            <span className="px-2.5 py-1.5 rounded-xl bg-zinc-900 text-white text-[11px] font-black tracking-tight flex items-center gap-1.5 shrink-0 whitespace-nowrap shadow-2xs">
+              <SvgShield />
               <span>
-                {currentUserInfo.roleTier === 'PASTOR' ? '목회자(목사) 통합관제' :
-                 currentUserInfo.roleTier === 'EVANGELIST' ? '교역자(전도사) 관제' :
-                 `${currentUserInfo.group || '담당목장'} 목자 권한`}
+                {currentUserInfo.roleTier === 'PASTOR'
+                  ? '목회자(목사) 통합관제'
+                  : currentUserInfo.roleTier === 'EVANGELIST'
+                  ? '교역자(전도사) 관제'
+                  : `${currentUserInfo.group || '담당목장'} 목자 권한`}
               </span>
             </span>
 
             <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <h2 className="text-[14.5px] sm:text-[15.5px] font-black text-zinc-900 tracking-tight truncate">
-                  신앙 상담실 (Pastoral Jira & Confluence)
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-[14.5px] sm:text-[15.5px] font-black text-zinc-900 tracking-tight whitespace-nowrap">
+                  신앙 상담실 (Pastoral Care & Directive)
                 </h2>
-                <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9.5px] font-mono font-black bg-emerald-50 text-emerald-700 border border-emerald-200">
-                  🔐 AES-256 암호화 · {dbSyncStatus === 'LIVE' ? 'DB 실시간 동기화' : '로컬 보안 동기화'}
+                <span className="hidden md:inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap">
+                  <SvgLock /> AES-256 E2EE · {dbSyncStatus === 'LIVE' ? 'DB 실시간 동기화' : '로컬 보안 동기화'}
                 </span>
               </div>
-              <p className="text-[10.5px] text-zinc-500 font-medium truncate mt-0.5">
-                목장별 상담 분리 ➔ 목자방 공유 및 교역자 모음함 보고 ➔ 목사님 권면·오더 발령 ➔ 목자 후속 피드백
+              <p className="text-[11px] text-zinc-500 font-medium truncate mt-0.5">
+                목장별 상담 분리 · 목자방 중보 공유 · 교역자 모음함 보고 · 목회 권면 오더 및 피드백
               </p>
             </div>
           </div>
 
-          {/* 우측 액션 버튼 그룹 */}
+          {/* 우측 액션 버튼 그룹 (줄바꿈 방지) */}
           <div className="flex items-center gap-1.5 flex-wrap ml-auto">
             {stats.unreadOrdersForMe > 0 && (
               <button
                 type="button"
                 onClick={() => setWorkspaceView('confluence')}
-                className="px-2.5 py-1.5 rounded-lg bg-amber-500 text-zinc-950 text-[11px] font-black flex items-center gap-1 animate-pulse cursor-pointer shadow-xs"
+                className="px-2.5 py-1.5 rounded-lg bg-amber-500 text-zinc-950 text-[11px] font-black flex items-center gap-1.5 animate-pulse cursor-pointer shadow-xs whitespace-nowrap shrink-0"
               >
-                <span>🔔 목사님 신규 오더 {stats.unreadOrdersForMe}건</span>
+                <SvgBell />
+                <span>신규 오더 {stats.unreadOrdersForMe}건</span>
               </button>
             )}
 
             <button
               type="button"
               onClick={fetchCounselingRecordsFromDB}
-              className="px-2.5 py-1.5 rounded-lg bg-white hover:bg-zinc-100 text-zinc-700 border border-zinc-200 text-[11px] font-bold cursor-pointer shadow-2xs"
+              className="px-2.5 py-1.5 rounded-lg bg-white hover:bg-zinc-100 text-zinc-700 border border-zinc-200/90 text-[11px] font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs whitespace-nowrap shrink-0"
               title="DB 최신 상태 동기화"
             >
-              {isSyncing ? '🔄 동기화중...' : '🔄 새로고침'}
+              <SvgRefresh spinning={isSyncing} />
+              <span className="hidden sm:inline">{isSyncing ? '동기화중' : '새로고침'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={exportCounselingCSV}
+              disabled={filteredRecords.length === 0}
+              className="hidden sm:flex px-2.5 py-1.5 rounded-lg bg-white hover:bg-zinc-100 disabled:opacity-30 text-zinc-700 border border-zinc-200/90 text-[11px] font-bold items-center gap-1.5 cursor-pointer shadow-2xs whitespace-nowrap shrink-0"
+              title="현재 필터링된 상담 기록 CSV 추출"
+            >
+              <SvgDownload /> CSV
             </button>
 
             <button
@@ -1033,73 +1152,73 @@ export default function AdminCounselingTab({
                 setOcrExtractedText('');
                 setIsOcrModalOpen(true);
               }}
-              className="px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-[11px] font-black flex items-center gap-1 cursor-pointer shadow-2xs active:scale-95 transition-all"
+              className="px-3 py-1.5 rounded-lg bg-white hover:bg-zinc-100 text-zinc-800 border border-zinc-300 text-[11px] font-black flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95 transition-all whitespace-nowrap shrink-0"
             >
-              <span>📷</span>
+              <SvgCamera />
               <span>OCR 스캔</span>
             </button>
 
             <button
               type="button"
               onClick={() => setPrintModeType('blank')}
-              className="px-3 py-1.5 rounded-lg bg-white hover:bg-zinc-100 text-zinc-800 border border-zinc-300 text-[11px] font-bold flex items-center gap-1 cursor-pointer shadow-2xs active:scale-95 transition-all"
+              className="px-3 py-1.5 rounded-lg bg-white hover:bg-zinc-100 text-zinc-800 border border-zinc-300 text-[11px] font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95 transition-all whitespace-nowrap shrink-0"
             >
-              <span>🖨️</span>
-              <span className="hidden sm:inline">표준카드 양식/인쇄</span>
+              <SvgPrinter />
+              <span className="hidden sm:inline">표준카드 인쇄</span>
               <span className="sm:hidden">인쇄</span>
             </button>
 
             <button
               type="button"
               onClick={() => openEditStandardForm(null)}
-              className="px-3.5 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white text-[11px] font-black flex items-center gap-1 cursor-pointer shadow-xs active:scale-95 transition-all"
+              className="px-3.5 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white text-[11.5px] font-black flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95 transition-all whitespace-nowrap shrink-0"
             >
-              <span>＋</span>
+              <SvgPlus />
               <span>상담카드 작성</span>
             </button>
           </div>
         </div>
 
-        {/* 2열: 4대 워크스페이스 탭 + 목장별 스윔레인 토글 + 정밀 필터 */}
+        {/* 2열: 4대 워크스페이스 탭 + 실시간 케어 KPI 필터 배지 + 검색 */}
         <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-zinc-200/80">
           
           <div className="flex items-center gap-1.5 overflow-x-auto hide-scrollbar">
-            <div className="flex bg-zinc-200/70 p-0.5 rounded-lg border border-zinc-300/60 text-[11px] font-bold shrink-0">
+            <div className="flex bg-zinc-200/70 p-0.5 rounded-lg border border-zinc-200 text-[11px] font-bold shrink-0">
               <button
                 type="button"
                 onClick={() => setWorkspaceView('kanban')}
-                className={`px-2.5 sm:px-3 py-1.5 rounded-md transition-all cursor-pointer flex items-center gap-1 whitespace-nowrap ${
-                  workspaceView === 'kanban' ? 'bg-white text-zinc-900 shadow-2xs font-black' : 'text-zinc-600 hover:text-zinc-900'
+                className={`px-2.5 sm:px-3 py-1.5 rounded-md transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap tabular-nums ${
+                  workspaceView === 'kanban' ? 'bg-white text-zinc-950 shadow-2xs font-black' : 'text-zinc-600 hover:text-zinc-900'
                 }`}
               >
-                <span>📋</span> <span>Jira 칸반보드 ({accessibleRecords.length})</span>
+                <span>파이프라인 보드 ({accessibleRecords.length})</span>
               </button>
               <button
                 type="button"
                 onClick={() => setWorkspaceView('confluence')}
-                className={`px-2.5 sm:px-3 py-1.5 rounded-md transition-all cursor-pointer flex items-center gap-1 whitespace-nowrap ${
-                  workspaceView === 'confluence' ? 'bg-white text-zinc-900 shadow-2xs font-black' : 'text-zinc-600 hover:text-zinc-900'
+                className={`px-2.5 sm:px-3 py-1.5 rounded-md transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+                  workspaceView === 'confluence' ? 'bg-white text-zinc-950 shadow-2xs font-black' : 'text-zinc-600 hover:text-zinc-900'
                 }`}
               >
-                <span>📑</span> <span>Confluence 상담문서·오더</span>
+                <span>상담문서·오더 관제</span>
               </button>
               <button
                 type="button"
                 onClick={() => setWorkspaceView('pastor_pool')}
-                className={`px-2.5 sm:px-3 py-1.5 rounded-md transition-all cursor-pointer flex items-center gap-1 whitespace-nowrap ${
-                  workspaceView === 'pastor_pool' ? 'bg-white text-indigo-700 shadow-2xs font-black' : 'text-zinc-600 hover:text-zinc-900'
+                className={`px-2.5 sm:px-3 py-1.5 rounded-md transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap tabular-nums ${
+                  workspaceView === 'pastor_pool' ? 'bg-white text-zinc-950 shadow-2xs font-black' : 'text-zinc-600 hover:text-zinc-900'
                 }`}
               >
-                <span>📥</span> <span>사역자 보고 모음함 ({stats.pastorPoolCount})</span>
+                <span>교역자 보고함 ({stats.pastorPoolCount})</span>
               </button>
               <button
                 type="button"
                 onClick={() => setWorkspaceView('shepherd_room')}
-                className={`px-2.5 sm:px-3 py-1.5 rounded-md transition-all cursor-pointer flex items-center gap-1 whitespace-nowrap ${
-                  workspaceView === 'shepherd_room' ? 'bg-white text-emerald-700 shadow-2xs font-black' : 'text-zinc-600 hover:text-zinc-900'
+                className={`px-2.5 sm:px-3 py-1.5 rounded-md transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap tabular-nums ${
+                  workspaceView === 'shepherd_room' ? 'bg-white text-zinc-950 shadow-2xs font-black' : 'text-zinc-600 hover:text-zinc-900'
                 }`}
               >
-                <span>🌿</span> <span>목자방 공유함 ({stats.shepherdRoomCount})</span>
+                <span>목자방 공유함 ({stats.shepherdRoomCount})</span>
               </button>
             </div>
 
@@ -1107,14 +1226,31 @@ export default function AdminCounselingTab({
               <button
                 type="button"
                 onClick={() => setGroupByCellSwimlane(!groupByCellSwimlane)}
-                className={`hidden md:inline-flex px-2.5 py-1.5 rounded-lg text-[11px] font-bold border transition-all cursor-pointer shrink-0 ${
+                className={`hidden md:inline-flex px-2.5 py-1.5 rounded-lg text-[11px] font-bold border transition-all cursor-pointer shrink-0 whitespace-nowrap ${
                   groupByCellSwimlane
                     ? 'bg-zinc-900 text-white border-zinc-900'
                     : 'bg-white text-zinc-700 border-zinc-200 hover:bg-zinc-100'
                 }`}
                 title="PC/태블릿 대화면에서 목장별로 행(Swimlane)을 나누어 비교합니다"
               >
-                {groupByCellSwimlane ? '✓ 목장별 스윔레인 분리뷰' : '⊞ 목장별 분리뷰 전환'}
+                {groupByCellSwimlane ? '✓ 목장별 스윔레인 뷰' : '목장별 분리뷰'}
+              </button>
+            )}
+
+            {/* 위기/긴급 케어 원터치 필터 칩 */}
+            {stats.highRisk > 0 && (
+              <button
+                type="button"
+                onClick={() =>
+                  setSelectedRiskFilter(selectedRiskFilter === 'HIGH_RISK' ? 'ALL' : 'HIGH_RISK')
+                }
+                className={`px-2.5 py-1.5 rounded-lg text-[11px] font-black border transition-all cursor-pointer whitespace-nowrap shrink-0 tabular-nums ${
+                  selectedRiskFilter === 'HIGH_RISK'
+                    ? 'bg-rose-600 text-white border-rose-600 shadow-2xs'
+                    : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'
+                }`}
+              >
+                위기·시험 케어 {stats.highRisk}명
               </button>
             )}
           </div>
@@ -1138,6 +1274,7 @@ export default function AdminCounselingTab({
               className="px-2.5 py-1.5 rounded-lg bg-white border border-zinc-200 text-[11px] font-bold text-zinc-800 outline-none cursor-pointer shadow-2xs"
             >
               <option value="ALL">위험도 (전체 1~5단계)</option>
+              <option value="HIGH_RISK">Lv.4~5 경계·긴급만</option>
               {RISK_LEVELS.map(rk => (
                 <option key={rk.level} value={rk.level}>{rk.label}</option>
               ))}
@@ -1155,12 +1292,13 @@ export default function AdminCounselingTab({
             </select>
 
             <div className="relative flex items-center">
+              <span className="absolute left-2.5 text-zinc-400 pointer-events-none"><SvgSearch /></span>
               <input
                 type="text"
-                placeholder="성도, 목장, 상담키워드..."
+                placeholder="성도, 목장, 키워드 검색..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-3 pr-6 py-1.5 rounded-lg bg-white border border-zinc-200 text-[11px] font-bold text-zinc-900 placeholder:text-zinc-400 outline-none focus:border-zinc-800 w-36 sm:w-44 shadow-2xs"
+                className="pl-8 pr-6 py-1.5 rounded-lg bg-white border border-zinc-200 text-[11px] font-bold text-zinc-900 placeholder:text-zinc-400 outline-none focus:border-zinc-900 w-36 sm:w-44 shadow-2xs transition-all"
               />
               {searchQuery && (
                 <button
@@ -1182,180 +1320,217 @@ export default function AdminCounselingTab({
           ========================================================================= */}
       <div className="flex-1 min-h-0 overflow-hidden flex flex-col bg-zinc-100/60">
         
-        {/* 등록된 상담카드가 하나도 없을 때의 안내 화면 (목업 0%) */}
+        {/* 등록된 상담카드가 하나도 없을 때의 빈 상태 화면 */}
         {filteredRecords.length === 0 && (
           <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
-            <div className="w-12 h-12 rounded-2xl bg-white border border-zinc-200 shadow-2xs flex items-center justify-center text-xl mb-3">
-              📋
+            <div className="w-12 h-12 rounded-2xl bg-white border border-zinc-200 shadow-2xs flex items-center justify-center text-zinc-400 mb-3">
+              <SvgShield />
             </div>
             <h3 className="text-sm font-black text-zinc-900">
               {workspaceView === 'pastor_pool'
-                ? '사역자 보고 모음함에 제출된 상담카드가 없습니다.'
+                ? '교역자 보고 모음함에 제출된 상담카드가 없습니다.'
                 : workspaceView === 'shepherd_room'
                 ? '목자방에 공유된 상담카드가 없습니다.'
                 : '조건에 해당하는 신앙 상담 기록카드가 없습니다.'}
             </h3>
             <p className="text-xs text-zinc-500 mt-1 max-w-md leading-relaxed">
-              우측 상단의 <b>[＋ 상담카드 작성]</b> 버튼을 눌러 목원 상담을 기록하거나, <b>[📷 OCR 스캔]</b>으로 수기 상담지를 촬영해 등록하세요.
+              우측 상단의 <b>[+ 상담카드 작성]</b> 버튼을 눌러 목원 상담을 기록하거나, <b>[OCR 스캔]</b>으로 수기 상담지를 촬영해 등록하세요.
             </p>
             <div className="flex items-center gap-2 mt-4">
               <button
                 type="button"
                 onClick={() => openEditStandardForm(null)}
-                className="px-4 py-2 rounded-xl bg-zinc-900 text-white text-xs font-black cursor-pointer shadow-xs"
+                className="px-4 py-2 rounded-xl bg-zinc-900 text-white text-xs font-black cursor-pointer shadow-xs whitespace-nowrap"
               >
-                ＋ 첫 상담카드 작성하기
+                + 첫 상담카드 작성하기
               </button>
               <button
                 type="button"
                 onClick={() => setPrintModeType('blank')}
-                className="px-4 py-2 rounded-xl bg-white border border-zinc-300 text-zinc-800 text-xs font-bold cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-white border border-zinc-300 text-zinc-800 text-xs font-bold cursor-pointer whitespace-nowrap"
               >
-                🖨️ 수기용 빈 양식 인쇄
+                수기용 빈 양식 인쇄
               </button>
             </div>
           </div>
         )}
 
         {/* -------------------------------------------------------------------
-            VIEW 1: Jira 5단 드래그앤드롭 칸반 보드 (일반 칸반 vs 목장별 스윔레인 뷰)
+            VIEW 1: Jira 5단 드래그앤드롭 칸반 보드 (모바일 퀵 탭 + 데스크톱 5컬럼)
            ------------------------------------------------------------------- */}
         {filteredRecords.length > 0 && workspaceView === 'kanban' && !groupByCellSwimlane && (
-          <div className="flex-1 overflow-x-auto overflow-y-auto p-3 sm:p-4 hide-scrollbar">
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-3 min-w-0 md:min-w-[1080px] xl:min-w-full h-full items-start">
-              {KANBAN_STAGES.map(stage => {
-                const stageCards = filteredRecords.filter(r => r.stage === stage.id);
-                const isDragOver = dragOverStage === stage.id;
-
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            
+            {/* 모바일 전용 스테이지 필터 탭 바 */}
+            <div className="md:hidden px-3 pt-2.5 pb-1 flex items-center gap-1 overflow-x-auto hide-scrollbar shrink-0">
+              <button
+                type="button"
+                onClick={() => setMobileKanbanStageFilter('ALL')}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border whitespace-nowrap cursor-pointer tabular-nums ${
+                  mobileKanbanStageFilter === 'ALL'
+                    ? 'bg-zinc-900 text-white border-zinc-900 font-black'
+                    : 'bg-white text-zinc-600 border-zinc-200'
+                }`}
+              >
+                전체 ({filteredRecords.length})
+              </button>
+              {KANBAN_STAGES.map(st => {
+                const cnt = filteredRecords.filter(r => r.stage === st.id).length;
                 return (
-                  <div
-                    key={stage.id}
-                    onDragOver={(e) => { e.preventDefault(); setDragOverStage(stage.id); }}
-                    onDragLeave={() => setDragOverStage(null)}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      setDragOverStage(null);
-                      const droppedId = e.dataTransfer.getData('text/plain') || draggedCardId;
-                      if (droppedId) handleStageChange(droppedId, stage.id);
-                    }}
-                    className={`rounded-xl border flex flex-col max-h-full transition-all ${
-                      isDragOver
-                        ? 'bg-indigo-50/70 border-indigo-400 ring-2 ring-indigo-300/60'
-                        : 'bg-zinc-100/90 border-zinc-200/90'
+                  <button
+                    key={st.id}
+                    type="button"
+                    onClick={() => setMobileKanbanStageFilter(st.id)}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border whitespace-nowrap cursor-pointer tabular-nums ${
+                      mobileKanbanStageFilter === st.id
+                        ? 'bg-zinc-900 text-white border-zinc-900 font-black'
+                        : 'bg-white text-zinc-600 border-zinc-200'
                     }`}
                   >
-                    <div className="p-3 bg-white rounded-t-xl border-b border-zinc-200/80 flex items-center justify-between shrink-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: stage.dotColor }} />
-                        <span className="text-[12.5px] font-black text-zinc-900">{stage.label}</span>
-                      </div>
-                      <span className="px-2 py-0.5 rounded-full text-[10.5px] font-mono font-black bg-zinc-100 text-zinc-700 border border-zinc-200">
-                        {stageCards.length}
-                      </span>
-                    </div>
-
-                    <div className="p-2.5 space-y-2.5 overflow-y-auto hide-scrollbar max-h-[calc(100vh-245px)]">
-                      {stageCards.map(card => {
-                        const rk = getRiskMeta(card.riskLevel);
-                        const cat = getCatMeta(card.category);
-                        const pendingOrders = (card.pastorOrders || []).filter(o => o.status !== 'done').length;
-
-                        return (
-                          <div
-                            key={card.id}
-                            draggable
-                            onDragStart={(e) => {
-                              e.dataTransfer.setData('text/plain', card.id);
-                              setDraggedCardId(card.id);
-                            }}
-                            onDragEnd={() => { setDraggedCardId(null); setDragOverStage(null); }}
-                            onClick={() => {
-                              setActiveCardId(card.id);
-                              setMobilePopupTab('detail');
-                              setIsCardPopupOpen(true);
-                            }}
-                            className={`p-3.5 rounded-xl bg-white border border-zinc-200 hover:border-zinc-400 shadow-2xs hover:shadow-md transition-all cursor-grab active:cursor-grabbing flex flex-col gap-2 relative ${
-                              draggedCardId === card.id ? 'opacity-40 scale-95' : ''
-                            }`}
-                          >
-                            <div className="flex items-center justify-between gap-1 flex-wrap">
-                              <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${rk.bgCls}`}>
-                                {rk.short}
-                              </span>
-                              <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-zinc-100 text-zinc-700 border border-zinc-200">
-                                {cat.label}
-                              </span>
-                              <div className="flex items-center gap-1 ml-auto">
-                                {card.isSharedWithShepherds && (
-                                  <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200" title="목자방 공유됨">
-                                    🌿목자방
-                                  </span>
-                                )}
-                                {card.isSubmittedToPastor && (
-                                  <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-indigo-50 text-indigo-700 border border-indigo-200" title="사역자 모음함 보고됨">
-                                    📥사역자보고
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-
-                            <div className="flex items-center justify-between pt-0.5">
-                              <div className="flex items-center gap-1.5 min-w-0">
-                                <span className="text-[13.5px] font-black text-zinc-900 truncate">{card.memberName}</span>
-                                <span className="text-[10.5px] font-bold text-zinc-500 shrink-0">{card.memberOffice}</span>
-                                <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50/80 px-1.5 py-0.2 rounded border border-indigo-100 shrink-0">
-                                  {card.cellName}
-                                </span>
-                              </div>
-                              <span className="text-[10px] font-mono text-zinc-400 shrink-0">{card.date}</span>
-                            </div>
-
-                            <h4 className="text-[12px] font-extrabold text-zinc-800 leading-snug line-clamp-2">
-                              {card.title}
-                            </h4>
-                            <p className="text-[11px] text-zinc-500 line-clamp-2 leading-relaxed">
-                              {card.content}
-                            </p>
-
-                            {card.pastorOrders && card.pastorOrders.length > 0 && (
-                              <div className={`px-2.5 py-1.5 rounded-lg border text-[10.5px] font-bold flex items-center justify-between ${
-                                pendingOrders > 0
-                                  ? 'bg-amber-50/95 border-amber-300 text-amber-900'
-                                  : 'bg-emerald-50/80 border-emerald-200 text-emerald-800'
-                              }`}>
-                                <span className="truncate">
-                                  👑 {card.pastorOrders[0].orderType}
-                                </span>
-                                <span className="font-mono text-[9.5px] shrink-0 ml-1 font-black">
-                                  {pendingOrders > 0 ? `오더 ${pendingOrders}건` : '피드백완료'}
-                                </span>
-                              </div>
-                            )}
-
-                            <div
-                              className="pt-2 border-t border-zinc-100 flex items-center justify-between text-[10px] text-zinc-500"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <span className="font-bold truncate">
-                                ✍️ {card.counselorName} ({card.counselorRole})
-                              </span>
-                              <select
-                                value={card.stage}
-                                onChange={(e) => handleStageChange(card.id, e.target.value)}
-                                className="px-1.5 py-0.5 rounded bg-zinc-50 border border-zinc-200 text-[10px] font-bold text-zinc-700 outline-none cursor-pointer"
-                              >
-                                {KANBAN_STAGES.map(st => (
-                                  <option key={st.id} value={st.id}>{st.short}</option>
-                                ))}
-                              </select>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
+                    {st.short} ({cnt})
+                  </button>
                 );
               })}
+            </div>
+
+            <div className="flex-1 overflow-x-auto overflow-y-auto p-3 sm:p-4 hide-scrollbar">
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-3.5 min-w-0 md:min-w-[1100px] xl:min-w-full h-full items-start">
+                {KANBAN_STAGES.filter(
+                  stage => mobileKanbanStageFilter === 'ALL' || stage.id === mobileKanbanStageFilter
+                ).map(stage => {
+                  const stageCards = filteredRecords.filter(r => r.stage === stage.id);
+                  const isDragOver = dragOverStage === stage.id;
+
+                  return (
+                    <div
+                      key={stage.id}
+                      onDragOver={(e) => { e.preventDefault(); setDragOverStage(stage.id); }}
+                      onDragLeave={() => setDragOverStage(null)}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        setDragOverStage(null);
+                        const droppedId = e.dataTransfer.getData('text/plain') || draggedCardId;
+                        if (droppedId) handleStageChange(droppedId, stage.id);
+                      }}
+                      className={`rounded-2xl border flex flex-col max-h-full transition-all ${
+                        isDragOver
+                          ? 'bg-zinc-200/80 border-zinc-900 ring-2 ring-zinc-900/20'
+                          : 'bg-zinc-100/90 border-zinc-200/90'
+                      }`}
+                    >
+                      <div className="px-3.5 py-2.5 bg-white rounded-t-2xl border-b border-zinc-200/80 flex items-center justify-between shrink-0 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: stage.dotColor }} />
+                          <span className="text-[12.5px] font-black text-zinc-900">{stage.label}</span>
+                        </div>
+                        <span className="px-2 py-0.5 rounded-md text-[10.5px] font-mono font-black bg-zinc-100 text-zinc-700 border border-zinc-200 tabular-nums">
+                          {stageCards.length}
+                        </span>
+                      </div>
+
+                      <div className="p-2.5 space-y-2.5 overflow-y-auto hide-scrollbar max-h-[calc(100vh-250px)]">
+                        {stageCards.map(card => {
+                          const rk = getRiskMeta(card.riskLevel);
+                          const cat = getCatMeta(card.category);
+                          const pendingOrders = (card.pastorOrders || []).filter(o => o.status !== 'done').length;
+
+                          return (
+                            <div
+                              key={card.id}
+                              draggable
+                              onDragStart={(e) => {
+                                e.dataTransfer.setData('text/plain', card.id);
+                                setDraggedCardId(card.id);
+                              }}
+                              onDragEnd={() => { setDraggedCardId(null); setDragOverStage(null); }}
+                              onClick={() => {
+                                setActiveCardId(card.id);
+                                setMobilePopupTab('detail');
+                                setIsCardPopupOpen(true);
+                              }}
+                              className={`p-3.5 rounded-xl bg-white border border-zinc-200/90 hover:border-zinc-400 shadow-2xs hover:shadow-sm transition-all cursor-grab active:cursor-grabbing flex flex-col gap-2 relative ${
+                                draggedCardId === card.id ? 'opacity-40 scale-95' : ''
+                              }`}
+                            >
+                              <div className="flex items-center justify-between gap-1 flex-wrap">
+                                <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border whitespace-nowrap ${rk.bgCls}`}>
+                                  {rk.short}
+                                </span>
+                                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-zinc-100 text-zinc-700 border border-zinc-200 whitespace-nowrap">
+                                  {cat.label}
+                                </span>
+                                <div className="flex items-center gap-1 ml-auto">
+                                  {card.isSharedWithShepherds && (
+                                    <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap">
+                                      목자방
+                                    </span>
+                                  )}
+                                  {card.isSubmittedToPastor && (
+                                    <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-indigo-50 text-indigo-700 border border-indigo-200 whitespace-nowrap">
+                                      교역자보고
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="flex items-center justify-between gap-1 pt-0.5 whitespace-nowrap">
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                  <span className="text-[13.5px] font-black text-zinc-900 truncate">{card.memberName}</span>
+                                  <span className="text-[10.5px] font-bold text-zinc-500 shrink-0">{card.memberOffice}</span>
+                                  <span className="text-[10px] font-bold text-zinc-700 bg-zinc-100 px-1.5 py-0.2 rounded border border-zinc-200 shrink-0">
+                                    {card.cellName}
+                                  </span>
+                                </div>
+                                <span className="text-[10px] font-mono text-zinc-400 shrink-0 tabular-nums">{card.date}</span>
+                              </div>
+
+                              <h4 className="text-[12px] font-extrabold text-zinc-800 leading-snug line-clamp-2">
+                                {card.title}
+                              </h4>
+                              <p className="text-[11px] text-zinc-500 line-clamp-2 leading-relaxed">
+                                {card.content}
+                              </p>
+
+                              {card.pastorOrders && card.pastorOrders.length > 0 && (
+                                <div className={`px-2.5 py-1.5 rounded-lg border text-[10.5px] font-bold flex items-center justify-between whitespace-nowrap ${
+                                  pendingOrders > 0
+                                    ? 'bg-amber-50/95 border-amber-300 text-amber-900'
+                                    : 'bg-emerald-50/80 border-emerald-200 text-emerald-800'
+                                }`}>
+                                  <span className="truncate">
+                                    오더: {card.pastorOrders[0].orderType}
+                                  </span>
+                                  <span className="font-mono text-[9.5px] shrink-0 ml-1.5 font-black tabular-nums">
+                                    {pendingOrders > 0 ? `진행 ${pendingOrders}건` : '완료'}
+                                  </span>
+                                </div>
+                              )}
+
+                              <div
+                                className="pt-2 border-t border-zinc-100 flex items-center justify-between text-[10px] text-zinc-500 whitespace-nowrap"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <span className="font-bold truncate pr-1">
+                                  담당: {card.counselorName} ({card.counselorRole})
+                                </span>
+                                <select
+                                  value={card.stage}
+                                  onChange={(e) => handleStageChange(card.id, e.target.value)}
+                                  className="px-1.5 py-0.5 rounded bg-zinc-50 border border-zinc-200 text-[10px] font-bold text-zinc-700 outline-none cursor-pointer shrink-0"
+                                >
+                                  {KANBAN_STAGES.map(st => (
+                                    <option key={st.id} value={st.id}>{st.short}</option>
+                                  ))}
+                                </select>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         )}
@@ -1368,11 +1543,11 @@ export default function AdminCounselingTab({
             {Array.from(new Set(filteredRecords.map(r => r.cellName))).map(cName => {
               const cellCards = filteredRecords.filter(r => r.cellName === cName);
               return (
-                <div key={cName} className="bg-white rounded-xl border border-zinc-200 shadow-2xs overflow-hidden">
-                  <div className="px-4 py-2.5 bg-zinc-900 text-white flex items-center justify-between">
-                    <span className="text-xs font-black">🌿 {cName} 상담 파이프라인 ({cellCards.length}건)</span>
-                    <span className="text-[10.5px] font-mono text-zinc-300">
-                      긴급/시험 {cellCards.filter(c => c.riskLevel >= 4).length}건 · 목사님오더 {cellCards.reduce((a, c) => a + (c.pastorOrders?.length || 0), 0)}건
+                <div key={cName} className="bg-white rounded-2xl border border-zinc-200/90 shadow-2xs overflow-hidden">
+                  <div className="px-4 py-2.5 bg-zinc-900 text-white flex items-center justify-between whitespace-nowrap">
+                    <span className="text-xs font-black">{cName} 상담 파이프라인 ({cellCards.length}건)</span>
+                    <span className="text-[10.5px] font-mono text-zinc-300 tabular-nums">
+                      위기/시험 {cellCards.filter(c => c.riskLevel >= 4).length}건 · 목회오더 {cellCards.reduce((a, c) => a + (c.pastorOrders?.length || 0), 0)}건
                     </span>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-5 divide-y md:divide-y-0 md:divide-x divide-zinc-200">
@@ -1380,17 +1555,17 @@ export default function AdminCounselingTab({
                       const list = cellCards.filter(c => c.stage === st.id);
                       return (
                         <div key={st.id} className="p-2.5 min-h-[140px] bg-zinc-50/40 space-y-2">
-                          <div className="text-[10.5px] font-black text-zinc-500 flex justify-between">
+                          <div className="text-[10.5px] font-black text-zinc-500 flex justify-between whitespace-nowrap">
                             <span>{st.label}</span>
-                            <span className="font-mono">{list.length}</span>
+                            <span className="font-mono tabular-nums">{list.length}</span>
                           </div>
                           {list.map(card => (
                             <div
                               key={card.id}
                               onClick={() => { setActiveCardId(card.id); setIsCardPopupOpen(true); }}
-                              className="p-2.5 rounded-lg bg-white border border-zinc-200 hover:border-zinc-400 cursor-pointer shadow-2xs space-y-1"
+                              className="p-2.5 rounded-xl bg-white border border-zinc-200 hover:border-zinc-400 cursor-pointer shadow-2xs space-y-1"
                             >
-                              <div className="flex items-center justify-between">
+                              <div className="flex items-center justify-between whitespace-nowrap">
                                 <span className="font-black text-xs text-zinc-900">{card.memberName}</span>
                                 <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold border ${getRiskMeta(card.riskLevel).bgCls}`}>
                                   {getRiskMeta(card.riskLevel).short}
@@ -1410,22 +1585,22 @@ export default function AdminCounselingTab({
         )}
 
         {/* -------------------------------------------------------------------
-            VIEW 2, 3, 4: Confluence 3단 와이드 문서·오더 워크스페이스 (PC/태블릿 대화면 최적화)
+            VIEW 2, 3, 4: Confluence 3단 와이드 문서·오더 워크스페이스
            ------------------------------------------------------------------- */}
         {filteredRecords.length > 0 && workspaceView !== 'kanban' && (
           <div className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden bg-white">
             
             {/* [좌측 패널] 목장별 상담 문서 디렉토리 */}
             <div className="w-full lg:w-[320px] xl:w-[350px] border-b lg:border-b-0 lg:border-r border-zinc-200 flex flex-col min-h-0 bg-zinc-50/60 shrink-0">
-              <div className="px-4 py-3 bg-white border-b border-zinc-200 flex items-center justify-between">
+              <div className="px-4 py-3 bg-white border-b border-zinc-200 flex items-center justify-between whitespace-nowrap">
                 <span className="text-[12px] font-black text-zinc-900">
                   {workspaceView === 'pastor_pool'
-                    ? '📥 사역자(목사·전도사) 보고 모음함'
+                    ? '교역자(목사·전도사) 보고 모음함'
                     : workspaceView === 'shepherd_room'
-                    ? '🌿 목자방(동역 목자) 공유 모음함'
-                    : '📑 목장별 상담 문서 디렉토리'}
+                    ? '목자방(동역 목자) 공유 모음함'
+                    : '목장별 상담 문서 디렉토리'}
                 </span>
-                <span className="text-[10.5px] font-mono font-bold text-zinc-500">{filteredRecords.length}건</span>
+                <span className="text-[10.5px] font-mono font-bold text-zinc-500 tabular-nums">{filteredRecords.length}건</span>
               </div>
 
               <div className="flex-1 overflow-y-auto p-2.5 space-y-2 hide-scrollbar">
@@ -1446,11 +1621,11 @@ export default function AdminCounselingTab({
                       }}
                       className={`p-3 rounded-xl border transition-all cursor-pointer space-y-1.5 ${
                         isSel
-                          ? 'bg-zinc-900 border-zinc-900 text-white shadow-md'
+                          ? 'bg-zinc-900 border-zinc-900 text-white shadow-sm'
                           : 'bg-white border-zinc-200 hover:border-zinc-400 text-zinc-900'
                       }`}
                     >
-                      <div className="flex items-center justify-between gap-1">
+                      <div className="flex items-center justify-between gap-1 whitespace-nowrap">
                         <div className="flex items-center gap-1.5 min-w-0">
                           <span className={`px-1.5 py-0.2 rounded text-[9.5px] font-bold border shrink-0 ${rk.bgCls}`}>
                             {rk.short}
@@ -1462,16 +1637,16 @@ export default function AdminCounselingTab({
                             ({card.cellName})
                           </span>
                         </div>
-                        <span className="text-[10px] font-mono text-zinc-400 shrink-0">{card.date}</span>
+                        <span className="text-[10px] font-mono text-zinc-400 shrink-0 tabular-nums">{card.date}</span>
                       </div>
 
                       <p className={`text-[12px] font-bold truncate ${isSel ? 'text-zinc-100' : 'text-zinc-800'}`}>
                         {card.title}
                       </p>
 
-                      <div className="flex items-center justify-between text-[10px] pt-1">
+                      <div className="flex items-center justify-between text-[10px] pt-1 whitespace-nowrap">
                         <span className={isSel ? 'text-zinc-400' : 'text-zinc-500'}>
-                          ✍️ {card.counselorName} ({card.counselorRole})
+                          담당: {card.counselorName} ({card.counselorRole})
                         </span>
                         <span className={`px-1.5 py-0.2 rounded border text-[9.5px] font-bold ${st.badgeCls}`}>
                           {st.short}
@@ -1489,123 +1664,145 @@ export default function AdminCounselingTab({
                 <div className="max-w-3xl mx-auto space-y-5">
                   <div className="flex flex-wrap items-center justify-between gap-2 pb-4 border-b border-zinc-200">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="font-mono text-[10.5px] font-bold px-2 py-0.5 rounded bg-zinc-100 text-zinc-600 border border-zinc-200">
+                      <span className="font-mono text-[10.5px] font-bold px-2 py-0.5 rounded bg-zinc-100 text-zinc-600 border border-zinc-200 whitespace-nowrap">
                         {activeCard.id}
                       </span>
-                      <span className={`px-2.5 py-0.5 rounded-md text-[11px] font-bold border ${getRiskMeta(activeCard.riskLevel).bgCls}`}>
+                      <span className={`px-2.5 py-0.5 rounded-md text-[11px] font-bold border whitespace-nowrap ${getRiskMeta(activeCard.riskLevel).bgCls}`}>
                         {getRiskMeta(activeCard.riskLevel).label}
                       </span>
-                      <span className="px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-zinc-100 text-zinc-800 border border-zinc-200">
+                      <span className="px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-zinc-100 text-zinc-800 border border-zinc-200 whitespace-nowrap">
                         {getCatMeta(activeCard.category).label}
                       </span>
                     </div>
 
-                    {/* 공유 및 인쇄·수정 버튼 */}
+                    {/* 공유 및 복사·인쇄·수정 버튼 */}
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <button
                         type="button"
                         onClick={() => handleToggleShareShepherds(activeCard)}
-                        className={`px-2.5 py-1.5 rounded-lg text-[11px] font-black border cursor-pointer transition-all ${
+                        className={`px-2.5 py-1.5 rounded-lg text-[11px] font-black border cursor-pointer transition-all whitespace-nowrap ${
                           activeCard.isSharedWithShepherds
                             ? 'bg-emerald-600 text-white border-emerald-600'
                             : 'bg-white text-emerald-700 border-emerald-300 hover:bg-emerald-50'
                         }`}
                       >
-                        {activeCard.isSharedWithShepherds ? '🌿 목자방 공유중' : '🌿 목자방 공유'}
+                        {activeCard.isSharedWithShepherds ? '✓ 목자방 공유중' : '목자방 공유'}
                       </button>
 
                       <button
                         type="button"
                         onClick={() => handleToggleSubmitPastor(activeCard)}
-                        className={`px-2.5 py-1.5 rounded-lg text-[11px] font-black border cursor-pointer transition-all ${
+                        className={`px-2.5 py-1.5 rounded-lg text-[11px] font-black border cursor-pointer transition-all whitespace-nowrap ${
                           activeCard.isSubmittedToPastor
                             ? 'bg-indigo-600 text-white border-indigo-600'
                             : 'bg-white text-indigo-700 border-indigo-300 hover:bg-indigo-50'
                         }`}
                       >
-                        {activeCard.isSubmittedToPastor ? '📥 사역자 모음함 보고됨' : '📤 사역자(목사·전도사) 보고'}
+                        {activeCard.isSubmittedToPastor ? '✓ 교역자 보고됨' : '교역자 보고 제출'}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={(e) => handleCopyCardSummary(activeCard, e)}
+                        className="px-2.5 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-[11px] font-bold border border-zinc-200 flex items-center gap-1 cursor-pointer whitespace-nowrap"
+                      >
+                        {copiedCardId === activeCard.id ? <><SvgCheck /> 복사됨</> : <><SvgCopy /> 복사</>}
                       </button>
 
                       <button
                         type="button"
                         onClick={() => setPrintModeType('filled')}
-                        className="px-2.5 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-[11px] font-bold border border-zinc-200 cursor-pointer"
+                        className="px-2.5 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-[11px] font-bold border border-zinc-200 flex items-center gap-1 cursor-pointer whitespace-nowrap"
                       >
-                        🖨️ 인쇄
+                        <SvgPrinter /> 인쇄
                       </button>
 
                       <button
                         type="button"
                         onClick={() => openEditStandardForm(activeCard)}
-                        className="px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white text-[11px] font-bold cursor-pointer"
+                        className="px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white text-[11px] font-bold flex items-center gap-1 cursor-pointer whitespace-nowrap"
                       >
-                        ✏️ 수정
+                        <SvgEdit /> 수정
                       </button>
                     </div>
                   </div>
 
                   {/* 표준 상담 문서 본문 */}
-                  <div className="p-5 rounded-2xl bg-zinc-50/70 border border-zinc-200 space-y-4">
+                  <div className="p-5 rounded-2xl bg-zinc-50/70 border border-zinc-200/90 space-y-4">
                     <h3 className="text-lg font-black text-zinc-900 leading-snug">{activeCard.title}</h3>
 
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
-                      <div className="p-2.5 rounded-xl bg-white border border-zinc-200">
+                      <div className="p-2.5 rounded-xl bg-white border border-zinc-200/90">
                         <span className="text-[10px] font-bold text-zinc-400 block">상담 대상 성도</span>
                         <span className="font-black text-zinc-900">{activeCard.memberName} ({activeCard.memberOffice})</span>
                       </div>
-                      <div className="p-2.5 rounded-xl bg-white border border-zinc-200">
+                      <div className="p-2.5 rounded-xl bg-white border border-zinc-200/90">
                         <span className="text-[10px] font-bold text-zinc-400 block">소속 목장</span>
-                        <span className="font-black text-indigo-700">{activeCard.cellName}</span>
+                        <span className="font-black text-zinc-900">{activeCard.cellName}</span>
                       </div>
-                      <div className="p-2.5 rounded-xl bg-white border border-zinc-200">
+                      <div className="p-2.5 rounded-xl bg-white border border-zinc-200/90">
                         <span className="text-[10px] font-bold text-zinc-400 block">상담자 (직책)</span>
                         <span className="font-black text-zinc-900">{activeCard.counselorName} ({activeCard.counselorRole})</span>
                       </div>
-                      <div className="p-2.5 rounded-xl bg-white border border-zinc-200">
+                      <div className="p-2.5 rounded-xl bg-white border border-zinc-200/90">
                         <span className="text-[10px] font-bold text-zinc-400 block">상담 일자 · 방식</span>
-                        <span className="font-black text-zinc-900">{activeCard.date} · {activeCard.method}</span>
+                        <span className="font-black text-zinc-900 font-mono tabular-nums">{activeCard.date} · {activeCard.method}</span>
                       </div>
                     </div>
 
                     {activeCard.spiritualState && (
-                      <div className="p-3.5 rounded-xl bg-white border border-zinc-200 space-y-1">
+                      <div className="p-3.5 rounded-xl bg-white border border-zinc-200/90 space-y-1">
                         <span className="text-[10.5px] font-black text-zinc-500 uppercase">1. 현재 영적 상태 및 예배·QT 진단</span>
                         <p className="text-[12.5px] font-medium text-zinc-800 leading-relaxed whitespace-pre-wrap">{activeCard.spiritualState}</p>
                       </div>
                     )}
 
-                    <div className="p-3.5 rounded-xl bg-white border border-zinc-200 space-y-1">
+                    <div className="p-3.5 rounded-xl bg-white border border-zinc-200/90 space-y-1">
                       <span className="text-[10.5px] font-black text-zinc-500 uppercase">2. 심층 상담 내용 및 나눈 말씀</span>
                       <p className="text-[12.5px] font-medium text-zinc-800 leading-relaxed whitespace-pre-wrap">{activeCard.content}</p>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div className="p-3.5 rounded-xl bg-purple-50/50 border border-purple-200 space-y-1">
+                      <div className="p-3.5 rounded-xl bg-purple-50/40 border border-purple-200 space-y-1">
                         <span className="text-[10.5px] font-black text-purple-800 uppercase">3. 집중 중보기도 제목</span>
                         <p className="text-[12px] font-medium text-zinc-800 leading-relaxed whitespace-pre-wrap">{activeCard.prayerTopics || '-'}</p>
                       </div>
-                      <div className="p-3.5 rounded-xl bg-sky-50/50 border border-sky-200 space-y-1">
+                      <div className="p-3.5 rounded-xl bg-sky-50/40 border border-sky-200 space-y-1">
                         <span className="text-[10.5px] font-black text-sky-800 uppercase">4. 담당 목자 소견 및 건의사항</span>
                         <p className="text-[12px] font-medium text-zinc-800 leading-relaxed whitespace-pre-wrap">{activeCard.shepherdOpinion || '-'}</p>
                       </div>
                     </div>
                   </div>
 
-                  {/* 👑 목사님 권면·조언 및 후속 조치 오더 & 목자 피드백 루프 */}
-                  <div className="p-5 rounded-2xl bg-amber-50/40 border-2 border-amber-300/80 space-y-4">
-                    <div className="flex items-center justify-between">
+                  {/* 목회자 권면·조언 및 후속 조치 오더 & 목자 피드백 루프 */}
+                  <div className="p-5 rounded-2xl bg-amber-50/35 border border-amber-300 space-y-4">
+                    <div className="flex items-center justify-between whitespace-nowrap">
                       <div>
                         <span className="text-[10px] font-mono font-black text-amber-800 uppercase">PASTORAL DIRECTIVE & SHEPHERD FEEDBACK</span>
-                        <h4 className="text-[14.5px] font-black text-zinc-900">👑 목사님 권면·조언 및 후속 조치 오더</h4>
+                        <h4 className="text-[14.5px] font-black text-zinc-900">목사님 권면·조언 및 후속 조치 오더</h4>
                       </div>
-                      <span className="text-[11px] font-bold text-amber-800 bg-amber-100 px-2.5 py-0.5 rounded-full">
+                      <span className="text-[11px] font-mono font-bold text-amber-900 bg-amber-100 px-2.5 py-0.5 rounded-md border border-amber-200 tabular-nums">
                         오더 {(activeCard.pastorOrders || []).length}건
                       </span>
                     </div>
 
-                    {/* 교역자(목사·전도사) 전용 오더 발령 폼 */}
+                    {/* 교역자(목사·전도사) 전용 오더 발령 폼 + 퀵 매크로 */}
                     {(currentUserInfo.isPastor || currentUserInfo.isEvangelist) && (
-                      <div className="p-3.5 rounded-xl bg-white border border-amber-200 space-y-2.5">
+                      <div className="p-3.5 rounded-xl bg-white border border-amber-200 space-y-2.5 shadow-2xs">
+                        <div className="flex items-center gap-1.5 overflow-x-auto hide-scrollbar pb-0.5">
+                          <span className="text-[10px] font-bold text-zinc-400 whitespace-nowrap shrink-0">권면 매크로:</span>
+                          {PASTOR_DIRECTIVE_MACROS.map((macro, idx) => (
+                            <button
+                              key={idx}
+                              type="button"
+                              onClick={() => setNewOrderDirective(macro)}
+                              className="px-2 py-0.5 rounded bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-[10px] font-bold whitespace-nowrap shrink-0 cursor-pointer"
+                            >
+                              + {macro.slice(0, 16)}...
+                            </button>
+                          ))}
+                        </div>
+
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                           <div className="sm:col-span-2">
                             <label className="text-[10px] font-bold text-zinc-500 block mb-1">후속 조치 오더 구분</label>
@@ -1623,7 +1820,7 @@ export default function AdminCounselingTab({
                               type="date"
                               value={newOrderDueDate}
                               onChange={(e) => setNewOrderDueDate(e.target.value)}
-                              className="w-full px-3 py-1.5 rounded-lg bg-zinc-50 border border-zinc-200 text-xs font-bold text-zinc-900 outline-none"
+                              className="w-full px-3 py-1.5 rounded-lg bg-zinc-50 border border-zinc-200 text-xs font-bold text-zinc-900 outline-none font-mono"
                             />
                           </div>
                         </div>
@@ -1633,16 +1830,16 @@ export default function AdminCounselingTab({
                           value={newOrderDirective}
                           onChange={(e) => setNewOrderDirective(e.target.value)}
                           placeholder="담당 목자님께 전달할 목회 권면, 심방 지시, 말씀 처방 오더를 입력하세요..."
-                          className="w-full p-2.5 rounded-lg bg-zinc-50 border border-zinc-200 text-xs font-medium text-zinc-900 outline-none resize-none"
+                          className="w-full p-2.5 rounded-lg bg-zinc-50 border border-zinc-200 text-xs font-medium text-zinc-900 outline-none focus:bg-white focus:border-zinc-900 resize-none"
                         />
 
                         <div className="flex justify-end">
                           <button
                             type="button"
                             onClick={handleIssuePastorOrder}
-                            className="px-4 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-black cursor-pointer shadow-xs"
+                            className="px-4 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-black cursor-pointer shadow-xs whitespace-nowrap"
                           >
-                            ⚡ 담당 목자에게 후속 오더 하달하기
+                            담당 목자에게 후속 오더 하달하기
                           </button>
                         </div>
                       </div>
@@ -1657,18 +1854,18 @@ export default function AdminCounselingTab({
                       ) : (
                         (activeCard.pastorOrders || []).map(ord => (
                           <div key={ord.id} className="p-3.5 rounded-xl bg-white border border-amber-200 shadow-2xs space-y-2">
-                            <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="flex flex-wrap items-center justify-between gap-2 whitespace-nowrap">
                               <div className="flex items-center gap-2">
                                 <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-900 text-[10.5px] font-black">
                                   {ord.orderType}
                                 </span>
-                                <span className="text-[11px] font-bold text-zinc-700">
+                                <span className="text-[11px] font-bold text-zinc-600 font-mono tabular-nums">
                                   발령: {ord.pastorName} ({ord.createdAt})
                                 </span>
                               </div>
 
                               <div className="flex items-center gap-1.5">
-                                <span className="text-[10.5px] font-mono text-zinc-500">기한: {ord.dueDate}</span>
+                                <span className="text-[10.5px] font-mono text-zinc-500 tabular-nums">기한: {ord.dueDate}</span>
                                 <select
                                   value={ord.status}
                                   onChange={(e) => handleUpdateOrderFeedback(activeCard.id, ord.id, e.target.value, undefined)}
@@ -1680,9 +1877,9 @@ export default function AdminCounselingTab({
                                       : 'bg-rose-50 text-rose-700 border-rose-300'
                                   }`}
                                 >
-                                  <option value="pending">🔴 오더 접수대기</option>
-                                  <option value="in_progress">🔵 목자 조치중</option>
-                                  <option value="done">🟢 피드백 완료</option>
+                                  <option value="pending">접수대기</option>
+                                  <option value="in_progress">목자 조치중</option>
+                                  <option value="done">피드백 완료</option>
                                 </select>
                               </div>
                             </div>
@@ -1692,13 +1889,13 @@ export default function AdminCounselingTab({
                             </p>
 
                             <div className="flex items-center gap-2 pt-1">
-                              <span className="text-[10.5px] font-black text-zinc-500 shrink-0">💬 목자 이행 피드백:</span>
+                              <span className="text-[10.5px] font-black text-zinc-500 shrink-0 whitespace-nowrap">목자 피드백:</span>
                               <input
                                 type="text"
                                 value={ord.feedbackNote || ''}
                                 onChange={(e) => handleUpdateOrderFeedback(activeCard.id, ord.id, undefined, e.target.value)}
                                 placeholder="목자님께서 오더를 이행한 후 결과/피드백을 입력하면 목사님께 실시간 보고됩니다..."
-                                className="flex-1 px-2.5 py-1 rounded-md bg-zinc-50 border border-zinc-200 text-[11.5px] font-medium text-zinc-800 outline-none focus:bg-white focus:border-zinc-500"
+                                className="flex-1 px-2.5 py-1.5 rounded-lg bg-zinc-50 border border-zinc-200 text-[11.5px] font-medium text-zinc-800 outline-none focus:bg-white focus:border-zinc-900"
                               />
                             </div>
                           </div>
@@ -1716,7 +1913,7 @@ export default function AdminCounselingTab({
                 <div className="border-b border-zinc-200 pb-2.5">
                   <span className="text-[10px] font-mono font-black uppercase text-zinc-400 block">MEMBER CARE HISTORY</span>
                   <h4 className="text-sm font-black text-zinc-900 mt-0.5">
-                    📜 {activeCard.memberName} 성도 누적 상담 ({selectedMemberHistory.length}건)
+                    {activeCard.memberName} 성도 누적 이력 ({selectedMemberHistory.length}건)
                   </h4>
                 </div>
                 <div className="space-y-2">
@@ -1730,8 +1927,8 @@ export default function AdminCounselingTab({
                           : 'bg-white text-zinc-800 border-zinc-200 hover:border-zinc-400'
                       }`}
                     >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="font-mono text-[10px] opacity-75">{h.date}</span>
+                      <div className="flex items-center justify-between mb-1 whitespace-nowrap">
+                        <span className="font-mono text-[10px] opacity-75 tabular-nums">{h.date}</span>
                         <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold border ${getRiskMeta(h.riskLevel).bgCls}`}>
                           {getRiskMeta(h.riskLevel).short}
                         </span>
@@ -1748,10 +1945,7 @@ export default function AdminCounselingTab({
       </div>
 
       {/* =========================================================================
-          [3] 📱 모바일 & 태블릿 정밀 ‘성도별 신앙 상담 카드 팝업’ (3탭 구조)
-          - 탭 1: 📝 상담 기록 원문 & 공유/위험도 즉시 변경
-          - 탭 2: 👑 목사님 권면·오더 & 목자 피드백 등록
-          - 탭 3: 📜 이 성도의 누적 상담 히스토리
+          [3] 모바일 & 태블릿 정밀 ‘성도별 신앙 상담 카드 팝업’ (3탭 구조)
           ========================================================================= */}
       {isCardPopupOpen && activeCard && (
         <div
@@ -1763,41 +1957,41 @@ export default function AdminCounselingTab({
             onClick={(e) => e.stopPropagation()}
           >
             {/* 팝업 헤더 */}
-            <div className="px-5 py-3.5 bg-zinc-900 text-white flex items-center justify-between shrink-0">
+            <div className="px-5 py-3.5 bg-zinc-900 text-white flex items-center justify-between shrink-0 gap-2">
               <div className="flex items-center gap-2 min-w-0">
-                <span className={`px-2 py-0.5 rounded text-[10px] font-black ${getRiskMeta(activeCard.riskLevel).bgCls}`}>
+                <span className={`px-2 py-0.5 rounded text-[10px] font-black whitespace-nowrap ${getRiskMeta(activeCard.riskLevel).bgCls}`}>
                   {getRiskMeta(activeCard.riskLevel).short}
                 </span>
                 <div className="min-w-0">
                   <h3 className="text-sm font-black truncate">
                     {activeCard.memberName} ({activeCard.memberOffice} · {activeCard.cellName})
                   </h3>
-                  <span className="text-[10px] text-zinc-400 font-mono block">
-                    {activeCard.id} • 상담자: {activeCard.counselorName}({activeCard.counselorRole})
+                  <span className="text-[10px] text-zinc-400 font-mono block truncate">
+                    {activeCard.id} • 담당: {activeCard.counselorName}({activeCard.counselorRole})
                   </span>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setIsCardPopupOpen(false)}
-                className="text-zinc-400 hover:text-white text-sm font-bold px-2 py-1 cursor-pointer"
+                className="text-zinc-400 hover:text-white p-1.5 cursor-pointer"
               >
-                ✕
+                <SvgClose />
               </button>
             </div>
 
             {/* 팝업 내부 3단 탭 스위처 */}
-            <div className="px-4 pt-2.5 bg-zinc-100 border-b border-zinc-200 flex gap-1.5 shrink-0">
+            <div className="px-4 pt-2.5 bg-zinc-100 border-b border-zinc-200 flex gap-1.5 shrink-0 overflow-x-auto hide-scrollbar">
               {[
-                { id: 'detail', label: '📝 상담기록 카드' },
-                { id: 'orders', label: `👑 목사님 권면·오더 (${(activeCard.pastorOrders || []).length})` },
-                { id: 'history', label: `📜 성도 누적 이력 (${selectedMemberHistory.length})` }
+                { id: 'detail', label: '상담기록 카드' },
+                { id: 'orders', label: `목사님 권면·오더 (${(activeCard.pastorOrders || []).length})` },
+                { id: 'history', label: `누적 이력 (${selectedMemberHistory.length})` }
               ].map(tItem => (
                 <button
                   key={tItem.id}
                   type="button"
                   onClick={() => setMobilePopupTab(tItem.id)}
-                  className={`px-3 py-2 rounded-t-xl text-xs font-black border-t border-x transition-all cursor-pointer ${
+                  className={`px-3.5 py-2 rounded-t-xl text-xs font-black border-t border-x transition-all cursor-pointer whitespace-nowrap ${
                     mobilePopupTab === tItem.id
                       ? 'bg-white text-zinc-900 border-zinc-200'
                       : 'bg-transparent text-zinc-500 border-transparent hover:text-zinc-800'
@@ -1812,7 +2006,6 @@ export default function AdminCounselingTab({
             <div className="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1 hide-scrollbar text-xs">
               {mobilePopupTab === 'detail' && (
                 <>
-                  {/* 상태·위험도·공유 원터치 컨트롤 바 */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-3 rounded-xl bg-zinc-50 border border-zinc-200">
                     <div>
                       <label className="text-[10px] font-bold text-zinc-400 block mb-1">칸반 단계</label>
@@ -1838,32 +2031,32 @@ export default function AdminCounselingTab({
                       <button
                         type="button"
                         onClick={() => handleToggleShareShepherds(activeCard)}
-                        className={`w-full py-1.5 px-2 rounded-lg font-black text-[11px] border cursor-pointer ${
+                        className={`w-full py-1.5 px-2 rounded-lg font-black text-[11px] border cursor-pointer whitespace-nowrap ${
                           activeCard.isSharedWithShepherds
                             ? 'bg-emerald-600 text-white border-emerald-600'
                             : 'bg-white text-emerald-700 border-emerald-300'
                         }`}
                       >
-                        {activeCard.isSharedWithShepherds ? '🌿 목자방 공유중' : '🌿 목자방 공유'}
+                        {activeCard.isSharedWithShepherds ? '✓ 목자방 공유중' : '목자방 공유'}
                       </button>
                     </div>
                     <div className="flex items-end">
                       <button
                         type="button"
                         onClick={() => handleToggleSubmitPastor(activeCard)}
-                        className={`w-full py-1.5 px-2 rounded-lg font-black text-[11px] border cursor-pointer ${
+                        className={`w-full py-1.5 px-2 rounded-lg font-black text-[11px] border cursor-pointer whitespace-nowrap ${
                           activeCard.isSubmittedToPastor
                             ? 'bg-indigo-600 text-white border-indigo-600'
                             : 'bg-white text-indigo-700 border-indigo-300'
                         }`}
                       >
-                        {activeCard.isSubmittedToPastor ? '📥 사역자 보고됨' : '📤 사역자 보고'}
+                        {activeCard.isSubmittedToPastor ? '✓ 교역자 보고됨' : '교역자 보고'}
                       </button>
                     </div>
                   </div>
 
                   <div>
-                    <span className="text-[10px] font-mono text-zinc-400 block">
+                    <span className="text-[10px] font-mono text-zinc-400 block tabular-nums">
                       {activeCard.date} • {activeCard.method} • {getCatMeta(activeCard.category).label}
                     </span>
                     <h4 className="text-base font-black text-zinc-900 mt-0.5">{activeCard.title}</h4>
@@ -1882,11 +2075,11 @@ export default function AdminCounselingTab({
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    <div className="p-3 rounded-xl bg-purple-50/60 border border-purple-200 space-y-1">
+                    <div className="p-3 rounded-xl bg-purple-50/50 border border-purple-200 space-y-1">
                       <span className="text-[10px] font-black text-purple-800">3. 집중 중보기도 제목</span>
                       <p className="text-zinc-800 font-medium leading-relaxed whitespace-pre-wrap">{activeCard.prayerTopics || '-'}</p>
                     </div>
-                    <div className="p-3 rounded-xl bg-sky-50/60 border border-sky-200 space-y-1">
+                    <div className="p-3 rounded-xl bg-sky-50/50 border border-sky-200 space-y-1">
                       <span className="text-[10px] font-black text-sky-800">4. 담당 목자 소견</span>
                       <p className="text-zinc-800 font-medium leading-relaxed whitespace-pre-wrap">{activeCard.shepherdOpinion || '-'}</p>
                     </div>
@@ -1897,8 +2090,8 @@ export default function AdminCounselingTab({
               {mobilePopupTab === 'orders' && (
                 <div className="space-y-3">
                   {(currentUserInfo.isPastor || currentUserInfo.isEvangelist) && (
-                    <div className="p-3.5 rounded-xl bg-amber-50/70 border border-amber-300 space-y-2.5">
-                      <span className="text-[11px] font-black text-amber-900 block">👑 목사님 권면 및 후속 조치 오더 발령</span>
+                    <div className="p-3.5 rounded-xl bg-amber-50/60 border border-amber-300 space-y-2.5">
+                      <span className="text-[11px] font-black text-amber-900 block">목사님 권면 및 후속 조치 오더 발령</span>
                       <div className="grid grid-cols-2 gap-2">
                         <select
                           value={newOrderType}
@@ -1911,7 +2104,7 @@ export default function AdminCounselingTab({
                           type="date"
                           value={newOrderDueDate}
                           onChange={(e) => setNewOrderDueDate(e.target.value)}
-                          className="px-2.5 py-1.5 rounded-lg bg-white border border-amber-300 text-xs font-bold"
+                          className="px-2.5 py-1.5 rounded-lg bg-white border border-amber-300 text-xs font-bold font-mono"
                         />
                       </div>
                       <textarea
@@ -1924,9 +2117,9 @@ export default function AdminCounselingTab({
                       <button
                         type="button"
                         onClick={handleIssuePastorOrder}
-                        className="w-full py-2 rounded-lg bg-amber-600 text-white font-black text-xs cursor-pointer"
+                        className="w-full py-2 rounded-lg bg-zinc-900 text-white font-black text-xs cursor-pointer"
                       >
-                        ⚡ 후속 조치 오더 등록
+                        후속 조치 오더 등록
                       </button>
                     </div>
                   )}
@@ -1938,7 +2131,7 @@ export default function AdminCounselingTab({
                   ) : (
                     (activeCard.pastorOrders || []).map(ord => (
                       <div key={ord.id} className="p-3.5 rounded-xl bg-white border border-amber-300 space-y-2 shadow-2xs">
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between whitespace-nowrap">
                           <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-900 font-black text-[11px]">
                             {ord.orderType}
                           </span>
@@ -1947,9 +2140,9 @@ export default function AdminCounselingTab({
                             onChange={(e) => handleUpdateOrderFeedback(activeCard.id, ord.id, e.target.value, undefined)}
                             className="px-2 py-0.5 rounded bg-zinc-100 border border-zinc-300 text-[10.5px] font-black"
                           >
-                            <option value="pending">🔴 접수대기</option>
-                            <option value="in_progress">🔵 조치이행중</option>
-                            <option value="done">🟢 피드백완료</option>
+                            <option value="pending">접수대기</option>
+                            <option value="in_progress">조치이행중</option>
+                            <option value="done">피드백완료</option>
                           </select>
                         </div>
                         <p className="text-zinc-900 font-bold leading-relaxed">"{ord.directive}"</p>
@@ -1979,8 +2172,8 @@ export default function AdminCounselingTab({
                         h.id === activeCard.id ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-zinc-50 text-zinc-900 border-zinc-200'
                       }`}
                     >
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="font-mono text-[10.5px]">{h.date} ({h.method})</span>
+                      <div className="flex justify-between items-center mb-1 whitespace-nowrap">
+                        <span className="font-mono text-[10.5px] tabular-nums">{h.date} ({h.method})</span>
                         <span className={`px-1.5 py-0.2 rounded text-[9.5px] font-bold border ${getRiskMeta(h.riskLevel).bgCls}`}>
                           {getRiskMeta(h.riskLevel).short}
                         </span>
@@ -1994,24 +2187,31 @@ export default function AdminCounselingTab({
             </div>
 
             {/* 팝업 하단 액션 바 */}
-            <div className="px-5 py-3 bg-zinc-50 border-t border-zinc-200 flex items-center justify-between gap-2 shrink-0">
+            <div className="px-5 py-3 bg-zinc-50 border-t border-zinc-200 flex items-center justify-between gap-2 shrink-0 whitespace-nowrap">
               <button
                 type="button"
                 onClick={() => handleDeleteCard(activeCard.id)}
-                className="px-3 py-2 rounded-lg text-rose-600 hover:bg-rose-50 text-xs font-bold cursor-pointer"
+                className="px-3 py-2 rounded-lg text-rose-600 hover:bg-rose-50 text-xs font-bold flex items-center gap-1 cursor-pointer"
               >
-                삭제
+                <SvgTrash /> 삭제
               </button>
               <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={(e) => handleCopyCardSummary(activeCard, e)}
+                  className="px-3 py-2 rounded-lg bg-white border border-zinc-300 text-zinc-800 text-xs font-bold flex items-center gap-1 cursor-pointer"
+                >
+                  {copiedCardId === activeCard.id ? <><SvgCheck /> 복사됨</> : <><SvgCopy /> 전문 복사</>}
+                </button>
                 <button
                   type="button"
                   onClick={() => {
                     setIsCardPopupOpen(false);
                     setPrintModeType('filled');
                   }}
-                  className="px-3.5 py-2 rounded-lg bg-white border border-zinc-300 text-zinc-800 text-xs font-bold cursor-pointer"
+                  className="px-3 py-2 rounded-lg bg-white border border-zinc-300 text-zinc-800 text-xs font-bold flex items-center gap-1 cursor-pointer"
                 >
-                  🖨️ 카드 인쇄
+                  <SvgPrinter /> 인쇄
                 </button>
                 <button
                   type="button"
@@ -2019,9 +2219,9 @@ export default function AdminCounselingTab({
                     setIsCardPopupOpen(false);
                     openEditStandardForm(activeCard);
                   }}
-                  className="px-4 py-2 rounded-lg bg-zinc-900 text-white text-xs font-black cursor-pointer"
+                  className="px-4 py-2 rounded-lg bg-zinc-900 text-white text-xs font-black flex items-center gap-1 cursor-pointer"
                 >
-                  ✏️ 내용 수정
+                  <SvgEdit /> 수정
                 </button>
               </div>
             </div>
@@ -2030,7 +2230,7 @@ export default function AdminCounselingTab({
       )}
 
       {/* =========================================================================
-          [4] 📝 고정형 ‘표준 신앙상담 기록카드’ 작성/수정 모달 (모바일 화면 고정 완료)
+          [4] 고정형 ‘표준 신앙상담 기록카드’ 작성/수정 모달
           ========================================================================= */}
       {isStandardFormOpen && (
         <div className="fixed inset-0 z-[340] w-full max-w-full overflow-hidden bg-zinc-950/65 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in touch-pan-y">
@@ -2039,13 +2239,13 @@ export default function AdminCounselingTab({
             className="w-full max-w-full sm:max-w-2xl bg-white rounded-t-3xl sm:rounded-2xl border border-zinc-200 shadow-2xl max-h-[92dvh] flex flex-col overflow-hidden box-border"
           >
             {/* 모달 상단 헤더 */}
-            <div className="px-4 sm:px-5 py-3 bg-zinc-900 text-white flex items-center justify-between gap-2 shrink-0 w-full box-border">
+            <div className="px-4 sm:px-5 py-3.5 bg-zinc-900 text-white flex items-center justify-between gap-2 shrink-0 w-full box-border">
               <div className="min-w-0 flex-1">
-                <span className="text-[9.5px] font-mono text-amber-400 uppercase block truncate">
+                <span className="text-[9.5px] font-mono text-zinc-400 uppercase block truncate">
                   AES-256 ENCRYPTED STANDARD COUNSELING FORM
                 </span>
                 <h3 className="text-[13.5px] sm:text-sm font-black truncate mt-0.5">
-                  {cardForm.id ? '✏️ 표준 신앙상담 기록카드 수정' : '📝 표준 신앙상담 기록카드 작성'}
+                  {cardForm.id ? '표준 신앙상담 기록카드 수정' : '표준 신앙상담 기록카드 작성'}
                 </h3>
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
@@ -2055,24 +2255,23 @@ export default function AdminCounselingTab({
                     setIsStandardFormOpen(false);
                     setIsOcrModalOpen(true);
                   }}
-                  className="px-2.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-black cursor-pointer whitespace-nowrap"
+                  className="px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[11px] font-black flex items-center gap-1 cursor-pointer whitespace-nowrap"
                 >
-                  📷 OCR 스캔 입력
+                  <SvgCamera /> OCR 스캔 입력
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsStandardFormOpen(false)}
-                  className="text-zinc-400 hover:text-white text-sm font-bold px-1.5 py-1 cursor-pointer"
+                  className="text-zinc-400 hover:text-white p-1.5 cursor-pointer"
                 >
-                  ✕
+                  <SvgClose />
                 </button>
               </div>
             </div>
 
-            {/* 모달 본문 (가로 스크롤 원천 차단: overflow-x-hidden & min-w-0) */}
+            {/* 모달 본문 */}
             <div className="p-4 sm:p-5 overflow-y-auto overflow-x-hidden touch-pan-y space-y-4 flex-1 hide-scrollbar text-xs w-full max-w-full box-border">
               
-              {/* 성도명 / 직분 / 소속 목장 / 상담 일자 */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 w-full">
                 <div className="min-w-0">
                   <label className="text-[10.5px] font-black text-zinc-600 block mb-1 truncate">성도명 (자동완성) *</label>
@@ -2126,12 +2325,11 @@ export default function AdminCounselingTab({
                     type="date"
                     value={cardForm.date}
                     onChange={(e) => setCardForm({ ...cardForm, date: e.target.value })}
-                    className="w-full min-w-0 max-w-full px-2 py-2 rounded-lg bg-zinc-50 border border-zinc-300 font-bold text-zinc-900 outline-none box-border appearance-none"
+                    className="w-full min-w-0 max-w-full px-2 py-2 rounded-lg bg-zinc-50 border border-zinc-300 font-bold text-zinc-900 outline-none box-border font-mono"
                   />
                 </div>
               </div>
 
-              {/* 신앙 위험도 5단계 분류 (좁은 모바일에서도 오른쪽 잘림 없이 5등분 정렬) */}
               <div className="w-full min-w-0">
                 <label className="text-[10.5px] font-black text-zinc-600 block mb-1.5">신앙 위험도 5단계 분류 *</label>
                 <div className="grid grid-cols-5 gap-1 sm:gap-1.5 w-full">
@@ -2144,7 +2342,7 @@ export default function AdminCounselingTab({
                         onClick={() => setCardForm({ ...cardForm, riskLevel: rk.level })}
                         className={`min-w-0 py-2 px-0.5 rounded-xl border text-center transition-all cursor-pointer truncate ${
                           isSelected
-                            ? `${rk.bgCls} ring-2${rk.ringCls} font-black`
+                            ? `${rk.bgCls} ring-2 ${rk.ringCls} font-black`
                             : 'bg-zinc-50 border-zinc-200 text-zinc-500 hover:bg-zinc-100'
                         }`}
                       >
@@ -2155,7 +2353,6 @@ export default function AdminCounselingTab({
                 </div>
               </div>
 
-              {/* 주제별 카테고리 / 상담 방식 / 칸반 단계 (모바일에서 넘치지 않도록 min-w-0 적용) */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full">
                 <div className="min-w-0">
                   <label className="text-[10.5px] font-black text-zinc-600 block mb-1">주제별 카테고리</label>
@@ -2255,7 +2452,7 @@ export default function AdminCounselingTab({
                     className="w-4 h-4 accent-emerald-600 rounded cursor-pointer shrink-0"
                   />
                   <span className="text-[11px] font-black text-emerald-900 truncate">
-                    🌿 [목자방 공유] 동역 목자들과 중보기도 공유
+                    [목자방 공유] 동역 목자들과 중보기도 공유
                   </span>
                 </label>
 
@@ -2267,14 +2464,14 @@ export default function AdminCounselingTab({
                     className="w-4 h-4 accent-indigo-600 rounded cursor-pointer shrink-0"
                   />
                   <span className="text-[11px] font-black text-indigo-900 truncate">
-                    📥 [사역자 모음함 제출] 전도사·담임목사님께 보고
+                    [교역자 보고함 제출] 전도사·담임목사님께 보고
                   </span>
                 </label>
               </div>
             </div>
 
             {/* 모달 하단 저장 버튼 바 */}
-            <div className="px-4 sm:px-5 py-3 bg-zinc-50 border-t border-zinc-200 flex items-center justify-end gap-2 shrink-0 w-full box-border">
+            <div className="px-4 sm:px-5 py-3 bg-zinc-50 border-t border-zinc-200 flex items-center justify-end gap-2 shrink-0 w-full box-border whitespace-nowrap">
               <button
                 type="button"
                 onClick={() => setIsStandardFormOpen(false)}
@@ -2284,9 +2481,9 @@ export default function AdminCounselingTab({
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-black cursor-pointer shadow-md"
+                className="px-5 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-black flex items-center gap-1.5 cursor-pointer shadow-sm"
               >
-                🔐 암호화 저장 및 동기화
+                <SvgLock /> 암호화 저장 및 동기화
               </button>
             </div>
           </form>
@@ -2294,27 +2491,27 @@ export default function AdminCounselingTab({
       )}
 
       {/* =========================================================================
-          [5] 📷 정밀 정규식 기반 OCR 스캔 & 아이폰 Live Text 통합 모달
+          [5] 정밀 정규식 기반 OCR 스캔 & 아이폰 Live Text 통합 모달
           ========================================================================= */}
       {isOcrModalOpen && (
         <div className="fixed inset-0 z-[360] bg-zinc-950/75 backdrop-blur-sm flex items-center justify-center p-3 animate-fade-in">
           <div className="w-full max-w-xl bg-white rounded-2xl border border-zinc-200 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="px-5 py-3.5 bg-indigo-950 text-white flex items-center justify-between">
+            <div className="px-5 py-3.5 bg-zinc-900 text-white flex items-center justify-between">
               <div>
-                <span className="text-[10px] font-mono text-indigo-300 uppercase block">REGEX OCR PARSER & iOS LIVE TEXT</span>
-                <h3 className="text-sm font-black">📷 수기 상담기록카드 OCR 스캔 & 정규식 자동 분류</h3>
+                <span className="text-[10px] font-mono text-zinc-400 uppercase block">REGEX OCR PARSER & LIVE TEXT</span>
+                <h3 className="text-sm font-black">수기 상담기록카드 OCR 스캔 & 정규식 자동 분류</h3>
               </div>
               <button
                 type="button"
                 onClick={() => setIsOcrModalOpen(false)}
-                className="text-indigo-200 hover:text-white text-sm font-bold cursor-pointer"
+                className="text-zinc-400 hover:text-white p-1.5 cursor-pointer"
               >
-                ✕
+                <SvgClose />
               </button>
             </div>
 
             <div className="p-5 overflow-y-auto space-y-4 flex-1 hide-scrollbar text-xs">
-              <div className="p-4 rounded-2xl bg-indigo-50/60 border-2 border-dashed border-indigo-300 text-center space-y-2.5">
+              <div className="p-5 rounded-2xl bg-zinc-50 border-2 border-dashed border-zinc-300 text-center space-y-2.5">
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -2323,19 +2520,21 @@ export default function AdminCounselingTab({
                   onChange={handleImageFileSelect}
                   className="hidden"
                 />
-                <div className="text-2xl">📸</div>
-                <h4 className="font-black text-indigo-950 text-[13px]">
+                <div className="w-10 h-10 rounded-xl bg-zinc-900 text-white flex items-center justify-center mx-auto shadow-2xs">
+                  <SvgCamera />
+                </div>
+                <h4 className="font-black text-zinc-900 text-[13px]">
                   수기 상담기록카드 사진을 촬영하거나 업로드하세요
                 </h4>
-                <p className="text-[11px] text-indigo-700 leading-relaxed">
+                <p className="text-[11px] text-zinc-500 leading-relaxed">
                   고대비 영상 전처리 후 한글/영문 OCR 엔진과 정규식 파서가 <b>성도명·목장·위험도·영적상태·상담내용·기도제목·목자소견</b>을 자동 분리 추출합니다.
                 </p>
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs shadow-md cursor-pointer active:scale-95 transition-all"
+                  className="px-5 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white font-black text-xs shadow-sm cursor-pointer active:scale-95 transition-all"
                 >
-                  📷 카메라 촬영 / 상담지 이미지 선택
+                  카메라 촬영 / 상담지 이미지 선택
                 </button>
               </div>
 
@@ -2343,10 +2542,10 @@ export default function AdminCounselingTab({
                 <div className="relative rounded-xl overflow-hidden border border-zinc-300 bg-black max-h-48 flex items-center justify-center">
                   <img src={ocrImagePreview} alt="Scanned Counseling Sheet" className="max-h-48 object-contain opacity-90" />
                   {isOcrScanning && (
-                    <div className="absolute inset-0 bg-indigo-950/70 flex flex-col items-center justify-center text-white gap-2">
-                      <span className="text-xs font-black animate-pulse">🔍 고대비 전처리 및 한글 OCR 정규식 분석 중... ({ocrProgress}%)</span>
+                    <div className="absolute inset-0 bg-zinc-950/75 flex flex-col items-center justify-center text-white gap-2">
+                      <span className="text-xs font-black animate-pulse">고대비 전처리 및 한글 OCR 정규식 분석 중... ({ocrProgress}%)</span>
                       <div className="w-48 h-1.5 bg-white/20 rounded-full overflow-hidden">
-                        <div className="h-full bg-cyan-400 transition-all duration-200" style={{ width: `${ocrProgress}%` }} />
+                        <div className="h-full bg-emerald-400 transition-all duration-200" style={{ width: `${ocrProgress}%` }} />
                       </div>
                     </div>
                   )}
@@ -2356,7 +2555,7 @@ export default function AdminCounselingTab({
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <label className="text-[11px] font-black text-zinc-800">
-                    📱 추출된 원문 (아이폰 카메라 [텍스트 스캔] 또는 복사본 붙여넣기 지원)
+                    추출된 원문 (스마트폰 텍스트 스캔 또는 복사본 붙여넣기 지원)
                   </label>
                   <button
                     type="button"
@@ -2365,9 +2564,9 @@ export default function AdminCounselingTab({
                         .then(clip => { if (clip) setOcrExtractedText(prev => prev ? `${prev}\n${clip}` : clip); })
                         .catch(() => {});
                     }}
-                    className="text-[10.5px] font-bold text-indigo-600 hover:underline cursor-pointer"
+                    className="text-[10.5px] font-bold text-zinc-700 hover:underline cursor-pointer"
                   >
-                    📋 클립보드 붙여넣기
+                    클립보드 붙여넣기
                   </button>
                 </div>
                 <textarea
@@ -2375,7 +2574,7 @@ export default function AdminCounselingTab({
                   value={ocrExtractedText}
                   onChange={(e) => setOcrExtractedText(e.target.value)}
                   placeholder={`정규식 자동 분류 지원 항목 예시:\n성도명: 홍길동 (집사)\n소속목장: 믿음 목장\n위험도: Lv.3 주의\n1. 영적상태: ...\n2. 상담내용: ...\n3. 기도제목: ...\n4. 목자소견: ...`}
-                  className="w-full p-3 rounded-xl bg-zinc-50 border border-zinc-300 font-medium text-zinc-900 leading-relaxed outline-none focus:bg-white focus:border-indigo-600 resize-none"
+                  className="w-full p-3 rounded-xl bg-zinc-50 border border-zinc-300 font-medium text-zinc-900 leading-relaxed outline-none focus:bg-white focus:border-zinc-900 resize-none"
                 />
               </div>
             </div>
@@ -2391,9 +2590,9 @@ export default function AdminCounselingTab({
               <button
                 type="button"
                 onClick={handleApplyOcrToStandardForm}
-                className="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black cursor-pointer shadow-md"
+                className="px-5 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-black cursor-pointer shadow-sm"
               >
-                ✨ 정규식 파싱 후 상담카드에 자동 채우기
+                정규식 파싱 후 상담카드에 자동 채우기
               </button>
             </div>
           </div>
@@ -2401,28 +2600,28 @@ export default function AdminCounselingTab({
       )}
 
       {/* =========================================================================
-          [6] 🖨️ A4 고정형 표준 신앙상담 기록카드 인쇄 모달
+          [6] A4 고정형 표준 신앙상담 기록카드 인쇄 모달
           ========================================================================= */}
       {printModeType && (
         <div className="fixed inset-0 z-[380] bg-zinc-950/80 backdrop-blur-sm flex items-center justify-center p-3 overflow-y-auto animate-fade-in">
           <div className="w-full max-w-3xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[94vh]">
-            <div className="no-print px-5 py-3.5 bg-zinc-900 text-white flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-black">🖨️ 표준 신앙상담 기록카드 (A4 규격 고정 폼)</span>
-                <div className="flex bg-zinc-800 p-0.5 rounded-lg text-[11px] font-bold ml-2">
+            <div className="no-print px-5 py-3.5 bg-zinc-900 text-white flex flex-wrap items-center justify-between gap-2 shrink-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm font-black whitespace-nowrap">표준 신앙상담 기록카드 (A4 규격)</span>
+                <div className="flex bg-zinc-800 p-0.5 rounded-lg text-[11px] font-bold">
                   <button
                     type="button"
                     onClick={() => setPrintModeType('blank')}
-                    className={`px-2.5 py-1 rounded-md cursor-pointer ${printModeType === 'blank' ? 'bg-amber-400 text-zinc-950 font-black' : 'text-zinc-300'}`}
+                    className={`px-2.5 py-1 rounded-md cursor-pointer whitespace-nowrap ${printModeType === 'blank' ? 'bg-white text-zinc-950 font-black' : 'text-zinc-300'}`}
                   >
-                    📄 수기 상담용 빈 양식
+                    수기 상담용 빈 양식
                   </button>
                   <button
                     type="button"
                     onClick={() => setPrintModeType('filled')}
-                    className={`px-2.5 py-1 rounded-md cursor-pointer ${printModeType === 'filled' ? 'bg-amber-400 text-zinc-950 font-black' : 'text-zinc-300'}`}
+                    className={`px-2.5 py-1 rounded-md cursor-pointer whitespace-nowrap ${printModeType === 'filled' ? 'bg-white text-zinc-950 font-black' : 'text-zinc-300'}`}
                   >
-                    📋 선택된 상담카드 채움
+                    선택된 상담카드 채움
                   </button>
                 </div>
               </div>
@@ -2431,16 +2630,16 @@ export default function AdminCounselingTab({
                 <button
                   type="button"
                   onClick={() => window.print()}
-                  className="px-4 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-black text-xs cursor-pointer shadow"
+                  className="px-4 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-black text-xs flex items-center gap-1.5 cursor-pointer shadow whitespace-nowrap"
                 >
-                  🖨️ A4 인쇄 / PDF 저장
+                  <SvgPrinter /> A4 인쇄 / PDF 저장
                 </button>
                 <button
                   type="button"
                   onClick={() => setPrintModeType(null)}
-                  className="text-zinc-400 hover:text-white text-sm font-bold px-2 cursor-pointer"
+                  className="text-zinc-400 hover:text-white p-1.5 cursor-pointer"
                 >
-                  ✕
+                  <SvgClose />
                 </button>
               </div>
             </div>
@@ -2458,7 +2657,7 @@ export default function AdminCounselingTab({
                 <div className="flex items-start justify-between border-b-2 border-zinc-900 pb-4">
                   <div>
                     <span className="text-[10px] font-mono font-black tracking-widest uppercase text-zinc-500 block">
-                      GOOD TREE CHURCH PASTORAL COUNSELING STANDARD SHEET
+                      PASTORAL COUNSELING STANDARD RECORD SHEET
                     </span>
                     <h1 className="text-2xl font-black tracking-tight mt-1">
                       표준 신앙상담 기록카드
@@ -2527,7 +2726,7 @@ export default function AdminCounselingTab({
                         {COUNSELING_CATEGORIES.map(cat => (
                           <span key={cat.id} className="mr-4 inline-flex items-center gap-1">
                             <span>{printModeType === 'filled' && activeCard?.category === cat.id ? '■' : '□'}</span>
-                            <span>{cat.label.replace(/^[^\s]+\s/, '')}</span>
+                            <span>{cat.label}</span>
                           </span>
                         ))}
                       </td>
