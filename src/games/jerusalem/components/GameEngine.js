@@ -1,52 +1,14 @@
-// src/games/jerusalem/components/GameEngine.jsx
+// src/games/jerusalem/components/GameEngine.js
 import React, { useEffect, useRef } from 'react';
 import * as PIXI from 'pixi.js';
 import { Viewport } from 'pixi-viewport';
 import { useTycoonStore, MAP_SIZE } from '../core/store';
 import { BUILDINGS } from '../data/buildings';
 
-const TILE_W = 88;
-const TILE_H = 44;
+const TILE_W = 92;
+const TILE_H = 46;
 const ORIG_X = 0;
-const ORIG_Y = -210;
-
-// =====================================================================
-// 📐 28대 건축물 타일 규격 및 SVG 바닥 앵커(기준점) 정밀 메트릭
-// =====================================================================
-const BUILDING_METRICS = {
-  road: { w: 88, h: 44, anchorX: 0.5, anchorY: 0.5 },
-  plaza: { w: 88, h: 44, anchorX: 0.5, anchorY: 0.5 },
-  aqueduct: { w: 88, h: 96, anchorX: 0.5, anchorY: 0.92 },
-  house_1: { w: 88, h: 90, anchorX: 0.5, anchorY: 0.88 },
-  house_2: { w: 88, h: 100, anchorX: 0.5, anchorY: 0.90 },
-  house_3: { w: 88, h: 110, anchorX: 0.5, anchorY: 0.91 },
-  house_4: { w: 88, h: 120, anchorX: 0.5, anchorY: 0.91 },
-  house_5: { w: 88, h: 130, anchorX: 0.5, anchorY: 0.92 },
-  wall: { w: 88, h: 86, anchorX: 0.5, anchorY: 0.91 },
-  tower: { w: 88, h: 116, anchorX: 0.5, anchorY: 0.93 },
-  well: { w: 88, h: 86, anchorX: 0.5, anchorY: 0.91 },
-
-  gate: { w: 176, h: 130, anchorX: 0.5, anchorY: 0.91 },
-
-  golgotha: { w: 176, h: 160, anchorX: 0.5, anchorY: 0.91 },
-  synagogue: { w: 176, h: 156, anchorX: 0.5, anchorY: 0.92 },
-  bread_market: { w: 176, h: 150, anchorX: 0.5, anchorY: 0.91 },
-  fish_market: { w: 176, h: 150, anchorX: 0.5, anchorY: 0.91 },
-  wheat_farm: { w: 176, h: 160, anchorX: 0.5, anchorY: 0.90 },
-  fountain: { w: 176, h: 126, anchorX: 0.5, anchorY: 0.91 },
-  vineyard: { w: 176, h: 136, anchorX: 0.5, anchorY: 0.91 },
-  olive_grove: { w: 176, h: 136, anchorX: 0.5, anchorY: 0.91 },
-  fishery: { w: 176, h: 136, anchorX: 0.5, anchorY: 0.91 },
-
-  temple: { w: 264, h: 230, anchorX: 0.5, anchorY: 0.92 },
-
-  caravan: { w: 176, h: 150, anchorX: 0.5, anchorY: 0.91 },
-  sacrifice_market: { w: 176, h: 150, anchorX: 0.5, anchorY: 0.91 },
-  money_changer: { w: 176, h: 150, anchorX: 0.5, anchorY: 0.91 },
-  beatitudes: { w: 176, h: 136, anchorX: 0.5, anchorY: 0.91 },
-  gethsemane: { w: 176, h: 136, anchorX: 0.5, anchorY: 0.91 },
-  granary: { w: 176, h: 160, anchorX: 0.5, anchorY: 0.91 }
-};
+const ORIG_Y = -220;
 
 // 🏛️ 시저 3식 배회자(Walker) 대사 풀
 const WALKER_THOUGHTS = {
@@ -76,39 +38,15 @@ const WALKER_THOUGHTS = {
   }
 };
 
-// 🏛️ 고속 텍스처 캐시
-const textureCache = new Map();
-const pendingLoads = new Set();
-
-const getBuildingTexture = (assetKey) => {
-  if (textureCache.has(assetKey)) return textureCache.get(assetKey);
-
-  if (!pendingLoads.has(assetKey)) {
-    pendingLoads.add(assetKey);
-    const img = new Image();
-    img.src = `/assets/buildings/${assetKey}.svg`;
-    img.onload = () => {
-      try {
-        const tex = PIXI.Texture.from(img);
-        textureCache.set(assetKey, tex);
-      } catch (_) {}
-    };
-  }
-  return null;
-};
-
 // =====================================================================
 // ⛰️ 2.5D 지형 고도(Elevation) 및 자연 생태계 판별기
-// - 성전산 고지대(Acropolis): +14px 융기
-// - 유대 평야: 0px
-// - 갈릴리 호수 & 요단강 수변: -10px 침강 (해안 절벽 형성)
 // =====================================================================
 const getNaturalTerrainType = (r, c) => {
   if (c === MAP_SIZE - 1 || (r >= MAP_SIZE - 2 && c >= MAP_SIZE - 3)) {
     return 'water';
   }
   if (r >= 2 && r <= 6 && c >= 2 && c <= 6) {
-    return 'zion_plateau'; // 시온산 / 성전산 고지대 단상
+    return 'zion_plateau';
   }
   if (c === MAP_SIZE - 2 || (r >= MAP_SIZE - 3 && c >= MAP_SIZE - 4)) {
     return 'meadow';
@@ -123,123 +61,497 @@ const getNaturalTerrainType = (r, c) => {
 
 const getTileElevation = (r, c, cell) => {
   const terrain = getNaturalTerrainType(r, c);
-  if (!cell && terrain === 'water') return -10; // 수면은 대지보다 10px 아래에 위치
-  if (terrain === 'zion_plateau') return 12;    // 시온산 성전 구역은 12px 높게 융기
+  if (!cell && terrain === 'water') return -10;
+  if (terrain === 'zion_plateau') return 14;
   return 0;
 };
 
 // =====================================================================
-// 🧱 2.5D 아이소메트릭 프리즘(육면체 블록) 드로잉 유틸리티
+// 🎨 고해상도 2.5D 카툰 시티빌더 프로시저럴 텍스처 베이커 (Canvas 2D)
+// - PixiJS v8 폴리곤 찢어짐(Tearing) 원천 차단
+// - 타운십/시저3 스타일의 둥글고 디테일한 카툰 셰이딩, 기와, 벽돌, 아치, 차양막 구현
 // =====================================================================
-const drawIsoPrism = (gfx, baseN, baseE, baseS, baseW, height, topColor, leftColor, rightColor, strokeColor = 0x3E2723, alpha = 1.0) => {
-  // 좌측 벽 (서남향 양지)
-  gfx.poly([
-    baseW.x, baseW.y - height,
-    baseS.x, baseS.y - height,
-    baseS.x, baseS.y,
-    baseW.x, baseW.y
-  ]);
-  gfx.fill({ color: leftColor, alpha });
-  if (strokeColor !== null) gfx.stroke({ width: 1, color: strokeColor, alpha: alpha * 0.65 });
+const bakedCartoonTextures = new Map();
 
-  // 우측 벽 (동남향 음지)
-  gfx.poly([
-    baseS.x, baseS.y - height,
-    baseE.x, baseE.y - height,
-    baseE.x, baseE.y,
-    baseS.x, baseS.y
-  ]);
-  gfx.fill({ color: rightColor, alpha });
-  if (strokeColor !== null) gfx.stroke({ width: 1, color: strokeColor, alpha: alpha * 0.65 });
+function drawIsoBox2D(ctx, cx, by, rx, ry, h, topCol, leftCol, rightCol, strokeCol = '#2B1810', lineW = 2.2) {
+  // 좌측 면
+  ctx.beginPath();
+  ctx.moveTo(cx - rx, by - ry - h);
+  ctx.lineTo(cx, by - h);
+  ctx.lineTo(cx, by);
+  ctx.lineTo(cx - rx, by - ry);
+  ctx.closePath();
+  ctx.fillStyle = leftCol;
+  ctx.fill();
+  ctx.lineWidth = lineW;
+  ctx.strokeStyle = strokeCol;
+  ctx.stroke();
 
-  // 상단 면 (옥상/지붕 바닥)
-  gfx.poly([
-    baseN.x, baseN.y - height,
-    baseE.x, baseE.y - height,
-    baseS.x, baseS.y - height,
-    baseW.x, baseW.y - height
-  ]);
-  gfx.fill({ color: topColor, alpha });
-  if (strokeColor !== null) gfx.stroke({ width: 1.1, color: strokeColor, alpha: alpha * 0.8 });
-};
+  // 우측 면
+  ctx.beginPath();
+  ctx.moveTo(cx, by - h);
+  ctx.lineTo(cx + rx, by - ry - h);
+  ctx.lineTo(cx + rx, by - ry);
+  ctx.lineTo(cx, by);
+  ctx.closePath();
+  ctx.fillStyle = rightCol;
+  ctx.fill();
+  ctx.stroke();
 
-// =====================================================================
-// 🏛️ 프로시저럴 2.5D 입체 건축물 조형기 (건물이 절대 평면이나 공중부양처럼 안 보이도록!)
-// =====================================================================
-const drawProcedural25DBuilding = (gfx, type, level, base, simTick) => {
-  const shrinkBase = (b, ratio) => {
-    const cx = (b.N.x + b.S.x) / 2;
-    const cy = (b.E.y + b.W.y) / 2;
-    return {
-      N: { x: cx + (b.N.x - cx) * ratio, y: cy + (b.N.y - cy) * ratio },
-      E: { x: cx + (b.E.x - cx) * ratio, y: cy + (b.E.y - cy) * ratio },
-      S: { x: cx + (b.S.x - cx) * ratio, y: cy + (b.S.y - cy) * ratio },
-      W: { x: cx + (b.W.x - cx) * ratio, y: cy + (b.W.y - cy) * ratio }
-    };
-  };
+  // 상단 면
+  ctx.beginPath();
+  ctx.moveTo(cx, by - ry * 2 - h);
+  ctx.lineTo(cx + rx, by - ry - h);
+  ctx.lineTo(cx, by - h);
+  ctx.lineTo(cx - rx, by - ry - h);
+  ctx.closePath();
+  ctx.fillStyle = topCol;
+  ctx.fill();
+  ctx.stroke();
+}
 
-  const shiftBaseY = (b, dy) => ({
-    N: { x: b.N.x, y: b.N.y - dy },
-    E: { x: b.E.x, y: b.E.y - dy },
-    S: { x: b.S.x, y: b.S.y - dy },
-    W: { x: b.W.x, y: b.W.y - dy }
-  });
+function drawPitchedRoof2D(ctx, cx, by, rx, ry, wallH, peakH, leftRoofCol, rightRoofCol, frontGableCol = '#FFFBEB', strokeCol = '#2B1810') {
+  const topY = by - wallH;
+  const frontPeakX = cx - rx * 0.5;
+  const frontPeakY = topY - ry * 0.5 - peakH;
+  const backPeakX = cx + rx * 0.5;
+  const backPeakY = topY - ry * 1.5 - peakH;
 
-  // 1) 모든 건물 공통: 지면에 단단히 뿌리내린 3D 석회암 기단(Plinth)
-  const plinthH = type === 'temple' ? 14 : 6;
-  drawIsoPrism(gfx, base.N, base.E, base.S, base.W, plinthH, 0xE7D8C1, 0xD6C1A0, 0xB59D7B, 0x5C4028);
+  // 서북쪽 지붕 경사면
+  ctx.beginPath();
+  ctx.moveTo(cx - rx, topY - ry);
+  ctx.lineTo(frontPeakX, frontPeakY);
+  ctx.lineTo(backPeakX, backPeakY);
+  ctx.lineTo(cx, topY - ry * 2);
+  ctx.closePath();
+  ctx.fillStyle = leftRoofCol;
+  ctx.fill();
+  ctx.lineWidth = 2.2;
+  ctx.strokeStyle = strokeCol;
+  ctx.stroke();
 
-  const onPlinth = shiftBaseY(base, plinthH);
-  const inner = shrinkBase(onPlinth, 0.82);
+  // 동남쪽 지붕 경사면
+  ctx.beginPath();
+  ctx.moveTo(frontPeakX, frontPeakY);
+  ctx.lineTo(cx, topY);
+  ctx.lineTo(cx + rx, topY - ry);
+  ctx.lineTo(backPeakX, backPeakY);
+  ctx.closePath();
+  ctx.fillStyle = rightRoofCol;
+  ctx.fill();
+  ctx.stroke();
 
-  if (type === 'house') {
-    const wallH = 16 + level * 9;
-    const topC = level >= 4 ? 0xD97706 : 0xE6D2B5;
-    const leftC = level >= 5 ? 0xFFFBEB : 0xF5EBE0;
-    const rightC = level >= 5 ? 0xE2E8F0 : 0xD5BDAF;
-    drawIsoPrism(gfx, inner.N, inner.E, inner.S, inner.W, wallH, topC, leftC, rightC, 0x4A3525);
+  // 정면 박공 삼각벽
+  ctx.beginPath();
+  ctx.moveTo(cx - rx, topY - ry);
+  ctx.lineTo(cx, topY);
+  ctx.lineTo(frontPeakX, frontPeakY);
+  ctx.closePath();
+  ctx.fillStyle = frontGableCol;
+  ctx.fill();
+  ctx.stroke();
+}
 
-    // 3단계 이상 가옥은 2층 테라코타 다락방 & 지붕 돔 추가
-    if (level >= 3) {
-      const roofBase = shiftBaseY(shrinkBase(inner, 0.65), wallH);
-      drawIsoPrism(gfx, roofBase.N, roofBase.E, roofBase.S, roofBase.W, 12, 0xB45309, 0xFEF3C7, 0xD97706, 0x4A3525);
-    }
-  } else if (type === 'temple') {
-    // 솔로몬/헤롯 대성전: 외소 뜰 성벽 + 황금 성소 본관
-    const outerCourt = shrinkBase(onPlinth, 0.92);
-    drawIsoPrism(gfx, outerCourt.N, outerCourt.E, outerCourt.S, outerCourt.W, 18, 0xF8FAFC, 0xF1F5F9, 0xCBD5E1, 0x475569);
-    const sanctuary = shiftBaseY(shrinkBase(onPlinth, 0.56), 18);
-    drawIsoPrism(gfx, sanctuary.N, sanctuary.E, sanctuary.S, sanctuary.W, 56, 0xFACC15, 0xFFFBEB, 0xE2E8F0, 0x92400E);
-    const crown = shiftBaseY(shrinkBase(sanctuary, 0.85), 56);
-    drawIsoPrism(gfx, crown.N, crown.E, crown.S, crown.W, 10, 0xFDE047, 0xF59E0B, 0xB45309, 0x78350F);
-  } else if (type === 'synagogue') {
-    drawIsoPrism(gfx, inner.N, inner.E, inner.S, inner.W, 34, 0xE2E8F0, 0xF8FAFC, 0xCBD5E1, 0x334155);
-    const domeCenter = { x: (inner.N.x + inner.S.x) / 2, y: (inner.E.y + inner.W.y) / 2 - 34 };
-    gfx.arc(domeCenter.x, domeCenter.y, 22, Math.PI, 0, false);
-    gfx.fill(0x38BDF8);
-    gfx.stroke({ width: 1.5, color: 0x0369A1 });
-  } else if (type === 'wall' || type === 'tower' || type === 'gate') {
-    const h = type === 'tower' ? 48 : type === 'gate' ? 38 : 26;
-    const bBox = shrinkBase(onPlinth, type === 'wall' ? 0.92 : 0.88);
-    drawIsoPrism(gfx, bBox.N, bBox.E, bBox.S, bBox.W, h, 0xD6C7B2, 0xE5D9C5, 0xB8A68E, 0x443727);
-  } else if (type === 'aqueduct') {
-    drawIsoPrism(gfx, inner.N, inner.E, inner.S, inner.W, 30, 0x38BDF8, 0xE2E8F0, 0x94A3B8, 0x475569);
-  } else if (['bread_market', 'fish_market', 'sacrifice_market', 'money_changer', 'caravan'].includes(type)) {
-    const awningC = type === 'fish_market' ? 0x0284C7 : type === 'bread_market' ? 0xD97706 : 0xE11D48;
-    drawIsoPrism(gfx, inner.N, inner.E, inner.S, inner.W, 20, awningC, 0xFDE68A, 0xD97706, 0x5C2E0B);
-  } else if (['wheat_farm', 'vineyard', 'olive_grove', 'fishery'].includes(type)) {
-    const fieldC = type === 'wheat_farm' ? 0xFACC15 : type === 'vineyard' ? 0x86EFAC : type === 'fishery' ? 0x38BDF8 : 0xA3E635;
-    const plot = shrinkBase(onPlinth, 0.9);
-    drawIsoPrism(gfx, plot.N, plot.E, plot.S, plot.W, 5, fieldC, 0x65A30D, 0x3F6212, 0x365314);
-  } else {
-    drawIsoPrism(gfx, inner.N, inner.E, inner.S, inner.W, 24, 0xE7D8C1, 0xF5EBE0, 0xC8B6A6, 0x5C4028);
+function drawIsoArchLeftWall(ctx, cx, by, rx, ry, tCenter, archW, archH, fillCol = '#1E110A') {
+  const ax = cx - rx * (1 - tCenter);
+  const ay = by - ry * (1 - tCenter);
+  ctx.beginPath();
+  ctx.moveTo(ax - archW, ay - archW * 0.5);
+  ctx.lineTo(ax - archW, ay - archW * 0.5 - archH * 0.65);
+  ctx.quadraticCurveTo(ax, ay - archH * 1.15, ax + archW, ay + archW * 0.5 - archH * 0.65);
+  ctx.lineTo(ax + archW, ay + archW * 0.5);
+  ctx.closePath();
+  ctx.fillStyle = fillCol;
+  ctx.fill();
+  ctx.lineWidth = 1.6;
+  ctx.strokeStyle = '#D97706';
+  ctx.stroke();
+}
+
+function drawIsoWindowsRightWall(ctx, cx, by, rx, ry, wallH, count = 2, isNight = false) {
+  const winCol = isNight ? '#FACC15' : '#38BDF8';
+  for (let i = 1; i <= count; i++) {
+    const t = i / (count + 1);
+    const wx = cx + rx * t;
+    const wy = by - ry * t - wallH * 0.52;
+    ctx.beginPath();
+    ctx.roundRect(wx - 4, wy - 6, 8, 11, 3);
+    ctx.fillStyle = winCol;
+    ctx.fill();
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = '#2B1810';
+    ctx.stroke();
   }
-};
+}
+
+function getBakedBuildingTexture(type, level = 1, wTiles = 1, hTiles = 1, isNight = false) {
+  const cacheKey = `${type}_${level}_${wTiles}x${hTiles}_${isNight ? 'night' : 'day'}`;
+  if (bakedCartoonTextures.has(cacheKey)) {
+    return bakedCartoonTextures.get(cacheKey);
+  }
+
+  const canvas = document.createElement('canvas');
+  const scale = 2; // 고해상도 레티나 베이킹
+  const span = Math.max(wTiles, hTiles);
+  const cw = (span * TILE_W + 60) * scale;
+  const ch = (span * TILE_H + 170) * scale;
+  canvas.width = cw;
+  canvas.height = ch;
+
+  const ctx = canvas.getContext('2d');
+  ctx.scale(scale, scale);
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+
+  const cx = cw / (2 * scale);
+  const by = ch / scale - 18; // 바닥 남쪽 꼭짓점(S) 기준점
+  const rx = (span * TILE_W) * 0.44;
+  const ry = (span * TILE_H) * 0.44;
+
+  // 1. 공통 바닥 카툰 석조 주춧돌(Plinth)
+  const plinthH = type === 'temple' ? 14 : 6;
+  drawIsoBox2D(ctx, cx, by, rx, ry, plinthH, '#EDE0CC', '#DFCBB0', '#BFA582', '#3E2723', 2.2);
+
+  const pBy = by - plinthH;
+  const inRx = rx * 0.84;
+  const inRy = ry * 0.84;
+
+  // ── 🏠 주택 1~5단계 진화 ──
+  if (type === 'house') {
+    if (level === 1) {
+      // 1단계: 유목민 카툰 텐트 + 줄무늬 러그 + 모닥불
+      ctx.beginPath();
+      ctx.moveTo(cx - inRx, pBy - inRy);
+      ctx.lineTo(cx, pBy);
+      ctx.lineTo(cx, pBy - inRy - 32);
+      ctx.closePath();
+      ctx.fillStyle = '#78350F';
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(cx, pBy);
+      ctx.lineTo(cx + inRx, pBy - inRy);
+      ctx.lineTo(cx, pBy - inRy - 32);
+      ctx.closePath();
+      ctx.fillStyle = '#451A03';
+      ctx.fill();
+      ctx.stroke();
+
+      // 텐트 황금빛 줄무늬 장식
+      ctx.beginPath();
+      ctx.moveTo(cx - inRx * 0.5, pBy - inRy * 0.5);
+      ctx.lineTo(cx, pBy - inRy - 32);
+      ctx.lineTo(cx + inRx * 0.5, pBy - inRy * 0.5);
+      ctx.strokeStyle = '#F59E0B';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+
+      drawIsoArchLeftWall(ctx, cx, pBy, inRx, inRy, 0.5, 6, 13, isNight ? '#F59E0B' : '#1C1917');
+    } else if (level === 2) {
+      // 2단계: 갈릴리 흙벽돌집 + 나무 서까래 + 옥상 양탄자 & 항아리
+      const wH = 26;
+      drawIsoBox2D(ctx, cx, pBy, inRx, inRy, wH, '#D9A773', '#F3C697', '#C28D58', '#3E2723');
+      drawIsoArchLeftWall(ctx, cx, pBy, inRx, inRy, 0.5, 6, 14, '#451A03');
+      drawIsoWindowsRightWall(ctx, cx, pBy, inRx, inRy, wH, 1, isNight);
+
+      // 돌출 나무 서까래(Vigas) 3개
+      [0.25, 0.5, 0.75].forEach(t => {
+        const vx = cx - inRx * (1 - t);
+        const vy = pBy - inRy * (1 - t) - wH + 4;
+        ctx.beginPath();
+        ctx.arc(vx, vy, 2.2, 0, Math.PI * 2);
+        ctx.fillStyle = '#451A03';
+        ctx.fill();
+      });
+
+      // 옥상 점토 물항아리 2개
+      ctx.beginPath();
+      ctx.arc(cx - 5, pBy - inRy - wH - 3, 4.5, 0, Math.PI * 2);
+      ctx.fillStyle = '#B45309';
+      ctx.fill();
+      ctx.stroke();
+    } else if (level === 3) {
+      // 3단계: 석회암 평지붕 가옥 + 다락방 + 옥상 야자수 화분
+      const wH = 32;
+      drawIsoBox2D(ctx, cx, pBy, inRx, inRy, wH, '#EAE0D0', '#FFFDF9', '#D6C7B2', '#334155');
+      drawIsoArchLeftWall(ctx, cx, pBy, inRx, inRy, 0.45, 6.5, 16, '#5C2E0B');
+      drawIsoWindowsRightWall(ctx, cx, pBy, inRx, inRy, wH, 2, isNight);
+
+      // 옥상 테라코타 다락방
+      drawIsoBox2D(ctx, cx, pBy - inRy * 0.4 - wH, inRx * 0.55, inRy * 0.55, 13, '#EA580C', '#FFFBEB', '#CBD5E1', '#334155', 1.8);
+    } else if (level === 4) {
+      // 4단계: 다윗성 2층 테라코타 기와 빌라
+      const wH = 38;
+      drawIsoBox2D(ctx, cx, pBy, inRx, inRy, wH, '#F8FAFC', '#FFFFFF', '#E2E8F0', '#1E293B');
+      drawIsoArchLeftWall(ctx, cx, pBy, inRx, inRy, 0.5, 7, 17, '#7C2D12');
+      drawIsoWindowsRightWall(ctx, cx, pBy, inRx, inRy, wH, 2, isNight);
+      drawPitchedRoof2D(ctx, cx, pBy, inRx * 1.06, inRy * 1.06, wH, 16, '#EA580C', '#C2410C', '#FFFBEB', '#431407');
+    } else {
+      // 5단계: 로마-헤롯식 황금 대리석 궁정
+      const wH = 44;
+      drawIsoBox2D(ctx, cx, pBy, inRx, inRy, wH, '#FFFFFF', '#FFFFFF', '#E2E8F0', '#1E293B');
+      drawIsoArchLeftWall(ctx, cx, pBy, inRx, inRy, 0.5, 8, 20, '#9A3412');
+      drawIsoWindowsRightWall(ctx, cx, pBy, inRx, inRy, wH, 3, isNight);
+      drawPitchedRoof2D(ctx, cx, pBy, inRx * 1.08, inRy * 1.08, wH, 19, '#FACC15', '#D97706', '#FEF08A', '#78350F');
+    }
+  }
+
+  // ── 👑 헤롯 제2성전 (3x3 대성전 랜드마크) ──
+  else if (type === 'temple') {
+    // 1) 외소 성전 뜰 회랑 성벽
+    drawIsoBox2D(ctx, cx, pBy, rx * 0.94, ry * 0.94, 18, '#F8FAFC', '#FFFFFF', '#CBD5E1', '#334155', 2.2);
+
+    // 2) 성전 본관(Heikhal) 대리석 & 황금 성소
+    const sBy = pBy - ry * 0.25 - 18;
+    const sRx = rx * 0.56;
+    const sRy = ry * 0.56;
+    const sH = 68;
+    drawIsoBox2D(ctx, cx, sBy, sRx, sRy, sH, '#FACC15', '#FFFBEB', '#E2E8F0', '#78350F', 2.5);
+
+    // 3) 성소 전면 4대 황금 기둥과 거대한 성전 문
+    [0.2, 0.4, 0.6, 0.8].forEach(t => {
+      const colX = cx - sRx * (1 - t);
+      const colY = sBy - sRy * (1 - t);
+      ctx.fillStyle = '#FDE047';
+      ctx.strokeStyle = '#78350F';
+      ctx.lineWidth = 1.6;
+      ctx.fillRect(colX - 3, colY - sH + 8, 6, sH - 8);
+      ctx.strokeRect(colX - 3, colY - sH + 8, 6, sH - 8);
+    });
+    drawIsoArchLeftWall(ctx, cx, sBy, sRx, sRy, 0.5, 12, 42, '#7C2D12');
+
+    // 4) 상단 황금 면류관 지붕 장식
+    drawIsoBox2D(ctx, cx, sBy - sH, sRx * 1.06, sRy * 1.06, 10, '#FEF08A', '#FACC15', '#CA8A04', '#713F12', 2.2);
+
+    // 5) 마당의 놋번제단
+    ctx.beginPath();
+    ctx.arc(cx + 22, pBy - 24, 10, 0, Math.PI * 2);
+    ctx.fillStyle = '#9A3412';
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(cx + 22, pBy - 28, 6, 0, Math.PI * 2);
+    ctx.fillStyle = '#EF4444';
+    ctx.fill();
+  }
+
+  // ── 🕍 가버나움 백색 회당 (2x2) ──
+  else if (type === 'synagogue') {
+    const wH = 40;
+    drawIsoBox2D(ctx, cx, pBy, inRx, inRy, wH, '#F1F5F9', '#FFFFFF', '#CBD5E1', '#1E293B');
+    drawIsoArchLeftWall(ctx, cx, pBy, inRx, inRy, 0.5, 10, 24, '#1E3A8A');
+    drawIsoWindowsRightWall(ctx, cx, pBy, inRx, inRy, wH, 3, isNight);
+    drawPitchedRoof2D(ctx, cx, pBy, inRx * 1.05, inRy * 1.05, wH, 18, '#0284C7', '#0369A1', '#F8FAFC', '#0C4A6E');
+  }
+
+  // ── 🌉 실로암 수로교 (1x1 아치형 교각 — 검은 줄 버그 완전 해결!) ──
+  else if (type === 'aqueduct') {
+    const aH = 30;
+    drawIsoBox2D(ctx, cx, pBy, inRx, inRy, aH, '#38BDF8', '#F5EBE0', '#CBD5E1', '#334155');
+    // 교각 아치 통로
+    drawIsoArchLeftWall(ctx, cx, pBy, inRx, inRy, 0.5, 9, 19, '#18120C');
+    // 상단 푸른 수로 물길
+    drawIsoBox2D(ctx, cx, pBy - aH + 2, inRx * 1.02, inRy * 1.02, 6, '#0EA5E9', '#E2E8F0', '#94A3B8', '#1E293B');
+  }
+
+  // ── 💧 야곱의 우물 & ⛲ 대리석 분수 ──
+  else if (type === 'well' || type === 'fountain') {
+    const centerY = pBy - inRy;
+    const radX = type === 'fountain' ? 38 : 20;
+    const radY = type === 'fountain' ? 21 : 11;
+
+    // 원형 대리석 수조
+    ctx.beginPath();
+    ctx.ellipse(cx, centerY, radX, radY, 0, 0, Math.PI * 2);
+    ctx.fillStyle = '#E2E8F0';
+    ctx.fill();
+    ctx.lineWidth = 2.2;
+    ctx.strokeStyle = '#334155';
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.ellipse(cx, centerY - 2, radX * 0.78, radY * 0.78, 0, 0, Math.PI * 2);
+    ctx.fillStyle = '#0284C7';
+    ctx.fill();
+    ctx.stroke();
+
+    if (type === 'well') {
+      // 목조 지붕 프레임
+      ctx.strokeStyle = '#78350F';
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.moveTo(cx - 12, centerY);
+      ctx.lineTo(cx - 12, centerY - 24);
+      ctx.moveTo(cx + 12, centerY);
+      ctx.lineTo(cx + 12, centerY - 24);
+      ctx.stroke();
+      drawPitchedRoof2D(ctx, cx, centerY + 6, 18, 9, 26, 9, '#B45309', '#78350F', '#FDE68A', '#451A03');
+    } else {
+      // 분수 중앙 조각 탑
+      drawIsoBox2D(ctx, cx, centerY + 4, 10, 5, 26, '#38BDF8', '#FFFFFF', '#CBD5E1', '#334155', 1.8);
+    }
+  }
+
+  // ── 🍞 장터 · 수산시장 · 제물시장 · 환전소 · 캐러밴 (화려한 줄무늬 천막과 상품 매대) ──
+  else if (['bread_market', 'fish_market', 'sacrifice_market', 'money_changer', 'caravan'].includes(type)) {
+    const awningCol =
+      type === 'fish_market' ? '#0284C7' :
+      type === 'bread_market' ? '#EA580C' :
+      type === 'sacrifice_market' ? '#9333EA' :
+      type === 'money_changer' ? '#EAB308' : '#B45309';
+
+    // 하단 나무 카운터 매대
+    drawIsoBox2D(ctx, cx, pBy, inRx, inRy, 12, '#FDE68A', '#A16207', '#78350F', '#271810');
+
+    // 매대 위 상품 바구니 (빵, 생선, 금화 등)
+    [-14, 0, 14].forEach((dx, i) => {
+      ctx.beginPath();
+      ctx.arc(cx + dx, pBy - inRy - 13, 5.5, 0, Math.PI * 2);
+      ctx.fillStyle = i === 1 ? '#FEF08A' : awningCol;
+      ctx.fill();
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = '#271810';
+      ctx.stroke();
+    });
+
+    // 4개 목조 기둥
+    const postH = 28;
+    [
+      [cx - inRx * 0.85, pBy - inRy],
+      [cx + inRx * 0.85, pBy - inRy],
+      [cx, pBy - 2],
+      [cx, pBy - inRy * 1.85]
+    ].forEach(([px, py]) => {
+      ctx.beginPath();
+      ctx.moveTo(px, py - 10);
+      ctx.lineTo(px, py - postH);
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#451A03';
+      ctx.stroke();
+    });
+
+    // 상단 카툰 줄무늬 차양막 지붕
+    drawPitchedRoof2D(ctx, cx, pBy, inRx * 1.06, inRy * 1.06, postH, 12, awningCol, '#FFFBEB', awningCol, '#271810');
+  }
+
+  // ── 🌾 밀밭 · 포도원 · 올리브원 · 어선 선착장 · 곡물창고 ──
+  else if (['wheat_farm', 'vineyard', 'olive_grove', 'fishery', 'granary'].includes(type)) {
+    const fieldC =
+      type === 'wheat_farm' ? '#FACC15' :
+      type === 'vineyard' ? '#4ADE80' :
+      type === 'fishery' ? '#0284C7' : '#84CC16';
+
+    drawIsoBox2D(ctx, cx, pBy, rx * 0.92, ry * 0.92, 5, fieldC, '#65A30D', '#3F6212', '#14532D');
+
+    if (type === 'wheat_farm' || type === 'granary') {
+      // 이랑 무늬 + 풍차 타워 본체
+      drawIsoBox2D(ctx, cx, pBy - ry * 0.35 - 5, inRx * 0.45, inRy * 0.45, 42, '#D97706', '#FFFBEB', '#E7D8C1', '#451A03');
+      drawPitchedRoof2D(ctx, cx, pBy - ry * 0.35 - 5, inRx * 0.5, inRy * 0.5, 42, 14, '#B45309', '#78350F', '#FDE68A', '#271810');
+    } else if (type === 'olive_grove' || type === 'vineyard') {
+      // 풍성한 카툰 과수원 나무 4그루
+      [
+        [cx - 22, pBy - inRy - 4],
+        [cx + 22, pBy - inRy - 4],
+        [cx, pBy - inRy - 16],
+        [cx, pBy - inRy + 8]
+      ].forEach(([tx, ty]) => {
+        ctx.fillStyle = '#5C2E0B';
+        ctx.fillRect(tx - 2.5, ty - 16, 5, 14);
+        ctx.beginPath();
+        ctx.arc(tx, ty - 20, 10, 0, Math.PI * 2);
+        ctx.fillStyle = type === 'vineyard' ? '#16A34A' : '#4D7C0F';
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#14532D';
+        ctx.stroke();
+
+        // 열매 송이
+        ctx.beginPath();
+        ctx.arc(tx + 3, ty - 19, 3, 0, Math.PI * 2);
+        ctx.fillStyle = type === 'vineyard' ? '#9333EA' : '#1E293B';
+        ctx.fill();
+      });
+    } else if (type === 'fishery') {
+      // 목조 부두 & 갈릴리 돛단배
+      const centerY = pBy - inRy - 6;
+      ctx.beginPath();
+      ctx.moveTo(cx - 20, centerY);
+      ctx.lineTo(cx + 20, centerY);
+      ctx.lineTo(cx + 13, centerY + 9);
+      ctx.lineTo(cx - 13, centerY + 9);
+      ctx.closePath();
+      ctx.fillStyle = '#78350F';
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(cx, centerY - 28);
+      ctx.lineTo(cx + 16, centerY - 3);
+      ctx.lineTo(cx - 10, centerY - 3);
+      ctx.closePath();
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fill();
+      ctx.stroke();
+    }
+  }
+
+  // ── ✝️ 골고다 언덕 · 팔복 동산 · 겟세마네 ──
+  else if (['golgotha', 'beatitudes', 'gethsemane'].includes(type)) {
+    const topC = type === 'golgotha' ? '#A8A29E' : '#84CC16';
+    drawIsoBox2D(ctx, cx, pBy, inRx, inRy, 12, topC, '#78716C', '#57534E', '#292524');
+    drawIsoBox2D(ctx, cx, pBy - inRy * 0.3 - 12, inRx * 0.65, inRy * 0.65, 12, topC, '#78716C', '#44403C', '#292524');
+
+    const topY = pBy - inRy - 24;
+    if (type === 'golgotha') {
+      [[-18, 4, 22], [0, 0, 34], [18, 4, 22]].forEach(([dx, dy, ch]) => {
+        ctx.beginPath();
+        ctx.moveTo(cx + dx, topY + dy);
+        ctx.lineTo(cx + dx, topY + dy - ch);
+        ctx.moveTo(cx + dx - 8, topY + dy - ch * 0.7);
+        ctx.lineTo(cx + dx + 8, topY + dy - ch * 0.7);
+        ctx.lineWidth = dx === 0 ? 4 : 3;
+        ctx.strokeStyle = '#451A03';
+        ctx.stroke();
+      });
+    } else {
+      ctx.beginPath();
+      ctx.arc(cx, topY - 12, 14, 0, Math.PI * 2);
+      ctx.fillStyle = '#15803D';
+      ctx.fill();
+      ctx.stroke();
+    }
+  }
+
+  // ── 🧱 성벽 · 성문 · 망대 ──
+  else if (['wall', 'gate', 'tower'].includes(type)) {
+    const h = type === 'tower' ? 52 : type === 'gate' ? 38 : 28;
+    drawIsoBox2D(ctx, cx, pBy, inRx, inRy, h, '#D6C7B2', '#EDE0CC', '#B8A68E', '#292524');
+    // 상단 성가퀴 요철
+    drawIsoBox2D(ctx, cx, pBy - h, inRx * 1.04, inRy * 1.04, 6, '#EDE0CC', '#F5EBE0', '#C8B6A6', '#292524');
+    if (type === 'gate') {
+      drawIsoArchLeftWall(ctx, cx, pBy, inRx, inRy, 0.5, 12, 24, '#1E110A');
+    }
+  } else {
+    drawIsoBox2D(ctx, cx, pBy, inRx, inRy, 26, '#E7D8C1', '#F5EBE0', '#C8B6A6', '#3E2723');
+  }
+
+  const tex = PIXI.Texture.from(canvas);
+  const result = {
+    tex,
+    anchorX: 0.5,
+    anchorY: (ch / scale - 18) / (ch / scale)
+  };
+  bakedCartoonTextures.set(cacheKey, result);
+  return result;
+}
 
 export default function GameEngine({
   overlayMode = 'normal',
   timeOfDay = 'day',
   floatingEvents = [],
+  harvestBubbles = [],
+  onHarvestBubbleClick,
   onWalkerClick
 }) {
   const containerRef = useRef(null);
@@ -247,11 +559,34 @@ export default function GameEngine({
   const viewportRef = useRef(null);
 
   const { grid, walkers, selectedTool, buildAt, demolishAt, setInspectedTile } = useTycoonStore();
-  const stateRef = useRef({ grid, walkers, selectedTool, overlayMode, timeOfDay, floatingEvents, onWalkerClick });
-  stateRef.current = { grid, walkers, selectedTool, overlayMode, timeOfDay, floatingEvents, onWalkerClick };
+  const stateRef = useRef({
+    grid,
+    walkers,
+    selectedTool,
+    overlayMode,
+    timeOfDay,
+    floatingEvents,
+    harvestBubbles,
+    onHarvestBubbleClick,
+    onWalkerClick
+  });
+  stateRef.current = {
+    grid,
+    walkers,
+    selectedTool,
+    overlayMode,
+    timeOfDay,
+    floatingEvents,
+    harvestBubbles,
+    onHarvestBubbleClick,
+    onWalkerClick
+  };
 
   const walkerInterpRef = useRef(new Map());
   const floatTextPoolRef = useRef(new Map());
+  const bubbleTextPoolRef = useRef(new Map());
+  const bldgSpritePoolRef = useRef(new Map());
+  const spawnTimeMapRef = useRef(new Map());
 
   const getTileCenter = (r, c, elev = 0) => ({
     x: (c - r) * (TILE_W / 2) + ORIG_X,
@@ -283,14 +618,12 @@ export default function GameEngine({
     if (!containerRef.current) return;
     let isMounted = true;
 
-    Object.keys(BUILDING_METRICS).forEach(key => getBuildingTexture(key));
-
     const app = new PIXI.Application();
     let viewport = null;
 
     app.init({
       resizeTo: containerRef.current,
-      backgroundColor: 0x1E1610,
+      backgroundColor: 0x18120C,
       antialias: true,
       resolution: Math.min(window.devicePixelRatio || 1, 2),
       autoDensity: true
@@ -320,34 +653,37 @@ export default function GameEngine({
         .pinch()
         .wheel()
         .decelerate()
-        .clampZoom({ minScale: 0.42, maxScale: 2.35 });
+        .clampZoom({ minScale: 0.45, maxScale: 2.35 });
 
-      viewport.moveCenter(0, 120);
+      viewport.moveCenter(0, 110);
 
-      // 🌟 2.5D 다층 렌더링 파이프라인 레이어
-      const bedrockGfx = new PIXI.Graphics();    // 1. 3D 디오라마 대지 단면 (지각 두께)
-      const groundGfx = new PIXI.Graphics();     // 2. 고도차 타일 & 수면 & 도로
-      const overlayGfx = new PIXI.Graphics();    // 3. 시저3 보급망 오라
-      const castShadowGfx = new PIXI.Graphics(); // 4. 입체 투영 그림자 + 접지 AO
-      const bldg3DGfx = new PIXI.Graphics();     // 5. 2.5D 프로시저럴 입체 기단 & 건축 블록
-      const bldgContainer = new PIXI.Container();// 6. 정밀 SVG 스프라이트
-      const animPartsGfx = new PIXI.Graphics();  // 7. 풍차 날개, 분수 물줄기, 게이지
-      const walkerGfx = new PIXI.Graphics();     // 8. 입체 시민 & 낙타 상단
-      const previewGfx = new PIXI.Graphics();    // 9. 3D 반투명 건설 홀로그램 박스
-      const fxGfx = new PIXI.Graphics();         // 10. 성전 연기 & 구름
-      const floatTextContainer = new PIXI.Container(); // 11. 떠오르는 생산 텍스트 (+12 🍞)
-      const nightGlowGfx = new PIXI.Graphics();  // 12. 야간 등불 조명
+      // 🌟 다층 카툰 디오라마 레이어
+      const bedrockGfx = new PIXI.Graphics();
+      const groundGfx = new PIXI.Graphics();
+      const overlayGfx = new PIXI.Graphics();
+      const castShadowGfx = new PIXI.Graphics();
+      const bldgSpriteContainer = new PIXI.Container();
+      bldgSpriteContainer.sortableChildren = true;
+      const animPartsGfx = new PIXI.Graphics();
+      const walkerGfx = new PIXI.Graphics();
+      const previewGfx = new PIXI.Graphics();
+      const fxGfx = new PIXI.Graphics();
+      const bubbleGfx = new PIXI.Graphics();
+      const bubbleTextContainer = new PIXI.Container();
+      const floatTextContainer = new PIXI.Container();
+      const nightGlowGfx = new PIXI.Graphics();
 
       viewport.addChild(bedrockGfx);
       viewport.addChild(groundGfx);
       viewport.addChild(overlayGfx);
       viewport.addChild(castShadowGfx);
-      viewport.addChild(bldg3DGfx);
-      viewport.addChild(bldgContainer);
+      viewport.addChild(bldgSpriteContainer);
       viewport.addChild(animPartsGfx);
       viewport.addChild(walkerGfx);
       viewport.addChild(previewGfx);
       viewport.addChild(fxGfx);
+      viewport.addChild(bubbleGfx);
+      viewport.addChild(bubbleTextContainer);
       viewport.addChild(floatTextContainer);
       viewport.addChild(nightGlowGfx);
 
@@ -367,7 +703,10 @@ export default function GameEngine({
             if (tileKey !== lastDragBuiltKey) {
               lastDragBuiltKey = tileKey;
               const bMeta = BUILDINGS[curTool];
-              if (bMeta) buildAt(tile.r, tile.c, bMeta);
+              if (bMeta) {
+                const ok = buildAt(tile.r, tile.c, bMeta);
+                if (ok) spawnTimeMapRef.current.set(tileKey, Date.now());
+              }
             }
           }
         } else {
@@ -382,13 +721,32 @@ export default function GameEngine({
         touchStartTime = Date.now();
         touchStartPos = { x: e.global.x, y: e.global.y };
 
+        // 1) 수확 버블 터치 최우선 감지
+        const worldPos = viewport.toWorld(e.global.x, e.global.y);
+        const { harvestBubbles: curBubbles, onHarvestBubbleClick: harvestCb, grid: curGrid } = stateRef.current;
+        if (curBubbles && curBubbles.length > 0 && harvestCb) {
+          for (let i = 0; i < curBubbles.length; i++) {
+            const b = curBubbles[i];
+            const elev = getTileElevation(b.r, b.c, curGrid[b.r]?.[b.c]);
+            const pos = getTileCenter(b.r, b.c, elev);
+            if (Math.hypot(worldPos.x - pos.x, worldPos.y - (pos.y - 58)) < 28) {
+              harvestCb(b);
+              return;
+            }
+          }
+        }
+
         const { selectedTool: curTool } = stateRef.current;
         if (['road', 'plaza', 'wall'].includes(curTool) && hoverTile) {
           isDragBuilding = true;
-          lastDragBuiltKey = `${hoverTile.r}-${hoverTile.c}`;
+          const tKey = `${hoverTile.r}-${hoverTile.c}`;
+          lastDragBuiltKey = tKey;
           viewport.plugins.pause('drag');
           const bMeta = BUILDINGS[curTool];
-          if (bMeta) buildAt(hoverTile.r, hoverTile.c, bMeta);
+          if (bMeta) {
+            const ok = buildAt(hoverTile.r, hoverTile.c, bMeta);
+            if (ok) spawnTimeMapRef.current.set(tKey, Date.now());
+          }
         }
       });
 
@@ -402,10 +760,30 @@ export default function GameEngine({
         const elapsed = Date.now() - touchStartTime;
         const dist = Math.hypot(e.global.x - touchStartPos.x, e.global.y - touchStartPos.y);
 
-        if (elapsed < 350 && dist < 10) {
+        if (elapsed < 350 && dist < 12) {
           const worldPos = viewport.toWorld(e.global.x, e.global.y);
 
-          const { walkers: curWalkers, onWalkerClick: walkerCb, grid: curGrid } = stateRef.current;
+          const {
+            harvestBubbles: curBubbles,
+            onHarvestBubbleClick: harvestCb,
+            walkers: curWalkers,
+            onWalkerClick: walkerCb,
+            grid: curGrid,
+            selectedTool: curTool
+          } = stateRef.current;
+
+          if (curBubbles && curBubbles.length > 0 && harvestCb) {
+            for (let i = 0; i < curBubbles.length; i++) {
+              const b = curBubbles[i];
+              const elev = getTileElevation(b.r, b.c, curGrid[b.r]?.[b.c]);
+              const pos = getTileCenter(b.r, b.c, elev);
+              if (Math.hypot(worldPos.x - pos.x, worldPos.y - (pos.y - 58)) < 28) {
+                harvestCb(b);
+                return;
+              }
+            }
+          }
+
           for (let i = 0; i < curWalkers.length; i++) {
             const wk = curWalkers[i];
             const interp = walkerInterpRef.current.get(wk.id || i) || { r: wk.r, c: wk.c };
@@ -423,7 +801,6 @@ export default function GameEngine({
 
           if (hoverTile) {
             const { r, c } = hoverTile;
-            const { selectedTool: curTool } = stateRef.current;
             const clicked = curGrid[r]?.[c];
 
             if (curTool === 'inspect') {
@@ -443,7 +820,15 @@ export default function GameEngine({
 
             const bMeta = BUILDINGS[curTool];
             if (bMeta) {
-              buildAt(r, c, bMeta);
+              const built = buildAt(r, c, bMeta);
+              if (built) {
+                spawnTimeMapRef.current.set(`${r}-${c}`, Date.now());
+              } else if (clicked) {
+                const rootR = clicked.isRoot ? r : clicked.rootR;
+                const rootC = clicked.isRoot ? c : clicked.rootC;
+                const rootCell = curGrid[rootR]?.[rootC];
+                if (rootCell) setInspectedTile({ ...rootCell, r: rootR, c: rootC });
+              }
             }
           }
         }
@@ -451,39 +836,38 @@ export default function GameEngine({
 
       let simTick = 0;
 
-      // ── 🔄 60FPS 2.5D 디오라마 메인 렌더링 루프 ──
+      // ── 🔄 60FPS 메인 루프 ──
       app.ticker.add((time) => {
         simTick += time.deltaTime * 0.05;
+        const nowMs = Date.now();
         const {
           grid: curGrid,
           walkers: curWalkers,
           selectedTool: curTool,
           overlayMode: curOverlay,
           timeOfDay: curTimeOfDay,
-          floatingEvents: curFloating
+          floatingEvents: curFloating,
+          harvestBubbles: curBubbles
         } = stateRef.current;
 
+        const isNight = curTimeOfDay === 'night' || curTimeOfDay === 'sunset';
         if (curTimeOfDay === 'night') app.renderer.background.color = 0x090D16;
         else if (curTimeOfDay === 'sunset') app.renderer.background.color = 0x2B1206;
-        else app.renderer.background.color = 0x1E1610;
+        else app.renderer.background.color = 0x18120C;
 
-        // ===============================================================
-        // [1] ⛰️ 3D 디오라마 대지 암반 두께(Bedrock Cross-Section) 렌더링
-        // ===============================================================
+        // [1] 3D 디오라마 대지 암반 두께
         bedrockGfx.clear();
         const wholeMapBase = getMultiTileBase(0, 0, MAP_SIZE, MAP_SIZE, 0);
-        const slabDepth = 44;
+        const slabDepth = 46;
 
-        // 디오라마 하단 대지 그림자
         bedrockGfx.poly([
-          wholeMapBase.N.x, wholeMapBase.N.y + slabDepth + 18,
-          wholeMapBase.E.x + 12, wholeMapBase.E.y + slabDepth + 18,
-          wholeMapBase.S.x, wholeMapBase.S.y + slabDepth + 26,
-          wholeMapBase.W.x - 12, wholeMapBase.W.y + slabDepth + 18
+          wholeMapBase.N.x, wholeMapBase.N.y + slabDepth + 20,
+          wholeMapBase.E.x + 14, wholeMapBase.E.y + slabDepth + 20,
+          wholeMapBase.S.x, wholeMapBase.S.y + slabDepth + 28,
+          wholeMapBase.W.x - 14, wholeMapBase.W.y + slabDepth + 20
         ]);
-        bedrockGfx.fill({ color: 0x000000, alpha: 0.55 });
+        bedrockGfx.fill({ color: 0x000000, alpha: 0.6 });
 
-        // 남서쪽(좌측) 지각 단면 암벽
         bedrockGfx.poly([
           wholeMapBase.W.x, wholeMapBase.W.y,
           wholeMapBase.S.x, wholeMapBase.S.y,
@@ -491,9 +875,8 @@ export default function GameEngine({
           wholeMapBase.W.x, wholeMapBase.W.y + slabDepth
         ]);
         bedrockGfx.fill(0x8C6D46);
-        bedrockGfx.stroke({ width: 1.5, color: 0x4A3520 });
+        bedrockGfx.stroke({ width: 2, color: 0x3E2723 });
 
-        // 남동쪽(우측) 지각 단면 암벽 (갈릴리 호수 수면 단면 포함)
         bedrockGfx.poly([
           wholeMapBase.S.x, wholeMapBase.S.y,
           wholeMapBase.E.x, wholeMapBase.E.y,
@@ -501,11 +884,9 @@ export default function GameEngine({
           wholeMapBase.S.x, wholeMapBase.S.y + slabDepth
         ]);
         bedrockGfx.fill(0x5C4328);
-        bedrockGfx.stroke({ width: 1.5, color: 0x3A2817 });
+        bedrockGfx.stroke({ width: 2, color: 0x271810 });
 
-        // ===============================================================
-        // [2] 3단 고도차 지형 타일 (성전산 고지대 · 평야 · 갈릴리 수변 절벽)
-        // ===============================================================
+        // [2] 지형 타일 & 도로 렌더링
         groundGfx.clear();
         for (let r = 0; r < MAP_SIZE; r++) {
           for (let c = 0; c < MAP_SIZE; c++) {
@@ -515,37 +896,32 @@ export default function GameEngine({
             const { x: cx, y: cy } = getTileCenter(r, c, elev);
             const isHov = hoverTile && hoverTile.r === r && hoverTile.c === c;
 
-            // 고지대(성전산) 또는 해안 절벽의 3D 측면 옹벽(Cliff Skirt) 렌더링
-            if (elev !== 0) {
-              const tileBase = getMultiTileBase(r, c, 1, 1, 0);
-              if (elev > 0) {
-                drawIsoPrism(
-                  groundGfx,
-                  tileBase.N, tileBase.E, tileBase.S, tileBase.W,
-                  elev,
-                  0xF5EBE0, 0xD6C1A0, 0xA68A64, 0x785A3C
-                );
-              } else {
-                // 갈릴리 호수 해안 절벽 내벽
-                groundGfx.poly([
-                  cx, cy + TILE_H / 2 + elev,
-                  cx - TILE_W / 2, cy + elev,
-                  cx - TILE_W / 2, cy,
-                  cx, cy + TILE_H / 2
-                ]);
-                groundGfx.fill(0x785A3C);
-              }
+            if (elev > 0) {
+              const tBase = getMultiTileBase(r, c, 1, 1, 0);
+              // 시온산 고지대 절벽 측면
+              groundGfx.poly([
+                tBase.W.x, tBase.W.y - elev,
+                tBase.S.x, tBase.S.y - elev,
+                tBase.S.x, tBase.S.y,
+                tBase.W.x, tBase.W.y
+              ]);
+              groundGfx.fill(0xD6C1A0);
+              groundGfx.poly([
+                tBase.S.x, tBase.S.y - elev,
+                tBase.E.x, tBase.E.y - elev,
+                tBase.E.x, tBase.E.y,
+                tBase.S.x, tBase.S.y
+              ]);
+              groundGfx.fill(0xA68A64);
             }
 
             let tileColor = (r + c) % 2 === 0 ? 0xEFE2C8 : 0xE7D6B7;
-            if (terrain === 'zion_plateau') {
-              tileColor = (r + c) % 2 === 0 ? 0xF8F1E5 : 0xEFE5D4;
-            }
+            if (terrain === 'zion_plateau') tileColor = (r + c) % 2 === 0 ? 0xFBF6EE : 0xF3E9D8;
             if (!cell) {
-              if (terrain === 'water') tileColor = 0x0369A1;
-              else if (terrain === 'meadow') tileColor = 0xA7F3D0;
+              if (terrain === 'water') tileColor = 0x0284C7;
+              else if (terrain === 'meadow') tileColor = 0x86EFAC;
             } else if (cell.type === 'road') {
-              tileColor = 0xB89F7D;
+              tileColor = 0xD6C5A9;
             } else if (cell.type === 'plaza') {
               tileColor = 0xF8FAFC;
             }
@@ -560,91 +936,52 @@ export default function GameEngine({
             ]);
             groundGfx.fill(tileColor);
             groundGfx.stroke({
-              width: isHov ? 2 : 1,
-              color: isHov ? 0xD97706 : terrain === 'water' ? 0x0284C7 : 0xD4C09E
+              width: isHov ? 2 : 0.9,
+              color: isHov ? 0xD97706 : terrain === 'water' ? 0x0369A1 : 0xCBB592
             });
 
-            // 🌊 갈릴리 호수 입체 수면 하이라이트 & 고깃배 물결
             if (!cell && terrain === 'water') {
               const wave = Math.sin(simTick * 2.2 + r * 0.8 + c) * 5;
-              groundGfx.poly([
-                cx, cy - TILE_H / 2 + 3,
-                cx + TILE_W / 2 - 4, cy,
-                cx, cy + TILE_H / 2 - 3,
-                cx - TILE_W / 2 + 4, cy
-              ]);
-              groundGfx.fill({ color: 0x0EA5E9, alpha: 0.45 });
-
               groundGfx.moveTo(cx - 12 + wave, cy - 3);
               groundGfx.lineTo(cx + 4 + wave, cy - 3);
               groundGfx.moveTo(cx - 6 - wave, cy + 4);
               groundGfx.lineTo(cx + 10 - wave, cy + 4);
-              groundGfx.stroke({ width: 1.5, color: 0xBAE6FD, alpha: 0.8 });
+              groundGfx.stroke({ width: 1.8, color: 0xBAE6FD, alpha: 0.85 });
             }
 
-            // 🌴 입체 자연 식생 (야자수, 감람나무, 사이프러스 삼나무, 바위)
             if (!cell && terrain === 'palm_tree') {
               const sway = Math.sin(simTick * 1.6 + r) * 2.5;
               groundGfx.ellipse(cx + 4, cy + 2, 9, 4.5);
-              groundGfx.fill({ color: 0x1E140A, alpha: 0.28 });
+              groundGfx.fill({ color: 0x1E140A, alpha: 0.25 });
               groundGfx.moveTo(cx, cy + 2);
-              groundGfx.quadraticCurveTo(cx + 3, cy - 10, cx + sway, cy - 22);
-              groundGfx.stroke({ width: 3.5, color: 0x78350F });
-              [-7, 0, 7].forEach((dx, i) => {
-                groundGfx.ellipse(cx + sway + dx, cy - 22 + Math.abs(dx) * 0.3, 6, 3);
+              groundGfx.quadraticCurveTo(cx + 3, cy - 12, cx + sway, cy - 24);
+              groundGfx.stroke({ width: 4, color: 0x78350F });
+              [-8, 0, 8].forEach((dx, i) => {
+                groundGfx.ellipse(cx + sway + dx, cy - 24 + Math.abs(dx) * 0.3, 7, 3.5);
                 groundGfx.fill(i === 1 ? 0x22C55E : 0x15803D);
               });
-            } else if (!cell && terrain === 'olive_tree') {
-              groundGfx.ellipse(cx + 3, cy + 2, 10, 5);
-              groundGfx.fill({ color: 0x1E140A, alpha: 0.28 });
-              groundGfx.rect(cx - 2.5, cy - 12, 5, 14);
-              groundGfx.fill(0x5C2E0B);
-              groundGfx.circle(cx - 4, cy - 15, 8);
-              groundGfx.fill(0x3F6212);
-              groundGfx.circle(cx + 4, cy - 14, 7.5);
-              groundGfx.fill(0x4D7C0F);
-              groundGfx.circle(cx, cy - 19, 8);
-              groundGfx.fill(0x84CC16);
-            } else if (!cell && terrain === 'cypress_tree') {
-              groundGfx.ellipse(cx + 3, cy + 2, 7, 3.5);
-              groundGfx.fill({ color: 0x1E140A, alpha: 0.28 });
-              groundGfx.poly([cx, cy - 30, cx + 7, cy - 2, cx - 7, cy - 2]);
-              groundGfx.fill(0x14532D);
-              groundGfx.poly([cx, cy - 30, cx, cy - 2, cx - 7, cy - 2]);
-              groundGfx.fill(0x166534);
-            } else if (!cell && terrain === 'desert_rock') {
-              const rBase = getMultiTileBase(r, c, 0.45, 0.45, elev - 4);
-              drawIsoPrism(groundGfx, rBase.N, rBase.E, rBase.S, rBase.W, 9, 0xD6D3D1, 0xA8A29E, 0x78716C, 0x44403C);
             }
 
-            // 🛣️ 입체 연석(Curb)이 살아있는 로마식 돌포장 도로 & 대리석 광장
             if (cell?.type === 'road') {
               const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
               dirs.forEach(([dr, dc]) => {
-                if (curGrid[r + dr]?.[c + dc]?.type === 'road' || curGrid[r + dr]?.[c + dc]?.type === 'plaza') {
-                  const nElev = getTileElevation(r + dr, c + dc, curGrid[r + dr]?.[c + dc]);
+                const nb = curGrid[r + dr]?.[c + dc];
+                if (nb && ['road', 'plaza', 'gate'].includes(nb.type)) {
+                  const nElev = getTileElevation(r + dr, c + dc, nb);
                   const nPos = getTileCenter(r + dr, c + dc, nElev);
                   groundGfx.moveTo(cx, cy);
                   groundGfx.lineTo((cx + nPos.x) / 2, (cy + nPos.y) / 2);
-                  groundGfx.stroke({ width: 16, color: 0x9C8260 });
+                  groundGfx.stroke({ width: 20, color: 0x8C7355 });
                   groundGfx.moveTo(cx, cy);
                   groundGfx.lineTo((cx + nPos.x) / 2, (cy + nPos.y) / 2);
-                  groundGfx.stroke({ width: 11, color: 0xDFCBB0 });
+                  groundGfx.stroke({ width: 14, color: 0xE5D3B3 });
                 }
               });
-              groundGfx.ellipse(cx, cy, 8, 4.5);
-              groundGfx.fill(0xE7D8C1);
-              groundGfx.stroke({ width: 1, color: 0x785A3C });
-            } else if (cell?.type === 'plaza') {
-              const pBase = getMultiTileBase(r, c, 1, 1, elev);
-              drawIsoPrism(groundGfx, pBase.N, pBase.E, pBase.S, pBase.W, 4, 0xF8FAFC, 0xE2E8F0, 0xCBD5E1, 0x94A3B8);
             }
           }
         }
 
-        // ===============================================================
-        // [3] 시저 3식 5대 오버레이 히트맵 & 보급 반경 링
-        // ===============================================================
+        // [3] 오버레이 히트맵
         overlayGfx.clear();
         if (curOverlay !== 'normal') {
           for (let r = 0; r < MAP_SIZE; r++) {
@@ -656,178 +993,126 @@ export default function GameEngine({
 
               let radiusTiles = 0;
               let auraColor = 0x38BDF8;
-
               if (curOverlay === 'water' && ['well', 'aqueduct', 'fountain'].includes(cell.type)) {
-                radiusTiles = cell.type === 'fountain' ? 4 : 3;
+                radiusTiles = cell.type === 'fountain' ? 4.5 : 3.5;
                 auraColor = 0x0284C7;
               } else if (curOverlay === 'food' && ['bread_market', 'fish_market', 'wheat_farm', 'fishery', 'granary'].includes(cell.type)) {
-                radiusTiles = 4;
+                radiusTiles = 4.5;
                 auraColor = 0x16A34A;
               } else if (curOverlay === 'faith' && ['synagogue', 'temple', 'golgotha', 'beatitudes'].includes(cell.type)) {
-                radiusTiles = cell.type === 'temple' ? 6 : 4;
+                radiusTiles = cell.type === 'temple' ? 6.5 : 4.5;
                 auraColor = 0x9333EA;
               }
 
               if (radiusTiles > 0) {
-                overlayGfx.ellipse(cx, cy, radiusTiles * (TILE_W * 0.65), radiusTiles * (TILE_H * 0.65));
-                overlayGfx.fill({ color: auraColor, alpha: 0.18 });
-                overlayGfx.stroke({ width: 2.2, color: auraColor, alpha: 0.8 });
+                overlayGfx.ellipse(cx, cy, radiusTiles * (TILE_W * 0.62), radiusTiles * (TILE_H * 0.62));
+                overlayGfx.fill({ color: auraColor, alpha: 0.2 });
+                overlayGfx.stroke({ width: 2.5, color: auraColor, alpha: 0.85 });
               }
             }
           }
         }
 
-        // ===============================================================
-        // [4] 🌑 지면 밀착 그림자(Ambient Occlusion) & 사선 투영 그림자
-        // ===============================================================
+        // [4 & 5] 고해상도 베이크드 카툰 스프라이트 배치 (폴리곤 찢어짐 0% 보장!)
         castShadowGfx.clear();
+        animPartsGfx.clear();
+        nightGlowGfx.clear();
+
+        const activeSpriteKeys = new Set();
+
         for (let r = 0; r < MAP_SIZE; r++) {
           for (let c = 0; c < MAP_SIZE; c++) {
             const cell = curGrid[r]?.[c];
             if (!cell || !cell.isRoot || cell.type === 'road' || cell.type === 'plaza') continue;
 
-            const w = cell.w || 1;
-            const h = cell.h || 1;
+            const { type, level = 1, w = 1, h = 1 } = cell;
             const elev = getTileElevation(r, c, cell);
             const base = getMultiTileBase(r, c, w, h, elev);
+            const sKey = `${r}-${c}`;
+            activeSpriteKeys.add(sKey);
 
-            // 1) 건물 밑바닥 밀착 앰비언트 오클루전(AO) 다크 링 (공중부양 느낌 100% 제거!)
+            // 건설 스프링 바운스 애니메이션
+            const builtAt = spawnTimeMapRef.current.get(sKey) || 0;
+            const ageMs = nowMs - builtAt;
+            let scaleY = 1.0;
+            if (ageMs < 550) {
+              const t = ageMs / 550;
+              scaleY = Math.min(1.12, Math.sin(t * Math.PI * 0.75) * 1.12);
+            }
+
+            // 바닥 밀착 그림자
             castShadowGfx.poly([
               base.N.x, base.N.y - 2,
-              base.E.x + 5, base.E.y + 2,
-              base.S.x, base.S.y + 6,
-              base.W.x - 5, base.W.y + 2
+              base.E.x + 6, base.E.y + 2,
+              base.S.x, base.S.y + 7,
+              base.W.x - 6, base.W.y + 2
             ]);
-            castShadowGfx.fill({ color: 0x0F0904, alpha: 0.48 });
+            castShadowGfx.fill({ color: 0x0F0904, alpha: 0.45 });
 
-            // 2) 태양광 사선 롱 섀도우
-            let bH = 28;
-            if (cell.type === 'temple') bH = 85;
-            else if (cell.type === 'golgotha') bH = 52;
-            else if (cell.type === 'aqueduct') bH = 36;
-            else if (cell.type === 'house') bH = 18 + (cell.level || 1) * 12;
-
-            const sDx = bH * 0.72;
-            const sDy = bH * 0.36;
-
-            castShadowGfx.poly([
-              base.W.x, base.W.y,
-              base.S.x, base.S.y,
-              base.E.x + sDx, base.E.y + sDy,
-              base.N.x + sDx, base.N.y + sDy
-            ]);
-            castShadowGfx.fill({ color: 0x1A0F07, alpha: curTimeOfDay === 'sunset' ? 0.38 : 0.24 });
-          }
-        }
-
-        // ===============================================================
-        // [5 & 6] 🏛️ Z-Sorting 후 2.5D 입체 기단/블록 + SVG 스프라이트 결합 렌더링
-        // ===============================================================
-        bldg3DGfx.clear();
-        bldgContainer.removeChildren();
-        animPartsGfx.clear();
-        nightGlowGfx.clear();
-
-        const renderQueue = [];
-        for (let r = 0; r < MAP_SIZE; r++) {
-          for (let c = 0; c < MAP_SIZE; c++) {
-            const cell = curGrid[r]?.[c];
-            if (cell && cell.isRoot && cell.type !== 'road' && cell.type !== 'plaza') {
-              renderQueue.push({
-                r,
-                c,
-                cell,
-                depth: (r + (cell.h || 1)) + (c + (cell.w || 1))
-              });
+            // 베이크드 카툰 텍스처 가져오기
+            const baked = getBakedBuildingTexture(type, level, w, h, isNight);
+            let spr = bldgSpritePoolRef.current.get(sKey);
+            if (!spr) {
+              spr = new PIXI.Sprite(baked.tex);
+              bldgSpriteContainer.addChild(spr);
+              bldgSpritePoolRef.current.set(sKey, spr);
+            } else if (spr.texture !== baked.tex) {
+              spr.texture = baked.tex;
             }
-          }
-        }
-        renderQueue.sort((a, b) => a.depth - b.depth);
 
-        renderQueue.forEach(({ r, c, cell }) => {
-          const { type, level = 1, w = 1, h = 1 } = cell;
-          const elev = getTileElevation(r, c, cell);
-          const base = getMultiTileBase(r, c, w, h, elev);
-
-          // Step A: 모든 건물 하단에 2.5D 입체 석재 기단(Plinth) 및 3D 매스 렌더링
-          drawProcedural25DBuilding(bldg3DGfx, type, level, base, simTick);
-
-          // Step B: 고화질 SVG 스프라이트를 3D 기단 상단(plinthOffset)에 정확히 안착
-          const assetKey = type === 'house' ? `house_${level}` : type;
-          const metrics = BUILDING_METRICS[assetKey] || BUILDING_METRICS[type] || BUILDING_METRICS.house_1;
-          const tex = getBuildingTexture(assetKey);
-          const plinthOffset = type === 'temple' ? 12 : 5;
-
-          if (tex) {
-            const spr = new PIXI.Sprite(tex);
-            spr.anchor.set(metrics.anchorX, metrics.anchorY);
+            spr.anchor.set(baked.anchorX, baked.anchorY);
             spr.x = base.S.x;
-            spr.y = base.S.y - plinthOffset;
+            spr.y = base.S.y;
+            spr.scale.set(0.5, 0.5 * scaleY);
+            spr.zIndex = (r + h) + (c + w);
 
-            if (curTimeOfDay === 'night') spr.tint = 0x8BA3C7;
-            else if (curTimeOfDay === 'sunset') spr.tint = 0xFDBA74;
-            else spr.tint = 0xFFFFFF;
+            // 🎡 풍차 회전 날개
+            if (type === 'wheat_farm' || type === 'granary') {
+              const hubX = base.S.x;
+              const hubY = base.S.y - 64 * scaleY;
+              for (let bIdx = 0; bIdx < 4; bIdx++) {
+                const angle = simTick * 1.6 + (bIdx * Math.PI) / 2;
+                const tipX = hubX + Math.cos(angle) * 24;
+                const tipY = hubY + Math.sin(angle) * 24;
+                const sideX = hubX + Math.cos(angle + 0.28) * 18;
+                const sideY = hubY + Math.sin(angle + 0.28) * 18;
 
-            bldgContainer.addChild(spr);
-          }
+                animPartsGfx.poly([hubX, hubY, tipX, tipY, sideX, sideY]);
+                animPartsGfx.fill(0xFFFBEB);
+                animPartsGfx.stroke({ width: 1.5, color: 0x451A03 });
+              }
+            }
 
-          // 🎡 1) 밀밭 풍차 날개 실시간 회전
-          if (type === 'wheat_farm' || type === 'granary') {
-            const hubX = base.S.x - 8;
-            const hubY = base.S.y - 96;
-            for (let bIdx = 0; bIdx < 4; bIdx++) {
-              const angle = simTick * 1.5 + (bIdx * Math.PI) / 2;
-              const tipX = hubX + Math.cos(angle) * 28;
-              const tipY = hubY + Math.sin(angle) * 28;
-              const sideX = hubX + Math.cos(angle + 0.25) * 22;
-              const sideY = hubY + Math.sin(angle + 0.25) * 22;
+            // ⛲ 분수대 물줄기
+            if (type === 'fountain') {
+              const fX = base.S.x;
+              const fY = base.S.y - 46 * scaleY;
+              for (let d = 0; d < 4; d++) {
+                const t = (simTick * 1.8 + d * 0.25) % 1;
+                const dropX = fX + (d % 2 === 0 ? 1 : -1) * (t * 18);
+                const dropY = fY - Math.sin(t * Math.PI) * 15 + t * 14;
+                animPartsGfx.circle(dropX, dropY, 3);
+                animPartsGfx.fill({ color: 0xE0F2FE, alpha: 1 - t * 0.6 });
+              }
+            }
 
-              animPartsGfx.moveTo(hubX, hubY);
-              animPartsGfx.lineTo(tipX, tipY);
-              animPartsGfx.stroke({ width: 2.5, color: 0x451A03 });
-
-              animPartsGfx.poly([hubX, hubY, tipX, tipY, sideX, sideY]);
-              animPartsGfx.fill({ color: 0xFFFBEB, alpha: 0.92 });
+            if (isNight) {
+              nightGlowGfx.circle(base.S.x, base.S.y - 28, type === 'temple' ? 65 : 26);
+              nightGlowGfx.fill({ color: 0xF59E0B, alpha: curTimeOfDay === 'night' ? 0.24 : 0.12 });
             }
           }
+        }
 
-          // ⛲ 2) 대리석 분수대 물줄기 아치
-          if (type === 'fountain') {
-            const fX = base.S.x;
-            const fY = base.S.y - 62;
-            for (let d = 0; d < 4; d++) {
-              const t = (simTick * 1.8 + d * 0.25) % 1;
-              const dropX = fX + (d % 2 === 0 ? 1 : -1) * (t * 18);
-              const dropY = fY - Math.sin(t * Math.PI) * 16 + t * 14;
-              animPartsGfx.circle(dropX, dropY, 2.8);
-              animPartsGfx.fill({ color: 0xE0F2FE, alpha: 1 - t * 0.65 });
-            }
-          }
-
-          // 📊 3) 오버레이 모드 시 주택 번영도 게이지 바
-          if (type === 'house' && curOverlay !== 'normal') {
-            const barW = 36;
-            const barH = 6;
-            const bx = base.S.x - barW / 2;
-            const by = base.S.y - (60 + level * 8);
-            const ratio = level / 5;
-
-            animPartsGfx.rect(bx, by, barW, barH);
-            animPartsGfx.fill({ color: 0x1C1917, alpha: 0.9 });
-            animPartsGfx.rect(bx + 1, by + 1, (barW - 2) * ratio, barH - 2);
-            animPartsGfx.fill(curOverlay === 'water' ? 0x38BDF8 : curOverlay === 'food' ? 0x4ADE80 : 0xFACC15);
-          }
-
-          // 🕯️ 4) 야간/황혼 창문 등불 글로우
-          if (curTimeOfDay === 'night' || curTimeOfDay === 'sunset') {
-            nightGlowGfx.circle(base.S.x, base.S.y - 38, type === 'temple' ? 62 : 24);
-            nightGlowGfx.fill({ color: 0xF59E0B, alpha: curTimeOfDay === 'night' ? 0.26 : 0.15 });
+        // 철거된 건물 스프라이트 정리
+        bldgSpritePoolRef.current.forEach((spr, key) => {
+          if (!activeSpriteKeys.has(key)) {
+            bldgSpriteContainer.removeChild(spr);
+            spr.destroy();
+            bldgSpritePoolRef.current.delete(key);
           }
         });
 
-        // ===============================================================
-        // [7] 🚶 입체 보행자(Walker) 스무스 보간 이동 & 고도(Elevation) 동기화
-        // ===============================================================
+        // [6] 보행자(Walker) 렌더링
         walkerGfx.clear();
         curWalkers.forEach((w, wIdx) => {
           const wKey = w.id || wIdx;
@@ -843,7 +1128,6 @@ export default function GameEngine({
           const bounce = Math.abs(Math.sin(simTick * 4.5 + wIdx)) * 3;
           const charY = cy - bounce;
 
-          // 발밑 접지 그림자
           walkerGfx.ellipse(cx, cy + 2, 7, 3.5);
           walkerGfx.fill({ color: 0x1A0F07, alpha: 0.4 });
 
@@ -852,44 +1136,25 @@ export default function GameEngine({
             walkerGfx.fill({ color: 0xFBBF24, alpha: 0.85 });
             walkerGfx.circle(cx, charY - 18, 5.5);
             walkerGfx.fill(0xFDE68A);
-            walkerGfx.stroke({ width: 1.2, color: 0x361F12 });
-
+            walkerGfx.stroke({ width: 1.4, color: 0x271810 });
             walkerGfx.rect(cx - 4.5, charY - 12, 9, 13);
             walkerGfx.fill(0xFFFFFF);
-            walkerGfx.stroke({ width: 1.4, color: 0x361F12 });
-
-            walkerGfx.rect(cx - 1.5, charY - 12, 3, 13);
-            walkerGfx.fill(0xEF4444);
+            walkerGfx.stroke({ width: 1.4, color: 0x271810 });
           } else if (w.type === 'disciple') {
             walkerGfx.circle(cx, charY - 16, 5);
             walkerGfx.fill(0xFDE68A);
-            walkerGfx.stroke({ width: 1.2, color: 0x361F12 });
-
+            walkerGfx.stroke({ width: 1.4, color: 0x271810 });
             walkerGfx.rect(cx - 3.5, charY - 11, 7, 11);
             walkerGfx.fill(0x0284C7);
-            walkerGfx.stroke({ width: 1.2, color: 0x361F12 });
-
-            walkerGfx.moveTo(cx + 5, charY - 18);
-            walkerGfx.lineTo(cx + 5, charY + 1);
-            walkerGfx.stroke({ width: 1.6, color: 0x78350F });
+            walkerGfx.stroke({ width: 1.4, color: 0x271810 });
           } else {
             walkerGfx.rect(cx - 5.5, charY - 8, 11, 7);
-            walkerGfx.fill(0x94A3B8);
-            walkerGfx.stroke({ width: 1.2, color: 0x361F12 });
-
-            walkerGfx.circle(cx + 6, charY - 9, 4);
-            walkerGfx.fill(0x94A3B8);
-            walkerGfx.stroke({ width: 1.2, color: 0x361F12 });
-
-            walkerGfx.circle(cx - 1, charY - 10, 3.8);
-            walkerGfx.fill(0xF59E0B);
-            walkerGfx.stroke({ width: 1, color: 0x361F12 });
+            walkerGfx.fill(0xD97706);
+            walkerGfx.stroke({ width: 1.4, color: 0x271810 });
           }
         });
 
-        // ===============================================================
-        // [8] 🟩 3D 반투명 건설 홀로그램 프리뷰 박스 (3D Ghost Prism)
-        // ===============================================================
+        // [7] 건설 홀로그램 타일 표시
         previewGfx.clear();
         if (hoverTile && curTool !== 'demolish' && curTool !== 'inspect') {
           const bMeta = BUILDINGS[curTool];
@@ -900,7 +1165,6 @@ export default function GameEngine({
             const elev = getTileElevation(r, c, curGrid[r]?.[c]);
             const base = getMultiTileBase(r, c, w, h, elev);
 
-            // 건설 가능 여부 검사
             let canBuild = true;
             for (let dr = 0; dr < h; dr++) {
               for (let dc = 0; dc < w; dc++) {
@@ -910,18 +1174,57 @@ export default function GameEngine({
               }
             }
 
-            const ghostH = curTool === 'road' || curTool === 'plaza' ? 4 : curTool === 'temple' ? 70 : 28;
-            const topCol = canBuild ? 0x34D399 : 0xF87171;
-            const leftCol = canBuild ? 0x10B981 : 0xEF4444;
-            const rightCol = canBuild ? 0x059669 : 0xDC2626;
-
-            drawIsoPrism(previewGfx, base.N, base.E, base.S, base.W, ghostH, topCol, leftCol, rightCol, 0xFFFFFF, 0.45);
+            previewGfx.poly([
+              base.N.x, base.N.y,
+              base.E.x, base.E.y,
+              base.S.x, base.S.y,
+              base.W.x, base.W.y
+            ]);
+            previewGfx.fill({ color: canBuild ? 0x34D399 : 0xF87171, alpha: 0.45 });
+            previewGfx.stroke({ width: 2.5, color: 0xFFFFFF });
           }
         }
 
-        // ===============================================================
-        // [9] 🔥 성전 번제단 연기 & 실시간 떠오르는 자원 텍스트 (+12 🍞)
-        // ===============================================================
+        // [8] 떠다니는 수확 버블(Tap-to-Harvest Bubbles) 렌더링
+        bubbleGfx.clear();
+        const activeBubbleIds = new Set();
+        (curBubbles || []).forEach((b, bIdx) => {
+          activeBubbleIds.add(b.id);
+          const elev = getTileElevation(b.r, b.c, curGrid[b.r]?.[b.c]);
+          const pos = getTileCenter(b.r, b.c, elev);
+          const floatY = Math.sin(simTick * 3.2 + bIdx) * 4;
+          const bx = pos.x;
+          const by = pos.y - 58 + floatY;
+
+          bubbleGfx.poly([bx - 5, by + 12, bx + 5, by + 12, bx, by + 20]);
+          bubbleGfx.fill(0xFFFBEB);
+          bubbleGfx.circle(bx, by, 16);
+          bubbleGfx.fill(0xFFFBEB);
+          bubbleGfx.stroke({ width: 2.5, color: 0xF59E0B });
+
+          let bTxt = bubbleTextPoolRef.current.get(b.id);
+          if (!bTxt) {
+            bTxt = new PIXI.Text({
+              text: b.icon || '💰',
+              style: { fontSize: 16 }
+            });
+            bTxt.anchor.set(0.5, 0.5);
+            bubbleTextContainer.addChild(bTxt);
+            bubbleTextPoolRef.current.set(b.id, bTxt);
+          }
+          bTxt.x = bx;
+          bTxt.y = by;
+        });
+
+        bubbleTextPoolRef.current.forEach((spr, id) => {
+          if (!activeBubbleIds.has(id)) {
+            bubbleTextContainer.removeChild(spr);
+            spr.destroy();
+            bubbleTextPoolRef.current.delete(id);
+          }
+        });
+
+        // [9] 성전 번제단 연기 & 수확 텍스트
         fxGfx.clear();
         for (let r = 0; r < MAP_SIZE; r++) {
           for (let c = 0; c < MAP_SIZE; c++) {
@@ -934,24 +1237,20 @@ export default function GameEngine({
 
               for (let i = 1; i <= 5; i++) {
                 const progress = (simTick * 0.4 + i * 0.2) % 1;
-                const py = altarY - progress * 68;
-                const px = altarX + Math.sin(simTick + i) * (progress * 15);
-                const pRadius = 4.5 + progress * 9;
-
-                fxGfx.circle(px, py, pRadius);
-                fxGfx.fill({ color: 0xFFFFFF, alpha: 0.78 - progress * 0.58 });
+                const py = altarY - progress * 64;
+                const px = altarX + Math.sin(simTick + i) * (progress * 14);
+                fxGfx.circle(px, py, 4 + progress * 8);
+                fxGfx.fill({ color: 0xFFFFFF, alpha: 0.75 - progress * 0.55 });
               }
             }
           }
         }
 
-        // 실시간 부유 자원 텍스트(floatingEvents) 렌더링
-        const now = Date.now();
-        const activeIds = new Set();
+        const activeFloatIds = new Set();
         (curFloating || []).forEach(ev => {
-          const age = now - ev.createdAt;
-          if (age > 2400) return;
-          activeIds.add(ev.id);
+          const age = nowMs - ev.createdAt;
+          if (age > 2200) return;
+          activeFloatIds.add(ev.id);
 
           let txtSpr = floatTextPoolRef.current.get(ev.id);
           if (!txtSpr) {
@@ -970,17 +1269,16 @@ export default function GameEngine({
             floatTextPoolRef.current.set(ev.id, txtSpr);
           }
 
-          const progress = age / 2400;
+          const progress = age / 2200;
           const elev = getTileElevation(ev.r, ev.c, curGrid[ev.r]?.[ev.c]);
           const pos = getTileCenter(ev.r, ev.c, elev);
           txtSpr.x = pos.x;
-          txtSpr.y = pos.y - 45 - progress * 38;
+          txtSpr.y = pos.y - 48 - progress * 38;
           txtSpr.alpha = 1 - Math.pow(progress, 2);
         });
 
-        // 수명이 다한 텍스트 스프라이트 정리
         floatTextPoolRef.current.forEach((spr, id) => {
-          if (!activeIds.has(id)) {
+          if (!activeFloatIds.has(id)) {
             floatTextContainer.removeChild(spr);
             spr.destroy();
             floatTextPoolRef.current.delete(id);
@@ -992,25 +1290,16 @@ export default function GameEngine({
     return () => {
       isMounted = false;
       floatTextPoolRef.current.clear();
+      bubbleTextPoolRef.current.clear();
+      bldgSpritePoolRef.current.clear();
       if (pixiAppRef.current) {
-        pixiAppRef.current.destroy(true, { children: true, texture: true });
+        pixiAppRef.current.destroy(true, { children: true, texture: false });
         pixiAppRef.current = null;
       }
     };
   }, []);
 
   return (
-    <div ref={containerRef} className="flex-1 relative overflow-hidden w-full h-full cursor-grab active:cursor-grabbing touch-none">
-      <div className="absolute bottom-3 left-3 bg-[#2A1B12]/90 text-amber-200 text-[10.5px] font-black px-3 py-1.5 rounded-full pointer-events-none z-10 backdrop-blur-md border border-amber-500/40 shadow-lg flex items-center gap-1.5">
-        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-        <span>
-          {overlayMode === 'normal' && '⛰️ 2.5D 시온산 고지대 & 갈릴리 해안 절벽 디오라마 가동 중'}
-          {overlayMode === 'water' && '💧 수자원 공급망 오버레이 (파란 원 안의 주택 진화)'}
-          {overlayMode === 'food' && '🍞 식량·장터 보급망 오버레이 (초록 원 안의 주택 진화)'}
-          {overlayMode === 'faith' && '🕊️ 성전·회당 교화망 오버레이 (보라 원 안의 신앙 공급)'}
-          {overlayMode === 'prosperity' && '👑 주택 등급 및 번영도 오버레이'}
-        </span>
-      </div>
-    </div>
+    <div ref={containerRef} className="flex-1 relative overflow-hidden w-full h-full cursor-grab active:cursor-grabbing touch-none" />
   );
 }

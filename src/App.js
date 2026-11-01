@@ -17,6 +17,7 @@ import FiveSetMenu from './pages/FiveSetMenu';
 import Diary from './pages/Diary';
 import TrainingSubPages from './components/TrainingSubPages';
 import FamilyScreens from './pages/FamilyScreens';
+import YouthTrainingCurriculum from './pages/YouthTrainingCurriculum';
 import Interlinear from './pages/Interlinear';
 import QT from './pages/QT';
 import SecretChat from './components/SecretChat';
@@ -407,6 +408,7 @@ export function Home({
     { id: 'bibleWikiAdvanced', icon: <IconMap className="w-4 h-4"/>, color: 'text-[#34C759]', bg: 'bg-[#34C759]/12', title: '성경 위키', desc: '지식 마인드맵' },
     { id: 'interlinear', icon: <IconDocument className="w-4 h-4"/>, color: 'text-[#5AC8FA]', bg: 'bg-[#5AC8FA]/12', title: '원어 성경', desc: '히브리어·헬라어' },
     { id: 'trainingCurriculum', icon: <IconBook className="w-4 h-4"/>, color: 'text-[#AF52DE]', bg: 'bg-[#AF52DE]/12', title: '양육 커리큘럼', desc: '성장 단계별 훈련' },
+    { id: 'youthCurriculum', icon: <IconBook className="w-4 h-4"/>, color: 'text-[#34C759]', bg: 'bg-[#34C759]/12', title: '청소년 10주 양육', desc: '신앙 뿌리와 성경적 돌봄' },
     { id: 'trainingSubPages', icon: <IconDocument className="w-4 h-4"/>, color: 'text-[#007AFF]', bg: 'bg-[#007AFF]/12', title: '4주 심화 워크북', desc: '제자 훈련 심화' },
     { id: 'prayer', icon: <IconPray className="w-4 h-4"/>, color: 'text-[#34C759]', bg: 'bg-[#34C759]/12', title: '기도 보관함', desc: '나의 기도 기록' },
     { id: 'jericho', icon: <IconMap className="w-4 h-4"/>, color: 'text-[#5AC8FA]', bg: 'bg-[#5AC8FA]/12', title: '여리고 땅밟기', desc: '세상을 향한 기도' }
@@ -2082,6 +2084,9 @@ export default function CompleteQtApp() {
   
       case 'trainingCurriculum':
         return <TrainingCurriculum t={t} isDarkMode={isDarkMode} setActiveScreen={setActiveScreen} isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} />;
+      
+        case 'youthCurriculum':
+        return <YouthTrainingCurriculum t={t} isDarkMode={isDarkMode} setActiveScreen={setActiveScreen} isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} />;
 
       case 'home':
         return (
@@ -2409,7 +2414,7 @@ export default function CompleteQtApp() {
             <div className="flex-1 overflow-hidden relative z-10 w-full h-full pointer-events-auto">{renderScreen()}</div>
 
             {/* 하단 모바일 도크 바 */}
-            {!['login', 'adminConsole', 'cell', 'cellAttendance', 'galaxy', 'JerichoWalk', 'jerichowalk','jericho', 'qtArchiveDetail', 'jerusalem_tycoon', 'Jerusalem_Tycoon', 'trainingCurriculum', 'trainingSubPages', 'QTArchiveDetail', 'Jerusalem_Tycoon', 'trainingCurriculum', 'trainingSubPages', 'interlinear_kids', 'secretChat', 'generalNote', 'meditationPilgrimage', 'bible', 'reelsStudio', 'interlinear', 'mcheyne'].includes(activeScreen) && (
+            {!['login', 'adminConsole', 'cell', 'cellAttendance', 'galaxy', 'youthCurriculum', 'JerichoWalk', 'jerichowalk','jericho', 'qtArchiveDetail', 'jerusalem_tycoon', 'Jerusalem_Tycoon', 'trainingCurriculum', 'trainingSubPages', 'QTArchiveDetail', 'Jerusalem_Tycoon', 'trainingCurriculum', 'trainingSubPages', 'interlinear_kids', 'secretChat', 'generalNote', 'meditationPilgrimage', 'bible', 'reelsStudio', 'interlinear', 'mcheyne'].includes(activeScreen) && (
               <div className={`md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-[390px] h-[64px] z-[90] pointer-events-auto rounded-full backdrop-blur-2xl shadow-[0_12px_36px_rgba(0,0,0,0.25)] border transition-all ${
                 isDarkMode 
                   ? 'bg-[#1C1C1E]/90 border-white/10' 

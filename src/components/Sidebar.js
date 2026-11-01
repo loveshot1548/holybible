@@ -446,7 +446,7 @@ export default function Sidebar({
     if (supabase) {
       try {
         if (typeof logUserAction === 'function') {
-          logUserAction(TARGET_NAME, 'sanctuary_pulse', 'write', signalText);
+          logUserAction(TARGET_NAME, 'sanctuary_pulse', 'write', encryptSecret(signalText));
         }
         await supabase.from('shared_qt').upsert([{
           date: 'couple_heartbeat_pulse',
@@ -2445,7 +2445,7 @@ export default function Sidebar({
                                   <span className="text-[10.5px] font-bold text-slate-500">{log.created_at ? new Date(log.created_at).toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit'}) : ''}</span>
                                 </div>
                                 {log.action_detail && (
-                                  <p className="text-[11.5px] font-medium leading-[1.6] text-slate-400 pl-2.5 border-l-2 border-rose-500/40 mt-1">{log.action_detail}</p>
+                                  <p className="text-[11.5px] font-medium leading-[1.6] text-slate-400 pl-2.5 border-l-2 border-rose-500/40 mt-1">{decryptSecret(log.action_detail)}</p>
                                 )}
                               </div>
                             );

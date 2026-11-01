@@ -38,15 +38,18 @@ const decryptSecret = (cipherText) => {
 const parseMissionIdFromDb = (rawId) => {
   if (!rawId) return 1;
   const str = String(rawId).trim();
-  // '00000000-0000-0000-0000-000000000101' 형식인 경우 끝자리 정수 추출
+  if (str.startsWith('00000000-0000-4000-a000-')) {
+    const hexTail = str.replace('00000000-0000-4000-a000-', '');
+    const num = parseInt(hexTail, 16);
+    return isNaN(num) ? 1 : num;
+  }
   if (str.startsWith('00000000-0000-0000-0000-')) {
     const tail = str.replace('00000000-0000-0000-0000-', '');
     const num = parseInt(tail, 10);
     return isNaN(num) ? 1 : num;
   }
-  // 일반 정수 문자열인 경우
   const num = parseInt(str, 10);
-  return isNaN(num) ? str : num;
+  return isNaN(num) ? 1 : num;
 };
 
 // 🌟 [DB 미조회 시 100% 오프라인 작동 보장용 12종 마스터 템플릿]
@@ -220,6 +223,7 @@ export default function MissionReceiverModal({ currentUserName = '' }) {
     }
   };
 
+  // ✅ 변경 후 (MissionReceiverModal.js 192~207번째 줄 교체)
   const reportStatusToShindong = useCallback(async (status, quickReplyText = null) => {
     if (!supabase) return;
     try {
@@ -229,6 +233,16 @@ export default function MissionReceiverModal({ currentUserName = '' }) {
       };
       if (quickReplyText) {
         updatePayload.partner_quick_reply = encryptSecret(quickReplyText);
+        // 신동님 화면 상단에 즉시 심장박동 토스트로도 띄우기
+        await supabase.from('shared_qt').upsert([{
+          date: 'couple_heartbeat_pulse',
+          video_id: encryptSecret(JSON.stringify({
+            sender: '모하나',
+            message: `🔥 [모하나 미션 시그널] ${quickReplyText}`,
+            temp: 39.5,
+            timestamp: Date.now()
+          }))
+        }], { onConflict: 'date' });
       }
       await supabase
         .from('mission_dispatch_status')

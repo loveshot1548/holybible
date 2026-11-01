@@ -675,30 +675,27 @@ export default function PositionLab({ currentUserName = '정신동' }) {
     }
   };
 
+  // ✅ 변경 후 (PositionLab.js 462~497번째 줄 교체)
   const handleApprovePhoto = async (isApproved) => {
     if (!supabase) return;
     try {
       const { data: session } = await supabase.from('active_mission_session').select('*').eq('id', 1).single();
       if (!session) return;
 
-      let totalStepsCount = 1;
-      const { count } = await supabase
-        .from('mission_steps')
-        .select('id', { count: 'exact', head: true })
-        .eq('mission_id', session.current_mission_id);
-        
-      if (count && count > 0) {
-        totalStepsCount = count;
-      } else {
-        const activeMissionObj = missions.find(m => m.id === session.current_mission_id);
-        totalStepsCount = activeMissionObj?.steps?.length || 1;
-      }
+      // UUID에서 정수 미션 ID 추출
+      const rawUuid = String(session.current_mission_id || '');
+      const numericMissionId = rawUuid.startsWith('00000000-0000-4000-a000-')
+        ? parseInt(rawUuid.replace('00000000-0000-4000-a000-', ''), 16)
+        : Number(rawUuid) || selectedMissionId;
 
-      const nextStep = session.current_step_order + 1;
+      const activeMissionObj = missions.find(m => m.id === numericMissionId) || missions.find(m => m.id === selectedMissionId);
+      const totalStepsCount = activeMissionObj?.steps?.length || 2;
+
+      const nextStep = (session.current_step_order || 1) + 1;
       const isLast = nextStep > totalStepsCount;
 
       await supabase.from('active_mission_session').update({
-        step_status: isApproved ? (isLast ? 'completed' : 'reading') : 'failed',
+        step_status: isApproved ? (isLast ? 'completed' : 'acting') : 'failed',
         current_step_order: isApproved && !isLast ? nextStep : session.current_step_order,
         auth_photo_url: isApproved ? null : session.auth_photo_url,
         updated_at: new Date().toISOString()
@@ -706,9 +703,9 @@ export default function PositionLab({ currentUserName = '정신동' }) {
 
       if (isApproved) {
         setPartnerAuthPhoto(null); 
-        alert(isLast ? "모든 단계 인증을 최종 승인했습니다! 모하나 미션이 완료되었습니다." : `Step ${session.current_step_order} 인증을 승인했습니다. 다음 단계(Step ${nextStep})로 넘어갑니다.`);
+        alert(isLast ? "🎉 모든 단계 인증을 최종 승인했습니다! 모하나 미션이 완료되었습니다." : `Step ${session.current_step_order} 인증을 승인했습니다. 다음 단계(Step ${nextStep})로 넘어갑니다.`);
       } else {
-        alert("반려(FAIL) 처리했습니다. 모하나에게 즉시 패널티 프로토콜이 발동됩니다.");
+        alert("🚨 반려(FAIL) 처리했습니다. 모하나에게 즉시 패널티 프로토콜이 발동됩니다.");
       }
     } catch(e) {
       alert("승인 처리 중 오류 발생: " + e.message);
