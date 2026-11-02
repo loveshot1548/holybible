@@ -13,6 +13,7 @@ import SermonArchiveAdvanced from './components/SermonArchiveAdvanced';
 import BibleWikiAdvanced from './pages/BibleWikiAdvanced'; 
 import Bible from './pages/Bible';
 import BibleMapViewer from './components/BibleMapViewer';
+import BibleSecondBrain3D from './pages/BibleSecondBrain3D';
 import FiveSetMenu from './pages/FiveSetMenu';
 import Diary from './pages/Diary';
 import TrainingSubPages from './components/TrainingSubPages';
@@ -2047,6 +2048,15 @@ export default function CompleteQtApp() {
             setTargetVerse={setTargetVerse}
           />
         );
+      case 'bibleSecondBrain':
+        return (
+          <BibleSecondBrain3D
+            setActiveScreen={setActiveScreen}
+            setCurrentChapId={setCurrentChapId}
+            setBibleViewMode={setBibleViewMode}
+            setTargetVerse={setTargetVerse}
+          />
+        );
 
       case 'sermonAnalytics':
       case 'sermonAnalysis':
@@ -2414,7 +2424,7 @@ export default function CompleteQtApp() {
             <div className="flex-1 overflow-hidden relative z-10 w-full h-full pointer-events-auto">{renderScreen()}</div>
 
             {/* 하단 모바일 도크 바 */}
-            {!['login', 'adminConsole', 'cell', 'cellAttendance', 'galaxy', 'youthCurriculum', 'JerichoWalk', 'jerichowalk','jericho', 'qtArchiveDetail', 'jerusalem_tycoon', 'Jerusalem_Tycoon', 'trainingCurriculum', 'trainingSubPages', 'QTArchiveDetail', 'Jerusalem_Tycoon', 'trainingCurriculum', 'trainingSubPages', 'interlinear_kids', 'secretChat', 'generalNote', 'meditationPilgrimage', 'bible', 'reelsStudio', 'interlinear', 'mcheyne'].includes(activeScreen) && (
+            {!['login', 'adminConsole', 'cell', 'bibleSecondBrain', 'cellAttendance', 'galaxy', 'youthCurriculum', 'JerichoWalk', 'jerichowalk','jericho', 'qtArchiveDetail', 'jerusalem_tycoon', 'Jerusalem_Tycoon', 'trainingCurriculum', 'trainingSubPages', 'QTArchiveDetail', 'Jerusalem_Tycoon', 'trainingCurriculum', 'trainingSubPages', 'interlinear_kids', 'secretChat', 'generalNote', 'meditationPilgrimage', 'bible', 'reelsStudio', 'interlinear', 'mcheyne'].includes(activeScreen) && (
               <div className={`md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-[390px] h-[64px] z-[90] pointer-events-auto rounded-full backdrop-blur-2xl shadow-[0_12px_36px_rgba(0,0,0,0.25)] border transition-all ${
                 isDarkMode 
                   ? 'bg-[#1C1C1E]/90 border-white/10' 

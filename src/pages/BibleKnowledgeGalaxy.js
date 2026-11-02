@@ -3529,6 +3529,18 @@ export default function BibleKnowledgeGalaxy({
               >
                 📋 나열
               </button>
+              {/* 📍 src/pages/BibleKnowledgeGalaxy.js (🪐 3D 버튼 바로 아래에 추가) */}
+              <button
+                onClick={() => {
+                  if (typeof setActiveScreen === 'function') {
+                    setActiveScreen('bibleSecondBrain');
+                  }
+                }}
+                className="px-2.5 py-1 rounded-lg text-[10.5px] sm:text-[11px] font-black transition-all cursor-pointer whitespace-nowrap bg-gradient-to-r from-fuchsia-500 to-indigo-500 text-white shadow-sm hover:opacity-95"
+                title="KRONOS 3D 세컨드 브레인 신경망 페이지로 이동"
+              >
+                🧠 세컨드 브레인
+              </button>
             </div>
 
             <button
