@@ -22,6 +22,7 @@ import YouthTrainingCurriculum from './pages/YouthTrainingCurriculum';
 import Interlinear from './pages/Interlinear';
 import QT from './pages/QT';
 import SecretChat from './components/SecretChat';
+import MetaverseHub from './metaverse/MetaverseHub';
 import Mcheyne from './pages/Mcheyne';
 import Cell from './pages/Cell';
 import SermonDetail from './components/SermonDetail';
@@ -47,6 +48,7 @@ import ReelsStudio from './components/layout/ReelsStudio';
 import InterlinearKids from './pages/InterlinearKids';
 import JerusalemTycoon from './pages/JerusalemTycoon';
 import BibleKnowledgeGalaxy from './pages/BibleKnowledgeGalaxy';
+import VirtualChurchLobby from './pages/VirtualChurchLobby';
 
 // 🛡️ [전역 안정화 패치] Passive 이벤트 리스너 내부의 preventDefault 호출 에러 원천 차단
 if (typeof window !== 'undefined' && typeof Event !== 'undefined') {
@@ -412,7 +414,8 @@ export function Home({
     { id: 'youthCurriculum', icon: <IconBook className="w-4 h-4"/>, color: 'text-[#34C759]', bg: 'bg-[#34C759]/12', title: '청소년 10주 양육', desc: '신앙 뿌리와 성경적 돌봄' },
     { id: 'trainingSubPages', icon: <IconDocument className="w-4 h-4"/>, color: 'text-[#007AFF]', bg: 'bg-[#007AFF]/12', title: '4주 심화 워크북', desc: '제자 훈련 심화' },
     { id: 'prayer', icon: <IconPray className="w-4 h-4"/>, color: 'text-[#34C759]', bg: 'bg-[#34C759]/12', title: '기도 보관함', desc: '나의 기도 기록' },
-    { id: 'jericho', icon: <IconMap className="w-4 h-4"/>, color: 'text-[#5AC8FA]', bg: 'bg-[#5AC8FA]/12', title: '여리고 땅밟기', desc: '세상을 향한 기도' }
+    { id: 'jericho', icon: <IconMap className="w-4 h-4"/>, color: 'text-[#5AC8FA]', bg: 'bg-[#5AC8FA]/12', title: '여리고 땅밟기', desc: '세상을 향한 기도' },
+    { id: 'virtualChurch', icon: <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0012 9.75c-2.551 0-5.056.2-7.5.582V21M3 21h18M12 6.75h.008v.008H12V6.75z" /></svg>, color: 'text-[#10B981]', bg: 'bg-[#10B981]/12', title: '3D 가상교회 투어', desc: '1층 로비·예배당·교육관 탐험' }
   ], []);
 
   const [menuOrderIds, setMenuOrderIds] = useState(() => {
@@ -2017,6 +2020,11 @@ export default function CompleteQtApp() {
             setActiveScreen={setActiveScreen} 
           />
         );
+      
+        case 'virtualChurch':
+  return <VirtualChurchLobby setActiveScreen={setActiveScreen} />; 
+    
+     
 
       case 'secretChat':
         return <SecretChat currentUser={authUser} setActiveScreen={setActiveScreen} />;
@@ -2424,7 +2432,7 @@ export default function CompleteQtApp() {
             <div className="flex-1 overflow-hidden relative z-10 w-full h-full pointer-events-auto">{renderScreen()}</div>
 
             {/* 하단 모바일 도크 바 */}
-            {!['login', 'adminConsole', 'cell', 'bibleSecondBrain', 'cellAttendance', 'galaxy', 'youthCurriculum', 'JerichoWalk', 'jerichowalk','jericho', 'qtArchiveDetail', 'jerusalem_tycoon', 'Jerusalem_Tycoon', 'trainingCurriculum', 'trainingSubPages', 'QTArchiveDetail', 'Jerusalem_Tycoon', 'trainingCurriculum', 'trainingSubPages', 'interlinear_kids', 'secretChat', 'generalNote', 'meditationPilgrimage', 'bible', 'reelsStudio', 'interlinear', 'mcheyne'].includes(activeScreen) && (
+            {!['login', 'adminConsole', 'cell', 'virtualChurch', 'bibleSecondBrain', 'cellAttendance', 'galaxy', 'youthCurriculum', 'JerichoWalk', 'jerichowalk','jericho', 'qtArchiveDetail', 'jerusalem_tycoon', 'Jerusalem_Tycoon', 'trainingCurriculum', 'trainingSubPages', 'QTArchiveDetail', 'Jerusalem_Tycoon', 'trainingCurriculum', 'trainingSubPages', 'interlinear_kids', 'secretChat', 'generalNote', 'meditationPilgrimage', 'bible', 'reelsStudio', 'interlinear', 'mcheyne'].includes(activeScreen) && (
               <div className={`md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-[390px] h-[64px] z-[90] pointer-events-auto rounded-full backdrop-blur-2xl shadow-[0_12px_36px_rgba(0,0,0,0.25)] border transition-all ${
                 isDarkMode 
                   ? 'bg-[#1C1C1E]/90 border-white/10' 
