@@ -2022,9 +2022,7 @@ export default function CompleteQtApp() {
         );
       
         case 'virtualChurch':
-  return <VirtualChurchLobby setActiveScreen={setActiveScreen} />; 
-    
-     
+  return <MetaverseHub setActiveScreen={setActiveScreen} />;
 
       case 'secretChat':
         return <SecretChat currentUser={authUser} setActiveScreen={setActiveScreen} />;
