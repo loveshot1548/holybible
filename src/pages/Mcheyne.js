@@ -1,4 +1,4 @@
-// src/pages/Mcheyne.js (또는 src/components/Mcheyne.js)
+// src/pages/Mcheyne.js
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { getCrossReferences } from '../lib/tskHelper';
@@ -10,7 +10,7 @@ import {
 } from '../pages/BibleKnowledgeGalaxy';
 
 // =====================================================================
-// 🔐 [보안 표준화] 군사급 AES-256 종단간 암호화
+// 암호화 표준화 유틸리티
 // =====================================================================
 const CHAT_SECRET_KEY = process.env.REACT_APP_CHAT_SECRET || 'tree-secret-key-2026';
 const ENC_PREFIX_V2 = "ENC_GTC_v2::";
@@ -28,7 +28,6 @@ const encryptField = (plainText) => {
 
 const decryptField = (cipherText) => {
   if (!cipherText || typeof cipherText !== 'string') return cipherText || '';
-  
   if (cipherText.startsWith(ENC_PREFIX_V2)) {
     try {
       const rawCipher = cipherText.replace(ENC_PREFIX_V2, '');
@@ -39,7 +38,6 @@ const decryptField = (cipherText) => {
       return cipherText;
     }
   }
-
   if (cipherText.startsWith(ENC_PREFIX_V1)) {
     try {
       const payload = cipherText.replace(ENC_PREFIX_V1, '');
@@ -48,11 +46,9 @@ const decryptField = (cipherText) => {
       return cipherText;
     }
   }
-
   return cipherText;
 };
 
-// 성경 구절 정밀 정규식 추출기 (타이핑 노트 실시간 감지용)
 const extractBibleReferences = (text) => {
   if (!text) return [];
   const extracted = typeof extractAllBibleRefsFromText === 'function'
@@ -64,75 +60,141 @@ const extractBibleReferences = (text) => {
 };
 
 // =====================================================================
-// 📜 [성경 66권 한글-영문 명칭 & 정경 분류 마스터 맵]
+// 성경 66권 정경 분류 및 맥체인 내장 강해 마스터 데이터
 // =====================================================================
 const BIBLE_66_MAP = {
-  "Genesis": { ko: "창세기", isOT: true, section: "모세오경" }, "창세기": { ko: "창세기", isOT: true, section: "모세오경" },
-  "Exodus": { ko: "출애굽기", isOT: true, section: "모세오경" }, "출애굽기": { ko: "출애굽기", isOT: true, section: "모세오경" },
-  "Leviticus": { ko: "레위기", isOT: true, section: "모세오경" }, "레위기": { ko: "레위기", isOT: true, section: "모세오경" },
-  "Numbers": { ko: "민수기", isOT: true, section: "모세오경" }, "민수기": { ko: "민수기", isOT: true, section: "모세오경" },
-  "Deuteronomy": { ko: "신명기", isOT: true, section: "모세오경" }, "신명기": { ko: "신명기", isOT: true, section: "모세오경" },
-  "Joshua": { ko: "여호수아", isOT: true, section: "역사서" }, "여호수아": { ko: "여호수아", isOT: true, section: "역사서" },
-  "Judges": { ko: "사사기", isOT: true, section: "역사서" }, "사사기": { ko: "사사기", isOT: true, section: "역사서" },
-  "Ruth": { ko: "룻기", isOT: true, section: "역사서" }, "룻기": { ko: "룻기", isOT: true, section: "역사서" },
-  "1 Samuel": { ko: "사무엘상", isOT: true, section: "역사서" }, "사무엘상": { ko: "사무엘상", isOT: true, section: "역사서" },
-  "2 Samuel": { ko: "사무엘하", isOT: true, section: "역사서" }, "사무엘하": { ko: "사무엘하", isOT: true, section: "역사서" },
-  "1 Kings": { ko: "열왕기상", isOT: true, section: "역사서" }, "열왕기상": { ko: "열왕기상", isOT: true, section: "역사서" },
-  "2 Kings": { ko: "열왕기하", isOT: true, section: "역사서" }, "열왕기하": { ko: "열왕기하", isOT: true, section: "역사서" },
-  "1 Chronicles": { ko: "역대상", isOT: true, section: "역사서" }, "역대상": { ko: "역대상", isOT: true, section: "역사서" },
-  "2 Chronicles": { ko: "역대하", isOT: true, section: "역사서" }, "역대하": { ko: "역대하", isOT: true, section: "역사서" },
-  "Ezra": { ko: "에스라", isOT: true, section: "역사서" }, "에스라": { ko: "에스라", isOT: true, section: "역사서" },
-  "Nehemiah": { ko: "느헤미야", isOT: true, section: "역사서" }, "느헤미야": { ko: "느헤미야", isOT: true, section: "역사서" },
-  "Esther": { ko: "에스더", isOT: true, section: "역사서" }, "에스더": { ko: "에스더", isOT: true, section: "역사서" },
-  "Job": { ko: "욥기", isOT: true, section: "시가서" }, "욥기": { ko: "욥기", isOT: true, section: "시가서" },
-  "Psalms": { ko: "시편", isOT: true, section: "시가서" }, "시편": { ko: "시편", isOT: true, section: "시가서" },
-  "Proverbs": { ko: "잠언", isOT: true, section: "시가서" }, "잠언": { ko: "잠언", isOT: true, section: "시가서" },
-  "Ecclesiastes": { ko: "전도서", isOT: true, section: "시가서" }, "전도서": { ko: "전도서", isOT: true, section: "시가서" },
-  "Song of Solomon": { ko: "아가", isOT: true, section: "시가서" }, "아가": { ko: "아가", isOT: true, section: "시가서" },
-  "Isaiah": { ko: "이사야", isOT: true, section: "선지서" }, "이사야": { ko: "이사야", isOT: true, section: "선지서" },
-  "Jeremiah": { ko: "예레미야", isOT: true, section: "선지서" }, "예레미야": { ko: "예레미야", isOT: true, section: "선지서" },
-  "Lamentations": { ko: "예레미야애가", isOT: true, section: "선지서" }, "예레미야애가": { ko: "예레미야애가", isOT: true, section: "선지서" },
-  "Ezekiel": { ko: "에스겔", isOT: true, section: "선지서" }, "에스겔": { ko: "에스겔", isOT: true, section: "선지서" },
-  "Daniel": { ko: "다니엘", isOT: true, section: "선지서" }, "다니엘": { ko: "다니엘", isOT: true, section: "선지서" },
-  "Hosea": { ko: "호세아", isOT: true, section: "선지서" }, "호세아": { ko: "호세아", isOT: true, section: "선지서" },
-  "Joel": { ko: "요엘", isOT: true, section: "선지서" }, "요엘": { ko: "요엘", isOT: true, section: "선지서" },
-  "Amos": { ko: "아모스", isOT: true, section: "선지서" }, "아모스": { ko: "아모스", isOT: true, section: "선지서" },
-  "Obadiah": { ko: "오바댜", isOT: true, section: "선지서" }, "오바댜": { ko: "오바댜", isOT: true, section: "선지서" },
-  "Jonah": { ko: "요나", isOT: true, section: "선지서" }, "요나": { ko: "요나", isOT: true, section: "선지서" },
-  "Micah": { ko: "미가", isOT: true, section: "선지서" }, "미가": { ko: "미가", isOT: true, section: "선지서" },
-  "Nahum": { ko: "나훔", isOT: true, section: "선지서" }, "나훔": { ko: "나훔", isOT: true, section: "선지서" },
-  "Habakkuk": { ko: "하박국", isOT: true, section: "선지서" }, "하박국": { ko: "하박국", isOT: true, section: "선지서" },
-  "Zephaniah": { ko: "스바냐", isOT: true, section: "선지서" }, "스바냐": { ko: "스바냐", isOT: true, section: "선지서" },
-  "Haggai": { ko: "학개", isOT: true, section: "선지서" }, "학개": { ko: "학개", isOT: true, section: "선지서" },
-  "Zechariah": { ko: "스가랴", isOT: true, section: "선지서" }, "스가랴": { ko: "스가랴", isOT: true, section: "선지서" },
-  "Malachi": { ko: "말라기", isOT: true, section: "선지서" }, "말라기": { ko: "말라기", isOT: true, section: "선지서" },
-  "Matthew": { ko: "마태복음", isOT: false, section: "복음/역사" }, "마태복음": { ko: "마태복음", isOT: false, section: "복음/역사" },
-  "Mark": { ko: "마가복음", isOT: false, section: "복음/역사" }, "마가복음": { ko: "마가복음", isOT: false, section: "복음/역사" },
-  "Luke": { ko: "누가복음", isOT: false, section: "복음/역사" }, "누가복음": { ko: "누가복음", isOT: false, section: "복음/역사" },
-  "John": { ko: "요한복음", isOT: false, section: "복음/역사" }, "요한복음": { ko: "요한복음", isOT: false, section: "복음/역사" },
-  "Acts": { ko: "사도행전", isOT: false, section: "복음/역사" }, "사도행전": { ko: "사도행전", isOT: false, section: "복음/역사" },
-  "Romans": { ko: "로마서", isOT: false, section: "서신서" }, "로마서": { ko: "로마서", isOT: false, section: "서신서" },
-  "1 Corinthians": { ko: "고린도전서", isOT: false, section: "서신서" }, "고린도전서": { ko: "고린도전서", isOT: false, section: "서신서" },
-  "2 Corinthians": { ko: "고린도후서", isOT: false, section: "서신서" }, "고린도후서": { ko: "고린도후서", isOT: false, section: "서신서" },
-  "Galatians": { ko: "갈라디아서", isOT: false, section: "서신서" }, "갈라디아서": { ko: "갈라디아서", isOT: false, section: "서신서" },
-  "Ephesians": { ko: "에베소서", isOT: false, section: "서신서" }, "에베소서": { ko: "에베소서", isOT: false, section: "서신서" },
-  "Philippians": { ko: "빌립보서", isOT: false, section: "서신서" }, "빌립보서": { ko: "빌립보서", isOT: false, section: "서신서" },
-  "Colossians": { ko: "골로새서", isOT: false, section: "서신서" }, "골로새서": { ko: "골로새서", isOT: false, section: "서신서" },
-  "1 Thessalonians": { ko: "데살로니가전서", isOT: false, section: "서신서" }, "데살로니가전서": { ko: "데살로니가전서", isOT: false, section: "서신서" },
-  "2 Thessalonians": { ko: "데살로니가후서", isOT: false, section: "서신서" }, "데살로니가후서": { ko: "데살로니가후서", isOT: false, section: "서신서" },
-  "1 Timothy": { ko: "디모데전서", isOT: false, section: "서신서" }, "디모데전서": { ko: "디모데전서", isOT: false, section: "서신서" },
-  "2 Timothy": { ko: "디모데후서", isOT: false, section: "서신서" }, "디모데후서": { ko: "디모데후서", isOT: false, section: "서신서" },
-  "Titus": { ko: "디도서", isOT: false, section: "서신서" }, "디도서": { ko: "디도서", isOT: false, section: "서신서" },
-  "Philemon": { ko: "빌레몬서", isOT: false, section: "서신서" }, "빌레몬서": { ko: "빌레몬서", isOT: false, section: "서신서" },
-  "Hebrews": { ko: "히브리서", isOT: false, section: "서신서" }, "히브리서": { ko: "히브리서", isOT: false, section: "서신서" },
-  "James": { ko: "야고보서", isOT: false, section: "서신서" }, "야고보서": { ko: "야고보서", isOT: false, section: "서신서" },
-  "1 Peter": { ko: "베드로전서", isOT: false, section: "서신서" }, "베드로전서": { ko: "베드로전서", isOT: false, section: "서신서" },
-  "2 Peter": { ko: "베드로후서", isOT: false, section: "서신서" }, "베드로후서": { ko: "베드로후서", isOT: false, section: "서신서" },
-  "1 John": { ko: "요한일서", isOT: false, section: "서신서" }, "요한일서": { ko: "요한일서", isOT: false, section: "서신서" },
-  "2 John": { ko: "요한이서", isOT: false, section: "서신서" }, "요한이서": { ko: "요한이서", isOT: false, section: "서신서" },
-  "3 John": { ko: "요한삼서", isOT: false, section: "서신서" }, "요한삼서": { ko: "요한삼서", isOT: false, section: "서신서" },
-  "Jude": { ko: "유다서", isOT: false, section: "서신서" }, "유다서": { ko: "유다서", isOT: false, section: "서신서" },
-  "Revelation": { ko: "요한계시록", isOT: false, section: "서신서" }, "요한계시록": { ko: "요한계시록", isOT: false, section: "서신서" }
+  "Genesis": { ko: "창세기", isOT: true, section: "모세오경", theme: "천지창조와 족장들을 통한 하나님의 언약 수립" },
+  "창세기": { ko: "창세기", isOT: true, section: "모세오경", theme: "천지창조와 족장들을 통한 하나님의 언약 수립" },
+  "Exodus": { ko: "출애굽기", isOT: true, section: "모세오경", theme: "유월절 어린양의 피로 구속받은 언약 백성의 탄생과 성막" },
+  "출애굽기": { ko: "출애굽기", isOT: true, section: "모세오경", theme: "유월절 어린양의 피로 구속받은 언약 백성의 탄생과 성막" },
+  "Leviticus": { ko: "레위기", isOT: true, section: "모세오경", theme: "거룩하신 하나님께 나아가는 제사법과 성결의 규례" },
+  "레위기": { ko: "레위기", isOT: true, section: "모세오경", theme: "거룩하신 하나님께 나아가는 제사법과 성결의 규례" },
+  "Numbers": { ko: "민수기", isOT: true, section: "모세오경", theme: "광야 순례길의 연단과 불순종 속에서도 신실하신 하나님의 인도" },
+  "민수기": { ko: "민수기", isOT: true, section: "모세오경", theme: "광야 순례길의 연단과 불순종 속에서도 신실하신 하나님의 인도" },
+  "Deuteronomy": { ko: "신명기", isOT: true, section: "모세오경", theme: "가나안 입성 전 모세의 고별 설교와 언약의 재갱신" },
+  "신명기": { ko: "신명기", isOT: true, section: "모세오경", theme: "가나안 입성 전 모세의 고별 설교와 언약의 재갱신" },
+  "Joshua": { ko: "여호수아", isOT: true, section: "역사서", theme: "약속의 땅 정복과 분배를 통한 언약 성취" },
+  "여호수아": { ko: "여호수아", isOT: true, section: "역사서", theme: "약속의 땅 정복과 분배를 통한 언약 성취" },
+  "Judges": { ko: "사사기", isOT: true, section: "역사서", theme: "배교와 징계, 부르짖음과 구원의 순환 속에 나타난 하나님의 긍휼" },
+  "사사기": { ko: "사사기", isOT: true, section: "역사서", theme: "배교와 징계, 부르짖음과 구원의 순환 속에 나타난 하나님의 긍휼" },
+  "Ruth": { ko: "룻기", isOT: true, section: "역사서", theme: "기업 무를 자(고엘) 보아스를 통해 이어지는 다윗과 메시아의 계보" },
+  "룻기": { ko: "룻기", isOT: true, section: "역사서", theme: "기업 무를 자(고엘) 보아스를 통해 이어지는 다윗과 메시아의 계보" },
+  "1 Samuel": { ko: "사무엘상", isOT: true, section: "역사서", theme: "사사 시대에서 왕정 시대로의 전환과 다윗을 향한 하나님의 선택" },
+  "사무엘상": { ko: "사무엘상", isOT: true, section: "역사서", theme: "사사 시대에서 왕정 시대로의 전환과 다윗을 향한 하나님의 선택" },
+  "2 Samuel": { ko: "사무엘하", isOT: true, section: "역사서", theme: "다윗 왕국의 확립과 영원한 왕위에 대한 다윗 언약(삼하 7장)" },
+  "사무엘하": { ko: "사무엘하", isOT: true, section: "역사서", theme: "다윗 왕국의 확립과 영원한 왕위에 대한 다윗 언약(삼하 7장)" },
+  "1 Kings": { ko: "열왕기상", isOT: true, section: "역사서", theme: "솔로몬 성전 건축과 왕국의 분열, 선지자 엘리야의 영적 투쟁" },
+  "열왕기상": { ko: "열왕기상", isOT: true, section: "역사서", theme: "솔로몬 성전 건축과 왕국의 분열, 선지자 엘리야의 영적 투쟁" },
+  "2 Kings": { ko: "열왕기하", isOT: true, section: "역사서", theme: "왕국의 패망 속에서도 언약의 말씀과 다윗의 등불을 보존하시는 섭리" },
+  "열왕기하": { ko: "열왕기하", isOT: true, section: "역사서", theme: "왕국의 패망 속에서도 언약의 말씀과 다윗의 등불을 보존하시는 섭리" },
+  "1 Chronicles": { ko: "역대상", isOT: true, section: "역사서", theme: "포로 귀환 공동체를 위한 다윗 언약과 성전 예배 중심의 계보" },
+  "역대상": { ko: "역대상", isOT: true, section: "역사서", theme: "포로 귀환 공동체를 위한 다윗 언약과 성전 예배 중심의 계보" },
+  "2 Chronicles": { ko: "역대하", isOT: true, section: "역사서", theme: "솔로몬 성전부터 유다 왕들의 개혁과 성전 회복의 역사" },
+  "역대하": { ko: "역대하", isOT: true, section: "역사서", theme: "솔로몬 성전부터 유다 왕들의 개혁과 성전 회복의 역사" },
+  "Ezra": { ko: "에스라", isOT: true, section: "역사서", theme: "바벨론 포로 귀환과 성전 재건, 율법 공동체의 영적 부흥" },
+  "에스라": { ko: "에스라", isOT: true, section: "역사서", theme: "바벨론 포로 귀환과 성전 재건, 율법 공동체의 영적 부흥" },
+  "Nehemiah": { ko: "느헤미야", isOT: true, section: "역사서", theme: "예루살렘 성벽 재건과 언약 공동체의 회개 및 신앙 개혁" },
+  "느헤미야": { ko: "느헤미야", isOT: true, section: "역사서", theme: "예루살렘 성벽 재건과 언약 공동체의 회개 및 신앙 개혁" },
+  "Esther": { ko: "에스더", isOT: true, section: "역사서", theme: "역사의 배후에서 보이지 않는 손으로 자기 백성을 보존하시는 섭리" },
+  "에스더": { ko: "에스더", isOT: true, section: "역사서", theme: "역사의 배후에서 보이지 않는 손으로 자기 백성을 보존하시는 섭리" },
+  "Job": { ko: "욥기", isOT: true, section: "시가서", theme: "의인의 고난과 주권자 하나님 앞에서의 참된 경외와 겸손" },
+  "욥기": { ko: "욥기", isOT: true, section: "시가서", theme: "의인의 고난과 주권자 하나님 앞에서의 참된 경외와 겸손" },
+  "Psalms": { ko: "시편", isOT: true, section: "시가서", theme: "언약 백성이 올려드리는 찬양과 탄식, 감사와 메시아 예언의 기도" },
+  "시편": { ko: "시편", isOT: true, section: "시가서", theme: "언약 백성이 올려드리는 찬양과 탄식, 감사와 메시아 예언의 기도" },
+  "Proverbs": { ko: "잠언", isOT: true, section: "시가서", theme: "여호와를 경외하는 지혜가 일상과 공동체 삶에서 맺는 열매" },
+  "잠언": { ko: "잠언", isOT: true, section: "시가서", theme: "여호와를 경외하는 지혜가 일상과 공동체 삶에서 맺는 열매" },
+  "Ecclesiastes": { ko: "전도서", isOT: true, section: "시가서", theme: "해 아래 모든 수고의 한계를 넘어 창조주 하나님을 경외하는 본분" },
+  "전도서": { ko: "전도서", isOT: true, section: "시가서", theme: "해 아래 모든 수고의 한계를 넘어 창조주 하나님을 경외하는 본분" },
+  "Song of Solomon": { ko: "아가", isOT: true, section: "시가서", theme: "신랑과 신부의 사랑을 통해 예표된 그리스도와 교회의 연합" },
+  "아가": { ko: "아가", isOT: true, section: "시가서", theme: "신랑과 신부의 사랑을 통해 예표된 그리스도와 교회의 연합" },
+  "Isaiah": { ko: "이사야", isOT: true, section: "선지서", theme: "거룩하신 하나님의 심판과 고난받는 종을 통한 구속의 복음" },
+  "이사야": { ko: "이사야", isOT: true, section: "선지서", theme: "거룩하신 하나님의 심판과 고난받는 종을 통한 구속의 복음" },
+  "Jeremiah": { ko: "예레미야", isOT: true, section: "선지서", theme: "유다의 심판 경고와 마음에 새기실 새 언약(렘 31:31)의 약속" },
+  "예레미야": { ko: "예레미야", isOT: true, section: "선지서", theme: "유다의 심판 경고와 마음에 새기실 새 언약(렘 31:31)의 약속" },
+  "Lamentations": { ko: "예레미야애가", isOT: true, section: "선지서", theme: "무너진 성읍의 애통 속에서도 아침마다 새로우신 여호와의 성실하심" },
+  "예레미야애가": { ko: "예레미야애가", isOT: true, section: "선지서", theme: "무너진 성읍의 애통 속에서도 아침마다 새로우신 여호와의 성실하심" },
+  "Ezekiel": { ko: "에스겔", isOT: true, section: "선지서", theme: "마른 뼈의 부활과 새 성전을 통해 다시 임재하시는 여호와의 영광" },
+  "에스겔": { ko: "에스겔", isOT: true, section: "선지서", theme: "마른 뼈의 부활과 새 성전을 통해 다시 임재하시는 여호와의 영광" },
+  "Daniel": { ko: "다니엘", isOT: true, section: "선지서", theme: "세상 제국들의 흥망성쇠를 주관하시고 영원한 나라를 세우시는 주권" },
+  "다니엘": { ko: "다니엘", isOT: true, section: "선지서", theme: "세상 제국들의 흥망성쇠를 주관하시고 영원한 나라를 세우시는 주권" },
+  "Hosea": { ko: "호세아", isOT: true, section: "선지서", theme: "반역한 백성을 끝까지 찾아가 회복시키시는 하나님의 언약적 사랑(헤세드)" },
+  "호세아": { ko: "호세아", isOT: true, section: "선지서", theme: "반역한 백성을 끝까지 찾아가 회복시키시는 하나님의 언약적 사랑(헤세드)" },
+  "Joel": { ko: "요엘", isOT: true, section: "선지서", theme: "여호와의 날의 심판과 만민에게 부어주실 성령 강림의 약속" },
+  "요엘": { ko: "요엘", isOT: true, section: "선지서", theme: "여호와의 날의 심판과 만민에게 부어주실 성령 강림의 약속" },
+  "Amos": { ko: "아모스", isOT: true, section: "선지서", theme: "형식적 제사를 배격하시고 정의와 공의를 강물처럼 흘릴 것을 요구하심" },
+  "아모스": { ko: "아모스", isOT: true, section: "선지서", theme: "형식적 제사를 배격하시고 정의와 공의를 강물처럼 흘릴 것을 요구하심" },
+  "Obadiah": { ko: "오바댜", isOT: true, section: "선지서", theme: "형제에게 포학을 행한 교만에 대한 심판과 시온산의 구원" },
+  "오바댜": { ko: "오바댜", isOT: true, section: "선지서", theme: "형제에게 포학을 행한 교만에 대한 심판과 시온산의 구원" },
+  "Jonah": { ko: "요나", isOT: true, section: "선지서", theme: "이방 성읍 니느웨까지 품으시는 하나님의 보편적 긍휼" },
+  "요나": { ko: "요나", isOT: true, section: "선지서", theme: "이방 성읍 니느웨까지 품으시는 하나님의 보편적 긍휼" },
+  "Micah": { ko: "미가", isOT: true, section: "선지서", theme: "공의를 행하며 인자를 사랑하고 겸손히 하나님과 동행하는 삶" },
+  "미가": { ko: "미가", isOT: true, section: "선지서", theme: "공의를 행하며 인자를 사랑하고 겸손히 하나님과 동행하는 삶" },
+  "Nahum": { ko: "나훔", isOT: true, section: "선지서", theme: "악한 제국의 멸망과 환난 날에 산성이 되시는 여호와" },
+  "나훔": { ko: "나훔", isOT: true, section: "선지서", theme: "악한 제국의 멸망과 환난 날에 산성이 되시는 여호와" },
+  "Habakkuk": { ko: "하박국", isOT: true, section: "선지서", theme: "불의한 세상 속에서도 오직 믿음으로 말미암아 사는 의인의 찬양" },
+  "하박국": { ko: "하박국", isOT: true, section: "선지서", theme: "불의한 세상 속에서도 오직 믿음으로 말미암아 사는 의인의 찬양" },
+  "Zephaniah": { ko: "스바냐", isOT: true, section: "선지서", theme: "심판 날을 통과한 남은 자들을 기쁨으로 잠잠히 사랑하시는 하나님" },
+  "스바냐": { ko: "스바냐", isOT: true, section: "선지서", theme: "심판 날을 통과한 남은 자들을 기쁨으로 잠잠히 사랑하시는 하나님" },
+  "Haggai": { ko: "학개", isOT: true, section: "선지서", theme: "무너진 성전 재건을 최우선으로 삼을 때 임하는 하늘의 영광" },
+  "학개": { ko: "학개", isOT: true, section: "선지서", theme: "무너진 성전 재건을 최우선으로 삼을 때 임하는 하늘의 영광" },
+  "Zechariah": { ko: "스가랴", isOT: true, section: "선지서", theme: "겸손히 나귀를 타신 왕 메시아와 성령으로 세워지는 성전" },
+  "스가랴": { ko: "스가랴", isOT: true, section: "선지서", theme: "겸손히 나귀를 타신 왕 메시아와 성령으로 세워지는 성전" },
+  "Malachi": { ko: "말라기", isOT: true, section: "선지서", theme: "참된 예배의 회복과 치료하는 광선으로 임하실 의로운 해" },
+  "말라기": { ko: "말라기", isOT: true, section: "선지서", theme: "참된 예배의 회복과 치료하는 광선으로 임하실 의로운 해" },
+  "Matthew": { ko: "마태복음", isOT: false, section: "복음/역사", theme: "구약의 예언을 성취하신 다윗의 자손, 천국 복음의 왕 예수 그리스도" },
+  "마태복음": { ko: "마태복음", isOT: false, section: "복음/역사", theme: "구약의 예언을 성취하신 다윗의 자손, 천국 복음의 왕 예수 그리스도" },
+  "Mark": { ko: "마가복음", isOT: false, section: "복음/역사", theme: "섬기려 하고 자기 목숨을 많은 사람의 대속물로 주신 하나님의 아들" },
+  "마가복음": { ko: "마가복음", isOT: false, section: "복음/역사", theme: "섬기려 하고 자기 목숨을 많은 사람의 대속물로 주신 하나님의 아들" },
+  "Luke": { ko: "누가복음", isOT: false, section: "복음/역사", theme: "잃어버린 자를 찾아 구원하려 오신 인자(Son of Man)의 긍휼" },
+  "누가복음": { ko: "누가복음", isOT: false, section: "복음/역사", theme: "잃어버린 자를 찾아 구원하려 오신 인자(Son of Man)의 긍휼" },
+  "John": { ko: "요한복음", isOT: false, section: "복음/역사", theme: "말씀이 육신이 되어 우리 가운데 거하신 독생자의 영광과 영생" },
+  "요한복음": { ko: "요한복음", isOT: false, section: "복음/역사", theme: "말씀이 육신이 되어 우리 가운데 거하신 독생자의 영광과 영생" },
+  "Acts": { ko: "사도행전", isOT: false, section: "복음/역사", theme: "부활하신 주님께서 성령을 통해 예루살렘에서 땅끝까지 교회를 세우심" },
+  "사도행전": { ko: "사도행전", isOT: false, section: "복음/역사", theme: "부활하신 주님께서 성령을 통해 예루살렘에서 땅끝까지 교회를 세우심" },
+  "Romans": { ko: "로마서", isOT: false, section: "서신서", theme: "오직 믿음으로 말미암는 칭의와 성령 안에서의 성화, 구속의 경륜" },
+  "로마서": { ko: "로마서", isOT: false, section: "서신서", theme: "오직 믿음으로 말미암는 칭의와 성령 안에서의 성화, 구속의 경륜" },
+  "1 Corinthians": { ko: "고린도전서", isOT: false, section: "서신서", theme: "십자가의 도와 사랑(13장), 부활 신앙으로 하나 되는 교회" },
+  "고린도전서": { ko: "고린도전서", isOT: false, section: "서신서", theme: "십자가의 도와 사랑(13장), 부활 신앙으로 하나 되는 교회" },
+  "2 Corinthians": { ko: "고린도후서", isOT: false, section: "서신서", theme: "질그릇 속에 담긴 보배로운 복음과 약할 때 강함 되시는 은혜" },
+  "고린도후서": { ko: "고린도후서", isOT: false, section: "서신서", theme: "질그릇 속에 담긴 보배로운 복음과 약할 때 강함 되시는 은혜" },
+  "Galatians": { ko: "갈라디아서", isOT: false, section: "서신서", theme: "율법의 멍에에서 해방하신 십자가와 성령을 따라 행하는 자유" },
+  "갈라디아서": { ko: "갈라디아서", isOT: false, section: "서신서", theme: "율법의 멍에에서 해방하신 십자가와 성령을 따라 행하는 자유" },
+  "Ephesians": { ko: "에베소서", isOT: false, section: "서신서", theme: "창세 전 그리스도 안에서 택하신 구원과 만물을 충만케 하는 교회" },
+  "에베소서": { ko: "에베소서", isOT: false, section: "서신서", theme: "창세 전 그리스도 안에서 택하신 구원과 만물을 충만케 하는 교회" },
+  "Philippians": { ko: "빌립보서", isOT: false, section: "서신서", theme: "자기를 비워 종의 형체를 가지신 그리스도의 마음과 복음의 기쁨" },
+  "빌립보서": { ko: "빌립보서", isOT: false, section: "서신서", theme: "자기를 비워 종의 형체를 가지신 그리스도의 마음과 복음의 기쁨" },
+  "Colossians": { ko: "골로새서", isOT: false, section: "서신서", theme: "보이지 않는 하나님의 형상이시며 만물의 으뜸이 되시는 그리스도" },
+  "골로새서": { ko: "골로새서", isOT: false, section: "서신서", theme: "보이지 않는 하나님의 형상이시며 만물의 으뜸이 되시는 그리스도" },
+  "1 Thessalonians": { ko: "데살로니가전서", isOT: false, section: "서신서", theme: "믿음의 역사와 사랑의 수고와 소망의 인내로 깨어 있는 삶" },
+  "데살로니가전서": { ko: "데살로니가전서", isOT: false, section: "서신서", theme: "믿음의 역사와 사랑의 수고와 소망의 인내로 깨어 있는 삶" },
+  "2 Thessalonians": { ko: "데살로니가후서", isOT: false, section: "서신서", theme: "주의 재림을 바라보며 흔들리지 않고 굳건히 서서 일하는 성도" },
+  "데살로니가후서": { ko: "데살로니가후서", isOT: false, section: "서신서", theme: "주의 재림을 바라보며 흔들리지 않고 굳건히 서서 일하는 성도" },
+  "1 Timothy": { ko: "디모데전서", isOT: false, section: "서신서", theme: "살아계신 하나님의 집인 교회에서 바른 교훈과 경건을 지킴" },
+  "디모데전서": { ko: "디모데전서", isOT: false, section: "서신서", theme: "살아계신 하나님의 집인 교회에서 바른 교훈과 경건을 지킴" },
+  "2 Timothy": { ko: "디모데후서", isOT: false, section: "서신서", theme: "복음과 함께 고난을 받으며 진리의 말씀을 옳게 분변하는 사명" },
+  "디모데후서": { ko: "디모데후서", isOT: false, section: "서신서", theme: "복음과 함께 고난을 받으며 진리의 말씀을 옳게 분변하는 사명" },
+  "Titus": { ko: "디도서", isOT: false, section: "서신서", theme: "구원하시는 은혜가 경건함과 선한 일에 열심 내는 삶으로 나타남" },
+  "디도서": { ko: "디도서", isOT: false, section: "서신서", theme: "구원하시는 은혜가 경건함과 선한 일에 열심 내는 삶으로 나타남" },
+  "Philemon": { ko: "빌레몬서", isOT: false, section: "서신서", theme: "그리스도 안에서 형제로 영접하게 하는 복음의 화해와 용서" },
+  "빌레몬서": { ko: "빌레몬서", isOT: false, section: "서신서", theme: "그리스도 안에서 형제로 영접하게 하는 복음의 화해와 용서" },
+  "Hebrews": { ko: "히브리서", isOT: false, section: "서신서", theme: "구약의 그림자를 완성하신 영원한 대제사장 예수를 바라보는 믿음" },
+  "히브리서": { ko: "히브리서", isOT: false, section: "서신서", theme: "구약의 그림자를 완성하신 영원한 대제사장 예수를 바라보는 믿음" },
+  "James": { ko: "야고보서", isOT: false, section: "서신서", theme: "시련을 이기는 인내와 행함으로 온전케 되는 산 믿음" },
+  "야고보서": { ko: "야고보서", isOT: false, section: "서신서", theme: "시련을 이기는 인내와 행함으로 온전케 되는 산 믿음" },
+  "1 Peter": { ko: "베드로전서", isOT: false, section: "서신서", theme: "산 소망을 가진 나그네로서 고난 중에도 왕 같은 제사장으로 살아감" },
+  "베드로전서": { ko: "베드로전서", isOT: false, section: "서신서", theme: "산 소망을 가진 나그네로서 고난 중에도 왕 같은 제사장으로 살아감" },
+  "2 Peter": { ko: "베드로후서", isOT: false, section: "서신서", theme: "거짓 교훈을 경계하고 그리스도의 은혜와 아는 지식에서 자라감" },
+  "베드로후서": { ko: "베드로후서", isOT: false, section: "서신서", theme: "거짓 교훈을 경계하고 그리스도의 은혜와 아는 지식에서 자라감" },
+  "1 John": { ko: "요한일서", isOT: false, section: "서신서", theme: "빛이시며 사랑이신 하나님과의 사귐과 형제 사랑의 실천" },
+  "요한일서": { ko: "요한일서", isOT: false, section: "서신서", theme: "빛이시며 사랑이신 하나님과의 사귐과 형제 사랑의 실천" },
+  "2 John": { ko: "요한이서", isOT: false, section: "서신서", theme: "진리와 사랑 안에서 행하며 그리스도의 교훈 안에 거함" },
+  "요한이서": { ko: "요한이서", isOT: false, section: "서신서", theme: "진리와 사랑 안에서 행하며 그리스도의 교훈 안에 거함" },
+  "3 John": { ko: "요한삼서", isOT: false, section: "서신서", theme: "진리를 위하여 함께 일하는 형제들을 돕고 선한 것을 본받음" },
+  "요한삼서": { ko: "요한삼서", isOT: false, section: "서신서", theme: "진리를 위하여 함께 일하는 형제들을 돕고 선한 것을 본받음" },
+  "Jude": { ko: "유다서", isOT: false, section: "서신서", theme: "성도에게 단번에 주신 믿음의 도를 위하여 힘써 싸우며 거룩함을 지킴" },
+  "유다서": { ko: "유다서", isOT: false, section: "서신서", theme: "성도에게 단번에 주신 믿음의 도를 위하여 힘써 싸우며 거룩함을 지킴" },
+  "Revelation": { ko: "요한계시록", isOT: false, section: "서신서", theme: "보좌에 앉으신 이들과 어린양의 최종 승리, 새 하늘과 새 땅의 완성" },
+  "요한계시록": { ko: "요한계시록", isOT: false, section: "서신서", theme: "보좌에 앉으신 이들과 어린양의 최종 승리, 새 하늘과 새 땅의 완성" }
 };
 
 let cachedMasterStrongs = null;
@@ -272,7 +334,7 @@ const speakOriginalAudio = (text, isOT) => {
 };
 
 // =====================================================================
-// 🌟 [2차 베지에 곡선 고정밀 브러시 렌더러] GeneralNote 엔진 이식
+// 2차 베지에 곡선 고정밀 브러시 렌더러
 // =====================================================================
 const renderStroke = (ctx, stroke, isDark) => {
   const { tool, color, size, points } = stroke;
@@ -350,7 +412,7 @@ const renderStroke = (ctx, stroke, isDark) => {
 };
 
 // =====================================================================
-// 🏛️ [맥체인 전용 고성능 필기 & 타이핑 노트 패널 + 아크/은하계 실시간 구절 감지]
+// 맥체인 전용 필사 & 묵상 노트 패널 (정갈한 무채색 SaaS 디자인)
 // =====================================================================
 const McheyneTranscriptionNotePanel = ({
   currentPlanKey,
@@ -362,7 +424,7 @@ const McheyneTranscriptionNotePanel = ({
   onOpenGalaxyPopup
 }) => {
   const [panelTab, setPanelTab] = useState('handwriting'); // 'handwriting' | 'typing'
-  const [paperStyle, setPaperStyle] = useState('line'); // 'dot', 'line', 'grid', 'blank'
+  const [paperStyle, setPaperStyle] = useState('line');
 
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
@@ -385,12 +447,10 @@ const McheyneTranscriptionNotePanel = ({
   const [strokeColor, setStrokeColor] = useState('#1E293B');
   const [strokeWidth, setStrokeWidth] = useState(3.0);
 
-  // 타이핑 노트에 입력된 성경 구절 실시간 감지
   const detectedTypingRefs = useMemo(() => {
     return extractBibleReferences(`${planTitle || ''} ${noteContent || ''}`);
   }, [planTitle, noteContent]);
 
-  // 플랜 또는 날짜 변경 시 해당 필기 복원
   useEffect(() => {
     try {
       const saved = localStorage.getItem(storageKey);
@@ -400,13 +460,6 @@ const McheyneTranscriptionNotePanel = ({
       setStrokes([]);
     }
   }, [storageKey]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(storageKey, JSON.stringify(strokes));
-    } catch (_) {}
-    redraw();
-  }, [strokes, storageKey]);
 
   const redraw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -426,6 +479,13 @@ const McheyneTranscriptionNotePanel = ({
       }, isDark);
     }
   }, [strokes, currentTool, strokeColor, strokeWidth, isDark]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(strokes));
+    } catch (_) {}
+    redraw();
+  }, [strokes, storageKey, redraw]);
 
   const handleResize = useCallback(() => {
     const canvas = canvasRef.current;
@@ -536,13 +596,13 @@ const McheyneTranscriptionNotePanel = ({
     const ctx = exportCanvas.getContext('2d');
     const dpr = window.devicePixelRatio || 1;
 
-    ctx.fillStyle = isDark ? '#121620' : '#FFFDF9';
+    ctx.fillStyle = isDark ? '#12151C' : '#FFFFFF';
     ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
     ctx.scale(dpr, dpr);
     strokes.forEach(s => renderStroke(ctx, s, isDark));
 
     const link = document.createElement('a');
-    link.download = `${planTitle || '맥체인'}_묵상노트.png`;
+    link.download = `${planTitle || '맥체인'}_필사노트.png`;
     link.href = exportCanvas.toDataURL('image/png');
     link.click();
   };
@@ -567,14 +627,14 @@ const McheyneTranscriptionNotePanel = ({
   ];
 
   const getPaperBg = () => {
-    const dotColor = isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)';
-    const lineColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)';
+    const dotColor = isDark ? 'rgba(255, 255, 255, 0.10)' : 'rgba(0, 0, 0, 0.10)';
+    const lineColor = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)';
 
     switch (paperStyle) {
       case 'dot':
         return { backgroundImage: `radial-gradient(${dotColor} 1.2px, transparent 1.2px)`, backgroundSize: '22px 22px' };
       case 'line':
-        return { backgroundImage: `linear-gradient(${lineColor} 1px, transparent 1px)`, backgroundSize: '100% 28px' };
+        return { backgroundImage: `linear-gradient(${lineColor} 1px, transparent 1px)`, backgroundSize: '100% 30px' };
       case 'grid':
         return { backgroundImage: `linear-gradient(${lineColor} 1px, transparent 1px), linear-gradient(90deg, ${lineColor} 1px, transparent 1px)`, backgroundSize: '24px 24px' };
       case 'blank':
@@ -584,68 +644,46 @@ const McheyneTranscriptionNotePanel = ({
   };
 
   return (
-    <div className={`flex flex-col h-full rounded-2xl border overflow-hidden ${
-      isDark ? 'bg-[#121620] border-slate-700/80' : 'bg-white border-stone-200/90 shadow-2xs'
+    <div className={`flex flex-col h-full rounded-xl border overflow-hidden ${
+      isDark ? 'bg-[#131720] border-white/10' : 'bg-white border-stone-200/90 shadow-2xs'
     }`}>
-      {/* 1. 상단 모드 스위처 & 툴바 헤더 */}
-      <div className={`p-2 sm:p-2.5 border-b flex flex-wrap items-center justify-between gap-1.5 shrink-0 ${
-        isDark ? 'bg-[#181F2C] border-slate-700' : 'bg-stone-50 border-stone-200'
+      {/* 상단 모드 스위처 헤더 */}
+      <div className={`px-3 py-2 border-b flex flex-wrap items-center justify-between gap-1.5 shrink-0 ${
+        isDark ? 'bg-[#181C26] border-white/10' : 'bg-stone-50 border-stone-200'
       }`}>
         <div className="flex items-center gap-1">
           <button
             onClick={() => setPanelTab('handwriting')}
-            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+            className={`px-3 py-1 rounded-lg text-[11.5px] font-bold transition-all cursor-pointer ${
               panelTab === 'handwriting'
-                ? (isDark ? 'bg-indigo-600 text-white shadow-xs' : 'bg-stone-900 text-white shadow-xs')
+                ? (isDark ? 'bg-white text-stone-950' : 'bg-stone-900 text-white')
                 : 'text-stone-500 hover:text-stone-900 dark:hover:text-white'
             }`}
           >
-            ✍️ 필기 캔버스
+            필기 캔버스
           </button>
           <button
             onClick={() => setPanelTab('typing')}
-            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+            className={`px-3 py-1 rounded-lg text-[11.5px] font-bold transition-all cursor-pointer ${
               panelTab === 'typing'
-                ? (isDark ? 'bg-indigo-600 text-white shadow-xs' : 'bg-stone-900 text-white shadow-xs')
+                ? (isDark ? 'bg-white text-stone-950' : 'bg-stone-900 text-white')
                 : 'text-stone-500 hover:text-stone-900 dark:hover:text-white'
             }`}
           >
-            ⌨️ 텍스트 타이핑
+            텍스트 타이핑
           </button>
         </div>
 
-        {/* 용지 선택기 & 아크/은하계 팝업 버튼 */}
-        <div className="flex items-center gap-1">
-          {onOpenGalaxyPopup && (
-            <>
-              <button
-                type="button"
-                onClick={() => onOpenGalaxyPopup('arc', detectedTypingRefs[0] || planTitle)}
-                className="px-2 py-1 rounded-lg text-[10px] font-black bg-amber-400 hover:bg-amber-300 text-slate-950 cursor-pointer shadow-2xs"
-                title="현재 필사 중인 말씀의 신·구약 아크 대조 팝업"
-              >
-                🌈 아크
-              </button>
-              <button
-                type="button"
-                onClick={() => onOpenGalaxyPopup('2d', detectedTypingRefs[0] || planTitle)}
-                className="px-2 py-1 rounded-lg text-[10px] font-black bg-cyan-400 hover:bg-cyan-300 text-slate-950 cursor-pointer shadow-2xs"
-                title="현재 필사 중인 말씀의 은하계 연관 팝업"
-              >
-                🌌 은하계
-              </button>
-            </>
-          )}
-
-          <div className={`flex p-0.5 rounded-lg border text-[10px] font-bold ${
-            isDark ? 'bg-black/30 border-slate-700' : 'bg-stone-200/70 border-stone-300'
+        <div className="flex items-center gap-1.5">
+          <div className={`flex p-0.5 rounded-lg border text-[10.5px] font-bold ${
+            isDark ? 'bg-[#0E1117] border-white/10' : 'bg-stone-200/70 border-stone-300'
           }`}>
             {['dot', 'line', 'grid', 'blank'].map(p => (
               <button
                 key={p}
                 onClick={() => setPaperStyle(p)}
-                className={`px-1.5 py-0.5 rounded transition-all cursor-pointer ${
-                  paperStyle === p ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-300 font-bold shadow-xs' : 'text-stone-500'
+                className={`px-2 py-0.5 rounded transition-all cursor-pointer ${
+                  paperStyle === p ? 'bg-white dark:bg-slate-700 text-stone-900 dark:text-white font-bold shadow-2xs' : 'text-stone-500'
                 }`}
               >
                 {p === 'dot' ? '도트' : p === 'line' ? '유선' : p === 'grid' ? '모눈' : '무지'}
@@ -656,28 +694,29 @@ const McheyneTranscriptionNotePanel = ({
           {panelTab === 'handwriting' && (
             <button
               onClick={handleExportPng}
-              className="px-2 py-1 rounded-lg text-[10.5px] font-bold bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer shadow-xs active:scale-95 transition-all"
-              title="PNG 이미지 저장"
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border cursor-pointer transition-all ${
+                isDark ? 'bg-white/10 border-white/15 text-white hover:bg-white/20' : 'bg-white border-stone-300 text-stone-800 hover:bg-stone-100'
+              }`}
             >
-              저장
+              이미지 저장
             </button>
           )}
         </div>
       </div>
 
-      {/* 2. 손필기 전용 정밀 제어 툴바 */}
+      {/* 손필기 도구 바 */}
       {panelTab === 'handwriting' && (
-        <div className={`px-2 py-1.5 border-b flex items-center justify-between gap-1.5 overflow-x-auto hide-scrollbar shrink-0 text-xs ${
-          isDark ? 'bg-[#151B27] border-slate-700/60' : 'bg-stone-100/70 border-stone-200'
+        <div className={`px-3 py-1.5 border-b flex items-center justify-between gap-2 overflow-x-auto hide-scrollbar shrink-0 text-xs ${
+          isDark ? 'bg-[#141821] border-white/10' : 'bg-stone-100/60 border-stone-200'
         }`}>
           <div className="flex items-center gap-1 shrink-0">
             {tools.map(t => (
               <button
                 key={t.id}
                 onClick={() => setCurrentTool(t.id)}
-                className={`px-2 py-1 rounded-md text-[10.5px] font-bold transition-all cursor-pointer ${
+                className={`px-2 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
                   currentTool === t.id
-                    ? 'bg-indigo-600 text-white shadow-xs'
+                    ? (isDark ? 'bg-white text-stone-950' : 'bg-stone-900 text-white')
                     : isDark ? 'text-slate-400 hover:text-white' : 'text-stone-600 hover:text-black'
                 }`}
               >
@@ -686,72 +725,65 @@ const McheyneTranscriptionNotePanel = ({
             ))}
           </div>
 
-          <div className="flex items-center gap-1 shrink-0 px-1">
+          <div className="flex items-center gap-1.5 shrink-0 px-1">
             <span className="text-[10px] font-mono text-stone-400">{strokeWidth.toFixed(1)}px</span>
             <input
               type="range" min="1" max="18" step="0.5"
               value={strokeWidth}
               onChange={(e) => setStrokeWidth(Number(e.target.value))}
-              className="w-14 sm:w-20 accent-indigo-600 cursor-pointer h-1"
+              className="w-16 accent-stone-800 dark:accent-white cursor-pointer h-1"
             />
           </div>
 
-          <div className="flex items-center gap-1 shrink-0">
+          <div className="flex items-center gap-1.5 shrink-0">
             {colorPalette.map(c => (
               <button
                 key={c.id}
                 onClick={() => setStrokeColor(c.color)}
                 style={{ backgroundColor: c.color }}
                 className={`w-3.5 h-3.5 rounded-full cursor-pointer transition-transform ${
-                  strokeColor === c.color ? 'scale-125 ring-2 ring-indigo-500' : 'opacity-80 hover:opacity-100'
+                  strokeColor === c.color ? 'scale-125 ring-2 ring-stone-500' : 'opacity-75 hover:opacity-100'
                 }`}
               />
             ))}
           </div>
 
-          <div className="flex items-center gap-0.5 shrink-0 ml-1">
-            <button onClick={handleUndo} disabled={strokes.length === 0} className="px-1.5 py-0.5 rounded text-[10px] font-bold text-stone-500 disabled:opacity-30 cursor-pointer">
-              ↩ 취소
+          <div className="flex items-center gap-1 shrink-0 ml-1">
+            <button onClick={handleUndo} disabled={strokes.length === 0} className="px-1.5 py-0.5 rounded text-[10.5px] font-bold text-stone-500 disabled:opacity-30 cursor-pointer">
+              취소
             </button>
-            <button onClick={handleRedo} disabled={redoStack.length === 0} className="px-1.5 py-0.5 rounded text-[10px] font-bold text-stone-500 disabled:opacity-30 cursor-pointer">
-              ↪ 다시
+            <button onClick={handleRedo} disabled={redoStack.length === 0} className="px-1.5 py-0.5 rounded text-[10.5px] font-bold text-stone-500 disabled:opacity-30 cursor-pointer">
+              재실행
             </button>
-            <button onClick={handleClear} disabled={strokes.length === 0} className="px-1.5 py-0.5 rounded text-[10px] font-bold text-rose-500 disabled:opacity-30 cursor-pointer">
-              비우기
+            <button onClick={handleClear} disabled={strokes.length === 0} className="px-1.5 py-0.5 rounded text-[10.5px] font-bold text-rose-500 disabled:opacity-30 cursor-pointer">
+              지우기
             </button>
           </div>
         </div>
       )}
 
-      {/* 타이핑 탭에서 감지된 성경 구절 칩 바 */}
+      {/* 타이핑 탭 감지구절 바 */}
       {panelTab === 'typing' && detectedTypingRefs.length > 0 && onOpenGalaxyPopup && (
-        <div className={`px-2.5 py-1.5 border-b flex items-center gap-1.5 overflow-x-auto hide-scrollbar shrink-0 ${
-          isDark ? 'bg-[#151B27] border-slate-700/60' : 'bg-amber-50/60 border-stone-200'
+        <div className={`px-3 py-1.5 border-b flex items-center gap-1.5 overflow-x-auto hide-scrollbar shrink-0 ${
+          isDark ? 'bg-[#141821] border-white/10' : 'bg-stone-50 border-stone-200'
         }`}>
-          <span className="text-[10px] font-black text-amber-600 dark:text-amber-400 shrink-0">⚡ 감지구절:</span>
+          <span className="text-[10.5px] font-bold text-stone-500 shrink-0">감지된 구절:</span>
           {detectedTypingRefs.map((refStr) => (
-            <div key={refStr} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-black/10 dark:bg-white/10 text-[10.5px] font-bold shrink-0">
+            <div key={refStr} className="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-stone-300 dark:border-white/15 text-[11px] font-bold shrink-0">
               <span>{refStr}</span>
               <button
                 type="button"
                 onClick={() => onOpenGalaxyPopup('arc', refStr)}
-                className="px-1.5 py-0.2 rounded bg-amber-400 text-slate-950 text-[9.5px] font-black cursor-pointer"
+                className="px-1.5 py-0.5 rounded bg-stone-900 dark:bg-white text-white dark:text-stone-900 text-[9.5px] font-bold cursor-pointer"
               >
-                🌈대조
-              </button>
-              <button
-                type="button"
-                onClick={() => onOpenGalaxyPopup('2d', refStr)}
-                className="px-1.5 py-0.2 rounded bg-cyan-400 text-slate-950 text-[9.5px] font-black cursor-pointer"
-              >
-                🌌은하
+                아크
               </button>
             </div>
           ))}
         </div>
       )}
 
-      {/* 3. 본문 뷰포트 (손필기 캔버스 vs 텍스트 타이핑) */}
+      {/* 본문 뷰포트 */}
       <div className="flex-1 relative overflow-hidden" style={getPaperBg()}>
         {panelTab === 'handwriting' ? (
           <div ref={containerRef} className="absolute inset-0 w-full h-full touch-none cursor-crosshair">
@@ -772,8 +804,8 @@ const McheyneTranscriptionNotePanel = ({
                 setNoteContent(e.target.value);
                 if (updateDay) updateDay({ mcheyneNote: e.target.value });
               }}
-              placeholder={`[${planTitle || '맥체인'}] 말씀을 묵상하며 이곳에 자유롭게 타이핑 필사나 묵상 노트를 적으세요.\n\n(원어 인스펙터나 신·구약 아크 대조 팝업에서 '노트에 삽입'을 누르면 이곳에 정밀 강해가 자동 기록됩니다.)`}
-              className={`w-full h-full bg-transparent outline-none resize-none text-[14px] leading-[2.1] font-medium border-none ${
+              placeholder={`[${planTitle || '맥체인'}] 말씀을 묵상하며 필사나 묵상 노트를 작성하세요.\n\n성경 본문에서 절을 선택하여 원어 강해나 맥체인 강해를 이곳에 바로 삽입할 수 있습니다.`}
+              className={`w-full h-full bg-transparent outline-none resize-none text-[14px] leading-[2.0] font-serif border-none ${
                 isDark ? 'text-slate-100 placeholder:text-slate-500' : 'text-stone-900 placeholder:text-stone-400'
               }`}
             />
@@ -784,11 +816,11 @@ const McheyneTranscriptionNotePanel = ({
   );
 };
 
-// UI 아이콘
-const IconArrowLeft = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>;
-const IconMenu = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" /></svg>;
-const IconVolume = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.757 3.63 8.25 4.51 8.25H6.75z" /></svg>;
-const IconDocument = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>;
+// =====================================================================
+// 모던 라인 아이콘
+// =====================================================================
+const IconArrowLeft = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>;
+const IconMenu = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2.0} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" /></svg>;
 const IconMinimize = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5M15 15l5.25 5.25" /></svg>;
 const IconMaximize = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" /></svg>;
 const IconPlay = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z" /></svg>;
@@ -796,7 +828,8 @@ const IconStop = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stro
 const IconMic = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15a3 3 0 003-3V6a3 3 0 00-6 0v6a3 3 0 003 3z" /></svg>;
 const IconSearch = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>;
 const IconBook = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" /></svg>;
-const IconCheckCircle = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
+const IconCheckCircle = () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
+const IconChevronDown = ({ className }) => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className={className || "w-4 h-4"}><polyline points="6 9 12 15 18 9" /></svg>;
 
 export default function Mcheyne({
   isDarkMode, setActiveScreen, setIsSidebarOpen, isSidebarOpen, date, currDay = {}, ymdStr,
@@ -809,21 +842,27 @@ export default function Mcheyne({
   const audioChunksRef = useRef([]);
 
   const [isFocusMode, setIsFocusMode] = useState(false);
-  const [viewMode, setViewMode] = useState('split'); // 'single' | 'split'
+  const [viewMode, setViewMode] = useState('split'); // 'single'(본문집중) | 'split'(2단필사) | 'mobileNote'(모바일 노트탭)
+  const [fontSizeLevel, setFontSizeLevel] = useState(1); // 0: 작게, 1: 기본, 2: 크게
   const [noteContent, setNoteContent] = useState(currDay?.mcheyneNote || '');
+
+  // 구절 선택 시 해당 절 하단에 열리는 슬림 컨텍스트 액션 바 상태 (`${ch}-${vNum}`)
+  const [selectedVerseKey, setSelectedVerseKey] = useState(null);
+
+  // 맥체인 장별 강해/해설 아코디언 오픈 상태 및 외부 JSON DB
+  const [showDevotionGuide, setShowDevotionGuide] = useState(false);
+  const [mcheyneDevotionsDb, setMcheyneDevotionsDb] = useState({});
 
   const [partnerActivity, setPartnerActivity] = useState(false);
   const isMoHana = (authUser?.name || authUser) === '모하나';
   const MY_NAME = "정신동";
 
-  // 🌈 [신규 고도화] 성경 아크(신·구약 대조) & 은하계(Galaxy) 인라인 팝업 상태
   const [galaxyModalConfig, setGalaxyModalConfig] = useState({
     isOpen: false,
-    mode: 'arc', // 'arc' | '2d' | '3d'
+    mode: 'arc',
     refQuery: ''
   });
 
-  // 📖 성경 번역본 모드: 'krv'(개역개정) | 'easy'(쉬운성경) | 'web'(World English Bible) | 'parallel'(동시대조)
   const [bibleVersion, setBibleVersion] = useState(() => {
     try {
       return localStorage.getItem('mcheyne_bible_version_mode') || 'krv';
@@ -855,27 +894,22 @@ export default function Mcheyne({
   const [customInputTrans, setCustomInputTrans] = useState('');
   const [customInputMemo, setCustomInputMemo] = useState('');
 
-  // 10대 학술 데이터베이스 상태
-  const [lxxDb, setLxxDb] = useState({});
   const [commentaryDb, setCommentaryDb] = useState({});
   const [matthewHenryDb, setMatthewHenryDb] = useState({});
   const [netNotesDb, setNetNotesDb] = useState({});
   const [targumPeshittaDb, setTargumPeshittaDb] = useState({});
   const [crossRefs, setCrossRefs] = useState([]);
 
-  const longPressTimerRef = useRef(null);
-  const isLongPressActiveRef = useRef(false);
-
   useEffect(() => {
     ensureMasterStrongs();
 
     fetch('/data/easy_bible.json').then(r => r.ok ? r.json() : {}).then(d => setEasyBibleDb(d || {})).catch(() => {});
     fetch('/data/web_bible.json').then(r => r.ok ? r.json() : {}).then(d => setWebBibleDb(d || {})).catch(() => {});
-    fetch('/data/lxx_quotes.json').then(r => r.ok ? r.json() : {}).then(d => setLxxDb(d || {})).catch(() => {});
     fetch('/data/commentaries.json').then(r => r.ok ? r.json() : {}).then(d => setCommentaryDb(d || {})).catch(() => {});
     fetch('/data/matthew_henry.json').then(r => r.ok ? r.json() : {}).then(d => setMatthewHenryDb(d || {})).catch(() => {});
     fetch('/data/net_notes.json').then(r => r.ok ? r.json() : {}).then(d => setNetNotesDb(d || {})).catch(() => {});
     fetch('/data/targum_peshitta.json').then(r => r.ok ? r.json() : {}).then(d => setTargumPeshittaDb(d || {})).catch(() => {});
+    fetch('/data/mcheyne_devotions.json').then(r => r.ok ? r.json() : {}).then(d => setMcheyneDevotionsDb(d || {})).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -889,7 +923,11 @@ export default function Mcheyne({
     setNoteContent(currDay?.mcheyneNote || '');
   }, [currDay?.mcheyneNote]);
 
-  // 파트너 동행 묵상 감지 기능
+  // 플랜 전환 시 선택된 절 컨텍스트 바 초기화
+  useEffect(() => {
+    setSelectedVerseKey(null);
+  }, [mcheynePlanIdx, date]);
+
   useEffect(() => {
     if (!isMoHana || !supabase) return;
     let isMounted = true;
@@ -901,7 +939,7 @@ export default function Mcheyne({
           const lastUpdated = new Date(data.updated_at).getTime();
           setPartnerActivity(Date.now() - lastUpdated < 5 * 60 * 1000);
         }
-      } catch(e) {}
+      } catch (e) {}
     };
     
     fetchActivity();
@@ -919,7 +957,6 @@ export default function Mcheyne({
     };
   }, [isMoHana]);
 
-  // 오디오 녹음 기능
   const startRecording = async () => {
     audioChunksRef.current = [];
     try {
@@ -1005,7 +1042,6 @@ export default function Mcheyne({
 
   const safeCleanText = (txt) => cleanText ? cleanText(txt) || txt : txt || '';
 
-  // 🌈 현재 맥체인 플랜 기준 아크/은하계 팝업 오픈 핸들러
   const openGalaxyPopup = useCallback((mode = 'arc', customRefStr = '') => {
     const koBookName = BIBLE_66_MAP[mBookD?.name]?.ko || mBookD?.name || mp?.book || '창세기';
     const defaultRef = `${koBookName} ${mChaps[0] || 1}:1`;
@@ -1016,7 +1052,6 @@ export default function Mcheyne({
     });
   }, [mBookD, mp, mChaps]);
 
-  // ✍️ 아크 팝업에서 찾은 신·구약 대조 인사이트를 맥체인 노트에 즉시 삽입
   const handleInsertArcInsightToMcheyne = useCallback((insightText) => {
     const updatedNote = (noteContent || '') + insightText;
     setNoteContent(updatedNote);
@@ -1048,7 +1083,6 @@ export default function Mcheyne({
     });
   }, [mChaps, getDisplayVersesForChapter, readVerses, mBookD]);
 
-  // 영적 동기화 및 전역 출석 루틴 연동
   const triggerSpiritualSync = useCallback((nextReadVerses) => {
     try {
       const todayYmd = ymdStr || date;
@@ -1110,7 +1144,6 @@ export default function Mcheyne({
     }
   }, [ymdStr, date, updateDay, currDay, mChaps, authUser]);
 
-  // 원어 연구 인스펙터 오픈
   const openVerseInspector = useCallback(async (chNum, vNum, verseText) => {
     const rawBookName = mBookD?.name || mp?.book || '창세기';
     const bookInfo = BIBLE_66_MAP[rawBookName] || { ko: rawBookName, isOT: true, section: '구약' };
@@ -1238,7 +1271,6 @@ export default function Mcheyne({
     }
   }, [customNotesMap]);
 
-  // 원어 연구실 점프
   const handleJumpToInterlinearStudio = () => {
     if (!inspectorTarget) return;
     try {
@@ -1254,10 +1286,9 @@ export default function Mcheyne({
     }
   };
 
-  // 🌟 맥체인 필사 노트에 주석 즉시 삽입 (성경통독과 동일)
   const handleInsertWordToMcheyneNote = (word) => {
     const lemmaNotice = word.isInflectedDifferent ? ` (원형: ${word.lemma})` : '';
-    const customMemoNotice = word.userCustomNote?.memo ? `\n   ↳ ✍️ 연구 메모: ${word.userCustomNote.memo}` : '';
+    const customMemoNotice = word.userCustomNote?.memo ? `\n   ↳ 연구 메모: ${word.userCustomNote.memo}` : '';
     const insightLine = `\n[원어묵상] ${word.inflected}${lemmaNotice} (${word.strongs}): ${word.korContextual} — ${word.grammarDecoded}${customMemoNotice}\n`;
     
     const updatedNote = (noteContent || '') + insightLine;
@@ -1266,7 +1297,6 @@ export default function Mcheyne({
     alert(`[${word.inflected}] 원어 강해가 맥체인 노트에 기록되었습니다.`);
   };
 
-  // 이 장 전체 완독 토글
   const handleToggleWholeChapter = (chNum) => {
     const isCurrentlyRead = isChapterAllRead(chNum);
     const nextState = !isCurrentlyRead;
@@ -1289,21 +1319,75 @@ export default function Mcheyne({
     }
   };
 
+  // 📍 src/pages/Mcheyne.js 내 activeBookMeta 부분을 아래로 교체하세요
+  const activeBookMeta = useMemo(() => {
+    const rawName = mBookD?.name || mp?.book || '창세기';
+    const mapped = BIBLE_66_MAP[rawName] || { ko: rawName, isOT: true, section: '성경', theme: '하나님의 구속사와 언약 성취' };
+    const firstChap = mChaps[0] || 1;
+    const chapterKey = `${mapped.ko}_${firstChap}`;
+
+    // 1) 방금 1,189장 전수 생성한 장별 고유 분석 데이터 로드
+    const chapData = mcheyneDevotionsDb?.chapters?.[chapterKey] || null;
+
+    // 2) 내장된 commentaries.json 및 matthew_henry.json에서 해당 장(1절~끝절)의 주석들을 자동 수집
+    const chapterCommentaries = [];
+    for (let v = 1; v <= 50; v++) {
+      const vKey = `${mapped.ko}-${firstChap}-${v}`;
+      if (commentaryDb[vKey]?.exegesis) {
+        chapterCommentaries.push(`[${v}절 주석] ${decodeHtmlEntities(commentaryDb[vKey].exegesis)}`);
+      }
+      if (chapterCommentaries.length >= 3) break;
+    }
+
+    if (chapData) {
+      return {
+        koBook: mapped.ko,
+        chapter: firstChap,
+        section: chapData.section || mapped.section,
+        title: chapData.title,
+        keywords: chapData.keywords || [],
+        summary: chapData.summary,
+        coreObservation: chapData.coreObservation,
+        christConnection: chapData.christConnection,
+        scholarlyNotes: chapterCommentaries,
+        questions: chapData.questions || []
+      };
+    }
+
+    return {
+      koBook: mapped.ko,
+      chapter: firstChap,
+      section: mapped.section,
+      title: `${mapped.ko} ${firstChap}장 말씀 강해`,
+      keywords: [],
+      summary: `${mapped.ko} ${firstChap}장 본문을 통해 하나님의 구속 경륜을 묵상합니다.`,
+      coreObservation: mapped.theme,
+      christConnection: `모든 성경은 예수 그리스도의 십자가와 부활의 복음을 증거합니다.`,
+      scholarlyNotes: chapterCommentaries,
+      questions: [`오늘 ${mapped.ko} ${firstChap}장 말씀에서 나에게 주시는 핵심 교훈은 무엇입니까?`]
+    };
+  }, [mBookD, mp, mChaps, mcheyneDevotionsDb, commentaryDb]);
+
   const isDark = isDarkMode;
   const theme = {
-    bg: isDark ? 'bg-[#0B0F17]' : 'bg-[#F9F9F6]',
-    panel: isDark ? 'bg-[#121824] border-slate-800' : 'bg-white border-stone-200/90 shadow-2xs',
+    bg: isDark ? 'bg-[#0B0E14]' : 'bg-[#F8F9FA]',
+    panel: isDark ? 'bg-[#121620] border-white/10' : 'bg-white border-stone-200/90 shadow-2xs',
     textMain: isDark ? 'text-slate-100' : 'text-stone-900',
-    textSub: isDark ? 'text-slate-400' : 'text-stone-600',
-    border: isDark ? 'border-slate-800' : 'border-stone-200',
+    textSub: isDark ? 'text-slate-400' : 'text-stone-500',
+    border: isDark ? 'border-white/10' : 'border-stone-200',
   };
+
+  const fontSizeClass = fontSizeLevel === 0
+    ? 'text-[14px] sm:text-[14.5px] leading-[1.8]'
+    : fontSizeLevel === 2
+    ? 'text-[17px] sm:text-[18px] leading-[1.95]'
+    : 'text-[15.5px] sm:text-[16px] leading-[1.88]';
 
   const originalFontStyle = (isOT) => isOT
     ? { fontFamily: "'SBL Hebrew', 'Taamey Frank CLM', 'Ezra SIL', serif", direction: 'rtl' }
     : { fontFamily: "'SBL Greek', 'Cardo', 'Times New Roman', serif", direction: 'ltr' };
 
   const currentKey = inspectorTarget ? `${inspectorTarget.book}-${inspectorTarget.chapter}-${inspectorTarget.verse}` : '';
-  const currentLxx = lxxDb[currentKey] || null;
   const currentCommentary = commentaryDb[currentKey] || null;
   const currentMatthewHenry = matthewHenryDb[currentKey] || null;
   const currentNetNote = netNotesDb[currentKey] || null;
@@ -1319,9 +1403,7 @@ export default function Mcheyne({
   return (
     <div className={`flex-1 flex flex-col h-full relative overflow-hidden font-sans select-none animate-fade-in ${theme.bg}`}>
       
-      {/* ===================================================================== */}
-      {/* 🌈 성경 아크(신·구약 대조) & 은하계(Galaxy) 인라인 팝업 모달 */}
-      {/* ===================================================================== */}
+      {/* 신구약 구속사 아크 & 성경 은하계 팝업 모달 */}
       <BibleGalaxyArcModal
         isOpen={galaxyModalConfig.isOpen}
         onClose={() => setGalaxyModalConfig(prev => ({ ...prev, isOpen: false }))}
@@ -1332,404 +1414,586 @@ export default function Mcheyne({
       />
 
       {/* 1. 상단 글로벌 헤더 */}
-      <div className={`relative z-20 px-2 sm:px-3 py-1.5 sm:py-2 flex items-center justify-between border-b shrink-0 ${
-        isDark ? 'border-slate-800 bg-[#101622]' : 'border-stone-200 bg-white shadow-2xs'
+      <header className={`relative z-20 px-3 sm:px-5 py-2.5 flex items-center justify-between border-b shrink-0 ${
+        isDark ? 'border-white/10 bg-[#11151E]' : 'border-stone-200 bg-white'
       }`}>
-        <button onClick={() => setActiveScreen('home')} className={`p-1.5 rounded-lg transition-colors cursor-pointer ${theme.textMain} hover:bg-black/5 dark:hover:bg-white/10`}>
-           <IconArrowLeft />
-        </button>
-        <div className="flex flex-col items-center">
-          <h1 className={`text-[15px] sm:text-[16px] font-bold tracking-tight ${theme.textMain}`}>오늘의 맥체인</h1>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={() => setActiveScreen('home')}
+            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${theme.textMain} hover:bg-black/5 dark:hover:bg-white/10`}
+          >
+            <IconArrowLeft />
+          </button>
+          <h1 className={`text-[15.5px] sm:text-[16.5px] font-bold tracking-tight whitespace-nowrap ${theme.textMain}`}>
+            오늘의 맥체인
+          </h1>
+          {isMoHana && partnerActivity && (
+            <span className="px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10.5px] font-bold border border-emerald-500/30">
+              동행 묵상 중
+            </span>
+          )}
         </div>
-        <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className={`p-1.5 rounded-lg transition-colors cursor-pointer ${theme.textMain} hover:bg-black/5 dark:hover:bg-white/10`}>
-           <IconMenu />
-        </button>
-      </div>
-      
-      {/* 2. 본문 타이틀 & 집중모드 & 2단 필사 토글 */}
-      <div className={`px-2 sm:px-3 py-1.5 border-b ${theme.border} shrink-0 z-10 flex items-center justify-between flex-wrap gap-1.5 ${
-        isDark ? 'bg-slate-900/50' : 'bg-white/70 backdrop-blur-md'
-      }`}>
-          <div className="flex items-center gap-1.5 min-w-0 pr-1">
-            <h2 className={`text-[15px] sm:text-[16.5px] font-bold tracking-tight truncate ${theme.textMain}`}>
-                {mp ? decodeHtmlEntities(safeCleanText(mp.title)) : '로딩 중...'}
-            </h2>
-            {mVerseRange && (
-              <span className="px-1.5 py-0.2 rounded-md bg-stone-100 text-stone-700 dark:bg-slate-800 dark:text-slate-300 text-[10px] font-semibold shrink-0 border border-stone-200 dark:border-slate-700">
-                절 나눔 본문
-              </span>
-            )}
-            {isMoHana && partnerActivity && (
-              <div className="flex items-center gap-1 px-1.5 py-0.2 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-[10px] font-bold text-emerald-800 dark:text-emerald-300 shadow-xs shrink-0 animate-pulse">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                동행 묵상 중
-              </div>
-            )}
+
+        <div className="flex items-center gap-1.5 shrink-0">
+          {/* 글자 크기 조절 */}
+          <div className={`flex items-center p-0.5 rounded-lg border text-[11px] font-bold ${isDark ? 'bg-black/30 border-white/10' : 'bg-stone-100 border-stone-200'}`}>
+            <button
+              onClick={() => setFontSizeLevel(l => Math.max(0, l - 1))}
+              className={`px-2 py-0.5 rounded cursor-pointer ${theme.textSub} hover:${theme.textMain}`}
+              title="글자 작게"
+            >
+              가-
+            </button>
+            <button
+              onClick={() => setFontSizeLevel(l => Math.min(2, l + 1))}
+              className={`px-2 py-0.5 rounded cursor-pointer ${theme.textSub} hover:${theme.textMain}`}
+              title="글자 크게"
+            >
+              가+
+            </button>
           </div>
 
-          <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
-            {/* 4대 역본 세그먼트 컨트롤 */}
-            <div className={`flex p-0.5 rounded-lg border text-[10.5px] font-bold ${isDark ? 'bg-black/30 border-slate-800' : 'bg-stone-100 border-stone-200'}`}>
-              <button 
-                onClick={() => handleVersionChange('krv')}
-                className={`px-1.5 py-0.5 rounded transition-all cursor-pointer ${bibleVersion === 'krv' ? (isDark ? 'bg-slate-800 text-white font-bold shadow-xs' : 'bg-white text-stone-900 font-bold shadow-xs') : theme.textSub}`}
-                title="개역개정 단독 보기"
-              >
-                개역개정
-              </button>
-              <button 
-                onClick={() => handleVersionChange('easy')}
-                className={`px-1.5 py-0.5 rounded transition-all cursor-pointer ${bibleVersion === 'easy' ? (isDark ? 'bg-slate-800 text-white font-bold shadow-xs' : 'bg-white text-stone-900 font-bold shadow-xs') : theme.textSub}`}
-                title="현대어 쉬운성경"
-              >
-                쉬운성경
-              </button>
-              <button 
-                onClick={() => handleVersionChange('web')}
-                className={`px-1.5 py-0.5 rounded transition-all cursor-pointer ${bibleVersion === 'web' ? (isDark ? 'bg-slate-800 text-white font-bold shadow-xs' : 'bg-white text-stone-900 font-bold shadow-xs') : theme.textSub}`}
-                title="World English Bible"
-              >
-                WEB
-              </button>
-              <button 
-                onClick={() => handleVersionChange('parallel')}
-                className={`px-1.5 py-0.5 rounded transition-all cursor-pointer ${bibleVersion === 'parallel' ? (isDark ? 'bg-slate-800 text-white font-bold shadow-xs' : 'bg-white text-stone-900 font-bold shadow-xs') : theme.textSub}`}
-                title="다중 역본 나란히 대조"
-              >
-                동시대조
-              </button>
+          <button 
+            onClick={() => setIsFocusMode(!isFocusMode)} 
+            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11.5px] font-bold transition-all shrink-0 cursor-pointer border ${
+              isFocusMode 
+                ? 'bg-stone-900 text-white dark:bg-white dark:text-stone-900 border-transparent' 
+                : (isDark ? 'bg-white/5 text-slate-300 border-white/10' : 'bg-white text-stone-700 border-stone-200')
+            }`}
+          >
+            {isFocusMode ? <><IconMinimize /> <span>툴바 펼치기</span></> : <><IconMaximize /> <span>집중 모드</span></>}
+          </button>
+
+          <button
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${theme.textMain} hover:bg-black/5 dark:hover:bg-white/10`}
+          >
+            <IconMenu />
+          </button>
+        </div>
+      </header>
+
+      {/* 2. 상단 컨트롤 바 (플랜 탭 + 역본 선택 + 오디오/연구 툴바) */}
+      <div className={`w-full flex-col shrink-0 border-b ${theme.border} ${isFocusMode ? 'hidden' : 'flex'} ${
+        isDark ? 'bg-[#121620]' : 'bg-white'
+      }`}>
+        {/* 2-1. 오늘의 맥체인 4대 본문 탭 바 + 레이아웃 전환 */}
+        <div className={`px-3 sm:px-5 py-2 border-b ${theme.border} flex items-center justify-between gap-2 flex-wrap`}>
+          <div className="flex items-center gap-1.5 overflow-x-auto hide-scrollbar py-0.5">
+            {(getArr ? getArr(mpList) : mpList || []).map((planItem, idx) => {
+              const isSelected = mcheynePlanIdx === idx;
+              return (
+                <button
+                  key={idx}
+                  onClick={() => setMcheynePlanIdx && setMcheynePlanIdx(idx)}
+                  className={`px-3 py-1.5 rounded-lg text-[12px] font-bold whitespace-nowrap shrink-0 transition-all cursor-pointer border ${
+                    isSelected
+                      ? (isDark ? 'bg-white text-stone-950 border-white shadow-2xs' : 'bg-stone-900 text-white border-stone-900 shadow-2xs')
+                      : (isDark ? 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10' : 'bg-stone-50 text-stone-600 border-stone-200 hover:bg-stone-100')
+                  }`}
+                >
+                  {decodeHtmlEntities(safeCleanText(planItem.title))}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex items-center gap-1.5 shrink-0 ml-auto">
+            {/* 4대 역본 전환 */}
+            <div className={`flex p-0.5 rounded-lg border text-[11px] font-bold ${isDark ? 'bg-[#0B0E14] border-white/10' : 'bg-stone-100 border-stone-200'}`}>
+              {[
+                { id: 'krv', label: '개역개정' },
+                { id: 'easy', label: '쉬운성경' },
+                { id: 'web', label: 'WEB' },
+                { id: 'parallel', label: '동시대조' }
+              ].map(v => (
+                <button
+                  key={v.id}
+                  onClick={() => handleVersionChange(v.id)}
+                  className={`px-2 py-1 rounded-md transition-all cursor-pointer whitespace-nowrap ${
+                    bibleVersion === v.id
+                      ? (isDark ? 'bg-[#1E2433] text-white shadow-2xs' : 'bg-white text-stone-900 shadow-2xs')
+                      : theme.textSub
+                  }`}
+                >
+                  {v.label}
+                </button>
+              ))}
             </div>
 
-            {/* 본문 집중 / 2단 필사 토글 (통독과 동일) */}
-            <div className={`flex gap-1 ${isDark ? 'bg-black/30 border-slate-800' : 'bg-stone-100 border-stone-200'} p-0.5 rounded-lg border`}>
+            {/* 뷰 모드 전환 (본문 집중 / 2단 필사) */}
+            <div className={`flex p-0.5 rounded-lg border text-[11px] font-bold ${isDark ? 'bg-[#0B0E14] border-white/10' : 'bg-stone-100 border-stone-200'}`}>
               <button 
                 onClick={() => setViewMode('single')}
-                className={`px-2.5 py-0.5 rounded text-[10.5px] font-bold transition-all cursor-pointer ${viewMode === 'single' ? (isDark ? 'bg-slate-800 text-white shadow-xs' : 'bg-white text-stone-900 shadow-xs') : theme.textSub}`}
+                className={`px-2.5 py-1 rounded-md transition-all cursor-pointer whitespace-nowrap ${
+                  viewMode === 'single' ? (isDark ? 'bg-[#1E2433] text-white' : 'bg-white text-stone-900 shadow-2xs') : theme.textSub
+                }`}
               >
                 본문 집중
               </button>
               <button 
                 onClick={() => setViewMode('split')}
-                className={`px-2.5 py-0.5 rounded text-[10.5px] font-bold transition-all cursor-pointer ${viewMode === 'split' ? (isDark ? 'bg-indigo-600 text-white shadow-xs' : 'bg-indigo-600 text-white shadow-xs') : theme.textSub}`}
+                className={`px-2.5 py-1 rounded-md transition-all cursor-pointer whitespace-nowrap ${
+                  viewMode === 'split' ? (isDark ? 'bg-white text-stone-950' : 'bg-stone-900 text-white shadow-2xs') : theme.textSub
+                }`}
               >
-                ✍️ 2단 필사
+                2단 필사
               </button>
             </div>
+          </div>
+        </div>
+
+        {/* 2-2. 오디오 낭독/녹음 및 신학 연구 액션 바 */}
+        <div className={`px-3 sm:px-5 py-1.5 flex items-center justify-between gap-2 overflow-x-auto hide-scrollbar ${
+          isDark ? 'bg-[#0E121A]' : 'bg-stone-50/70'
+        }`}>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              onClick={() => setTtsRate && setTtsRate(r => r === 1.0 ? 1.2 : r === 1.2 ? 1.5 : r === 1.5 ? 2.0 : 1.0)}
+              className={`h-7 px-2.5 rounded-lg text-[11px] font-bold border transition-colors cursor-pointer whitespace-nowrap ${
+                isDark ? 'border-white/10 bg-[#161B26] text-slate-300' : 'border-stone-200 bg-white text-stone-700'
+              }`}
+            >
+              {ttsRate}x 배속
+            </button>
+            
+            <button
+              onClick={() => { 
+                const q = [`${mp?.title} 말씀입니다.`]; 
+                getArr(mChaps).forEach(ch => { 
+                  getDisplayVersesForChapter(ch).forEach(v => {
+                    const koBookName = BIBLE_66_MAP[mBookD?.name]?.ko || mBookD?.name || mp?.book;
+                    const easyKey = `${koBookName}-${ch}-${v.vNum}`;
+                    const webKey = `${koBookName}-${ch}-${v.vNum}`;
+                    
+                    let textToRead = decodeHtmlEntities(safeCleanText(v.text));
+                    if (bibleVersion === 'easy' && easyBibleDb[easyKey]) {
+                      textToRead = easyBibleDb[easyKey];
+                    } else if (bibleVersion === 'web' && (webBibleDb[webKey] || webBibleDb[`${mBookD?.name}-${ch}-${v.vNum}`])) {
+                      textToRead = webBibleDb[webKey] || webBibleDb[`${mBookD?.name}-${ch}-${v.vNum}`];
+                    }
+                    q.push(textToRead);
+                  }); 
+                }); 
+                if (toggleTTS) toggleTTS(q); 
+              }}
+              className={`h-7 px-3 rounded-lg text-[11px] font-bold transition-colors flex items-center gap-1 cursor-pointer whitespace-nowrap ${
+                isSpeaking ? 'bg-rose-600 text-white animate-pulse' : (isDark ? 'bg-white text-stone-950' : 'bg-stone-900 text-white')
+              }`}
+            >
+              {isSpeaking ? <IconStop /> : <IconPlay />} <span>{isSpeaking ? '낭독 중지' : '본문 낭독'}</span>
+            </button>
+            
+            <button
+              onClick={isRecording ? stopRecording : startRecording}
+              className={`h-7 px-2.5 rounded-lg text-[11px] font-bold flex items-center gap-1 border transition-all cursor-pointer whitespace-nowrap ${
+                isRecording ? 'bg-rose-600 text-white border-rose-600 animate-pulse' : (isDark ? 'border-white/10 bg-[#161B26] text-slate-300' : 'border-stone-200 bg-white text-stone-700')
+              }`}
+            >
+              <IconMic /> <span>{isRecording ? '녹음 저장' : '음성 녹음'}</span>
+            </button>
+
+            <div className="w-[1px] h-4 bg-stone-300 dark:bg-white/10 mx-0.5" />
+
+            <a
+              href={`https://www.youtube.com/results?search_query=부산신성교회+맥체인+성경읽기+${ymdStr}`}
+              target="_blank"
+              rel="noreferrer"
+              className={`h-7 px-2.5 rounded-lg text-[11px] font-bold flex items-center gap-1 border transition-colors whitespace-nowrap ${
+                isDark ? 'border-white/10 bg-[#161B26] text-slate-300 hover:text-white' : 'border-stone-200 bg-white text-stone-700 hover:bg-stone-100'
+              }`}
+            >
+              <IconSearch /> <span>통독 영상</span>
+            </a>
+            <a
+              href={`https://www.youtube.com/results?search_query=부산신성교회+맥체인+성경+해설+${ymdStr}`}
+              target="_blank"
+              rel="noreferrer"
+              className={`h-7 px-2.5 rounded-lg text-[11px] font-bold flex items-center gap-1 border transition-colors whitespace-nowrap ${
+                isDark ? 'border-white/10 bg-[#161B26] text-slate-300 hover:text-white' : 'border-stone-200 bg-white text-stone-700 hover:bg-stone-100'
+              }`}
+            >
+              <span>해설 영상</span>
+            </a>
+          </div>
+
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              type="button"
+              onClick={() => setShowDevotionGuide(prev => !prev)}
+              className={`h-7 px-2.5 rounded-lg text-[11px] font-bold border flex items-center gap-1 cursor-pointer transition-colors whitespace-nowrap ${
+                showDevotionGuide
+                  ? (isDark ? 'bg-white text-stone-950 border-white' : 'bg-stone-900 text-white border-stone-900')
+                  : (isDark ? 'border-white/15 bg-[#161B26] text-amber-300 hover:bg-white/10' : 'border-stone-300 bg-white text-stone-800 hover:bg-stone-100')
+              }`}
+            >
+              <IconBook /> <span>맥체인 강해 해설</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => openGalaxyPopup('arc')}
+              className={`h-7 px-2.5 rounded-lg text-[11px] font-bold border flex items-center gap-1 cursor-pointer transition-colors whitespace-nowrap ${
+                isDark ? 'border-white/15 bg-[#161B26] text-slate-200 hover:bg-white/10' : 'border-stone-200 bg-white text-stone-700 hover:bg-stone-100'
+              }`}
+            >
+              <span>신구약 아크</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => openGalaxyPopup('2d')}
+              className={`h-7 px-2.5 rounded-lg text-[11px] font-bold border flex items-center gap-1 cursor-pointer transition-colors whitespace-nowrap ${
+                isDark ? 'border-white/15 bg-[#161B26] text-slate-200 hover:bg-white/10' : 'border-stone-200 bg-white text-stone-700 hover:bg-stone-100'
+              }`}
+            >
+              <span>말씀 은하계</span>
+            </button>
 
             <button 
-                onClick={() => setIsFocusMode(!isFocusMode)} 
-                className={`flex items-center gap-1 px-2 py-0.8 rounded-lg text-[10.5px] font-bold transition-all shrink-0 cursor-pointer border ${
-                  isFocusMode 
-                    ? 'bg-amber-600 text-white border-amber-600 shadow-xs' 
-                    : (isDark ? 'bg-slate-800 text-slate-300 border-slate-700' : 'bg-stone-100 text-stone-700 border-stone-200')
-                }`}
+              onClick={() => setActiveScreen && setActiveScreen('interlinear')}
+              className={`h-7 px-2.5 rounded-lg text-[11px] font-bold border transition-colors flex items-center gap-1 cursor-pointer whitespace-nowrap ${
+                isDark ? 'border-white/15 bg-[#161B26] text-slate-200 hover:bg-white/10' : 'border-stone-200 bg-white text-stone-700 hover:bg-stone-100'
+              }`}
             >
-                {isFocusMode ? <><IconMinimize /> 몰입 해제</> : <><IconMaximize /> 집중 모드</>}
+              <span>원어 연구실</span>
             </button>
           </div>
+        </div>
       </div>
 
-      {/* 3. 배속/낭독 & 유튜브 검색 & 녹음 재생기 & 플랜 탭바 */}
-      <div className={`w-full flex-col shrink-0 ${isFocusMode ? 'hidden' : 'flex'}`}>
-          <div className={`px-2 sm:px-3 py-1 border-b ${theme.border} relative z-10 w-full ${isDark ? 'bg-slate-900/30' : 'bg-stone-50/50'}`}>
-            <div className="flex flex-col gap-1">
-              <div className="flex flex-wrap gap-1 items-center">
-                <button onClick={()=>setTtsRate && setTtsRate(r => r===1.0 ? 1.2 : r===1.2 ? 1.5 : r===1.5 ? 2.0 : 1.0)} className={`h-6.5 px-2 rounded-lg text-[10.5px] font-semibold border transition-colors cursor-pointer ${isDark ? 'border-slate-800 bg-slate-900 text-slate-300' : 'border-stone-200 bg-white text-stone-700'}`}>
-                  {ttsRate}x 배속
-                </button>
-                
-                <button onClick={()=>{ 
-                    const q = [`${mp?.title} 말씀입니다.`]; 
-                    getArr(mChaps).forEach(ch => { 
-                      getDisplayVersesForChapter(ch).forEach(v => {
-                        const koBookName = BIBLE_66_MAP[mBookD?.name]?.ko || mBookD?.name || mp?.book;
-                        const easyKey = `${koBookName}-${ch}-${v.vNum}`;
-                        const webKey = `${koBookName}-${ch}-${v.vNum}`;
-                        
-                        let textToRead = decodeHtmlEntities(safeCleanText(v.text));
-                        if (bibleVersion === 'easy' && easyBibleDb[easyKey]) {
-                          textToRead = easyBibleDb[easyKey];
-                        } else if (bibleVersion === 'web' && (webBibleDb[webKey] || webBibleDb[`${mBookD?.name}-${ch}-${v.vNum}`])) {
-                          textToRead = webBibleDb[webKey] || webBibleDb[`${mBookD?.name}-${ch}-${v.vNum}`];
-                        }
-                        q.push(textToRead);
-                      }); 
-                    }); 
-                    if(toggleTTS) toggleTTS(q); 
-                }} className={`h-6.5 px-2.5 rounded-lg text-[10.5px] font-bold transition-colors flex items-center gap-1 cursor-pointer ${isSpeaking ? `bg-amber-600 text-white animate-pulse shadow-xs` : (isDark ? 'bg-white text-black' : 'bg-stone-900 text-white')}`}>
-                    {isSpeaking ? <IconStop /> : <IconPlay />} {isSpeaking ? '중지' : '낭독'}
-                </button>
-                
-                <button onClick={isRecording ? stopRecording : startRecording} className={`h-6.5 px-2 rounded-lg text-[10.5px] font-semibold flex items-center gap-1 border transition-all cursor-pointer ${isRecording ? 'bg-rose-600 text-white animate-pulse shadow-xs' : (isDark ? 'border-slate-800 bg-slate-900 text-slate-300' : 'border-stone-200 bg-white text-stone-700')}`}>
-                  <IconMic /> {isRecording ? '저장' : '녹음'}
-                </button>
-
-                <a href={`https://www.youtube.com/results?search_query=부산신성교회+맥체인+성경읽기+${ymdStr}`} target="_blank" rel="noreferrer" className={`h-6.5 px-2 rounded-lg text-[10.5px] font-semibold flex items-center gap-1 border transition-colors ${isDark ? 'border-slate-800 bg-slate-900 text-slate-300' : 'border-stone-200 bg-white text-stone-700'}`}>
-                    <IconSearch /> 읽기
-                </a>
-                <a href={`https://www.youtube.com/results?search_query=부산신성교회+맥체인+성경+해설+${ymdStr}`} target="_blank" rel="noreferrer" className={`h-6.5 px-2 rounded-lg text-[10.5px] font-semibold flex items-center border transition-colors ${isDark ? 'border-slate-800 bg-slate-900 text-slate-300' : 'border-stone-200 bg-white text-stone-700'}`}>
-                    해설
-                </a>
-
-                <button 
-                  onClick={() => setActiveScreen && setActiveScreen('interlinear')}
-                  className={`h-6.5 px-2.5 rounded-lg text-[10.5px] font-bold border transition-colors flex items-center gap-1 cursor-pointer ${
-                    isDark ? 'border-indigo-800 bg-indigo-950/40 text-indigo-300' : 'border-indigo-200 bg-indigo-50 text-indigo-800'
-                  }`}
-                >
-                  <IconBook /> 원어 성경
-                </button>
-
-                {/* 🌈 현재 플랜 본문 아크 대조 & 은하계 팝업 버튼 */}
-                <button
-                  type="button"
-                  onClick={() => openGalaxyPopup('arc')}
-                  className="h-6.5 px-2.5 rounded-lg text-[10.5px] font-black bg-amber-400 hover:bg-amber-300 text-slate-950 shadow-2xs flex items-center gap-1 cursor-pointer active:scale-95 transition-all"
-                  title="페이지 이동 없이 현재 맥체인 본문의 신·구약 아크 대조 팝업 열기"
-                >
-                  🌈 아크 대조
-                </button>
-                <button
-                  type="button"
-                  onClick={() => openGalaxyPopup('2d')}
-                  className="h-6.5 px-2.5 rounded-lg text-[10.5px] font-black bg-cyan-500 hover:bg-cyan-400 text-slate-950 shadow-2xs flex items-center gap-1 cursor-pointer active:scale-95 transition-all"
-                  title="페이지 이동 없이 현재 맥체인 본문의 성경 은하계 팝업 열기"
-                >
-                  🌌 은하계
-                </button>
-              </div>
-
-              {audioUrl && (
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <span className={`text-[10px] font-medium ${theme.textSub}`}>최근 녹음:</span>
-                  <audio src={audioUrl} controls className={`h-5.5 max-w-[190px] rounded-lg opacity-90 ${isDark ? 'invert' : ''}`} />
-                </div>
-              )}
-            </div>
-          </div>
-          
-          {/* 플랜 탭바 */}
-          <div className={`border-b ${theme.border} px-2 py-1 overflow-x-auto hide-scrollbar snap-x flex gap-1 ${
-            isDark ? 'bg-slate-950/40' : 'bg-white'
-          }`}>
-              {(getArr ? getArr(mpList) : mpList || []).map((planItem, idx) => ( 
-                  <button key={idx} onClick={() => setMcheynePlanIdx && setMcheynePlanIdx(idx)} className={`h-6.5 px-2 rounded-lg text-[10.5px] font-bold whitespace-nowrap shrink-0 snap-center transition-all cursor-pointer ${mcheynePlanIdx === idx ? 'bg-stone-900 text-white dark:bg-slate-200 dark:text-stone-900 shadow-2xs' : (isDark ? 'text-slate-400 hover:text-white' : 'text-stone-600 hover:text-stone-900')}`}>
-                      {decodeHtmlEntities(safeCleanText(planItem.title))}
-                  </button> 
-              ))}
-          </div>
-      </div>
-
-      {/* 4. 본문 메인 레이아웃 (좌측 리딩 뷰 + 우측 고성능 필사 스케치북) */}
-      <div className={`flex-1 px-2 sm:px-3 md:px-4 pt-1.5 pb-20 grid gap-3 h-full relative z-10 overflow-hidden ${
-        viewMode === 'split' ? 'grid-cols-1 md:grid-cols-2 max-w-[1500px]' : 'grid-cols-1 max-w-4xl'
+      {/* 3. 본문 메인 레이아웃 (좌측 성경 리딩 뷰 + 우측 필사 노트) */}
+      <div className={`flex-1 px-2.5 sm:px-4 md:px-6 pt-2.5 pb-20 grid gap-4 h-full relative z-10 overflow-hidden ${
+        viewMode === 'split' ? 'grid-cols-1 lg:grid-cols-12 max-w-[1560px]' : 'grid-cols-1 max-w-4xl'
       } mx-auto w-full`}>
           
-          {/* 좌측 성경 본문 스트림 */}
-          <div className="flex flex-col relative z-[45] pointer-events-auto h-full overflow-y-auto hide-scrollbar">
-              <div className={`break-words border ${theme.panel} rounded-2xl p-2.5 sm:p-4 min-h-[400px]`}>
-              {(getArr ? getArr(mChaps) : mChaps || []).map(ch => {
-                const displayVerses = getDisplayVersesForChapter(ch);
-                const chRead = isChapterAllRead(ch);
-                const koBookNameForChap = BIBLE_66_MAP[mBookD?.name]?.ko || mBookD?.name || mp?.book || '창세기';
+        {/* 좌측 성경 본문 스트림 */}
+        <div className={`${viewMode === 'split' ? 'lg:col-span-7' : ''} flex flex-col relative z-[45] pointer-events-auto h-full overflow-y-auto hide-scrollbar space-y-3`}>
+          
+          {/* ===================================================================== */}
+          {/* 맥체인 장별 강해 및 신학적 배경 아코디언 패널 */}
+          {/* ===================================================================== */}
+          {/* src/pages/Mcheyne.js 본문 상단 강해 카드 */}
+          <div className={`rounded-xl border transition-all overflow-hidden shrink-0 ${
+            isDark ? 'bg-[#121620] border-white/10' : 'bg-white border-stone-200/90 shadow-2xs'
+          }`}>
+            <div
+              onClick={() => setShowDevotionGuide(!showDevotionGuide)}
+              className="px-4 py-3 flex items-center justify-between cursor-pointer select-none hover:bg-black/[0.02] dark:hover:bg-white/[0.02]"
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <span className={`px-2 py-0.5 rounded text-[10px] font-bold shrink-0 ${
+                  isDark ? 'bg-white/10 text-stone-200' : 'bg-stone-100 text-stone-700'
+                }`}>
+                  {activeBookMeta.section}
+                </span>
+                <span className={`text-[13.5px] font-bold truncate ${theme.textMain}`}>
+                  {activeBookMeta.koBook} {activeBookMeta.chapter}장: {activeBookMeta.title}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className={`text-[11px] font-medium hidden sm:inline ${theme.textSub}`}>
+                  {showDevotionGuide ? '해설 접기' : '해설 보기'}
+                </span>
+                <IconChevronDown className={`w-4 h-4 text-stone-400 transition-transform ${showDevotionGuide ? 'rotate-180' : ''}`} />
+              </div>
+            </div>
 
-                return ( 
-                  <div key={ch} className="mb-4 p-2 sm:p-3 rounded-xl border border-stone-200/80 dark:border-slate-800 bg-stone-50/40 dark:bg-black/20">
-                      
-                      {/* 이 장 전체 완독 체크 버튼 & 장별 아크/은하계 팝업 버튼 */}
-                      <div className="flex items-center justify-between mb-2 border-b border-stone-200 dark:border-slate-800 pb-1.5 flex-wrap gap-1.5">
-                        <div className="flex items-center gap-2">
-                          <h4 className={`font-bold text-[14px] sm:text-[15px] flex items-center gap-1.5 ${theme.textMain}`}>
-                              <IconBook /> 제 {ch} 장
-                          </h4>
-                          <button
-                            type="button"
-                            onClick={() => openGalaxyPopup('arc', `${koBookNameForChap} ${ch}:1`)}
-                            className="px-2 py-0.5 rounded-md text-[10px] font-black bg-amber-400/20 hover:bg-amber-400/35 text-amber-700 dark:text-amber-300 border border-amber-400/40 cursor-pointer"
-                            title={`${koBookNameForChap} ${ch}장 신·구약 아크 대조 팝업`}
-                          >
-                            🌈 {ch}장 아크 대조
-                          </button>
-                        </div>
-                        
-                        <button
-                          type="button"
-                          onClick={() => handleToggleWholeChapter(ch)}
-                          className={`px-2.5 py-1 rounded-lg text-[10.5px] font-bold transition-all flex items-center gap-1 cursor-pointer border ${
-                            chRead
-                              ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
-                              : (isDark ? 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700' : 'bg-white text-stone-700 border-stone-300 hover:bg-stone-50 shadow-2xs')
-                          }`}
-                        >
-                          <IconCheckCircle />
-                          {chRead ? '완독 취소' : '이 장 전체 완독'}
-                        </button>
-                      </div>
+            {showDevotionGuide && (
+              <div className={`px-4 pb-4 pt-2 border-t ${theme.border} space-y-3 text-left`}>
+                <div className={`p-3 rounded-lg border ${isDark ? 'bg-[#0B0E14] border-white/10' : 'bg-stone-50 border-stone-200/80'}`}>
+                  <span className="text-[10.5px] font-bold text-stone-400 block mb-1">본문 핵심 요약</span>
+                  <p className={`text-[13px] font-medium leading-relaxed ${theme.textMain}`}>{activeBookMeta.summary}</p>
+                </div>
 
-                      {/* 성경 본문 스트림 */}
-                      <div className="space-y-1">
-                        {displayVerses.map(({ vNum, text }) => { 
-                            const vId = `${mBookD?.name}-${ch}-${vNum - 1}`; 
-                            const isRead = (readVerses || {})[vId]; 
-                            const displayVerseText = decodeHtmlEntities(safeCleanText(text));
+                <div className="space-y-1">
+                  <span className="text-[11px] font-bold text-stone-400 block">핵심 관찰 포인트</span>
+                  <p className={`text-[12.5px] font-serif leading-relaxed ${isDark ? 'text-slate-300' : 'text-stone-700'}`}>
+                    {activeBookMeta.coreObservation}
+                  </p>
+                </div>
 
-                            const koBookName = BIBLE_66_MAP[mBookD?.name]?.ko || mBookD?.name || mp?.book;
-                            const easyKey = `${koBookName}-${ch}-${vNum}`;
-                            const easyText = easyBibleDb[easyKey] || '';
-                            const webKey = `${koBookName}-${ch}-${vNum}`;
-                            const webText = webBibleDb[webKey] || webBibleDb[`${mBookD?.name}-${ch}-${vNum}`] || '';
+                {activeBookMeta.christConnection && (
+                  <div className={`p-3 rounded-lg border ${isDark ? 'bg-[#181D29] border-white/10' : 'bg-stone-100/70 border-stone-200'}`}>
+                    <span className="text-[11px] font-bold text-stone-400 block mb-0.5">구속사적 연결 (Christ Connection)</span>
+                    <p className={`text-[12.5px] font-serif leading-relaxed ${isDark ? 'text-slate-200' : 'text-stone-800'}`}>
+                      {activeBookMeta.christConnection}
+                    </p>
+                  </div>
+                )}
 
-                            return ( 
-                                <div 
-                                  key={vNum} 
-                                  onContextMenu={(e) => {
-                                    e.preventDefault();
-                                    openVerseInspector(ch, vNum, displayVerseText);
-                                  }}
-                                  onTouchStart={() => {
-                                    isLongPressActiveRef.current = false;
-                                    longPressTimerRef.current = setTimeout(() => {
-                                      isLongPressActiveRef.current = true;
-                                      if (window.navigator?.vibrate) window.navigator.vibrate(40);
-                                      openVerseInspector(ch, vNum, displayVerseText);
-                                    }, 500);
-                                  }}
-                                  onTouchMove={() => { if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current); }}
-                                  onTouchEnd={() => { if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current); }}
-                                  className={`py-1.5 px-1 rounded-lg transition-colors cursor-pointer ${
-                                    isRead ? 'opacity-35 line-through' : 'hover:bg-stone-100/60 dark:hover:bg-white/5'
-                                  }`}
-                                >
-                                    <div className="flex items-start gap-1.5">
-                                      <span 
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          openVerseInspector(ch, vNum, displayVerseText);
-                                        }}
-                                        className="font-bold font-mono text-[12px] sm:text-[13px] text-amber-700 dark:text-amber-400 mt-0.5 min-w-[20px] text-right shrink-0 select-none cursor-pointer hover:underline"
-                                        title="원어 분해 및 10대 학술 사료"
-                                      >
-                                        {vNum}
-                                      </span>
+                <div className="space-y-1">
+                  <span className="text-[11px] font-bold text-stone-400 block">오늘의 삶의 질문</span>
+                  <ul className={`text-[12px] space-y-1 pl-4 list-disc ${isDark ? 'text-slate-300' : 'text-stone-700'}`}>
+                    {activeBookMeta.questions.map((q, idx) => (
+                      <li key={idx} className="leading-relaxed">{q}</li>
+                    ))}
+                  </ul>
+                </div>
 
-                                      <div 
-                                        onClick={() => { 
-                                          if (isLongPressActiveRef.current) return;
-                                          const willBeRead = !isRead;
-                                          const nextReadVerses = { ...(readVerses || {}), [vId]: willBeRead };
-                                          if (setReadVerses) setReadVerses(nextReadVerses); 
-                                          localStorage.setItem('readVerses', JSON.stringify(nextReadVerses));
-                                          if (willBeRead) triggerSpiritualSync(nextReadVerses);
-                                        }}
-                                        className="flex-1 text-[14px] sm:text-[15px] leading-[1.8] font-serif break-keep text-stone-900 dark:text-slate-100"
-                                      >
-                                          {bibleVersion === 'krv' && <span>{displayVerseText}</span>}
-                                          {bibleVersion === 'easy' && <span className="font-sans font-medium">{easyText || displayVerseText}</span>}
-                                          {bibleVersion === 'web' && <span className="text-[13.5px] sm:text-[14.5px]">{webText || "Loading World English Bible..."}</span>}
-                                          {bibleVersion === 'parallel' && (
-                                            <div className="space-y-1">
-                                              <div>{displayVerseText}</div>
-                                              {easyText && (
-                                                <div className="text-[13px] sm:text-[13.5px] font-sans text-emerald-800 dark:text-emerald-300">
-                                                  <span className="text-[9.5px] font-bold text-emerald-600 dark:text-emerald-400 mr-1">[쉬운]</span>
-                                                  {easyText}
-                                                </div>
-                                              )}
-                                              {webText && (
-                                                <div className="text-[13px] sm:text-[13.5px] text-blue-800 dark:text-blue-300">
-                                                  <span className="text-[9.5px] font-bold text-blue-600 dark:text-blue-400 mr-1">[WEB]</span>
-                                                  {webText}
-                                                </div>
-                                              )}
-                                            </div>
-                                          )}
-
-                                          {/* 🌟 각 절 우측: [📖 원어] + [🌈 아크] + [🌌 은하계] 인라인 팝업 버튼 */}
-                                          <span className="inline-flex items-center gap-1 ml-2 align-middle select-none">
-                                            <button
-                                              type="button"
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                openVerseInspector(ch, vNum, displayVerseText);
-                                              }}
-                                              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-sans font-bold bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/80 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 shadow-2xs cursor-pointer active:scale-95 transition-all"
-                                              title="원어 분해 및 10대 학술 사료"
-                                            >
-                                              <span>📖</span> 원어
-                                            </button>
-                                            <button
-                                              type="button"
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                openGalaxyPopup('arc', `${koBookName} ${ch}:${vNum}`);
-                                              }}
-                                              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-sans font-bold bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/60 dark:hover:bg-amber-900/80 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 shadow-2xs cursor-pointer active:scale-95 transition-all"
-                                              title={`${koBookName} ${ch}:${vNum} 신·구약 아크 대조 팝업 열기`}
-                                            >
-                                              <span>🌈</span> 아크
-                                            </button>
-                                            <button
-                                              type="button"
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                openGalaxyPopup('2d', `${koBookName} ${ch}:${vNum}`);
-                                              }}
-                                              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-sans font-bold bg-cyan-50 hover:bg-cyan-100 dark:bg-cyan-950/60 dark:hover:bg-cyan-900/80 text-cyan-800 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800 shadow-2xs cursor-pointer active:scale-95 transition-all"
-                                              title={`${koBookName} ${ch}:${vNum} 성경 은하계 연관 팝업 열기`}
-                                            >
-                                              <span>🌌</span> 은하계
-                                            </button>
-                                          </span>
-                                      </div>
-                                    </div>
-                                </div> 
-                            ); 
-                        })}
-                      </div>
-                  </div> 
-                );
-              })}
-              
-              {/* 오늘의 맥체인 본문 모두 완독 체크 버튼 */}
-              <div className="mt-3 pt-2.5 border-t border-stone-200 dark:border-slate-800">
-                  <button 
-                    onClick={() => { 
-                      const u = {}; 
-                      const nextState = !mAllR; 
-
-                      (getArr ? getArr(mChaps) : mChaps || []).forEach(ch => { 
-                        const displayVerses = getDisplayVersesForChapter(ch);
-                        displayVerses.forEach(v => {
-                          u[`${mBookD?.name}-${ch}-${v.vNum - 1}`] = nextState;
-                        });
-                      }); 
-
-                      const nextReadVerses = { ...(readVerses || {}), ...u };
-                      if(setReadVerses) setReadVerses(nextReadVerses); 
-                      localStorage.setItem('readVerses', JSON.stringify(nextReadVerses));
-
-                      if (nextState) {
-                        triggerSpiritualSync(nextReadVerses);
-                      } else {
-                        window.dispatchEvent(new Event('storage'));
-                        window.dispatchEvent(new CustomEvent('bible-progress-updated'));
-                      }
-                    }} 
-                    className={`w-full py-2.5 rounded-xl font-bold text-[12.5px] shadow-xs transition-transform active:scale-[0.98] flex items-center justify-center gap-1.5 cursor-pointer ${
-                      mAllR 
-                        ? (isDark ? 'bg-white/10 text-slate-400' : 'bg-stone-200 text-stone-700') 
-                        : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                <div className="pt-1 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const summaryBlock = `\n[${activeBookMeta.koBook} ${activeBookMeta.chapter}장 묵상 노트]\n• 핵심: ${activeBookMeta.title}\n• 요약: ${activeBookMeta.summary}\n• 결단: ${activeBookMeta.questions[0]}\n`;
+                      const nextNote = (noteContent || '') + summaryBlock;
+                      setNoteContent(nextNote);
+                      if (updateDay) updateDay({ mcheyneNote: nextNote });
+                    }}
+                    className={`px-3 py-1.5 rounded-lg text-[11.5px] font-bold border cursor-pointer transition-colors ${
+                      isDark ? 'bg-white/10 border-white/15 text-white hover:bg-white/20' : 'bg-stone-900 border-stone-900 text-white hover:bg-black'
                     }`}
                   >
-                      {mAllR ? '전체 플랜 읽음 취소' : <><IconCheckCircle /> 오늘의 맥체인 본문 모두 완독 체크</>}
+                    강해 요약을 필사 노트에 삽입
                   </button>
+                </div>
               </div>
+            )}
+          </div>
+
+          {/* ===================================================================== */}
+          {/* 성경 본문 카드 (구절별 지저분한 버튼 완전 제거 & 고밀도 리딩 뷰) */}
+          {/* ===================================================================== */}
+          <div className={`border ${theme.panel} rounded-xl p-4 sm:p-6 min-h-[420px]`}>
+            {/* 상단 사용 안내 힌트 바 */}
+            <div className={`mb-4 pb-2.5 border-b ${theme.border} flex items-center justify-between text-[11.5px] ${theme.textSub}`}>
+              <span>절 번호 클릭: <b>원어 강해</b> · 본문 클릭: <b>읽음 체크 및 연구 도구</b></span>
+              {audioUrl && (
+                <audio src={audioUrl} controls className="h-6 max-w-[160px]" />
+              )}
+            </div>
+
+            {(getArr ? getArr(mChaps) : mChaps || []).map(ch => {
+              const displayVerses = getDisplayVersesForChapter(ch);
+              const chRead = isChapterAllRead(ch);
+              const koBookNameForChap = BIBLE_66_MAP[mBookD?.name]?.ko || mBookD?.name || mp?.book || '창세기';
+
+              return ( 
+                <div key={ch} className="mb-8 last:mb-2">
+                  {/* 장 헤더 바 */}
+                  <div className={`flex items-center justify-between mb-3 pb-2 border-b ${theme.border} flex-wrap gap-2`}>
+                    <div className="flex items-center gap-2.5">
+                      <h3 className={`font-bold text-[16px] sm:text-[17px] tracking-tight ${theme.textMain}`}>
+                        {koBookNameForChap} 제 {ch} 장
+                      </h3>
+                      <button
+                        type="button"
+                        onClick={() => openGalaxyPopup('arc', `${koBookNameForChap} ${ch}:1`)}
+                        className={`px-2 py-0.5 rounded text-[11px] font-bold border cursor-pointer transition-colors ${
+                          isDark ? 'bg-white/5 border-white/15 text-slate-300 hover:bg-white/10' : 'bg-stone-100 border-stone-200 text-stone-700 hover:bg-stone-200'
+                        }`}
+                      >
+                        {ch}장 아크 대조
+                      </button>
+                    </div>
+                    
+                    <button
+                      type="button"
+                      onClick={() => handleToggleWholeChapter(ch)}
+                      className={`px-3 py-1 rounded-lg text-[11.5px] font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
+                        chRead
+                          ? (isDark ? 'bg-white/15 text-white border-white/30' : 'bg-stone-900 text-white border-stone-900')
+                          : (isDark ? 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10' : 'bg-white text-stone-700 border-stone-300 hover:bg-stone-50')
+                      }`}
+                    >
+                      <IconCheckCircle />
+                      <span>{chRead ? `${ch}장 완독됨` : `${ch}장 전체 완독`}</span>
+                    </button>
+                  </div>
+
+                  {/* 클린 성경 본문 리스트 (각 절 우측의 원어/아크/은하계 버튼 완전 제거!) */}
+                  <div className="space-y-1">
+                    {displayVerses.map(({ vNum, text }) => { 
+                      const vId = `${mBookD?.name}-${ch}-${vNum - 1}`; 
+                      const verseKey = `${ch}-${vNum}`;
+                      const isRead = (readVerses || {})[vId]; 
+                      const isSelectedVerse = selectedVerseKey === verseKey;
+                      const displayVerseText = decodeHtmlEntities(safeCleanText(text));
+
+                      const koBookName = BIBLE_66_MAP[mBookD?.name]?.ko || mBookD?.name || mp?.book;
+                      const easyKey = `${koBookName}-${ch}-${vNum}`;
+                      const easyText = easyBibleDb[easyKey] || '';
+                      const webKey = `${koBookName}-${ch}-${vNum}`;
+                      const webText = webBibleDb[webKey] || webBibleDb[`${mBookD?.name}-${ch}-${vNum}`] || '';
+
+                      return ( 
+                        <div key={vNum} className="rounded-lg transition-colors">
+                          <div 
+                            className={`py-2 px-2.5 rounded-lg transition-all flex items-baseline gap-3 ${
+                              isSelectedVerse
+                                ? (isDark ? 'bg-white/[0.07] ring-1 ring-white/20' : 'bg-stone-100/90 ring-1 ring-stone-300')
+                                : 'hover:bg-black/[0.03] dark:hover:bg-white/[0.03]'
+                            }`}
+                          >
+                            {/* 절 번호 (클릭 시 원어 강해 인스펙터 즉시 오픈) */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openVerseInspector(ch, vNum, displayVerseText);
+                              }}
+                              className={`font-mono font-bold text-[12.5px] min-w-[24px] text-right shrink-0 select-none cursor-pointer transition-colors ${
+                                isRead
+                                  ? 'text-stone-400 dark:text-slate-600'
+                                  : 'text-stone-500 dark:text-slate-400 hover:text-stone-950 dark:hover:text-white underline-offset-4 hover:underline'
+                              }`}
+                              title={`${vNum}절 원어 강해 열기`}
+                            >
+                              {vNum}
+                            </button>
+
+                            {/* 성경 본문 텍스트 (클릭 시 읽음 토글 + 슬림 컨텍스트 액션 바 표시) */}
+                            <div 
+                              onClick={() => { 
+                                const willBeRead = !isRead;
+                                const nextReadVerses = { ...(readVerses || {}), [vId]: willBeRead };
+                                if (setReadVerses) setReadVerses(nextReadVerses); 
+                                localStorage.setItem('readVerses', JSON.stringify(nextReadVerses));
+                                if (willBeRead) triggerSpiritualSync(nextReadVerses);
+                                setSelectedVerseKey(prev => (prev === verseKey ? null : verseKey));
+                              }}
+                              className={`flex-1 font-serif break-keep cursor-pointer transition-opacity ${fontSizeClass} ${
+                                isRead ? 'opacity-40 line-through' : theme.textMain
+                              }`}
+                            >
+                              {bibleVersion === 'krv' && <span>{displayVerseText}</span>}
+                              {bibleVersion === 'easy' && <span className="font-sans">{easyText || displayVerseText}</span>}
+                              {bibleVersion === 'web' && <span>{webText || "Loading World English Bible..."}</span>}
+                              {bibleVersion === 'parallel' && (
+                                <div className="space-y-1.5">
+                                  <div>{displayVerseText}</div>
+                                  {easyText && (
+                                    <div className="text-[13.5px] font-sans text-stone-600 dark:text-slate-300 pl-2.5 border-l-2 border-stone-300 dark:border-slate-700">
+                                      <span className="text-[10px] font-bold mr-1.5 opacity-70">쉬운</span>
+                                      {easyText}
+                                    </div>
+                                  )}
+                                  {webText && (
+                                    <div className="text-[13.5px] text-stone-600 dark:text-slate-300 pl-2.5 border-l-2 border-stone-300 dark:border-slate-700">
+                                      <span className="text-[10px] font-bold mr-1.5 opacity-70">WEB</span>
+                                      {webText}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* 선택한 절에만 부드럽게 열리는 슬림 컨텍스트 도구 바 */}
+                          {isSelectedVerse && (
+                            <div className={`ml-9 mr-2 mt-1 mb-2 px-3 py-1.5 rounded-lg border flex flex-wrap items-center justify-between gap-2 animate-fade-in ${
+                              isDark ? 'bg-[#181E2C] border-white/15 text-slate-200' : 'bg-white border-stone-200/90 text-stone-700 shadow-xs'
+                            }`}>
+                              <span className="text-[11px] font-mono font-bold opacity-75">
+                                {koBookName} {ch}:{vNum}
+                              </span>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <button
+                                  type="button"
+                                  onClick={() => openVerseInspector(ch, vNum, displayVerseText)}
+                                  className={`px-2.5 py-1 rounded text-[11px] font-bold cursor-pointer ${
+                                    isDark ? 'bg-white text-stone-950' : 'bg-stone-900 text-white'
+                                  }`}
+                                >
+                                  원어 강해
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => openGalaxyPopup('arc', `${koBookName} ${ch}:${vNum}`)}
+                                  className={`px-2.5 py-1 rounded text-[11px] font-bold border cursor-pointer ${
+                                    isDark ? 'border-white/15 hover:bg-white/10' : 'border-stone-200 hover:bg-stone-100'
+                                  }`}
+                                >
+                                  신구약 아크
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => openGalaxyPopup('2d', `${koBookName} ${ch}:${vNum}`)}
+                                  className={`px-2.5 py-1 rounded text-[11px] font-bold border cursor-pointer ${
+                                    isDark ? 'border-white/15 hover:bg-white/10' : 'border-stone-200 hover:bg-stone-100'
+                                  }`}
+                                >
+                                  말씀 은하계
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const quoteLine = `\n[${koBookName} ${ch}:${vNum}] "${displayVerseText}"\n`;
+                                    const nextNote = (noteContent || '') + quoteLine;
+                                    setNoteContent(nextNote);
+                                    if (updateDay) updateDay({ mcheyneNote: nextNote });
+                                    setSelectedVerseKey(null);
+                                  }}
+                                  className={`px-2.5 py-1 rounded text-[11px] font-bold border cursor-pointer ${
+                                    isDark ? 'border-white/15 hover:bg-white/10' : 'border-stone-200 hover:bg-stone-100'
+                                  }`}
+                                >
+                                  노트에 인용
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    navigator.clipboard?.writeText(`[${koBookName} ${ch}:${vNum}] ${displayVerseText}`);
+                                    setSelectedVerseKey(null);
+                                  }}
+                                  className={`px-2 py-1 rounded text-[11px] font-bold border cursor-pointer ${
+                                    isDark ? 'border-white/15 hover:bg-white/10' : 'border-stone-200 hover:bg-stone-100'
+                                  }`}
+                                >
+                                  복사
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ); 
+                    })}
+                  </div>
+                </div> 
+              );
+            })}
+            
+            {/* 하단 플랜 전체 완독 버튼 */}
+            <div className={`mt-4 pt-4 border-t ${theme.border}`}>
+              <button 
+                onClick={() => { 
+                  const u = {}; 
+                  const nextState = !mAllR; 
+
+                  (getArr ? getArr(mChaps) : mChaps || []).forEach(ch => { 
+                    const displayVerses = getDisplayVersesForChapter(ch);
+                    displayVerses.forEach(v => {
+                      u[`${mBookD?.name}-${ch}-${v.vNum - 1}`] = nextState;
+                    });
+                  }); 
+
+                  const nextReadVerses = { ...(readVerses || {}), ...u };
+                  if (setReadVerses) setReadVerses(nextReadVerses); 
+                  localStorage.setItem('readVerses', JSON.stringify(nextReadVerses));
+
+                  if (nextState) {
+                    triggerSpiritualSync(nextReadVerses);
+                  } else {
+                    window.dispatchEvent(new Event('storage'));
+                    window.dispatchEvent(new CustomEvent('bible-progress-updated'));
+                  }
+                }} 
+                className={`w-full py-3 rounded-xl font-bold text-[13px] transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                  mAllR 
+                    ? (isDark ? 'bg-white/10 text-slate-300' : 'bg-stone-200 text-stone-700') 
+                    : (isDark ? 'bg-white text-stone-950 hover:bg-stone-200' : 'bg-stone-900 text-white hover:bg-black')
+                }`}
+              >
+                <IconCheckCircle />
+                <span>{mAllR ? '현재 본문 완독 취소' : '현재 맥체인 본문 전체 완독 체크'}</span>
+              </button>
+            </div>
           </div>
         </div>
 
         {/* 우측: 2단 필사 전용 손필기 & 타이핑 노트 패널 */}
         {viewMode === 'split' && (
-          <div className="flex flex-col h-full relative z-[45] pointer-events-auto min-h-[450px]">
+          <div className="lg:col-span-5 flex flex-col h-full relative z-[45] pointer-events-auto min-h-[460px]">
             <McheyneTranscriptionNotePanel
               currentPlanKey={`${date || ymdStr || 'today'}_plan_${mcheynePlanIdx}`}
               planTitle={decodeHtmlEntities(safeCleanText(mp?.title || '맥체인'))}
@@ -1744,17 +2008,22 @@ export default function Mcheyne({
       </div>
 
       {/* ===================================================================== */}
-      {/* 🏛️ [원어 연구 인스펙터 모달 - 10대 학술 코퍼스 전수 연동]             */}
+      {/* 4. 원어 연구 인스펙터 모달 (10대 학술 코퍼스 전수 연동) */}
       {/* ===================================================================== */}
       {inspectorTarget && (
-        <div className="mcheyne-modal-portal fixed inset-0 z-[999999] bg-black/75 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-3 animate-fade-in select-none">
-          <div className={`w-full sm:max-w-2xl rounded-t-3xl sm:rounded-2xl border p-3.5 sm:p-5 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden ${
-            isDark ? 'bg-[#0F141F] border-slate-700 text-white' : 'bg-white border-stone-300 text-stone-900'
-          }`}>
-            
-            <div className="border-b pb-2.5 border-stone-200 dark:border-slate-800 shrink-0 space-y-2">
+        <div
+          className="mcheyne-modal-portal fixed inset-0 z-[999999] bg-black/75 flex items-end sm:items-center justify-center p-0 sm:p-3 animate-fade-in select-none"
+          onClick={() => setInspectorTarget(null)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className={`w-full sm:max-w-2xl rounded-t-3xl sm:rounded-2xl border p-4 sm:p-5 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden ${
+              isDark ? 'bg-[#10141D] border-white/20 text-white' : 'bg-white border-stone-300 text-stone-900'
+            }`}
+          >
+            <div className="border-b pb-3 border-stone-200 dark:border-white/15 shrink-0 space-y-2.5">
               <div className="flex justify-between items-center flex-wrap gap-1.5">
-                <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
+                <span className="text-[13px] font-bold">
                   {inspectorTarget.book} {inspectorTarget.chapter}장 {inspectorTarget.verse}절 원어 강해
                 </span>
                 
@@ -1766,127 +2035,114 @@ export default function Mcheyne({
                       setInspectorTarget(null);
                       openGalaxyPopup('arc', refStr);
                     }}
-                    className="px-2.5 py-1 rounded-lg text-[10.5px] font-black bg-amber-400 hover:bg-amber-300 text-slate-950 shadow-xs cursor-pointer flex items-center gap-1 transition-all active:scale-95"
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border cursor-pointer ${
+                      isDark ? 'bg-white/10 border-white/20 text-white' : 'bg-stone-100 border-stone-300 text-stone-800'
+                    }`}
                   >
-                    <span>🌈</span> 신구약 아크 ➔
+                    신구약 아크 ➔
                   </button>
                   <button
                     type="button"
                     onClick={handleJumpToInterlinearStudio}
-                    className="px-2.5 py-1 rounded-lg text-[10.5px] font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs cursor-pointer flex items-center gap-1 transition-all active:scale-95"
-                    title="10대 학술 엔진 전체 화면으로 이동"
+                    className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-stone-900 dark:bg-white text-white dark:text-stone-900 cursor-pointer"
                   >
-                    <span>🔬</span> 원어성경연구실 ➔
+                    원어성경연구실 ➔
                   </button>
-                  <button onClick={() => setInspectorTarget(null)} className="text-xs font-bold text-stone-400 hover:text-stone-900 dark:hover:text-white p-1 cursor-pointer">
+                  <button
+                    onClick={() => setInspectorTarget(null)}
+                    className="text-xs font-bold text-stone-400 hover:text-stone-900 dark:hover:text-white px-2 py-1 cursor-pointer"
+                  >
                     닫기 ✕
                   </button>
                 </div>
               </div>
 
               {selectedWordDetail && (
-                <div className={`grid grid-cols-2 gap-2 p-2.5 rounded-xl border ${
-                  isDark ? 'bg-[#161D2B] border-slate-700 text-white' : 'bg-stone-50 border-stone-200 text-stone-900'
+                <div className={`grid grid-cols-2 gap-2 p-3 rounded-xl border ${
+                  isDark ? 'bg-[#161B26] border-white/15 text-white' : 'bg-stone-50 border-stone-200 text-stone-900'
                 }`}>
                   <div className="space-y-0.5 text-left">
-                    <span className="text-[9px] font-bold text-stone-400 uppercase tracking-widest block">본문 출현형 (INFLECTED)</span>
+                    <span className="text-[9.5px] font-bold text-stone-400 uppercase block">본문 출현형 (INFLECTED)</span>
                     <div className="flex items-baseline gap-2">
-                      <span style={originalFontStyle(inspectorTarget.isOT)} className="text-2xl font-bold text-stone-900 dark:text-slate-100">
+                      <span style={originalFontStyle(inspectorTarget.isOT)} className="text-2xl font-bold">
                         {cleanTypography(selectedWordDetail.inflected, inspectorTarget.isOT)}
                       </span>
-                      <span className="text-xs font-mono text-stone-500 dark:text-slate-300">{selectedWordDetail.pron}</span>
+                      <span className="text-xs font-mono text-stone-400">{selectedWordDetail.pron}</span>
                     </div>
                     <p className="text-xs font-bold">
-                      번역: <span className="underline underline-offset-2 text-indigo-700 dark:text-indigo-300">{selectedWordDetail.korContextual}</span>
+                      번역: <span className="underline underline-offset-2">{selectedWordDetail.korContextual}</span>
                     </p>
                   </div>
 
-                  <div className="space-y-0.5 border-l pl-2.5 text-left border-stone-200 dark:border-slate-700">
-                    <span className="text-[9px] font-bold text-stone-400 uppercase tracking-widest block">원형 표제어 (LEMMA)</span>
+                  <div className="space-y-0.5 border-l pl-3 text-left border-stone-200 dark:border-white/15">
+                    <span className="text-[9.5px] font-bold text-stone-400 uppercase block">원형 표제어 (LEMMA)</span>
                     <div className="flex items-baseline gap-2">
-                      <span style={originalFontStyle(inspectorTarget.isOT)} className="text-2xl font-bold text-stone-900 dark:text-slate-100">
+                      <span style={originalFontStyle(inspectorTarget.isOT)} className="text-2xl font-bold">
                         {cleanTypography(selectedWordDetail.lemma, inspectorTarget.isOT)}
                       </span>
-                      <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-800">
+                      <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-stone-200 dark:bg-white/15">
                         {selectedWordDetail.strongs}
                       </span>
                     </div>
                     <p className="text-xs font-bold">
-                      기본뜻: <b className="text-stone-800 dark:text-slate-200">{selectedWordDetail.korLemma}</b>
+                      기본뜻: <b>{selectedWordDetail.korLemma}</b>
                     </p>
                   </div>
                 </div>
               )}
 
               <div className="space-y-1 text-left">
-                <p className={`text-[12.5px] font-serif font-medium leading-relaxed ${theme.textMain}`}>
-                  <span className="text-[9.5px] font-bold text-stone-400 mr-1">[개역]</span>
+                <p className={`text-[13px] font-serif font-medium leading-relaxed ${theme.textMain}`}>
+                  <span className="text-[10px] font-bold text-stone-400 mr-1.5">[개역]</span>
                   {inspectorTarget.text}
                 </p>
                 {inspectorTarget.easyText && (
-                  <p className="text-[12px] leading-relaxed text-emerald-800 dark:text-emerald-300">
-                    <span className="text-[9.5px] font-bold text-emerald-600 dark:text-emerald-400 mr-1">[쉬운]</span>
+                  <p className="text-[12.5px] leading-relaxed text-emerald-700 dark:text-emerald-300">
+                    <span className="text-[10px] font-bold mr-1.5">[쉬운]</span>
                     {inspectorTarget.easyText}
-                  </p>
-                )}
-                {inspectorTarget.webText && (
-                  <p className="text-[11.5px] font-serif leading-relaxed text-blue-800 dark:text-blue-300">
-                    <span className="text-[9.5px] font-bold text-blue-600 dark:text-blue-400 mr-1">[WEB]</span>
-                    {inspectorTarget.webText}
                   </p>
                 )}
               </div>
             </div>
 
-            {/* 탭바 */}
-            <div className={`flex gap-1 overflow-x-auto hide-scrollbar p-1 rounded-xl border my-2 shrink-0 ${
-              isDark ? 'bg-black/40 border-slate-800' : 'bg-stone-100 border-stone-200'
+            {/* 탭 바 */}
+            <div className={`flex gap-1 p-1 rounded-xl border my-2.5 shrink-0 ${
+              isDark ? 'bg-[#0B0E14] border-white/15' : 'bg-stone-100 border-stone-200'
             }`}>
-              <button
-                type="button"
-                onClick={() => setModalTab('scholarly')}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap cursor-pointer ${
-                  modalTab === 'scholarly' ? 'bg-stone-900 text-white dark:bg-slate-200 dark:text-stone-900 shadow-2xs' : 'text-stone-500'
-                }`}
-              >
-                📜 10대 학술 사료
-              </button>
-              <button
-                type="button"
-                onClick={() => setModalTab('concordance')}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap cursor-pointer ${
-                  modalTab === 'concordance' ? 'bg-stone-900 text-white dark:bg-slate-200 dark:text-stone-900 shadow-2xs' : 'text-stone-500'
-                }`}
-              >
-                📊 전권 용례 ({concordanceTotalCount}회)
-              </button>
-              <button
-                type="button"
-                onClick={() => setModalTab('custom_study')}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap cursor-pointer ${
-                  modalTab === 'custom_study' ? 'bg-stone-900 text-white dark:bg-slate-200 dark:text-stone-900 shadow-2xs' : 'text-stone-500'
-                }`}
-              >
-                ✍️ 연구 메모
-              </button>
+              {[
+                { id: 'scholarly', label: '10대 학술 사료' },
+                { id: 'concordance', label: `전권 용례 (${concordanceTotalCount}회)` },
+                { id: 'custom_study', label: '연구 메모' }
+              ].map(tb => (
+                <button
+                  key={tb.id}
+                  type="button"
+                  onClick={() => setModalTab(tb.id)}
+                  className={`flex-1 py-1.5 rounded-lg text-[11.5px] font-bold whitespace-nowrap cursor-pointer ${
+                    modalTab === tb.id ? 'bg-stone-900 text-white dark:bg-white dark:text-stone-900' : 'text-stone-500'
+                  }`}
+                >
+                  {tb.label}
+                </button>
+              ))}
             </div>
 
             {/* 본문 스크롤 */}
-            <div className="overflow-y-auto hide-scrollbar space-y-2 flex-1 text-xs text-left">
-              <div className={`p-2.5 rounded-xl border ${isDark ? 'bg-[#141A26] border-slate-700' : 'bg-stone-50 border-stone-200'}`}>
-                <span className="text-[9.5px] font-bold text-stone-400 uppercase tracking-wider block mb-1">어절 선택</span>
+            <div className="overflow-y-auto hide-scrollbar space-y-2.5 flex-1 text-xs text-left">
+              <div className={`p-3 rounded-xl border ${isDark ? 'bg-[#161B26] border-white/15' : 'bg-stone-50 border-stone-200'}`}>
+                <span className="text-[10px] font-bold text-stone-400 uppercase block mb-1.5">어절 선택</span>
                 {isInspectorLoading ? (
-                  <div className="py-3 text-center text-stone-400">어휘 로딩 중...</div>
+                  <div className="py-3 text-center text-stone-400">원어 데이터를 불러오는 중...</div>
                 ) : (
-                  <div className={`flex flex-wrap gap-x-2 gap-y-1 items-baseline ${inspectorTarget.isOT ? 'justify-end' : 'justify-start'}`} dir={inspectorTarget.isOT ? 'rtl' : 'ltr'}>
+                  <div className={`flex flex-wrap gap-x-2.5 gap-y-1.5 items-baseline ${inspectorTarget.isOT ? 'justify-end' : 'justify-start'}`} dir={inspectorTarget.isOT ? 'rtl' : 'ltr'}>
                     {inspectorWords.map(w => (
                       <span
                         key={w.id}
                         onClick={() => handleSelectInspectorWord(w)}
                         style={originalFontStyle(inspectorTarget.isOT)}
-                        className={`text-[19px] sm:text-[22px] font-bold px-1.5 py-0.5 rounded cursor-pointer transition-all ${
+                        className={`text-[20px] sm:text-[22px] font-bold px-2 py-0.5 rounded-lg cursor-pointer transition-all ${
                           selectedWordDetail?.order === w.order 
-                            ? 'bg-amber-600 text-white ring-2 ring-amber-500' 
+                            ? 'bg-stone-900 text-white dark:bg-white dark:text-stone-950' 
                             : isDark ? 'text-slate-100 hover:bg-white/10' : 'text-stone-900 hover:bg-black/5'
                         }`}
                       >
@@ -1899,12 +2155,12 @@ export default function Mcheyne({
 
               {modalTab === 'scholarly' && (
                 <div className="space-y-2">
-                  <div className="p-2.5 rounded-xl border bg-sky-50/70 border-sky-200 dark:bg-sky-950/20 dark:border-sky-900/60 text-sky-950 dark:text-sky-200">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-bold text-[11px]">🔗 교차참조 (TSK) - {crossRefs.length}개</span>
-                      <span className="text-[9.5px] opacity-75">클릭 시 아크 대조 오픈</span>
+                  <div className={`p-3 rounded-xl border ${isDark ? 'bg-[#0B0E14] border-white/15' : 'bg-stone-50 border-stone-200'}`}>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="font-bold text-[11.5px]">교차참조 (TSK) — {crossRefs.length}개</span>
+                      <span className="text-[10px] text-stone-400">클릭 시 아크 대조 오픈</span>
                     </div>
-                    <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto hide-scrollbar">
+                    <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto hide-scrollbar">
                       {crossRefs.map((ref, idx) => (
                         <button
                           key={idx}
@@ -1913,7 +2169,9 @@ export default function Mcheyne({
                             setInspectorTarget(null);
                             openGalaxyPopup('arc', ref.label);
                           }}
-                          className="px-1.5 py-0.5 rounded text-[10px] font-mono border bg-white hover:bg-amber-100 dark:bg-black/40 dark:hover:bg-amber-950/50 border-stone-200 dark:border-slate-700 cursor-pointer transition-colors"
+                          className={`px-2 py-0.5 rounded text-[11px] font-mono border cursor-pointer ${
+                            isDark ? 'bg-[#161B26] border-white/15 text-stone-200 hover:bg-white/15' : 'bg-white border-stone-300 text-stone-800 hover:bg-stone-100'
+                          }`}
                         >
                           {ref.label}
                         </button>
@@ -1922,34 +2180,34 @@ export default function Mcheyne({
                   </div>
 
                   {currentHebrewSyntax && (
-                    <div className="p-2.5 rounded-xl border space-y-1 bg-amber-50/70 border-amber-200 dark:bg-amber-950/20 dark:border-amber-900/60 text-amber-950 dark:text-amber-200">
-                      <span className="font-bold text-[11px] block">📜 BHS 히브리어 구문론 구조</span>
+                    <div className={`p-3 rounded-xl border space-y-1.5 ${isDark ? 'bg-[#0B0E14] border-white/15' : 'bg-stone-50 border-stone-200'}`}>
+                      <span className="font-bold text-[11.5px] block">BHS 히브리어 구문론 구조</span>
                       {currentHebrewSyntax.clauseHierarchy.map((c, idx) => (
-                        <div key={idx} className="p-1 rounded bg-white dark:bg-[#121824] flex justify-between text-[11px]">
+                        <div key={idx} className={`p-1.5 rounded flex justify-between text-[11.5px] ${isDark ? 'bg-[#161B26]' : 'bg-white'}`}>
                           <span style={originalFontStyle(true)} className="font-bold">{c.unit}</span>
-                          <span className="text-stone-500">{c.role}</span>
+                          <span className="text-stone-400">{c.role}</span>
                         </div>
                       ))}
                     </div>
                   )}
 
                   {currentCommentary && (
-                    <div className="p-2.5 rounded-xl border bg-indigo-50/70 border-indigo-200 dark:bg-indigo-950/20 dark:border-indigo-900/60 text-indigo-950 dark:text-indigo-200">
-                      <span className="font-bold text-[11px] block mb-0.5">📖 학술 주석 ({currentCommentary.commentator})</span>
-                      <p className="text-[11.5px] leading-relaxed font-serif">{decodeHtmlEntities(currentCommentary.exegesis)}</p>
+                    <div className={`p-3 rounded-xl border ${isDark ? 'bg-[#0B0E14] border-white/15' : 'bg-stone-50 border-stone-200'}`}>
+                      <span className="font-bold text-[11.5px] block mb-1">학술 주석 ({currentCommentary.commentator})</span>
+                      <p className="text-[12px] leading-relaxed font-serif">{decodeHtmlEntities(currentCommentary.exegesis)}</p>
                     </div>
                   )}
 
                   {currentMatthewHenry && (
-                    <div className="p-2.5 rounded-xl border bg-emerald-50/70 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-900/60 text-emerald-950 dark:text-emerald-200">
-                      <span className="font-bold text-[11px] block mb-0.5">🌿 매튜 헨리 묵상 강해</span>
-                      <p className="text-[11.5px] leading-relaxed font-serif">{decodeHtmlEntities(currentMatthewHenry.devotionalExegesis)}</p>
+                    <div className={`p-3 rounded-xl border ${isDark ? 'bg-[#0B0E14] border-white/15' : 'bg-stone-50 border-stone-200'}`}>
+                      <span className="font-bold text-[11.5px] block mb-1">매튜 헨리 묵상 강해</span>
+                      <p className="text-[12px] leading-relaxed font-serif">{decodeHtmlEntities(currentMatthewHenry.devotionalExegesis)}</p>
                     </div>
                   )}
 
                   {currentTargumPeshitta && (
-                    <div className="p-2.5 rounded-xl border space-y-1 bg-orange-50/70 border-orange-200 dark:bg-orange-950/20 dark:border-orange-900/60 text-orange-950 dark:text-orange-200">
-                      <span className="font-bold text-[11px] block">🏺 고대 아람어 타르굼 & 시리아 페시타</span>
+                    <div className={`p-3 rounded-xl border space-y-1 ${isDark ? 'bg-[#0B0E14] border-white/15' : 'bg-stone-50 border-stone-200'}`}>
+                      <span className="font-bold text-[11.5px] block">고대 아람어 타르굼 & 시리아 페시타</span>
                       {currentTargumPeshitta.targumAramaic && (
                         <p style={{ fontFamily: "'SBL Hebrew', serif" }} className="text-right text-[14px] font-bold" dir="rtl">{currentTargumPeshitta.targumAramaic}</p>
                       )}
@@ -1960,21 +2218,21 @@ export default function Mcheyne({
                   )}
 
                   {currentNetNote && (
-                    <div className="p-2.5 rounded-xl border bg-rose-50/70 border-rose-200 dark:bg-rose-950/20 dark:border-rose-900/60 text-rose-950 dark:text-rose-200">
-                      <span className="font-bold text-[11px] block mb-0.5">🔍 NET Bible 비평 각주: {decodeHtmlEntities(currentNetNote.title)}</span>
-                      <p className="text-[11.5px] leading-relaxed font-serif">{decodeHtmlEntities(currentNetNote.note)}</p>
+                    <div className={`p-3 rounded-xl border ${isDark ? 'bg-[#0B0E14] border-white/15' : 'bg-stone-50 border-stone-200'}`}>
+                      <span className="font-bold text-[11.5px] block mb-1">NET Bible 비평 각주: {decodeHtmlEntities(currentNetNote.title)}</span>
+                      <p className="text-[12px] leading-relaxed font-serif">{decodeHtmlEntities(currentNetNote.note)}</p>
                     </div>
                   )}
                 </div>
               )}
 
               {modalTab === 'concordance' && (
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   {concordanceList.map((item, idx) => (
-                    <div key={idx} className="p-2 rounded-lg border flex items-center justify-between bg-white dark:bg-[#141A26] border-stone-200 dark:border-slate-800">
-                      <span className="font-bold min-w-[70px]">{item.book} {item.chapter}:{item.verse}</span>
-                      <span style={originalFontStyle(inspectorTarget.isOT)} className="font-bold text-[15px]">{cleanTypography(item.original_word, inspectorTarget.isOT)}</span>
-                      <span className="text-stone-600 dark:text-slate-300 truncate max-w-[120px] text-right font-medium">{item.korean_trans}</span>
+                    <div key={idx} className={`p-2.5 rounded-lg border flex items-center justify-between ${isDark ? 'bg-[#0B0E14] border-white/10' : 'bg-stone-50 border-stone-200'}`}>
+                      <span className="font-bold min-w-[75px]">{item.book} {item.chapter}:{item.verse}</span>
+                      <span style={originalFontStyle(inspectorTarget.isOT)} className="font-bold text-[16px]">{cleanTypography(item.original_word, inspectorTarget.isOT)}</span>
+                      <span className="text-stone-500 dark:text-slate-300 truncate max-w-[130px] text-right font-medium">{item.korean_trans}</span>
                     </div>
                   ))}
                 </div>
@@ -1987,39 +2245,39 @@ export default function Mcheyne({
                     value={customInputTrans}
                     onChange={(e) => setCustomInputTrans(e.target.value)}
                     placeholder="대표 번역어..."
-                    className="w-full px-2.5 py-1.5 rounded-lg text-xs font-bold border outline-none border-stone-300 dark:border-slate-700 bg-white dark:bg-black/50"
+                    className={`w-full px-3 py-2 rounded-lg text-xs font-bold border outline-none ${isDark ? 'bg-[#0B0E14] border-white/20 text-white' : 'bg-stone-50 border-stone-300 text-stone-900'}`}
                   />
                   <textarea
                     value={customInputMemo}
                     onChange={(e) => setCustomInputMemo(e.target.value)}
                     rows={3}
                     placeholder="신학 연구 메모..."
-                    className="w-full p-2 rounded-lg text-xs font-medium border outline-none resize-none border-stone-300 dark:border-slate-700 bg-white dark:bg-black/50"
+                    className={`w-full p-3 rounded-lg text-xs font-medium border outline-none resize-none ${isDark ? 'bg-[#0B0E14] border-white/20 text-white' : 'bg-stone-50 border-stone-300 text-stone-900'}`}
                   />
                 </div>
               )}
             </div>
 
-            {/* 하단 사역 액션 바 */}
             {selectedWordDetail && (
-              <div className="pt-2.5 border-t border-stone-200 dark:border-slate-800 flex gap-2 shrink-0">
+              <div className="pt-3 border-t border-stone-200 dark:border-white/15 flex gap-2 shrink-0">
                 <button
                   type="button"
                   onClick={() => handleInsertWordToMcheyneNote(selectedWordDetail)}
-                  className="flex-1 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[11px] shadow-2xs active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="flex-1 py-2.5 rounded-lg bg-stone-900 hover:bg-black dark:bg-white dark:hover:bg-stone-200 text-white dark:text-stone-950 font-bold text-xs cursor-pointer"
                 >
-                  📝 묵상 노트에 강해 삽입
+                  필사 노트에 강해 삽입
                 </button>
                 <button
                   type="button"
                   onClick={() => speakOriginalAudio(selectedWordDetail.inflected, inspectorTarget.isOT)}
-                  className="px-3 py-2 rounded-lg font-bold text-[11px] flex items-center gap-1 cursor-pointer bg-stone-100 hover:bg-stone-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-stone-800 dark:text-slate-200 border border-stone-200 dark:border-slate-700"
+                  className={`px-4 py-2.5 rounded-lg font-bold text-xs border cursor-pointer ${
+                    isDark ? 'bg-white/10 border-white/20 text-white' : 'bg-stone-100 border-stone-300 text-stone-800'
+                  }`}
                 >
-                  🔊 낭독
+                  원어 발음 듣기
                 </button>
               </div>
             )}
-
           </div>
         </div>
       )}

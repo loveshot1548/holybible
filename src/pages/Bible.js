@@ -7,7 +7,7 @@ import { analyzeHebrewSyntaxFromWords } from '../lib/hebrewSyntaxEngine';
 import CryptoJS from 'crypto-js';
 
 // =====================================================================
-// 🔐 [보안 표준화] 군사급 AES-256 종단간 암호화
+// 보안 표준화: 군사급 AES-256 종단간 암호화
 // =====================================================================
 const CHAT_SECRET_KEY = process.env.REACT_APP_CHAT_SECRET || 'tree-secret-key-2026';
 const ENC_PREFIX_V2 = "ENC_GTC_v2::";
@@ -25,7 +25,6 @@ const encryptField = (plainText) => {
 
 const decryptField = (cipherText) => {
   if (!cipherText || typeof cipherText !== 'string') return cipherText || '';
-  
   if (cipherText.startsWith(ENC_PREFIX_V2)) {
     try {
       const rawCipher = cipherText.replace(ENC_PREFIX_V2, '');
@@ -36,7 +35,6 @@ const decryptField = (cipherText) => {
       return cipherText;
     }
   }
-
   if (cipherText.startsWith(ENC_PREFIX_V1)) {
     try {
       const payload = cipherText.replace(ENC_PREFIX_V1, '');
@@ -45,15 +43,13 @@ const decryptField = (cipherText) => {
       return cipherText;
     }
   }
-
   return cipherText;
 };
 
 // =====================================================================
-// 📜 [성경 66권 한글-영문 명칭 & 정경 분류 마스터 맵]
+// 성경 66권 마스터 맵
 // =====================================================================
 const BIBLE_66_MAP = {
-  // 구약 39권
   "Genesis": { ko: "창세기", isOT: true, section: "모세오경" }, "창세기": { ko: "창세기", isOT: true, section: "모세오경" },
   "Exodus": { ko: "출애굽기", isOT: true, section: "모세오경" }, "출애굽기": { ko: "출애굽기", isOT: true, section: "모세오경" },
   "Leviticus": { ko: "레위기", isOT: true, section: "모세오경" }, "레위기": { ko: "레위기", isOT: true, section: "모세오경" },
@@ -93,8 +89,6 @@ const BIBLE_66_MAP = {
   "Haggai": { ko: "학개", isOT: true, section: "선지서" }, "학개": { ko: "학개", isOT: true, section: "선지서" },
   "Zechariah": { ko: "스가랴", isOT: true, section: "선지서" }, "스가랴": { ko: "스가랴", isOT: true, section: "선지서" },
   "Malachi": { ko: "말라기", isOT: true, section: "선지서" }, "말라기": { ko: "말라기", isOT: true, section: "선지서" },
-
-  // 신약 27권
   "Matthew": { ko: "마태복음", isOT: false, section: "복음/역사" }, "마태복음": { ko: "마태복음", isOT: false, section: "복음/역사" },
   "Mark": { ko: "마가복음", isOT: false, section: "복음/역사" }, "마가복음": { ko: "마가복음", isOT: false, section: "복음/역사" },
   "Luke": { ko: "누가복음", isOT: false, section: "복음/역사" }, "누가복음": { ko: "누가복음", isOT: false, section: "복음/역사" },
@@ -261,7 +255,7 @@ const speakOriginalAudio = (text, isOT) => {
 };
 
 // =====================================================================
-// 🌟 [2차 베지에 곡선 고정밀 브러시 렌더러] GeneralNote 엔진 이식
+// 2차 베지에 곡선 고정밀 브러시 렌더러
 // =====================================================================
 const renderStroke = (ctx, stroke, isDark) => {
   const { tool, color, size, points } = stroke;
@@ -366,10 +360,6 @@ const BibleTranscriptionNotePanel = ({ currentChapId, chapterTitle, isDark, note
   const [strokeColor, setStrokeColor] = useState('#1E293B');
   const [strokeWidth, setStrokeWidth] = useState(3.0);
 
-  // 🌟 [은하계 -> 성경 특정 권/장 직행 수신기] Bible.js 내부 useEffect 아래에 추가
-  
-  
-  // 장 변경 시 해당 장의 필기 복원
   useEffect(() => {
     try {
       const saved = localStorage.getItem(storageKey);
@@ -380,7 +370,6 @@ const BibleTranscriptionNotePanel = ({ currentChapId, chapterTitle, isDark, note
     }
   }, [storageKey]);
 
-  // 획 변경 시 로컬스토리지 동기화
   useEffect(() => {
     try {
       localStorage.setItem(storageKey, JSON.stringify(strokes));
@@ -488,14 +477,14 @@ const BibleTranscriptionNotePanel = ({ currentChapId, chapterTitle, isDark, note
     if (strokes.length === 0) return;
     const last = strokes[strokes.length - 1];
     setRedoStack(p => [...p, last]);
-    setStrokes(p => p.slice(0, -1));
+    setStrokes(p => strokes.slice(0, -1));
   };
 
   const handleRedo = () => {
     if (redoStack.length === 0) return;
     const last = redoStack[redoStack.length - 1];
-    setRedoStack(p => [...p, last]);
-    setStrokes(p => p.slice(0, -1));
+    setRedoStack(p => redoStack.slice(0, -1));
+    setStrokes(p => [...p, last]);
   };
 
   const handleClear = () => {
@@ -797,13 +786,13 @@ export default function Bible({
     } catch (_) {}
   }, []);
   
-useEffect(() => {
+  useEffect(() => {
     try {
       const jumpTarget = localStorage.getItem('bible_jump_target');
       if (jumpTarget) {
         localStorage.removeItem('bible_jump_target');
-        setCurrentChapId(jumpTarget); // 예: "Genesis-15"
-        setBibleViewMode('read');     // 66권 목록('index')을 건너뛰고 즉시 본문('read') 오픈!
+        setCurrentChapId(jumpTarget);
+        setBibleViewMode('read');
       }
     } catch (_) {}
   }, [setCurrentChapId, setBibleViewMode]);
@@ -830,13 +819,11 @@ useEffect(() => {
   const cVs = (cBk && cBk.chapters && Array.isArray(cBk.chapters[parseInt(sCh, 10)-1])) ? cBk.chapters[parseInt(sCh, 10)-1] : [];
   const isAllR = cVs.length > 0 && (getArr ? getArr(cVs) : cVs).every((_, i) => (readVerses||{})[`${sBk}-${sCh}-${i}`]);
 
-  // 장 이동 네비게이션 메트릭 계산
   const totalChapters = (getArr ? getArr(cBk?.chapters) : cBk?.chapters || []).length;
   const currentChapterNum = parseInt(sCh, 10) || 1;
   const hasPrevChapter = currentChapterNum > 1;
   const hasNextChapter = currentChapterNum < totalChapters;
 
-  // 🌟 [설교 인용 정밀 파싱]
   const checkHasSermon = useCallback((koName, enName, chapter, verseNum) => {
     if (!sermonSummaryData || !sermonSummaryData.index) return null;
     const vInt = parseInt(verseNum, 10);
@@ -852,7 +839,6 @@ useEffect(() => {
       if (!sermons || sermons.length === 0) continue;
 
       const cleanKey = key.replace(/\s+/g, '');
-      
       let versePart = null;
       if (cleanKey.startsWith(targetPrefixKo)) {
         versePart = cleanKey.slice(targetPrefixKo.length);
@@ -882,7 +868,6 @@ useEffect(() => {
     return null;
   }, [sermonSummaryData]);
 
-  // 본문 실시간 엔티티 디코딩
   const safeGetVerseText = useCallback((verse) => {
     let verseText = "";
     if (typeof verse === 'string') {
@@ -918,7 +903,6 @@ useEffect(() => {
     window.dispatchEvent(new CustomEvent('bible-progress-updated'));
   };
 
-  // 장 전체 완독 토글 핸들러
   const handleToggleWholeChapter = () => {
     const u = {}; 
     const s = !isAllR;
@@ -934,7 +918,6 @@ useEffect(() => {
     if (s) syncBibleReading();
   };
 
-  // 원어 연구 인스펙터 오픈
   const openVerseInspector = useCallback(async (chNum, vNum, verseText) => {
     const rawBookName = sBk || 'Genesis';
     const bookInfo = BIBLE_66_MAP[rawBookName] || { ko: (getKoName ? getKoName(rawBookName) : rawBookName) || rawBookName, isOT: true, section: '구약' };
@@ -1062,10 +1045,9 @@ useEffect(() => {
     }
   }, [customNotesMap]);
 
-  // 필사 노트에 원어 강해 삽입
   const handleInsertWordToFreeNote = (word) => {
     const lemmaNotice = word.isInflectedDifferent ? ` (원형: ${word.lemma})` : '';
-    const customMemoNotice = word.userCustomNote?.memo ? `\n   ↳ ✍️ 연구 메모: ${word.userCustomNote.memo}` : '';
+    const customMemoNotice = word.userCustomNote?.memo ? `\n   ↳ 연구 메모: ${word.userCustomNote.memo}` : '';
     const insightLine = `\n[원어묵상] ${word.inflected}${lemmaNotice} (${word.strongs}): ${word.korContextual} — ${word.grammarDecoded}${customMemoNotice}\n`;
     
     const updated = (noteContent || '') + insightLine;
@@ -1088,7 +1070,6 @@ useEffect(() => {
     : { fontFamily: "'SBL Greek', 'Cardo', 'Times New Roman', serif", direction: 'ltr' };
 
   const currentKey = inspectorTarget ? `${inspectorTarget.book}-${inspectorTarget.chapter}-${inspectorTarget.verse}` : '';
-  const currentLxx = lxxDb[currentKey] || null;
   const currentCommentary = commentaryDb[currentKey] || null;
   const currentMatthewHenry = matthewHenryDb[currentKey] || null;
   const currentNetNote = netNotesDb[currentKey] || null;
@@ -1258,13 +1239,14 @@ useEffect(() => {
                               style={hColor && hColor !== 'transparent' ? { backgroundColor: `${hColor}33`, borderLeft: `3px solid ${hColor}` } : {}}
                             >
                                <div className="flex items-start gap-2">
+                                 {/* 🌟 [핵심 수정 1] 절 번호만 깔끔하게 남기고 지저분한 [원어] [설교] 배지는 삭제했습니다! */}
                                  <span 
                                    onClick={(e) => {
                                      e.stopPropagation();
                                      openVerseInspector(sCh, idx + 1, displayVerseText);
                                    }}
                                    className="font-bold font-mono text-[12px] sm:text-[13px] text-amber-700 dark:text-amber-400 mt-0.5 min-w-[20px] text-right shrink-0 select-none cursor-pointer hover:underline"
-                                   title="원어 분해 및 10대 학술 사료"
+                                   title="절 번호를 누르면 원어 강해 및 연구 도구가 열립니다"
                                  >
                                    {idx + 1}
                                  </span>
@@ -1310,20 +1292,8 @@ useEffect(() => {
                                       </div>
                                     )}
 
-                                    {/* 본문 인라인 배지 */}
+                                    {/* 🌟 [핵심 수정 2] 설교 데이터가 실제로 존재하는 절에만 감성적인 [✍️ 설교] 배지가 나타납니다! */}
                                     <span className="inline-flex items-center gap-1 ml-2 align-middle select-none">
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          openVerseInspector(sCh, idx + 1, displayVerseText);
-                                        }}
-                                        className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-sans font-bold bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/80 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 shadow-2xs cursor-pointer active:scale-95 transition-all"
-                                        title="원어 분해 및 10대 학술 사료"
-                                      >
-                                        <span>📖</span> 원어
-                                      </button>
-
                                       {matchedKey && (
                                         <button 
                                           type="button"
@@ -1347,12 +1317,10 @@ useEffect(() => {
                        </div>
                      </div>
 
-                     {/* 🌟 [핵심 개선] 모바일 하단 고정 완독 & 장 이동 바 (Sticky Dock) */}
+                     {/* 모바일 하단 고정 완독 & 장 이동 바 (Sticky Dock) */}
                      <div className={`shrink-0 pt-2 pb-2 sm:pb-3 px-1 border-t ${
                        isDark ? 'border-white/10 bg-[#0B0F17]/95' : 'border-stone-200/90 bg-[#F9F9F6]/95'
                      } backdrop-blur-md flex items-center justify-between gap-2 z-30`}>
-                         
-                         {/* 이전 장 이동 버튼 */}
                          <button 
                            type="button"
                            disabled={!hasPrevChapter}
@@ -1370,7 +1338,6 @@ useEffect(() => {
                            <span className="hidden sm:inline">이전</span>
                          </button>
 
-                         {/* 🌟 장 전체 완독 토글 버튼 (직관적인 상태 및 아이콘 피드백) */}
                          <button 
                            type="button"
                            onClick={handleToggleWholeChapter} 
@@ -1388,7 +1355,6 @@ useEffect(() => {
                            </span>
                          </button>
 
-                         {/* 다음 장 이동 버튼 */}
                          <button 
                            type="button"
                            disabled={!hasNextChapter}
@@ -1408,7 +1374,7 @@ useEffect(() => {
                      </div>
                  </div>
 
-                 {/* 우측: 2단 필사 전용 베지에 손필기 & 타이핑 노트 패널 */}
+                 {/* 우측: 2단 필사 전용 필기 노트 패널 */}
                  {viewMode === 'split' && (
                    <div className="flex flex-col h-full relative z-[45] pointer-events-auto min-h-[450px]">
                      <BibleTranscriptionNotePanel
@@ -1474,9 +1440,7 @@ useEffect(() => {
           </div>
        )}
 
-       {/* ===================================================================== */}
-       {/* 🏛️ [원어 연구 인스펙터 모달]                                           */}
-       {/* ===================================================================== */}
+       {/* 원어 연구 인스펙터 모달 */}
        {inspectorTarget && (
         <div className="fixed inset-0 z-[999999] bg-black/75 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-3 animate-fade-in select-none">
           <div className={`w-full sm:max-w-2xl rounded-t-3xl sm:rounded-2xl border p-3.5 sm:p-5 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden ${
