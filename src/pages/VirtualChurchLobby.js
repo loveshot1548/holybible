@@ -1711,6 +1711,7 @@ export default function VirtualChurchLobby({ setActiveScreen, onChangeFloor }) {
                 {[
                   { fl: '3F', label: '3F 대예배당 (본당 설교 스크린 · 장의자 착석)' },
                   { fl: '4F', label: '4F 영유아 예배실 (온돌 마루 자모실 · 코너 TV)' },
+                  { fl: '5F', label: '5F 학생부 예배실 (조리실, 학생부 예배실)' },
                   { fl: '6F', label: '6F 다음세대 교육관 · 새가족반 (유아·유치·초등)' }
                 ].map((item) => (
                   <button
