@@ -1,10 +1,9 @@
 // src/metaverse/Sanctuary3F.js
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
-import { OrthographicCamera, MapControls, RoundedBox, ContactShadows, Billboard } from '@react-three/drei';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { PerspectiveCamera, OrbitControls, RoundedBox, ContactShadows, Billboard } from '@react-three/drei';
 import * as THREE from 'three';
 import { useAppStore } from '../store/useAppStore';
-import StairwellCore3D from './StairwellCore3D';
 
 // =====================================================================
 // 🔗 유튜브 URL에서 11자리 Video ID 추출기 (예배노트 Sermon.js 호환)
@@ -43,7 +42,7 @@ const getSyncedSermonVideo = () => {
 };
 
 // =====================================================================
-// 🎨 고해상도 한글 캔버스 텍스처 생성기 (<Html> 에러 원천 차단)
+// 🎨 고해상도 캔버스 텍스처 & 리얼 원목 나뭇결(Wood Grain) 생성기
 // =====================================================================
 function makeCanvasTexture(drawFn, width = 512, height = 256) {
   const canvas = document.createElement('canvas');
@@ -57,8 +56,106 @@ function makeCanvasTexture(drawFn, width = 512, height = 256) {
   return tex;
 }
 
+function makeWoodGrainTexture(baseHex = '#D49552', lineHex = '#AD6E2F') {
+  return makeCanvasTexture((ctx, w, h) => {
+    ctx.fillStyle = baseHex;
+    ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = lineHex;
+    ctx.globalAlpha = 0.14;
+    for (let i = 0; i < 85; i++) {
+      ctx.lineWidth = 1 + (i % 3);
+      ctx.beginPath();
+      const y = (i / 85) * h;
+      ctx.moveTo(0, y);
+      ctx.bezierCurveTo(w * 0.3, y + Math.sin(i) * 5, w * 0.7, y - Math.cos(i) * 5, w, y);
+      ctx.stroke();
+    }
+  }, 512, 512);
+}
+
 // =====================================================================
-// 📍 3층 대예배당 6대 인터랙션 존(Trigger Zones) 정의
+// 🚧 장의자·벽·강단 충돌 방지(AABB) & 복도 자동 우회 경로 탐색기
+// =====================================================================
+const PEW_ROWS = [-2.2, -0.9, 0.4, 1.7, 3.0, 4.3];
+const PEW_COLS = [
+  { colId: 'L', x: -4.25, width: 2.75, name: '좌측석' },
+  { colId: 'C', x: 0.0, width: 3.45, name: '중앙석' },
+  { colId: 'R', x: 4.25, width: 2.75, name: '우측석' }
+];
+
+const AISLE_X_LEFT = -2.32;
+const AISLE_X_RIGHT = 2.32;
+
+const OBSTACLE_BOXES = [
+  // 북쪽 강단 무대 전체
+  { minX: -8.0, maxX: 8.0, minZ: -8.0, maxZ: -3.25 },
+  // 우측 그랜드 피아노 충돌 박스
+  { minX: 4.3, maxX: 7.2, minZ: -4.6, maxZ: -2.7 },
+  // 장의자 3열 x 6줄 물리 충돌 박스
+  ...PEW_ROWS.flatMap((rz) =>
+    PEW_COLS.map((col) => ({
+      minX: col.x - col.width / 2 - 0.15,
+      maxX: col.x + col.width / 2 + 0.15,
+      minZ: rz - 0.35,
+      maxZ: rz + 0.38
+    }))
+  )
+];
+
+function isPointBlocked(x, z) {
+  if (x < -6.3 || x > 6.3 || z < -3.2 || z > 6.2) return true;
+  for (const box of OBSTACLE_BOXES) {
+    if (x >= box.minX && x <= box.maxX && z >= box.minZ && z <= box.maxZ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function clampToWalkable(tx, tz) {
+  let x = Math.max(-6.1, Math.min(6.1, tx));
+  let z = Math.max(-3.0, Math.min(5.9, tz));
+
+  for (const box of OBSTACLE_BOXES) {
+    if (x >= box.minX && x <= box.maxX && z >= box.minZ && z <= box.maxZ) {
+      const distFront = Math.abs(z - box.minZ);
+      const distBack = Math.abs(box.maxZ - z);
+      z = distFront < distBack ? box.minZ - 0.1 : box.maxZ + 0.1;
+    }
+  }
+  return [x, z];
+}
+
+function computeSmartPath(sx, sz, rawEx, rawEz) {
+  const [ex, ez] = clampToWalkable(rawEx, rawEz);
+
+  let directClear = true;
+  const steps = 16;
+  for (let i = 1; i <= steps; i++) {
+    const ix = sx + ((ex - sx) * i) / steps;
+    const iz = sz + ((ez - sz) * i) / steps;
+    if (isPointBlocked(ix, iz)) {
+      directClear = false;
+      break;
+    }
+  }
+  if (directClear) return [[ex, ez]];
+
+  const bestAisleX =
+    Math.abs(sx - AISLE_X_LEFT) + Math.abs(ex - AISLE_X_LEFT) <=
+    Math.abs(sx - AISLE_X_RIGHT) + Math.abs(ex - AISLE_X_RIGHT)
+      ? AISLE_X_LEFT
+      : AISLE_X_RIGHT;
+
+  return [
+    [bestAisleX, sz],
+    [bestAisleX, ez],
+    [ex, ez]
+  ];
+}
+
+// =====================================================================
+// 📍 3층 대예배당 6대 인터랙션 존 정의 (피아노 우측 이동 반영)
 // =====================================================================
 const ZONES_3F = [
   {
@@ -67,23 +164,23 @@ const ZONES_3F = [
     subCode: '02',
     name: '중앙 새가족 환영 지정석',
     prompt: '01 새가족 환영석에 앉아 예배드리기',
-    pos: [1.35, 0, 1.35],
-    seatTarget: { x: 0.0, z: -0.95, rowLabel: '중앙 새가족 환영석 (2열)' },
+    pos: [1.45, 0, 1.05],
+    seatTarget: { x: 0.35, z: 0.28, rowLabel: '중앙 새가족 환영석 (3열)' },
     isSeatZone: true,
     badge: '01 새가족 환영석',
     title: '🪑 "좋은나무교회 환영합니다" 새가족 지정석',
     desc: '등받이에 새가족 환영 커버가 씌워진 본당 중앙 명당 좌석입니다. 착석하시면 즉시 정면 대형 설교 스크린이 켜지고 예배 영상이 재생됩니다!'
   },
   {
-    id: 'zone_3f_pulpit',
-    code: '02',
+    id: 'zone_3f_aisle_guide',
+    code: '01',
     subCode: '03',
-    name: '강대상 & 정면 대형 설교 스크린',
-    prompt: '02 정면 대형 설교 스크린 켜기 / 링크 설정',
-    pos: [-1.45, 0, -0.35],
-    badge: '02 강대상 · 대형스크린',
-    title: '📺 3층 대예배당 강대상 & 전면 대형 LED 스크린',
-    desc: '세로 원목 루버 아트월 중앙에 설치된 대형 LED 설교 스크린과 십자가 강대상, 양옆 대형 꽃꽂이 화분입니다.',
+    name: '중앙 통로 & 강대상 안내',
+    prompt: '02 강대상 & 설교 영상 스크린 열기',
+    pos: [-1.65, 0, -0.35],
+    badge: '02 강대상 · 설교스크린',
+    title: '✝️ 3층 대예배당 강대상 & 세로 루버 아트월',
+    desc: '2단 동심원 간접조명 우물천장 아래 34줄 세로 원목 루버벽과 십자가 강대상, 양옆 대형 꽃꽂이 화분이 배치된 성전 중심부입니다.',
     actions: [
       { label: '📝 예배노트 열기', screen: 'sermon' },
       { label: '🔥 오늘의 QT 열기', screen: 'qt' }
@@ -95,85 +192,203 @@ const ZONES_3F = [
     subCode: '03',
     name: '우측 성도석 & 채광 창가',
     prompt: '03 우측 창가 성도석에 착석하기',
-    pos: [2.85, 0, 3.15],
-    seatTarget: { x: 3.6, z: 1.65, rowLabel: '우측 창가 성도석 (4열)' },
+    pos: [2.75, 0, 2.95],
+    seatTarget: { x: 3.6, z: 1.58, rowLabel: '우측 창가 성도석 (4열)' },
     isSeatZone: true,
     badge: '03 우측 성도석',
     title: '☀️ 따뜻한 햇살이 비치는 우측 성도석',
-    desc: '우측 4개의 채광 창문을 통해 밝고 화사한 자연광이 들어오는 성도석 구역입니다.'
+    desc: '우측 4개의 채광 창문을 통해 부드러운 자연광이 들어오는 성도석 구역입니다.'
   },
   {
     id: 'zone_3f_band',
     code: '04',
     subCode: '04',
-    name: '아크릴 드럼부스 & 찬양단 건반석',
-    prompt: '04 찬양단 아크릴 드럼부스 & 건반 보기',
-    pos: [2.8, 0, -3.2],
-    badge: '04 찬양단 악기석',
-    title: '🥁 6각 투명 아크릴 드럼 쉴드 & 듀얼 신디사이저',
-    desc: '강단 우측에 설치된 투명 아크릴 차음벽 드럼 세트와 2단 신디사이저 건반, 악보 보면대, 바닥 웨지 모니터 스피커 구역입니다.'
+    name: '우측 찬양단 드럼부스 & 그랜드 피아노',
+    prompt: '04 우측 그랜드 피아노 & 드럼부스 보기',
+    pos: [2.85, 0, -2.65],
+    badge: '04 피아노 · 드럼부스',
+    title: '🎹 우측 그랜드 피아노 & 6각 아크릴 드럼 쉴드',
+    desc: '강단 우측에 배치된 블랙 그랜드 피아노와 투명 아크릴 차음벽 드럼 세트, 2단 신디사이저 건반 구역입니다.'
   },
   {
-    id: 'zone_3f_piano',
+    id: 'zone_3f_communion',
     code: '05',
     subCode: '05',
-    name: '좌측 그랜드 피아노',
-    prompt: '05 클래식 그랜드 피아노 안내',
-    pos: [-4.8, 0, -2.8],
-    badge: '05 그랜드 피아노',
-    title: '🎹 강단 좌측 클래식 블랙 그랜드 피아노',
-    desc: '강단 좌측 아래에 배치된 그랜드 피아노와 피아노 벤치 구역입니다.'
+    name: '좌측 성찬·헌금 테이블 & 예배위원석',
+    prompt: '05 좌측 성찬 테이블 & 예배위원석 보기',
+    pos: [-3.8, 0, -2.65],
+    badge: '05 성찬 · 위원석',
+    title: '🍞 강단 좌측 원목 성찬 테이블 & 예배위원 대기석',
+    desc: '강단 좌측에 마련된 성찬·헌금 위원 테이블과 대기 의자 구역입니다.'
   },
   {
     id: 'zone_3f_elev',
     code: '06',
     subCode: '06',
-    name: '1층 로비 이동 엘리베이터/계단',
-    prompt: '06 엘리베이터 타고 1층 로비로 이동',
-    pos: [-5.2, 0, 4.8],
+    name: '후면 방송실 창 & 1층 이동 엘리베이터',
+    prompt: '06 후면 중층 방송실 안내 & 1F 로비 이동',
+    pos: [-2.35, 0, 5.1],
     isElevator: true,
-    badge: '06 1F 로비 이동',
-    title: '🛗 1층 메인 로비 & 야외 주차장 이동',
-    desc: '계단과 엘리베이터를 타고 1층 메인 로비로 즉시 내려갈 수 있습니다.'
+    badge: '06 후면 방송실 · 1F이동',
+    title: '🎥 강대상 반대편(후면) 4층 방송실 유리창 & 1F 이동',
+    desc: '강대상 정반대편 후면 2층에는 다크 프레임 방송실 통유리창과 발코니 보조 모니터가 설치되어 있으며, 엘리베이터로 1층 로비로 이동할 수 있습니다.'
   }
 ];
 
-const PEW_ROWS = [-2.2, -0.9, 0.4, 1.7, 3.0, 4.3];
-const PEW_COLS = [
-  { colId: 'L', x: -4.2, width: 2.75, name: '좌측석' },
-  { colId: 'C', x: 0.0, width: 3.45, name: '중앙석' },
-  { colId: 'R', x: 4.2, width: 2.75, name: '우측석' }
-];
-
-// 본당 성도 NPC 배치 (중앙 통로 원피스 안내위원 포함)
+// =====================================================================
+// 👥 [핵심 수정 2] NPC끼리 실시간으로 대화를 주고받는 성도 & 안내위원 데이터
+// =====================================================================
 const CONGREGATION_NPCS = [
-  { id: 'usher_lady', x: -1.85, z: 0.15, seated: false, isSkirt: true, rotY: 0.45, shirt: '#F5EBE0', pants: '#E6D5C3', hair: '#6B4423' },
-  { id: 'front_kid', x: -1.35, z: 1.64, seated: true, shirt: '#FBBF24', pants: '#0284C7', hair: '#78350F' },
-  { id: 'c1', x: -0.95, z: -0.96, seated: true, shirt: '#C084FC', pants: '#334155', hair: '#5C3A21' },
-  { id: 'c2', x: 1.05, z: 0.34, seated: true, shirt: '#34D399', pants: '#1E293B', hair: '#5C3A21' },
-  { id: 'c3', x: 0.75, z: -2.26, seated: true, shirt: '#60A5FA', pants: '#1E293B', hair: '#451A03' },
-  { id: 'r1', x: 3.25, z: -0.96, seated: true, shirt: '#38BDF8', pants: '#1E293B', hair: '#451A03' },
-  { id: 'r2', x: 3.75, z: -2.26, seated: true, shirt: '#818CF8', pants: '#1E293B', hair: '#1C1917' },
-  { id: 'r3', x: 3.85, z: 0.34, seated: true, shirt: '#FDE68A', pants: '#D6D3D1', hair: '#5C3A21' },
-  { id: 'r4', x: 4.55, z: 1.64, seated: true, shirt: '#FB7185', pants: '#2563EB', hair: '#451A03' }
+  // 1) 중앙 통로를 걸어 다니며 성도들에게 인사하는 베이지 원피스 안내위원
+  {
+    id: 'usher_walking',
+    name: '박권사 (안내)',
+    x: -1.95,
+    z: 0.25,
+    patrolZ: [-1.4, 2.3],
+    seated: false,
+    isSkirt: true,
+    rotY: 0.35,
+    shirt: '#D8C3A5',
+    pants: '#C8B294',
+    hair: '#5C3A21',
+    dialogues: [
+      '할렐루야! 주일 예배에 오신 것을 환영합니다 😊',
+      '김집사님 반갑습니다! 앞쪽 새가족석으로 편히 앉으세요~',
+      '오늘 말씀과 찬양 가운데 큰 은혜 받으시길 축복합니다!'
+    ]
+  },
+  // 2) 통로 옆에서 안내위원과 인사 나누는 성도
+  {
+    id: 'front_greeter',
+    name: '김성도',
+    x: -1.45,
+    z: 1.58,
+    seated: true,
+    autoWave: true,
+    shirt: '#EAB308',
+    pants: '#0284C7',
+    hair: '#78350F',
+    dialogues: [
+      '권사님 샬롬! 반갑게 맞아주셔서 감사합니다 🙏',
+      '한 주간도 주님 은혜로 평안하셨어요?',
+      '오늘 본당이 참 따뜻하고 은혜롭네요!'
+    ]
+  },
+  // 3) 장의자에 착석해 서로 인사와 기도를 나누는 성도들
+  {
+    id: 'c1',
+    name: '이집사',
+    x: -0.55,
+    z: -1.02,
+    seated: true,
+    shirt: '#A855F7',
+    pants: '#334155',
+    hair: '#5C3A21',
+    dialogues: [
+      '아멘! 오늘 설교 말씀이 마음에 깊이 와닿네요.',
+      '조용히 기도로 주일 예배를 준비합니다 🙏'
+    ]
+  },
+  {
+    id: 'c2',
+    name: '최청년',
+    x: 1.05,
+    z: 0.28,
+    seated: true,
+    shirt: '#22C55E',
+    pants: '#1E293B',
+    hair: '#5C3A21',
+    dialogues: [
+      '찬양팀 연주가 정말 은혜롭습니다 🎵',
+      '새가족분들 우리 교회에 오신 것을 진심으로 환영해요!'
+    ]
+  },
+  {
+    id: 'c3',
+    name: '정장로',
+    x: 0.65,
+    z: -2.32,
+    seated: true,
+    shirt: '#64748B',
+    pants: '#1E293B',
+    hair: '#451A03',
+    dialogues: [
+      '주님, 오늘 예배 가운데 성령으로 임재하여 주옵소서.',
+      '성도님들 모두 한 주간 승리하셨습니다!'
+    ]
+  },
+  {
+    id: 'r1',
+    name: '한권사',
+    x: 3.15,
+    z: -1.02,
+    seated: true,
+    shirt: '#38BDF8',
+    pants: '#1E293B',
+    hair: '#451A03',
+    dialogues: [
+      '박집사님 옆자리에 함께 앉아 예배드리니 참 기쁘네요 🥰',
+      '예배 후 5층 식당에서 애찬 나누며 교제해요!'
+    ]
+  },
+  {
+    id: 'r2',
+    name: '윤집사',
+    x: 4.15,
+    z: -1.02,
+    seated: true,
+    shirt: '#2563EB',
+    pants: '#1E293B',
+    hair: '#1C1917',
+    dialogues: [
+      '네 권사님! 함께 기도하며 말씀 들으니 힘이 납니다 💪',
+      '할렐루야~ 주님께 감사와 찬양을 올려드립니다!'
+    ]
+  },
+  {
+    id: 'r3',
+    name: '강자매',
+    x: 3.85,
+    z: 0.28,
+    seated: true,
+    shirt: '#E7E5E4',
+    pants: '#A8A29E',
+    hair: '#5C3A21',
+    dialogues: [
+      '예배노트에 오늘 주신 말씀 꼭 기록해 두어야겠어요 📝'
+    ]
+  },
+  {
+    id: 'r4',
+    name: '조형제',
+    x: 4.55,
+    z: 1.58,
+    seated: true,
+    shirt: '#EF4444',
+    pants: '#2563EB',
+    hair: '#451A03',
+    dialogues: [
+      '우측 창가로 들어오는 햇살이 참 포근하네요 ☀️'
+    ]
+  }
 ];
 
 // =====================================================================
-// 👁️ [필수 구조] 화면을 회전할 때 시야를 가리는 벽을 자동으로 투명하게 만드는 컴포넌트
+// 👁️ 화면을 회전할 때 시야를 가리는 외벽을 자동으로 투명하게 만드는 컴포넌트
 // =====================================================================
-function SmartCutawayWall({ wallSide, children }) {
+function SmartCutawayWall({ wallSide, minOpacity = 0.05, children }) {
   const groupRef = useRef();
 
   useFrame(({ camera }) => {
     if (!groupRef.current) return;
     let shouldFade = false;
-    // 카메라 위치에 따라 시야 앞쪽을 가리는 벽면 즉시 감지
-    if (wallSide === 'south' && camera.position.z > 2.2) shouldFade = true;
-    if (wallSide === 'west' && camera.position.x < -2.2) shouldFade = true;
-    if (wallSide === 'east' && camera.position.x > 3.5) shouldFade = true;
-    if (wallSide === 'north' && camera.position.z < -2.2) shouldFade = true;
+    if (wallSide === 'south' && camera.position.z > 4.2) shouldFade = true;
+    if (wallSide === 'west' && camera.position.x < -3.5) shouldFade = true;
+    if (wallSide === 'east' && camera.position.x > 8.2) shouldFade = true;
+    if (wallSide === 'north' && camera.position.z < -4.5) shouldFade = true;
 
-    const targetOpacity = shouldFade ? 0.06 : 1.0;
+    const targetOpacity = shouldFade ? minOpacity : 1.0;
 
     groupRef.current.traverse((child) => {
       if (child.isMesh && child.material) {
@@ -188,7 +403,7 @@ function SmartCutawayWall({ wallSide, children }) {
 }
 
 // =====================================================================
-// 🟢 바닥 초록색 홀로그램 원형 마커 + 3D 번호 배지
+// 🟢 빛기둥 홀로그램 링 + 3D 원형 캡슐 마커
 // =====================================================================
 function HologramZoneMarker({ zone, isSelected, onSelect }) {
   const pulseRef = useRef();
@@ -201,26 +416,26 @@ function HologramZoneMarker({ zone, isSelected, onSelect }) {
       grad.addColorStop(1, '#059669');
       ctx.fillStyle = grad;
       ctx.beginPath();
-      ctx.arc(w / 2 - 16, h / 2, 82, 0, Math.PI * 2);
+      ctx.arc(w / 2 - 18, h / 2, 80, 0, Math.PI * 2);
       ctx.fill();
-      ctx.lineWidth = 6;
-      ctx.strokeStyle = '#FFFFFF';
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = '#A7F3D0';
       ctx.stroke();
 
       ctx.fillStyle = '#FFFFFF';
-      ctx.font = '900 72px sans-serif';
+      ctx.font = '900 68px sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(zone.code, w / 2 - 16, h / 2 + 4);
+      ctx.fillText(zone.code, w / 2 - 18, h / 2 + 4);
 
       if (zone.subCode) {
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+        ctx.fillStyle = 'rgba(20, 24, 32, 0.88)';
         ctx.beginPath();
-        ctx.roundRect(w / 2 + 52, h / 2 + 12, 64, 44, 16);
+        ctx.roundRect(w / 2 + 46, h / 2 + 10, 62, 42, 14);
         ctx.fill();
-        ctx.fillStyle = '#ECFDF5';
-        ctx.font = 'bold 30px sans-serif';
-        ctx.fillText(zone.subCode, w / 2 + 84, h / 2 + 35);
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = 'bold 28px sans-serif';
+        ctx.fillText(zone.subCode, w / 2 + 77, h / 2 + 32);
       }
     }, 320, 220);
   }, [zone.code, zone.subCode]);
@@ -241,20 +456,20 @@ function HologramZoneMarker({ zone, isSelected, onSelect }) {
       }}
     >
       <mesh ref={pulseRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.025, 0]}>
-        <ringGeometry args={[0.55, 0.66, 48]} />
-        <meshBasicMaterial color="#10B981" />
+        <ringGeometry args={[0.52, 0.62, 48]} />
+        <meshBasicMaterial color="#34D399" />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.018, 0]}>
-        <circleGeometry args={[0.55, 48]} />
-        <meshBasicMaterial color="#34D399" transparent opacity={isSelected ? 0.45 : 0.25} />
+        <circleGeometry args={[0.52, 48]} />
+        <meshBasicMaterial color="#10B981" transparent opacity={isSelected ? 0.45 : 0.24} />
       </mesh>
-      <mesh position={[0, 0.20, 0]}>
-        <cylinderGeometry args={[0.55, 0.60, 0.38, 32, 1, true]} />
-        <meshBasicMaterial color="#34D399" transparent opacity={0.15} side={THREE.DoubleSide} depthWrite={false} />
+      <mesh position={[0, 0.22, 0]}>
+        <cylinderGeometry args={[0.52, 0.58, 0.42, 32, 1, true]} />
+        <meshBasicMaterial color="#34D399" transparent opacity={0.14} side={THREE.DoubleSide} depthWrite={false} />
       </mesh>
-      <Billboard position={[0.08, 0.50, 0]}>
+      <Billboard position={[0.08, 0.48, 0]}>
         <mesh>
-          <planeGeometry args={[0.85, 0.58]} />
+          <planeGeometry args={[0.82, 0.56]} />
           <meshBasicMaterial map={badgeTex} transparent depthWrite={false} />
         </mesh>
       </Billboard>
@@ -263,41 +478,103 @@ function HologramZoneMarker({ zone, isSelected, onSelect }) {
 }
 
 // =====================================================================
-// 🚶‍♀️ 부드러운 둥근 관절형 아바타 (팔·다리·손·원피스/정장·선글라스·말풍선)
+// 🚶‍♀️ 살아 움직이는 관절형 아바타 + NPC 실시간 대화 말풍선 빌보드
 // =====================================================================
 function SmoothChibiAvatar({
   position = [0, 0, 0],
+  patrolZ = null,
   rotationY = 0,
   isWalking = false,
   isSeated = false,
   isSkirt = false,
+  autoWave = false,
   hasSunglasses = false,
   emote = null,
   shirtColor = '#FACC15',
   pantsColor = '#2563EB',
   hairColor = '#B45309',
-  skinColor = '#FFE4B5',
+  skinColor = '#FDE68A',
   nameTagTexture = null,
-  promptTexture = null,
-  onClickPrompt = null
+  speechBubbleText = null,
+  seedOffset = 0
 }) {
+  const outerGroupRef = useRef();
   const rootRef = useRef();
+  const headGroupRef = useRef();
   const leftArmRef = useRef();
   const rightArmRef = useRef();
   const leftLegRef = useRef();
   const rightLegRef = useRef();
 
-  useFrame(({ clock }) => {
-    const t = clock.elapsedTime;
+  const patrolState = useRef({ z: position[2], dir: 1, pauseTimer: 0 });
+
+  // NPC 대화 말풍선 캔버스 텍스처
+  const bubbleTex = useMemo(() => {
+    if (!speechBubbleText) return null;
+    return makeCanvasTexture((ctx, w, h) => {
+      ctx.clearRect(0, 0, w, h);
+      // 말풍선 본체
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.96)';
+      ctx.beginPath();
+      ctx.roundRect(12, 10, w - 24, h - 34, 34);
+      ctx.fill();
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = '#10B981';
+      ctx.stroke();
+
+      // 말풍선 아래 꼬리 삼각형
+      ctx.beginPath();
+      ctx.moveTo(w / 2 - 14, h - 24);
+      ctx.lineTo(w / 2 + 14, h - 24);
+      ctx.lineTo(w / 2, h - 4);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.96)';
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#0F172A';
+      ctx.font = '900 28px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(speechBubbleText.slice(0, 25), w / 2, (h - 24) / 2 + 4);
+    }, 680, 120);
+  }, [speechBubbleText]);
+
+  useFrame(({ clock }, delta) => {
+    const t = clock.elapsedTime + seedOffset;
+    let walkingNow = isWalking;
+
+    if (patrolZ && outerGroupRef.current) {
+      const st = patrolState.current;
+      if (st.pauseTimer > 0) {
+        st.pauseTimer -= delta;
+        walkingNow = false;
+      } else {
+        walkingNow = true;
+        st.z += st.dir * delta * 0.65;
+        if (st.z > patrolZ[1]) {
+          st.z = patrolZ[1];
+          st.dir = -1;
+          st.pauseTimer = 2.8;
+        } else if (st.z < patrolZ[0]) {
+          st.z = patrolZ[0];
+          st.dir = 1;
+          st.pauseTimer = 2.8;
+        }
+        outerGroupRef.current.position.z = st.z;
+        outerGroupRef.current.rotation.y = st.dir > 0 ? 0.25 : Math.PI - 0.25;
+      }
+    }
 
     if (leftLegRef.current && rightLegRef.current) {
       if (isSeated) {
-        leftLegRef.current.rotation.x = -Math.PI / 2.05;
-        rightLegRef.current.rotation.x = -Math.PI / 2.05;
-        leftLegRef.current.position.set(-0.09, 0.20, 0.09);
-        rightLegRef.current.position.set(0.09, 0.20, 0.09);
-      } else if (isWalking) {
-        const sw = Math.sin(t * 10) * 0.6;
+        // 정면(-Z)을 바라보고 앉을 때 무릎이 앞으로 자연스럽게 굽혀지도록 설정
+        leftLegRef.current.rotation.x = Math.PI / 2.1;
+        rightLegRef.current.rotation.x = Math.PI / 2.1;
+        leftLegRef.current.position.set(-0.09, 0.22, 0.12);
+        rightLegRef.current.position.set(0.09, 0.22, 0.12);
+      } else if (walkingNow) {
+        const sw = Math.sin(t * 9.5) * 0.58;
         leftLegRef.current.rotation.x = sw;
         rightLegRef.current.rotation.x = -sw;
         leftLegRef.current.position.set(-0.09, 0.22, 0);
@@ -311,37 +588,42 @@ function SmoothChibiAvatar({
     }
 
     if (leftArmRef.current && rightArmRef.current) {
-      if (emote === 'wave') {
-        rightArmRef.current.rotation.z = -2.4 + Math.sin(t * 14) * 0.35;
-        leftArmRef.current.rotation.x = 0;
+      if (emote === 'wave' || autoWave || (patrolZ && !walkingNow)) {
+        rightArmRef.current.rotation.z = -2.35 + Math.sin(t * 10) * 0.32;
+        rightArmRef.current.rotation.x = 0.3;
+        leftArmRef.current.rotation.x = Math.sin(t * 2) * 0.08;
       } else if (isSeated) {
-        leftArmRef.current.rotation.x = -0.5;
-        rightArmRef.current.rotation.x = -0.5;
+        leftArmRef.current.rotation.x = 0.45 + Math.sin(t * 2.2) * 0.04;
+        rightArmRef.current.rotation.x = 0.45 + Math.cos(t * 2.2) * 0.04;
         rightArmRef.current.rotation.z = -0.1;
-      } else if (isWalking) {
-        const sw = Math.sin(t * 10) * 0.5;
+      } else if (walkingNow) {
+        const sw = Math.sin(t * 9.5) * 0.48;
         leftArmRef.current.rotation.x = -sw;
         rightArmRef.current.rotation.x = sw;
         rightArmRef.current.rotation.z = -0.12;
       } else {
-        leftArmRef.current.rotation.x = 0;
-        rightArmRef.current.rotation.x = 0;
+        leftArmRef.current.rotation.x = Math.sin(t * 2) * 0.06;
+        rightArmRef.current.rotation.x = -Math.sin(t * 2) * 0.06;
         leftArmRef.current.rotation.z = 0.14;
         rightArmRef.current.rotation.z = -0.14;
       }
     }
 
+    if (headGroupRef.current) {
+      headGroupRef.current.rotation.x = Math.sin(t * 2.6) * 0.06;
+      headGroupRef.current.rotation.y = Math.cos(t * 1.4) * 0.08;
+    }
     if (rootRef.current) {
-      const bounce = isWalking && !isSeated ? Math.abs(Math.sin(t * 10)) * 0.05 : 0;
-      rootRef.current.position.y = (isSeated ? 0.16 : 0) + bounce;
+      const bounce = walkingNow && !isSeated ? Math.abs(Math.sin(t * 9.5)) * 0.045 : Math.sin(t * 2.6) * 0.01;
+      rootRef.current.position.y = (isSeated ? 0.18 : 0) + bounce;
     }
   });
 
   return (
-    <group position={position} rotation={[0, rotationY, 0]}>
+    <group ref={outerGroupRef} position={position} rotation={[0, rotationY, 0]}>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.015, 0]}>
         <circleGeometry args={[0.26, 24]} />
-        <meshBasicMaterial color="#0F172A" transparent opacity={0.2} />
+        <meshBasicMaterial color="#0F172A" transparent opacity={0.28} />
       </mesh>
 
       <group ref={rootRef}>
@@ -386,7 +668,7 @@ function SmoothChibiAvatar({
           </mesh>
         </group>
 
-        <group position={[0, 0.78, 0]}>
+        <group ref={headGroupRef} position={[0, 0.78, 0]}>
           <RoundedBox args={[0.42, 0.39, 0.39]} radius={0.12} smoothness={4} castShadow receiveShadow>
             <meshStandardMaterial color={skinColor} roughness={0.4} />
           </RoundedBox>
@@ -420,23 +702,22 @@ function SmoothChibiAvatar({
           )}
         </group>
 
+        {/* 플레이어 네임태그 */}
         {nameTagTexture && (
           <Billboard position={[0, 1.28, 0]}>
-            {promptTexture && (
-              <mesh
-                position={[0, 0.35, 0]}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (onClickPrompt) onClickPrompt();
-                }}
-              >
-                <planeGeometry args={[2.1, 0.36]} />
-                <meshBasicMaterial map={promptTexture} transparent depthTest={false} />
-              </mesh>
-            )}
             <mesh renderOrder={12}>
-              <planeGeometry args={[1.55, 0.34]} />
+              <planeGeometry args={[1.65, 0.36]} />
               <meshBasicMaterial map={nameTagTexture} transparent depthTest={false} />
+            </mesh>
+          </Billboard>
+        )}
+
+        {/* NPC 실시간 대화 말풍선 */}
+        {bubbleTex && (
+          <Billboard position={[0, 1.42, 0]}>
+            <mesh renderOrder={15}>
+              <planeGeometry args={[2.35, 0.42]} />
+              <meshBasicMaterial map={bubbleTex} transparent depthTest={false} />
             </mesh>
           </Billboard>
         )}
@@ -446,7 +727,7 @@ function SmoothChibiAvatar({
 }
 
 // =====================================================================
-// 🏛️ 3층 대예배당 화사한 오픈 탑뷰 디오라마 씬 (천장 제거 + 대형 스크린 + 투명 벽!)
+// 🏛️ 3층 대예배당 초정밀 3D 씬 (장의자 2번 사진 완벽 고증 + 피아노 우측 + 방송실 후면!)
 // =====================================================================
 function SanctuaryMasterpieceDiorama({
   activeZoneId,
@@ -454,9 +735,38 @@ function SanctuaryMasterpieceDiorama({
   seatedInfo,
   onSitOnPew,
   onToggleScreenPlayer,
-  sermonTitle
+  sermonTitle,
+  activeNpcChatIdx
 }) {
-  // 1) 장의자 등받이 '좋은나무교회 환영합니다' 한글 배너 텍스처
+  const oakWoodTex = useMemo(() => makeWoodGrainTexture('#D49552', '#A86B2D'), []);
+  const stageWoodTex = useMemo(() => makeWoodGrainTexture('#E0AA6E', '#B87E42'), []);
+
+  // =================================================================
+  // 🪑 [핵심 수정 1] 2번 사진(분도가구·제천성민교회 장의자)과 100% 동일한 장의자 옆판(End Stanchion)
+  // 앞쪽(-Z, 강대상 쪽)으로 좌석 팔걸이가 열려 있고, 뒤쪽(+Z)으로 등받이가 12도 기울어진 정통 교회 장의자 단면!
+  // =================================================================
+  const pewSideStanchionGeo = useMemo(() => {
+    const shape = new THREE.Shape();
+    // Shape X축이 회전 후 World Z축이 되도록 설계:
+    // shape X < 0 : 앞쪽(강대상 방향 -Z) / shape X > 0 : 뒤쪽(등받이 방향 +Z)
+    shape.moveTo(-0.26, 0.0);    // 앞쪽 바닥 다리
+    shape.lineTo(0.24, 0.0);     // 뒤쪽 바닥 다리
+    shape.lineTo(0.32, 0.88);    // 뒤로 살짝 기울어진 등받이 상단 뒤끝
+    shape.lineTo(0.20, 0.90);    // 등받이 상단 둥근 몰딩 앞끝
+    shape.lineTo(0.11, 0.46);    // 등받이 안쪽 경사면 내려와서 방석과 만나는 지점
+    shape.lineTo(-0.24, 0.46);   // 팔걸이/방석 상단 앞끝
+    shape.lineTo(-0.28, 0.36);   // 방석 앞코 라운드
+    shape.closePath();
+
+    return new THREE.ExtrudeGeometry(shape, {
+      depth: 0.08,
+      bevelEnabled: true,
+      bevelThickness: 0.015,
+      bevelSize: 0.015,
+      bevelSegments: 4
+    });
+  }, []);
+
   const welcomeCoverTex = useMemo(() => {
     return makeCanvasTexture((ctx, w, h) => {
       ctx.fillStyle = '#FFFFFF';
@@ -467,143 +777,130 @@ function SanctuaryMasterpieceDiorama({
       ctx.strokeStyle = '#E2E8F0';
       ctx.stroke();
 
-      ctx.fillStyle = '#0F766E';
+      ctx.fillStyle = '#1E293B';
       ctx.font = '900 38px sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText('좋은나무교회', w / 2, h / 2 - 14);
-      ctx.fillStyle = '#E11D48';
       ctx.fillText('환영합니다', w / 2, h / 2 + 34);
     }, 420, 150);
   }, []);
 
-  // 2) 강대상 양옆 '교회 표어가' 그린 수채화 배너 텍스처
   const standBannerTex = useMemo(() => {
     return makeCanvasTexture((ctx, w, h) => {
       const grad = ctx.createLinearGradient(0, 0, 0, h);
-      grad.addColorStop(0, '#ECFCCB');
-      grad.addColorStop(0.22, '#FFFFFF');
-      grad.addColorStop(0.78, '#FFFFFF');
+      grad.addColorStop(0, '#D9F99D');
+      grad.addColorStop(0.24, '#FFFFFF');
+      grad.addColorStop(0.76, '#FFFFFF');
       grad.addColorStop(1, '#86EFAC');
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, w, h);
 
-      ctx.fillStyle = '#14532D';
-      ctx.font = '900 46px serif';
+      ctx.fillStyle = '#334155';
+      ctx.font = '900 50px serif';
       ctx.textAlign = 'center';
-      ctx.fillText('말씀과', w / 2, 175);
-      ctx.fillText('성령으로', w / 2, 245);
-      ctx.fillText('자라가는', w / 2, 315);
-      ctx.fillText('좋은나무', w / 2, 385);
+      ctx.fillText('교 회', w / 2, h / 2 - 22);
+      ctx.fillText('표어가', w / 2, h / 2 + 44);
     }, 256, 540);
   }, []);
 
-  // 3) 정면 대형 LED 설교 스크린 텍스처 (원래대로 큼직하게 복원!)
   const bigScreenTex = useMemo(() => {
     return makeCanvasTexture((ctx, w, h) => {
       const grad = ctx.createLinearGradient(0, 0, 0, h);
-      grad.addColorStop(0, '#1D4ED8');
-      grad.addColorStop(0.6, '#1E3A8A');
+      grad.addColorStop(0, '#1E3A8A');
       grad.addColorStop(1, '#0F172A');
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, w, h);
 
-      // 테두리 골드 라인
-      ctx.strokeStyle = 'rgba(253, 224, 71, 0.5)';
-      ctx.lineWidth = 8;
-      ctx.strokeRect(16, 16, w - 32, h - 32);
+      ctx.strokeStyle = 'rgba(253, 224, 71, 0.55)';
+      ctx.lineWidth = 6;
+      ctx.strokeRect(14, 14, w - 28, h - 28);
 
       ctx.fillStyle = '#FDE047';
-      ctx.font = '900 32px sans-serif';
+      ctx.font = '900 30px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('🌳 김포 좋은나무교회 주일 대예배', w / 2, 95);
+      ctx.fillText('김포 좋은나무교회 주일 대예배', w / 2, 90);
 
       ctx.fillStyle = '#FFFFFF';
-      ctx.font = '900 62px serif';
-      ctx.fillText(sermonTitle || '기적이 상식이 되는 5일의 기도', w / 2, 210);
+      ctx.font = '900 56px serif';
+      ctx.fillText(sermonTitle || '기적이 상식이 되는 5일의 기도', w / 2, 200);
 
-      ctx.fillStyle = '#BAE6FD';
-      ctx.font = 'bold 30px sans-serif';
-      ctx.fillText('▶ 자리에 앉거나 스크린을 터치하면 설교 영상이 재생됩니다', w / 2, 320);
-    }, 1024, 420);
+      ctx.fillStyle = '#93C5FD';
+      ctx.font = 'bold 28px sans-serif';
+      ctx.fillText('▶ 장의자에 앉거나 스크린을 클릭하면 예배 영상이 상영됩니다', w / 2, 310);
+    }, 1024, 400);
   }, [sermonTitle]);
 
   return (
     <group>
-      {/* 1. 본당 바닥 (칙칙한 검은색 대신 밝고 부드러운 웜 슬레이트 타일 카펫!) */}
-      <RoundedBox args={[16.2, 0.16, 16.2]} position={[0, -0.08, 0]} radius={0.03} receiveShadow>
-        <meshStandardMaterial color="#6E7682" roughness={0.65} />
+      {/* 1. 본당 바닥 카펫 & 통로 러너 */}
+      <RoundedBox args={[17.0, 0.2, 16.5]} position={[0, -0.1, 0]} radius={0.02} receiveShadow>
+        <meshStandardMaterial color="#3D3E42" roughness={0.82} />
       </RoundedBox>
-      {/* 중앙 통로 따뜻한 베이지그레이 러너 카펫 */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-2.15, 0.005, 1.1]} receiveShadow>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[AISLE_X_LEFT, 0.005, 1.1]} receiveShadow>
         <planeGeometry args={[0.92, 8.8]} />
-        <meshStandardMaterial color="#828B99" roughness={0.7} />
+        <meshStandardMaterial color="#484A50" roughness={0.85} />
       </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[2.15, 0.005, 1.1]} receiveShadow>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[AISLE_X_RIGHT, 0.005, 1.1]} receiveShadow>
         <planeGeometry args={[0.92, 8.8]} />
-        <meshStandardMaterial color="#828B99" roughness={0.7} />
+        <meshStandardMaterial color="#484A50" roughness={0.85} />
       </mesh>
 
       {/* ================================================================= */}
-      {/* 🎤 2. 정면 3단 허니오크 우드 강단 & 세로 루버벽 & 대형 LED 설교 스크린! */}
+      {/* 🎤 2. 정면(북쪽 -Z) 3단 우드 강단 & 세로 루버 아트월 & 대형 스크린 */}
       {/* ================================================================= */}
-      <group position={[0, 0, -5.4]}>
-        {/* 화사한 3단 계단식 허니오크 우드 무대 */}
-        <RoundedBox args={[10.8, 0.15, 3.5]} position={[0, 0.075, 0.15]} radius={0.025} castShadow receiveShadow>
-          <meshStandardMaterial color="#E6B882" roughness={0.35} />
+      <group position={[-0.6, 0, -5.2]}>
+        <RoundedBox args={[10.8, 0.16, 3.5]} position={[0.4, 0.08, 0.15]} radius={0.025} castShadow receiveShadow>
+          <meshStandardMaterial map={stageWoodTex} roughness={0.38} />
         </RoundedBox>
-        <RoundedBox args={[10.4, 0.15, 3.2]} position={[0, 0.225, 0.0]} radius={0.025} castShadow receiveShadow>
-          <meshStandardMaterial color="#EDC492" roughness={0.35} />
+        <RoundedBox args={[10.4, 0.16, 3.2]} position={[0.4, 0.24, 0.0]} radius={0.025} castShadow receiveShadow>
+          <meshStandardMaterial map={stageWoodTex} roughness={0.36} />
         </RoundedBox>
-        <RoundedBox args={[10.0, 0.15, 2.9]} position={[0, 0.375, -0.15]} radius={0.025} castShadow receiveShadow>
-          <meshStandardMaterial color="#F3CFA2" roughness={0.32} />
+        <RoundedBox args={[10.0, 0.16, 2.9]} position={[0.4, 0.40, -0.15]} radius={0.025} castShadow receiveShadow>
+          <meshStandardMaterial map={stageWoodTex} roughness={0.34} />
         </RoundedBox>
 
-        {/* [북쪽/정면 벽] 카메라가 북쪽 뒤로 돌아가면 자동으로 투명해짐! */}
         <SmartCutawayWall wallSide="north">
-          <RoundedBox args={[16.2, 5.2, 0.26]} position={[0, 2.6, -1.65]} radius={0.02} receiveShadow>
-            <meshStandardMaterial color="#F7EBDC" roughness={0.6} />
+          <RoundedBox args={[17.0, 5.6, 0.26]} position={[0.6, 2.8, -1.75]} radius={0.02} receiveShadow>
+            <meshStandardMaterial color="#E6CEB5" roughness={0.62} />
           </RoundedBox>
-          <RoundedBox args={[6.8, 4.9, 0.08]} position={[0, 2.55, -1.50]} radius={0.01}>
-            <meshStandardMaterial color="#9C6334" roughness={0.5} />
+          <RoundedBox args={[6.8, 5.1, 0.08]} position={[-0.2, 2.65, -1.60]} radius={0.01}>
+            <meshStandardMaterial color="#5C3418" roughness={0.6} />
           </RoundedBox>
           {Array.from({ length: 35 }).map((_, i) => (
             <RoundedBox
               key={`slat_${i}`}
-              args={[0.095, 4.85, 0.09]}
-              position={[-3.23 + i * 0.19, 2.55, -1.44]}
+              args={[0.095, 5.05, 0.09]}
+              position={[-3.42 + i * 0.19, 2.65, -1.53]}
               radius={0.015}
               castShadow
               receiveShadow
             >
-              <meshStandardMaterial color="#D99B5E" roughness={0.38} />
+              <meshStandardMaterial map={oakWoodTex} roughness={0.4} />
             </RoundedBox>
           ))}
 
-          {/* 📺 정면 초대형 LED 설교 스크린 (원래 위치 그대로 선명하게 복원!) */}
           <group
-            position={[0, 3.28, -1.32]}
+            position={[-0.2, 3.45, -1.42]}
             onClick={(e) => {
               e.stopPropagation();
               if (onToggleScreenPlayer) onToggleScreenPlayer();
             }}
           >
-            <RoundedBox args={[4.5, 2.25, 0.10]} radius={0.03} castShadow>
+            <RoundedBox args={[4.2, 2.05, 0.08]} radius={0.025} castShadow>
               <meshStandardMaterial color="#18181B" roughness={0.2} />
             </RoundedBox>
-            <mesh position={[0, 0, 0.056]}>
-              <planeGeometry args={[4.32, 2.08]} />
+            <mesh position={[0, 0, 0.045]}>
+              <planeGeometry args={[4.02, 1.88]} />
               <meshBasicMaterial map={bigScreenTex} />
             </mesh>
           </group>
 
-          {/* 정면 우측 원목 양개 출입문 */}
-          <RoundedBox args={[1.55, 2.25, 0.08]} position={[6.1, 1.12, -1.50]} radius={0.01} castShadow>
-            <meshStandardMaterial color="#9E6230" roughness={0.45} />
+          <RoundedBox args={[1.55, 2.25, 0.08]} position={[6.1, 1.12, -1.58]} radius={0.01} castShadow>
+            <meshStandardMaterial map={oakWoodTex} roughness={0.45} />
           </RoundedBox>
         </SmartCutawayWall>
 
-        {/* 강대상 양옆 스탠드 배너 2개 */}
-        {[-2.65, 2.65].map((bx, bIdx) => (
+        {[-2.85, 2.45].map((bx, bIdx) => (
           <group key={`banner_${bIdx}`} position={[bx, 1.48, -0.95]}>
             <RoundedBox args={[0.78, 2.05, 0.04]} radius={0.015} castShadow>
               <meshStandardMaterial color="#FFFFFF" />
@@ -618,70 +915,63 @@ function SanctuaryMasterpieceDiorama({
           </group>
         ))}
 
-        {/* 중앙 십자가 원목 강대상 & 양옆 풍성한 꽃꽂이 화분 2개 */}
-        <group position={[0, 0.45, 0.15]}>
+        {/* 중앙 십자가 원목 강대상 & 양옆 꽃꽂이 화분 */}
+        <group position={[-0.2, 0.48, 0.15]}>
           <RoundedBox args={[1.22, 0.14, 0.68]} position={[0, 0.07, 0]} radius={0.02} castShadow>
-            <meshStandardMaterial color="#C88242" />
+            <meshStandardMaterial map={oakWoodTex} />
           </RoundedBox>
           <RoundedBox args={[1.06, 0.84, 0.56]} position={[0, 0.52, 0]} radius={0.025} castShadow receiveShadow>
-            <meshStandardMaterial color="#D9924E" roughness={0.38} />
+            <meshStandardMaterial map={oakWoodTex} roughness={0.38} />
           </RoundedBox>
           <RoundedBox args={[1.20, 0.10, 0.66]} position={[0, 0.96, 0]} radius={0.02} castShadow>
-            <meshStandardMaterial color="#B06D30" />
+            <meshStandardMaterial map={oakWoodTex} />
           </RoundedBox>
           <mesh position={[0, 0.54, 0.29]}>
-            <boxGeometry args={[0.055, 0.38, 0.02]} />
-            <meshStandardMaterial color="#FDE047" metalness={0.7} roughness={0.2} />
+            <boxGeometry args={[0.05, 0.36, 0.02]} />
+            <meshStandardMaterial color="#78350F" />
           </mesh>
           <mesh position={[0, 0.60, 0.29]}>
-            <boxGeometry args={[0.24, 0.055, 0.02]} />
-            <meshStandardMaterial color="#FDE047" metalness={0.7} roughness={0.2} />
+            <boxGeometry args={[0.22, 0.05, 0.02]} />
+            <meshStandardMaterial color="#78350F" />
           </mesh>
-          {[-0.16, 0.16].map((mx, mi) => (
-            <mesh key={mi} position={[mx, 1.12, 0.08]} rotation={[0.28, 0, 0]}>
-              <cylinderGeometry args={[0.01, 0.01, 0.26, 8]} />
-              <meshStandardMaterial color="#18181B" />
-            </mesh>
-          ))}
 
-          {/* 양옆 사각 원목 화분 & 화사한 핑크/화이트/옐로우 꽃송이 */}
           {[-1.05, 1.05].map((fx, fIdx) => (
             <group key={`flw_${fIdx}`} position={[fx, 0, 0.06]}>
               <RoundedBox args={[0.48, 0.46, 0.48]} position={[0, 0.23, 0]} radius={0.02} castShadow>
-                <meshStandardMaterial color="#D9924E" />
+                <meshStandardMaterial map={oakWoodTex} />
               </RoundedBox>
               <mesh position={[0, 0.58, 0]} castShadow>
                 <sphereGeometry args={[0.34, 16, 16]} />
-                <meshStandardMaterial color="#22C55E" roughness={0.6} />
+                <meshStandardMaterial color="#15803D" roughness={0.7} />
               </mesh>
               {[
-                [0, 0.78, 0, '#FFFFFF', 0.13],
+                [0, 0.78, 0, '#FFFFFF', 0.12],
                 [-0.15, 0.70, 0.15, '#F472B6', 0.11],
                 [0.15, 0.70, 0.15, '#FB7185', 0.11],
                 [-0.16, 0.68, -0.14, '#FBCFE8', 0.11],
-                [0.16, 0.68, -0.14, '#FEF08A', 0.10],
-                [0, 0.64, 0.24, '#FFFFFF', 0.10],
-                [-0.24, 0.60, 0.02, '#F43F5E', 0.09],
-                [0.24, 0.60, 0.02, '#F9A8D4', 0.09]
+                [0.16, 0.68, -0.14, '#FEF08A', 0.10]
               ].map(([bx, by, bz, bcol, brad], bi) => (
                 <mesh key={bi} position={[bx, by, bz]} castShadow>
                   <sphereGeometry args={[brad, 10, 10]} />
-                  <meshStandardMaterial color={bcol} roughness={0.35} />
+                  <meshStandardMaterial color={bcol} roughness={0.4} />
                 </mesh>
               ))}
             </group>
           ))}
         </group>
 
-        {/* 강단 바닥 모니터 스피커 */}
-        <RoundedBox args={[0.46, 0.26, 0.36]} position={[2.2, 0.54, 1.05]} rotation={[-0.35, -0.3, 0]} radius={0.02} castShadow>
-          <meshStandardMaterial color="#1E293B" />
+        {/* 강단 좌측: 원목 성찬/헌금 테이블 & 예배위원 대기석 */}
+        <RoundedBox args={[1.35, 0.78, 0.65]} position={[-4.2, 0.48, 0.85]} radius={0.025} castShadow>
+          <meshStandardMaterial map={oakWoodTex} roughness={0.38} />
+        </RoundedBox>
+        <RoundedBox args={[0.55, 0.88, 0.52]} position={[-5.1, 0.52, 0.85]} radius={0.02} castShadow>
+          <meshStandardMaterial map={oakWoodTex} />
         </RoundedBox>
 
-        {/* 🎹 3. 좌측 블랙 그랜드 피아노 & 피아노 벤치 */}
-        <group position={[-5.6, 0, 1.35]} rotation={[0, 0.18, 0]}>
+        {/* 🎹 [핵심 수정 4] 그랜드 피아노를 오른쪽(강단 우측 찬양단 구역)으로 이동 배치! */}
+        <group position={[5.85, 0.0, 1.35]} rotation={[0, -0.28, 0]}>
           <RoundedBox args={[1.45, 0.30, 1.75]} position={[0, 0.68, 0]} radius={0.06} castShadow receiveShadow>
-            <meshStandardMaterial color="#1E293B" roughness={0.18} metalness={0.25} />
+            <meshStandardMaterial color="#18181B" roughness={0.15} metalness={0.25} />
           </RoundedBox>
           <RoundedBox args={[1.32, 0.06, 0.24]} position={[0, 0.64, 0.88]} radius={0.01}>
             <meshStandardMaterial color="#FFFFFF" />
@@ -689,16 +979,16 @@ function SanctuaryMasterpieceDiorama({
           {[[-0.58, -0.68], [0.58, -0.68], [0, 0.68]].map(([lx, lz], li) => (
             <mesh key={li} position={[lx, 0.34, lz]} castShadow>
               <cylinderGeometry args={[0.045, 0.03, 0.68, 12]} />
-              <meshStandardMaterial color="#1E293B" />
+              <meshStandardMaterial color="#18181B" />
             </mesh>
           ))}
           <RoundedBox args={[0.76, 0.42, 0.36]} position={[0, 0.21, 1.28]} radius={0.03} castShadow>
-            <meshStandardMaterial color="#334155" />
+            <meshStandardMaterial color="#27272A" />
           </RoundedBox>
         </group>
 
-        {/* 🥁 4. 우측 6각 투명 아크릴 드럼 부스 + 드럼 세트 + 2단 건반 */}
-        <group position={[3.35, 0.45, -0.15]}>
+        {/* 🥁 우측 6각 투명 아크릴 드럼 부스 + 드럼 세트 + 2단 건반 */}
+        <group position={[3.25, 0.48, -0.15]}>
           {[-0.8, -0.4, 0, 0.4, 0.8].map((ang, ai) => (
             <mesh
               key={ai}
@@ -706,16 +996,16 @@ function SanctuaryMasterpieceDiorama({
               rotation={[0, ang * 1.5, 0]}
             >
               <boxGeometry args={[0.62, 1.48, 0.03]} />
-              <meshStandardMaterial color="#E0F2FE" transparent opacity={0.34} roughness={0.08} />
+              <meshStandardMaterial color="#E0F2FE" transparent opacity={0.32} roughness={0.08} />
             </mesh>
           ))}
           <mesh position={[0, 0.28, -0.1]} rotation={[Math.PI / 2, 0, 0]} castShadow>
             <cylinderGeometry args={[0.28, 0.28, 0.38, 20]} />
-            <meshStandardMaterial color="#991B1B" roughness={0.3} />
+            <meshStandardMaterial color="#334155" metalness={0.5} roughness={0.3} />
           </mesh>
           <mesh position={[-0.28, 0.45, 0.12]} castShadow>
             <cylinderGeometry args={[0.16, 0.16, 0.14, 16]} />
-            <meshStandardMaterial color="#E2E8F0" metalness={0.7} />
+            <meshStandardMaterial color="#CBD5E1" metalness={0.7} />
           </mesh>
           {[[-0.35, 0.82, -0.05], [0.35, 0.86, -0.05], [0.0, 0.92, -0.25]].map(([cx, cy, cz], ci) => (
             <mesh key={ci} position={[cx, cy, cz]} rotation={[0.2, 0, 0]}>
@@ -725,47 +1015,66 @@ function SanctuaryMasterpieceDiorama({
           ))}
         </group>
 
-        <group position={[5.05, 0, -0.15]} rotation={[0, -0.35, 0]}>
-          <RoundedBox args={[1.28, 0.09, 0.38]} position={[0, 0.72, 0]} radius={0.015} castShadow>
-            <meshStandardMaterial color="#1E293B" />
+        <group position={[4.55, 0, 0.35]} rotation={[0, -0.35, 0]}>
+          <RoundedBox args={[1.22, 0.09, 0.36]} position={[0, 0.72, 0]} radius={0.015} castShadow>
+            <meshStandardMaterial color="#18181B" />
           </RoundedBox>
-          <RoundedBox args={[1.18, 0.08, 0.32]} position={[0, 0.96, -0.12]} radius={0.015} castShadow>
-            <meshStandardMaterial color="#1E293B" />
+          <RoundedBox args={[1.12, 0.08, 0.30]} position={[0, 0.96, -0.12]} radius={0.015} castShadow>
+            <meshStandardMaterial color="#18181B" />
           </RoundedBox>
           <mesh position={[0, 0.36, 0]} castShadow>
-            <boxGeometry args={[0.9, 0.72, 0.05]} />
-            <meshStandardMaterial color="#334155" />
+            <boxGeometry args={[0.85, 0.72, 0.05]} />
+            <meshStandardMaterial color="#27272A" />
           </mesh>
         </group>
+      </group>
 
-        {/* 💡 5. 시야를 가리는 천장 슬래브는 완전히 제거하고, 공중에 우아한 2단 원형 조명 링과 스피커만 배치! */}
-        <group position={[0, 4.95, 0.8]}>
+      {/* ================================================================= */}
+      {/* 💡 5. 천장 2단 동심원 간접조명 우물천장 + 매립 할로겐등 + 4단 스피커 */}
+      {/* ================================================================= */}
+      <group position={[0, 5.45, 0]}>
+        <mesh position={[0, 0.15, -1.0]}>
+          <boxGeometry args={[17.0, 0.2, 16.5]} />
+          <meshStandardMaterial color="#EFE3D3" roughness={0.65} />
+        </mesh>
+
+        <group position={[-0.8, -0.08, -3.5]}>
           <mesh rotation={[Math.PI / 2, 0, 0]}>
-            <torusGeometry args={[2.9, 0.18, 20, 64]} />
-            <meshStandardMaterial color="#FFFBEB" emissive="#FDE68A" emissiveIntensity={0.7} />
+            <torusGeometry args={[3.35, 0.26, 24, 72]} />
+            <meshStandardMaterial color="#F7EFE4" roughness={0.5} />
           </mesh>
-          <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, -0.05, 0]}>
-            <torusGeometry args={[1.85, 0.15, 20, 64]} />
-            <meshStandardMaterial color="#FFFBEB" emissive="#F59E0B" emissiveIntensity={0.9} />
+          <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0.04, 0]}>
+            <torusGeometry args={[3.06, 0.10, 16, 72]} />
+            <meshStandardMaterial color="#FEF08A" emissive="#F59E0B" emissiveIntensity={1.9} />
+          </mesh>
+
+          <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, -0.02, 0]}>
+            <torusGeometry args={[2.05, 0.22, 24, 72]} />
+            <meshStandardMaterial color="#F7EFE4" roughness={0.5} />
+          </mesh>
+          <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
+            <torusGeometry args={[1.80, 0.09, 16, 72]} />
+            <meshStandardMaterial color="#FEF08A" emissive="#F59E0B" emissiveIntensity={1.9} />
           </mesh>
         </group>
 
-        {[-3.1, 3.1].map((sx, idx) => (
-          <group key={`line_spk_${idx}`} position={[sx, 4.05, 1.1]}>
-            <mesh position={[0, 0.55, 0]}>
-              <cylinderGeometry args={[0.025, 0.025, 0.9, 8]} />
-              <meshStandardMaterial color="#1E293B" />
+        {[[-3.85, 1.85]].map(() => null)}
+        {[-3.85, 1.85].map((sx, idx) => (
+          <group key={`line_spk_${idx}`} position={[sx, -1.05, -3.4]}>
+            <mesh position={[0, 0.65, 0]}>
+              <cylinderGeometry args={[0.028, 0.028, 1.1, 8]} />
+              <meshStandardMaterial color="#18181B" />
             </mesh>
-            {[0.28, 0, -0.28].map((sy, sIdx) => (
+            {[0.38, 0.12, -0.14, -0.40].map((sy, sIdx) => (
               <RoundedBox
                 key={sIdx}
-                args={[0.66, 0.24, 0.48]}
-                position={[0, sy, sIdx * 0.04]}
+                args={[0.72, 0.24, 0.52]}
+                position={[0, sy, sIdx * 0.05]}
                 rotation={[0.14 + sIdx * 0.08, 0, 0]}
                 radius={0.025}
                 castShadow
               >
-                <meshStandardMaterial color="#1E293B" roughness={0.28} />
+                <meshStandardMaterial color="#18181B" roughness={0.28} />
               </RoundedBox>
             ))}
           </group>
@@ -773,68 +1082,75 @@ function SanctuaryMasterpieceDiorama({
       </group>
 
       {/* ================================================================= */}
-      {/* 🏢 6. 화면 회전 시 자동으로 투명해지는 동·서·남 외벽 & 2층 발코니 */}
+      {/* 🏢 6. 우측(동쪽) 벽면 채광창 4개 + [핵심 수정 5] 강대상 반대편(남쪽 후면) 4층 방송실 대형 유리벽! */}
       {/* ================================================================= */}
-      {/* [동쪽/우측 벽 & 채광창 4개 & 2층 발코니 & 4층 방송실 창문] */}
       <SmartCutawayWall wallSide="east">
-        <RoundedBox args={[0.24, 2.85, 16.0]} position={[7.4, 1.42, 0]} radius={0.02} castShadow receiveShadow>
-          <meshStandardMaterial color="#F7EBDC" roughness={0.6} />
+        <RoundedBox args={[0.26, 5.4, 16.2]} position={[7.4, 2.7, 0]} radius={0.02} receiveShadow>
+          <meshStandardMaterial color="#E6CEB5" roughness={0.65} />
         </RoundedBox>
+        {/* 우측 1층 채광 창문 4개 */}
         {[-2.4, -0.5, 1.4, 3.3].map((wz, wi) => (
-          <group key={`rwin_${wi}`} position={[7.25, 1.38, wz]}>
-            <RoundedBox args={[0.08, 1.48, 0.90]} radius={0.01}>
-              <meshStandardMaterial color="#8C5828" />
+          <group key={`rwin_${wi}`} position={[7.25, 1.45, wz]}>
+            <RoundedBox args={[0.08, 1.55, 0.92]} radius={0.01}>
+              <meshStandardMaterial color="#6B4423" />
             </RoundedBox>
             <mesh position={[-0.03, 0, 0]} rotation={[0, -Math.PI / 2, 0]}>
-              <planeGeometry args={[0.80, 1.36]} />
-              <meshStandardMaterial color="#FFFBEB" emissive="#FEF08A" emissiveIntensity={0.95} />
+              <planeGeometry args={[0.82, 1.42]} />
+              <meshStandardMaterial color="#FFFBEB" emissive="#FDE68A" emissiveIntensity={0.85} />
             </mesh>
           </group>
         ))}
+      </SmartCutawayWall>
 
-        {/* 2층 발코니 슬래브 & 강화유리 난간 */}
-        <RoundedBox args={[2.2, 0.38, 13.6]} position={[6.3, 2.75, 0.4]} radius={0.025} castShadow receiveShadow>
-          <meshStandardMaterial color="#F5EBE0" roughness={0.55} />
+      {/* 🎥 [핵심 수정 5] 강대상 정반대편(남쪽 후면 벽, z = +7.2)으로 옮겨진 2층 발코니 & 4층 방송실 다크프레임 통유리창! */}
+      <SmartCutawayWall wallSide="south" minOpacity={0.14}>
+        {/* 후면 벽체 */}
+        <RoundedBox args={[16.8, 5.4, 0.26]} position={[0, 2.7, 7.2]} radius={0.02} receiveShadow>
+          <meshStandardMaterial color="#E6CEB5" roughness={0.65} />
         </RoundedBox>
-        <mesh position={[5.25, 3.22, 0.4]}>
-          <boxGeometry args={[0.04, 0.58, 13.4]} />
-          <meshStandardMaterial color="#BAE6FD" transparent opacity={0.35} roughness={0.1} />
+
+        {/* 후면 2층 발코니 돌출 바닥 슬래브 & 강화유리 난간 */}
+        <RoundedBox args={[14.6, 0.42, 2.2]} position={[0, 2.75, 6.0]} radius={0.025} receiveShadow>
+          <meshStandardMaterial color="#EFE3D3" roughness={0.6} />
+        </RoundedBox>
+        <mesh position={[0, 3.24, 4.92]}>
+          <boxGeometry args={[14.4, 0.62, 0.04]} />
+          <meshStandardMaterial color="#BAE6FD" transparent opacity={0.36} roughness={0.1} />
         </mesh>
-        <RoundedBox args={[0.07, 0.06, 13.4]} position={[5.25, 3.52, 0.4]} radius={0.01}>
-          <meshStandardMaterial color="#8C5828" roughness={0.4} />
+        <RoundedBox args={[14.4, 0.06, 0.07]} position={[0, 3.56, 4.92]} radius={0.01}>
+          <meshStandardMaterial color="#785A46" roughness={0.4} />
+        </RoundedBox>
+        {[-6.0, -4.0, -2.0, 0.0, 2.0, 4.0, 6.0].map((px, pi) => (
+          <RoundedBox key={`spost_${pi}`} args={[0.05, 0.72, 0.05]} position={[px, 3.22, 4.92]} radius={0.01}>
+            <meshStandardMaterial color="#334155" metalness={0.7} />
+          </RoundedBox>
+        ))}
+
+        {/* 후면 발코니 정중앙 보조 모니터 (실제 교회 사진 완벽 고증!) */}
+        <RoundedBox args={[1.8, 0.95, 0.10]} position={[0, 2.85, 4.84]} radius={0.02}>
+          <meshStandardMaterial color="#18181B" />
         </RoundedBox>
 
-        {/* 4층 방송실 통유리 부스 */}
-        <RoundedBox args={[0.24, 2.4, 16.0]} position={[7.4, 4.05, 0]} radius={0.02} receiveShadow>
-          <meshStandardMaterial color="#F7EBDC" roughness={0.6} />
-        </RoundedBox>
-        <group position={[7.22, 4.05, 0.2]}>
-          <RoundedBox args={[0.12, 1.85, 9.6]} radius={0.01}>
-            <meshStandardMaterial color="#334155" />
+        {/* 후면 2층 위쪽 4층 방송실 대형 다크프레임 통유리 부스 */}
+        <group position={[0, 4.15, 7.02]}>
+          <RoundedBox args={[10.6, 1.95, 0.14]} radius={0.01}>
+            <meshStandardMaterial color="#27272A" />
           </RoundedBox>
-          <mesh position={[-0.05, 0, 0]} rotation={[0, -Math.PI / 2, 0]}>
-            <planeGeometry args={[9.3, 1.68]} />
-            <meshStandardMaterial color="#64748B" metalness={0.5} roughness={0.2} />
+          <mesh position={[0, 0, -0.06]} rotation={[0, Math.PI, 0]}>
+            <planeGeometry args={[10.2, 1.78]} />
+            <meshStandardMaterial color="#334155" metalness={0.75} roughness={0.18} />
           </mesh>
+          {[-3.4, -1.2, 1.2, 3.4].map((fx, fi) => (
+            <RoundedBox key={fi} args={[0.08, 1.92, 0.16]} position={[fx, 0, 0]} radius={0.005}>
+              <meshStandardMaterial color="#18181B" />
+            </RoundedBox>
+          ))}
         </group>
       </SmartCutawayWall>
 
-      {/* [서쪽/좌측 벽] 카메라가 좌측에 있을 때 자동 투명화! */}
-      <SmartCutawayWall wallSide="west">
-        <RoundedBox args={[0.24, 4.8, 16.0]} position={[-7.4, 2.4, 0]} radius={0.02} castShadow receiveShadow>
-          <meshStandardMaterial color="#F7EBDC" roughness={0.6} />
-        </RoundedBox>
-      </SmartCutawayWall>
-
-      {/* [남쪽/후면 벽] 카메라가 남쪽 뒤편에 있을 때 자동 투명화! */}
-      <SmartCutawayWall wallSide="south">
-        <RoundedBox args={[14.8, 4.8, 0.24]} position={[0, 2.4, 7.9]} radius={0.02} castShadow receiveShadow>
-          <meshStandardMaterial color="#F7EBDC" roughness={0.6} />
-        </RoundedBox>
-      </SmartCutawayWall>
-
       {/* ================================================================= */}
-      {/* 🪑 7. 화사한 허니오크 원목 + 크림베이지 쿠션 장의자(Pews) 3블록 x 6열 */}
+      {/* 🪑 7. [핵심 수정 1] 2번 사진과 100% 동일한 정통 교회 원목 장의자(Pews) 3열 x 6줄 */}
+      {/* (앞쪽 -Z로 좌석 방석이 열려 있고, 뒤쪽 +Z로 등받이가 12도 기울어진 오픈형 벤치 구조!) */}
       {/* ================================================================= */}
       {PEW_ROWS.map((rz, rIdx) =>
         PEW_COLS.map((col) => {
@@ -843,7 +1159,7 @@ function SanctuaryMasterpieceDiorama({
             (col.colId === 'L' && (rIdx === 3 || rIdx === 4)) ||
             (col.colId === 'C' && (rIdx === 1 || rIdx === 2));
           const isCurrentSeatedPew =
-            seatedInfo && Math.abs(seatedInfo.z - rz) < 0.25 && Math.abs(seatedInfo.x - col.x) < col.width * 0.6;
+            seatedInfo && Math.abs(seatedInfo.z - rz) < 0.35 && Math.abs(seatedInfo.x - col.x) < col.width * 0.6;
 
           return (
             <group
@@ -854,95 +1170,125 @@ function SanctuaryMasterpieceDiorama({
                 const clickX = Math.max(col.x - col.width * 0.36, Math.min(col.x + col.width * 0.36, e.point.x));
                 onSitOnPew({
                   x: clickX,
-                  z: rz - 0.05,
+                  z: rz - 0.06,
                   rowLabel: `${rIdx + 1}열 ${col.name}`
                 });
               }}
             >
-              {/* 등받이 밝은 허니오크 원목 프레임 */}
-              <RoundedBox args={[col.width, 0.84, 0.09]} position={[0, 0.44, 0.22]} radius={0.025} castShadow receiveShadow>
-                <meshStandardMaterial color={isCurrentSeatedPew ? '#F59E0B' : '#DF9E5E'} roughness={0.36} />
+              {/* 1) 앞쪽(-Z)을 향해 열려 있는 원목 좌석 판 & 푹신한 브라운 가죽 방석 */}
+              <RoundedBox args={[col.width - 0.10, 0.06, 0.44]} position={[0, 0.35, -0.04]} radius={0.015} castShadow receiveShadow>
+                <meshStandardMaterial map={oakWoodTex} roughness={0.38} />
               </RoundedBox>
-              {/* 뒷면 소프트 베이지 웨인스코팅 패널 */}
-              <RoundedBox args={[col.width - 0.18, 0.56, 0.02]} position={[0, 0.42, 0.27]} radius={0.005}>
-                <meshStandardMaterial color="#C2AA92" roughness={0.5} />
-              </RoundedBox>
-
-              {/* 푹신한 웜토프 가죽 방석 & 등쿠션 */}
-              <RoundedBox args={[col.width - 0.12, 0.12, 0.46]} position={[0, 0.36, -0.02]} radius={0.03} castShadow receiveShadow>
-                <meshStandardMaterial color="#B09882" roughness={0.48} />
-              </RoundedBox>
-              <RoundedBox args={[col.width - 0.12, 0.46, 0.08]} position={[0, 0.58, 0.16]} radius={0.025} castShadow>
-                <meshStandardMaterial color="#BDA58E" roughness={0.48} />
+              <RoundedBox args={[col.width - 0.14, 0.08, 0.42]} position={[0, 0.41, -0.05]} radius={0.025} castShadow receiveShadow>
+                <meshStandardMaterial color="#7D6856" roughness={0.5} />
               </RoundedBox>
 
-              {/* 양끝 두꺼운 원목 팔걸이 측판 */}
-              <RoundedBox args={[0.10, 0.88, 0.58]} position={[-col.width / 2 + 0.05, 0.44, 0]} radius={0.025} castShadow>
-                <meshStandardMaterial color="#DF9E5E" roughness={0.36} />
-              </RoundedBox>
-              <RoundedBox args={[0.10, 0.88, 0.58]} position={[col.width / 2 - 0.05, 0.44, 0]} radius={0.025} castShadow>
-                <meshStandardMaterial color="#DF9E5E" roughness={0.36} />
+              {/* 2) 좌석 아래 다리 사이를 지지하는 하단 원목 보강판(Modesty Panel) */}
+              <RoundedBox args={[col.width - 0.14, 0.26, 0.04]} position={[0, 0.18, 0.10]} radius={0.01} castShadow receiveShadow>
+                <meshStandardMaterial map={oakWoodTex} roughness={0.42} />
               </RoundedBox>
 
-              {/* 등받이 위 성경책 2권씩 */}
-              <RoundedBox args={[0.26, 0.045, 0.18]} position={[-col.width * 0.27, 0.88, 0.22]} radius={0.008} castShadow>
-                <meshStandardMaterial color="#334155" />
-              </RoundedBox>
-              <RoundedBox args={[0.26, 0.045, 0.18]} position={[col.width * 0.27, 0.88, 0.22]} radius={0.008} castShadow>
-                <meshStandardMaterial color="#334155" />
-              </RoundedBox>
+              {/* 3) 뒤쪽(+Z)에 위치하며 뒤로 12도(0.18 rad) 살짝 기울어진 인체공학적 원목 등받이 & 등쿠션 */}
+              <group position={[0, 0.64, 0.20]} rotation={[0.18, 0, 0]}>
+                {/* 원목 등받이 본체 */}
+                <RoundedBox
+                  args={[col.width, 0.54, 0.07]}
+                  position={[0, 0, 0]}
+                  radius={0.02}
+                  castShadow
+                  receiveShadow
+                >
+                  <meshStandardMaterial map={oakWoodTex} color={isCurrentSeatedPew ? '#FDE047' : '#FFFFFF'} roughness={0.35} />
+                </RoundedBox>
+                {/* 등받이 상단 둥근 원목 몰딩 바 (2번 사진의 고급스러운 상단 탑레일!) */}
+                <RoundedBox args={[col.width + 0.02, 0.06, 0.09]} position={[0, 0.27, 0]} radius={0.025} castShadow>
+                  <meshStandardMaterial map={oakWoodTex} roughness={0.3} />
+                </RoundedBox>
+                {/* 등받이 앞면(-Z) 푹신한 가죽 등쿠션 */}
+                <RoundedBox args={[col.width - 0.16, 0.40, 0.04]} position={[0, -0.02, -0.045]} radius={0.015}>
+                  <meshStandardMaterial color="#8E7966" roughness={0.5} />
+                </RoundedBox>
+                {/* 등받이 뒷면(+Z) 뒷줄 성도용 성경/찬송가 수납 선반 (Book Rack) & 성경책 */}
+                <RoundedBox args={[col.width - 0.24, 0.04, 0.12]} position={[0, -0.06, 0.08]} radius={0.01} castShadow>
+                  <meshStandardMaterial map={oakWoodTex} roughness={0.4} />
+                </RoundedBox>
+                <RoundedBox args={[0.24, 0.04, 0.15]} position={[-col.width * 0.26, 0.29, 0]} radius={0.008} castShadow>
+                  <meshStandardMaterial color="#27272A" />
+                </RoundedBox>
+                <RoundedBox args={[0.24, 0.04, 0.15]} position={[col.width * 0.26, 0.29, 0]} radius={0.008} castShadow>
+                  <meshStandardMaterial color="#27272A" />
+                </RoundedBox>
 
-              {/* '좋은나무교회 환영합니다' 하얀색 커버 배너 */}
-              {hasWelcomeCover && (
-                <group position={[col.colId === 'C' ? 0.65 : -0.25, 0.79, 0.22]}>
-                  <RoundedBox args={[0.86, 0.25, 0.12]} radius={0.015} castShadow>
-                    <meshStandardMaterial color="#FFFFFF" />
-                  </RoundedBox>
-                  <mesh position={[0, 0, 0.062]}>
-                    <planeGeometry args={[0.82, 0.22]} />
-                    <meshBasicMaterial map={welcomeCoverTex} />
-                  </mesh>
-                  <mesh position={[0, 0, -0.062]} rotation={[0, Math.PI, 0]}>
-                    <planeGeometry args={[0.82, 0.22]} />
-                    <meshBasicMaterial map={welcomeCoverTex} />
-                  </mesh>
-                </group>
-              )}
+                {/* '좋은나무교회 환영합니다' 하얀색 커버 배너 */}
+                {hasWelcomeCover && (
+                  <group position={[col.colId === 'C' ? 0.65 : -0.25, 0.16, 0]}>
+                    <RoundedBox args={[0.86, 0.24, 0.11]} radius={0.015} castShadow>
+                      <meshStandardMaterial color="#FFFFFF" />
+                    </RoundedBox>
+                    <mesh position={[0, 0, 0.058]}>
+                      <planeGeometry args={[0.82, 0.21]} />
+                      <meshBasicMaterial map={welcomeCoverTex} />
+                    </mesh>
+                    <mesh position={[0, 0, -0.058]} rotation={[0, Math.PI, 0]}>
+                      <planeGeometry args={[0.82, 0.21]} />
+                      <meshBasicMaterial map={welcomeCoverTex} />
+                    </mesh>
+                  </group>
+                )}
+              </group>
+
+              {/* 4) 양끝 L자형 사선 커브 원목 옆판(Stanchions) — 앞쪽(-Z)이 열려 있고 뒤쪽(+Z)이 높은 정방향 배치! */}
+              <mesh
+                geometry={pewSideStanchionGeo}
+                position={[-col.width / 2, 0, 0]}
+                rotation={[0, -Math.PI / 2, 0]}
+                castShadow
+                receiveShadow
+              >
+                <meshStandardMaterial map={oakWoodTex} roughness={0.35} />
+              </mesh>
+              <mesh
+                geometry={pewSideStanchionGeo}
+                position={[col.width / 2 + 0.08, 0, 0]}
+                rotation={[0, -Math.PI / 2, 0]}
+                castShadow
+                receiveShadow
+              >
+                <meshStandardMaterial map={oakWoodTex} roughness={0.35} />
+              </mesh>
             </group>
           );
         })
       )}
 
-      {/* 8. 전 층 공통 계단실 모듈 & 코너 소화기 */}
-      <StairwellCore3D
-        currentFloor="3F"
-        position={[-5.4, 0, 5.2]}
-        onClickStairs={() => onSelectZone(ZONES_3F[5])}
-        onClickExtinguisher={() =>
-          onSelectZone({
-            badge: '3F 소방안전 설비',
-            title: '🧯 3F 대예배당 계단실 코너 소화기 & IDF 단자함',
-            desc: '전 층 공통 계단실 입구 코너에 비치되어 있는 초기 진화용 분말 소화기입니다.'
-          })
-        }
-      />
+      {/* 8. 서로 말풍선 대화를 주고받으며 살아 움직이는 성도 & 안내위원 NPC 아바타들 */}
+      {CONGREGATION_NPCS.map((npc, idx) => {
+        const isSpeakingNow = idx === activeNpcChatIdx || idx === (activeNpcChatIdx + 1) % CONGREGATION_NPCS.length;
+        const msgList = npc.dialogues || [];
+        const currentMsg = isSpeakingNow && msgList.length > 0
+          ? `${npc.name}: ${msgList[activeNpcChatIdx % msgList.length]}`
+          : null;
 
-      {/* 9. 성도 NPC 아바타들 */}
-      {CONGREGATION_NPCS.map((npc) => (
-        <SmoothChibiAvatar
-          key={npc.id}
-          position={[npc.x, 0, npc.z]}
-          rotationY={npc.seated ? Math.PI : (npc.rotY || 0)}
-          isSeated={npc.seated}
-          isSkirt={Boolean(npc.isSkirt)}
-          shirtColor={npc.shirt}
-          pantsColor={npc.pants}
-          hairColor={npc.hair}
-        />
-      ))}
+        return (
+          <SmoothChibiAvatar
+            key={npc.id}
+            position={[npc.x, 0, npc.z]}
+            patrolZ={npc.patrolZ || null}
+            rotationY={npc.seated ? Math.PI : (npc.rotY || 0)}
+            isSeated={npc.seated}
+            isSkirt={Boolean(npc.isSkirt)}
+            autoWave={Boolean(npc.autoWave)}
+            shirtColor={npc.shirt}
+            pantsColor={npc.pants}
+            hairColor={npc.hair}
+            speechBubbleText={currentMsg}
+            seedOffset={idx * 1.7}
+          />
+        );
+      })}
 
-      {/* 10. 바닥 초록색 홀로그램 원형 마커 (01 ~ 06) */}
-      {ZONES_3F.map((z) => (
+      {/* 9. 바닥 초록색 홀로그램 원형 마커 (01, 02, 03) */}
+      {ZONES_3F.slice(0, 3).map((z) => (
         <HologramZoneMarker
           key={z.id}
           zone={z}
@@ -961,75 +1307,49 @@ function SanctuaryMasterpieceDiorama({
 }
 
 // =====================================================================
-// 🚶‍♂️ 플레이어 아바타 컨트롤러
+// 🚶‍♂️ 플레이어 아바타 ('나 · 정신동') 스마트 통로 우회 이동 컨트롤러
 // =====================================================================
 function PlayerController3F({
-  targetPos,
+  waypoints,
   seatedInfo,
   playerName,
-  activeZone,
   emote,
-  onClickPrompt,
   onPositionUpdate
 }) {
-  const posRef = useRef([0.0, 0, 0.8]);
+  const posRef = useRef([0.35, 0, 0.28]);
+  const wpIndexRef = useRef(0);
   const [renderState, setRenderState] = useState({
-    pos: [0.0, 0, 0.8],
+    pos: [0.35, 0, 0.28],
     rotY: Math.PI,
     walking: false
   });
 
+  useEffect(() => {
+    wpIndexRef.current = 0;
+  }, [waypoints]);
+
   const nameTagTex = useMemo(() => {
     return makeCanvasTexture((ctx, w, h) => {
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.96)';
+      ctx.fillStyle = 'rgba(30, 33, 40, 0.95)';
       ctx.beginPath();
       ctx.roundRect(6, 6, w - 12, h - 12, 48);
       ctx.fill();
-      ctx.lineWidth = 5;
-      ctx.strokeStyle = '#3B82F6';
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
       ctx.stroke();
 
-      ctx.fillStyle = '#2563EB';
+      ctx.fillStyle = '#38BDF8';
       ctx.beginPath();
       ctx.arc(52, h / 2, 16, 0, Math.PI * 2);
       ctx.fill();
 
-      ctx.fillStyle = '#0F172A';
+      ctx.fillStyle = '#FFFFFF';
       ctx.font = '900 38px sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(`나 · ${playerName}`, w / 2 + 18, h / 2 + 2);
     }, 520, 110);
   }, [playerName]);
-
-  const promptTex = useMemo(() => {
-    if (!activeZone && !seatedInfo) return null;
-    const labelText = seatedInfo ? `${seatedInfo.rowLabel} 예배 중 (일어나기)` : activeZone.prompt;
-    return makeCanvasTexture((ctx, w, h) => {
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.96)';
-      ctx.beginPath();
-      ctx.roundRect(6, 6, w - 12, h - 12, 48);
-      ctx.fill();
-      ctx.lineWidth = 6;
-      ctx.strokeStyle = '#10B981';
-      ctx.stroke();
-
-      ctx.fillStyle = '#0F172A';
-      ctx.beginPath();
-      ctx.roundRect(24, 22, 66, h - 44, 18);
-      ctx.fill();
-      ctx.fillStyle = '#FFFFFF';
-      ctx.font = '900 40px monospace';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('E', 57, h / 2 + 2);
-
-      ctx.fillStyle = '#0F172A';
-      ctx.font = '900 34px sans-serif';
-      ctx.textAlign = 'left';
-      ctx.fillText(labelText.slice(0, 18), 108, h / 2 + 2);
-    }, 680, 115);
-  }, [activeZone, seatedInfo]);
 
   useFrame((_, delta) => {
     if (seatedInfo) {
@@ -1044,8 +1364,12 @@ function PlayerController3F({
       return;
     }
 
+    if (!waypoints || waypoints.length === 0) return;
+    const currentTarget = waypoints[Math.min(wpIndexRef.current, waypoints.length - 1)];
+    if (!currentTarget) return;
+
     const [cx, , cz] = posRef.current;
-    const [tx, , tz] = targetPos;
+    const [tx, tz] = currentTarget;
     const dx = tx - cx;
     const dz = tz - cz;
     const dist = Math.hypot(dx, dz);
@@ -1062,8 +1386,12 @@ function PlayerController3F({
         walking: true
       });
       onPositionUpdate(nx, nz);
-    } else if (renderState.walking) {
-      setRenderState((prev) => ({ ...prev, walking: false }));
+    } else {
+      if (wpIndexRef.current < waypoints.length - 1) {
+        wpIndexRef.current += 1;
+      } else if (renderState.walking) {
+        setRenderState((prev) => ({ ...prev, walking: false }));
+      }
     }
   });
 
@@ -1075,34 +1403,40 @@ function PlayerController3F({
       isSeated={Boolean(seatedInfo)}
       hasSunglasses={true}
       emote={emote}
-      shirtColor="#38BDF8"
-      pantsColor="#2563EB"
-      hairColor="#D97706"
+      shirtColor="#FACC15"
+      pantsColor="#0284C7"
+      hairColor="#EAB308"
       nameTagTexture={nameTagTex}
-      promptTexture={promptTex}
-      onClickPrompt={onClickPrompt}
     />
   );
 }
 
 // =====================================================================
-// 🎥 착석 시 정면 대형 설교 스크린을 바라보는 예배 시점 카메라 리그
+// 🎥 [핵심 수정 3] 최초 1회만 기본 시점을 잡아주고, 이후에는 유저가 100% 자유롭게 카메라를 이동/회전할 수 있도록 보장!
 // =====================================================================
-function WorshipCameraRig({ seatedInfo, controlsRef }) {
-  useFrame((state) => {
-    if (!controlsRef.current) return;
-    const cam = state.camera;
+function InitialCameraSetup({ controlsRef }) {
+  const { camera, size } = useThree();
+  const initializedRef = useRef(false);
 
-    if (seatedInfo) {
-      const desiredCamPos = new THREE.Vector3(seatedInfo.x * 0.4, 4.5, seatedInfo.z + 6.5);
-      const desiredTarget = new THREE.Vector3(0, 2.0, -5.2);
-      cam.position.lerp(desiredCamPos, 0.06);
-      cam.zoom = THREE.MathUtils.lerp(cam.zoom, 65, 0.06);
-      cam.updateProjectionMatrix();
-      controlsRef.current.target.lerp(desiredTarget, 0.08);
+  useEffect(() => {
+    if (initializedRef.current) return;
+    initializedRef.current = true;
+
+    const isMobilePortrait = size.width < 640;
+    if (isMobilePortrait) {
+      camera.position.set(-9.6, 4.4, 10.2);
+      camera.fov = 42;
+    } else {
+      camera.position.set(-7.6, 3.45, 7.8);
+      camera.fov = 34;
+    }
+    camera.updateProjectionMatrix();
+    if (controlsRef.current) {
+      controlsRef.current.target.set(0.5, 1.35, -1.5);
       controlsRef.current.update();
     }
-  });
+  }, [size.width, camera, controlsRef]);
+
   return null;
 }
 
@@ -1114,11 +1448,20 @@ export default function Sanctuary3F({ setActiveScreen, onChangeFloor, onExitHome
   const minimapRef = useRef(null);
   const initialSermon = useMemo(() => getSyncedSermonVideo(), []);
 
-  const [targetPos, setTargetPos] = useState([-1.8, 0, 1.2]);
-  const [seatedInfo, setSeatedInfo] = useState(null);
+  const [waypoints, setWaypoints] = useState([[0.35, 0.28]]);
+  const [seatedInfo, setSeatedInfo] = useState({ x: 0.35, z: 0.28, rowLabel: '중앙 새가족 환영석 (3열)' });
   const [activeZone, setActiveZone] = useState(ZONES_3F[0]);
   const [modalZone, setModalZone] = useState(null);
   const [emote, setEmote] = useState(null);
+
+  // NPC끼리 실시간 대화를 주고받는 타이머 인덱스
+  const [activeNpcChatIdx, setActiveNpcChatIdx] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setActiveNpcChatIdx((prev) => (prev + 1) % CONGREGATION_NPCS.length);
+    }, 3800);
+    return () => clearInterval(timer);
+  }, []);
 
   const [videoUrlInput, setVideoUrlInput] = useState(initialSermon.url);
   const [youtubeId, setYoutubeId] = useState(initialSermon.id);
@@ -1131,32 +1474,38 @@ export default function Sanctuary3F({ setActiveScreen, onChangeFloor, onExitHome
     setTimeout(() => setEmote(null), 2200);
   };
 
-  // 🪑 [핵심 복원] 의자에 앉는 즉시 설교 영상 플레이어가 자동으로 켜지고 재생됩니다!
-  const handleSitOnPew = (seatData) => {
-    setSeatedInfo(seatData);
-    setTargetPos([seatData.x, 0, seatData.z]);
-    setIsScreenPlaying(true);
+  // 카메라 시점을 초기 황금 각도로 리셋하는 헬퍼
+  const handleResetCameraView = () => {
+    if (!controlsRef.current) return;
+    const cam = controlsRef.current.object;
+    cam.position.set(-7.6, 3.45, 7.8);
+    controlsRef.current.target.set(0.5, 1.35, -1.5);
+    controlsRef.current.update();
   };
 
-  const handleStandUp = () => {
+  const handleSitOnPew = useCallback((seatData) => {
+    setSeatedInfo(seatData);
+    setWaypoints([[seatData.x, seatData.z]]);
+    setIsScreenPlaying(true);
+  }, []);
+
+  const handleStandUp = useCallback(() => {
+    const curX = seatedInfo ? seatedInfo.x : 0.35;
+    const curZ = seatedInfo ? seatedInfo.z : 0.28;
+    const exitX = curX < 0 ? AISLE_X_LEFT : AISLE_X_RIGHT;
     setSeatedInfo(null);
     setIsScreenPlaying(false);
-  };
+    setWaypoints([[exitX, curZ - 0.38]]);
+  }, [seatedInfo]);
 
-  useEffect(() => {
-    const onKeyDown = (e) => {
-      const k = e.key.toLowerCase();
-      if (k === 'e') {
-        if (seatedInfo) handleStandUp();
-        else if (activeZone?.isSeatZone && activeZone.seatTarget) handleSitOnPew(activeZone.seatTarget);
-        else if (activeZone) setModalZone(activeZone);
-      } else if (k === '1') {
-        triggerEmote('wave');
-      }
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [seatedInfo, activeZone]);
+  const handleWalkToPoint = useCallback((targetX, targetZ) => {
+    const startX = seatedInfo ? (seatedInfo.x < 0 ? AISLE_X_LEFT : AISLE_X_RIGHT) : (waypoints[waypoints.length - 1]?.[0] || 0);
+    const startZ = seatedInfo ? seatedInfo.z - 0.38 : (waypoints[waypoints.length - 1]?.[1] || 0);
+    if (seatedInfo) setSeatedInfo(null);
+
+    const path = computeSmartPath(startX, startZ, targetX, targetZ);
+    setWaypoints(path);
+  }, [seatedInfo, waypoints]);
 
   useEffect(() => {
     const mini = minimapRef.current;
@@ -1166,11 +1515,11 @@ export default function Sanctuary3F({ setActiveScreen, onChangeFloor, onExitHome
     const h = mini.height;
     ctx.clearRect(0, 0, w, h);
 
-    ctx.fillStyle = '#1E222B';
+    ctx.fillStyle = '#1E2026';
     ctx.fillRect(0, 0, w, h);
 
     ctx.save();
-    ctx.translate(w * 0.5, h * 0.5);
+    ctx.translate(w * 0.5, h * 0.52);
 
     ctx.beginPath();
     ctx.moveTo(0, -32);
@@ -1178,7 +1527,7 @@ export default function Sanctuary3F({ setActiveScreen, onChangeFloor, onExitHome
     ctx.lineTo(0, 18);
     ctx.lineTo(-44, -8);
     ctx.closePath();
-    ctx.fillStyle = '#64748B';
+    ctx.fillStyle = '#4B5563';
     ctx.fill();
 
     ctx.beginPath();
@@ -1187,7 +1536,7 @@ export default function Sanctuary3F({ setActiveScreen, onChangeFloor, onExitHome
     ctx.lineTo(0, -45);
     ctx.lineTo(-44, -21);
     ctx.closePath();
-    ctx.fillStyle = '#F5EBE0';
+    ctx.fillStyle = '#E6CEB5';
     ctx.fill();
 
     ctx.beginPath();
@@ -1196,10 +1545,10 @@ export default function Sanctuary3F({ setActiveScreen, onChangeFloor, onExitHome
     ctx.lineTo(44, -21);
     ctx.lineTo(0, -45);
     ctx.closePath();
-    ctx.fillStyle = '#E6CEB5';
+    ctx.fillStyle = '#D4B595';
     ctx.fill();
 
-    ctx.strokeStyle = '#DF9E5E';
+    ctx.strokeStyle = '#C88242';
     ctx.lineWidth = 2.2;
     for (let i = -2; i <= 2; i++) {
       ctx.beginPath();
@@ -1209,7 +1558,7 @@ export default function Sanctuary3F({ setActiveScreen, onChangeFloor, onExitHome
     }
 
     ctx.restore();
-  }, [targetPos, seatedInfo]);
+  }, [waypoints, seatedInfo]);
 
   const handleSaveYoutubeLink = () => {
     const vid = parseYoutubeId(videoUrlInput);
@@ -1231,55 +1580,65 @@ export default function Sanctuary3F({ setActiveScreen, onChangeFloor, onExitHome
     }
   };
 
+  const darkPillStyle = {
+    backgroundColor: 'rgba(34, 36, 42, 0.94)',
+    color: '#FFFFFF',
+    borderColor: 'rgba(255, 255, 255, 0.14)'
+  };
+
   return (
-    <div translate="no" className="notranslate w-full h-full relative bg-[#F7F2EB] overflow-hidden select-none font-sans">
-      
-      {/* ── 1. 좌측 상단: 화사한 배경에 어울리는 다크 캡슐 헤더 ── */}
-      <div className="absolute top-4 left-4 z-20 flex flex-col gap-2 pointer-events-auto">
-        <div className="px-4 py-2.5 rounded-2xl bg-[#26282E]/92 backdrop-blur-md text-white shadow-xl border border-white/15 flex items-center gap-3">
-          <button
-            onClick={onExitHome}
-            className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-bold cursor-pointer"
-          >
-            ◀ 홈
-          </button>
-          <span className="text-base font-black tracking-tight">3F 대예배당 본당</span>
+    <div
+      translate="no"
+      style={{ backgroundColor: '#2B2C30' }}
+      className="notranslate w-full h-full relative overflow-hidden select-none font-sans"
+    >
+      {/* ── 1. 좌측 상단: 다크 캡슐 헤더 & 카메라 자유이동 안내 ── */}
+      <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-20 flex flex-col gap-2 pointer-events-auto">
+        <div
+          onClick={onExitHome}
+          style={darkPillStyle}
+          className="px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl backdrop-blur-md shadow-2xl border flex items-center gap-3 cursor-pointer hover:opacity-95"
+        >
+          <span style={{ color: '#FFFFFF' }} className="text-sm sm:text-lg font-black tracking-tight">
+            ◀ 3F 대예배당 본당
+          </span>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           <button
             onClick={() => {
               if (seatedInfo) handleStandUp();
-              else handleSitOnPew({ x: 0.0, z: -0.95, rowLabel: '중앙 새가족 환영석 (2열)' });
+              else handleSitOnPew({ x: 0.35, z: 0.28, rowLabel: '중앙 새가족 환영석 (3열)' });
             }}
-            className={`px-4 py-2 rounded-full text-xs font-black shadow-lg cursor-pointer flex items-center gap-1.5 transition-all ${
-              seatedInfo
-                ? 'bg-amber-400 hover:bg-amber-300 text-slate-950 animate-pulse'
-                : 'bg-emerald-600 hover:bg-emerald-500 text-white'
-            }`}
+            style={darkPillStyle}
+            className="px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-full text-[11px] sm:text-xs font-extrabold border shadow-xl cursor-pointer flex items-center gap-1.5"
           >
-            <span>{seatedInfo ? '🚶 자리에서 일어나기' : '🪑 새가족석 앉기 (설교자동재생)'}</span>
-          </button>
-
-          <button
-            onClick={() => setIsScreenPlaying(prev => !prev)}
-            className="px-3.5 py-2 rounded-full bg-rose-600 hover:bg-rose-500 text-white text-xs font-black shadow-lg cursor-pointer"
-          >
-            {isScreenPlaying ? '📺 스크린 닫기' : '▶ 대형 스크린 켜기'}
+            <span>🚶</span>
+            <span style={{ color: '#FFFFFF' }}>{seatedInfo ? '자리에서 일어나기' : '새가족석 착석하기'}</span>
           </button>
 
           <button
             onClick={() => setActiveScreen && setActiveScreen('sermon')}
-            className="px-4 py-2 rounded-full bg-[#26282E]/92 hover:bg-black text-white text-xs font-bold border border-white/15 shadow-lg cursor-pointer"
+            style={darkPillStyle}
+            className="px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-full text-[11px] sm:text-xs font-extrabold border shadow-xl cursor-pointer"
           >
-            📝 예배노트 열기
+            <span style={{ color: '#FFFFFF' }}>예배노트 열기</span>
+          </button>
+
+          <button
+            onClick={handleResetCameraView}
+            style={darkPillStyle}
+            className="px-3 py-1.5 sm:py-2 rounded-full text-[11px] font-bold border shadow-xl cursor-pointer"
+            title="좌클릭 드래그: 360도 회전 / 우클릭 드래그: 카메라 위치 이동 / 휠: 줌인·아웃"
+          >
+            <span style={{ color: '#93C5FD' }}>🎥 시점 초기화</span>
           </button>
         </div>
       </div>
 
-      {/* ── 2. 우측 상단: [01·02·03 + 3D 미니맵 + 04~06] ── */}
-      <div className="absolute top-4 right-4 z-20 flex flex-col items-end gap-2.5 pointer-events-auto">
-        <div className="flex items-start gap-2">
+      {/* ── 2. 우측 상단: [01·02·03 + 3D 맵 + 04~06] ── */}
+      <div className="absolute top-3 right-3 sm:top-4 sm:right-4 z-20 flex flex-col items-end gap-2 pointer-events-auto">
+        <div className="flex items-start gap-1.5 sm:gap-2">
           <div className="flex flex-col gap-1.5">
             {ZONES_3F.slice(0, 3).map((z, idx) => (
               <button
@@ -1287,15 +1646,15 @@ export default function Sanctuary3F({ setActiveScreen, onChangeFloor, onExitHome
                 onClick={() => {
                   if (z.isSeatZone && z.seatTarget) handleSitOnPew(z.seatTarget);
                   else {
-                    setSeatedInfo(null);
-                    setTargetPos([z.pos[0], 0, z.pos[2]]);
+                    handleWalkToPoint(z.pos[0], z.pos[2]);
                     setActiveZone(z);
                     setModalZone(z);
                   }
                 }}
-                className="w-10 h-10 rounded-full bg-[#26282E]/92 hover:bg-emerald-500 text-white hover:text-slate-950 font-mono font-black text-xs border border-white/15 shadow-xl flex items-center justify-center cursor-pointer transition-all"
+                style={darkPillStyle}
+                className="w-8 h-8 sm:w-10 sm:h-10 rounded-full font-mono font-black text-[11px] sm:text-xs border shadow-xl flex items-center justify-center cursor-pointer transition-transform active:scale-95"
               >
-                0{idx + 1}
+                <span style={{ color: '#FFFFFF' }}>0{idx + 1}</span>
               </button>
             ))}
           </div>
@@ -1303,56 +1662,72 @@ export default function Sanctuary3F({ setActiveScreen, onChangeFloor, onExitHome
           <div
             onClick={() => onChangeFloor && onChangeFloor('1F')}
             title="클릭 시 1층 로비로 이동"
-            className="p-2 rounded-2xl bg-[#26282E]/92 border border-white/15 shadow-2xl flex flex-col items-start cursor-pointer hover:border-emerald-400"
+            style={darkPillStyle}
+            className="p-1.5 sm:p-2 rounded-2xl border shadow-2xl flex flex-col items-start cursor-pointer"
           >
-            <canvas ref={minimapRef} width={118} height={96} className="rounded-xl" />
-            <span className="text-[11px] font-extrabold text-white pl-1 mt-1">3D 맵 (1F 이동)</span>
+            <canvas ref={minimapRef} width={104} height={82} className="rounded-xl w-[88px] h-[70px] sm:w-[114px] sm:h-[90px]" />
+            <span style={{ color: '#FFFFFF' }} className="text-[10px] sm:text-[11px] font-extrabold pl-1 mt-1">
+              3D 맵
+            </span>
           </div>
         </div>
 
-        <div className="px-2.5 py-3 rounded-2xl bg-[#26282E]/92 border border-white/15 shadow-xl flex flex-col items-center gap-1.5 text-white font-mono text-xs font-black">
+        <div
+          style={darkPillStyle}
+          className="px-2 sm:px-2.5 py-2.5 rounded-2xl border shadow-xl flex flex-col items-center gap-1 font-mono text-[11px] sm:text-xs font-black"
+        >
           {ZONES_3F.slice(3, 6).map((z, idx) => (
             <React.Fragment key={z.id}>
               <button
                 onClick={() => {
                   if (z.isElevator && onChangeFloor) onChangeFloor('1F');
                   else {
-                    setSeatedInfo(null);
-                    setTargetPos([z.pos[0], 0, z.pos[2]]);
+                    handleWalkToPoint(z.pos[0], z.pos[2]);
                     setActiveZone(z);
                     setModalZone(z);
                   }
                 }}
-                className="hover:text-emerald-400 cursor-pointer"
+                style={{ color: '#FFFFFF' }}
+                className="hover:opacity-80 cursor-pointer"
               >
                 {z.code}
               </button>
-              {idx < 2 && <span className="text-[9px] text-stone-400">~</span>}
+              {idx < 2 && <span style={{ color: '#9CA3AF' }} className="text-[9px]">~</span>}
             </React.Fragment>
           ))}
         </div>
       </div>
 
-      {/* ── 3. 의자에 앉거나 스크린 클릭 시 열리는 본당 전면 설교 유튜브 플레이어 ── */}
+      {/* ── 3. 설교 유튜브 재생 플레이어 모달 ── */}
       {isScreenPlaying && (
-        <div className="absolute top-24 left-1/2 -translate-x-1/2 z-30 w-[92vw] max-w-[500px] bg-slate-950 border-2 border-amber-400/80 rounded-2xl overflow-hidden shadow-[0_25px_70px_rgba(0,0,0,0.85)] pointer-events-auto animate-fade-in">
-          <div className="px-3.5 py-2 bg-slate-900 border-b border-white/10 flex items-center justify-between text-white">
+        <div
+          style={{ backgroundColor: '#090D16', borderColor: '#F59E0B', color: '#FFFFFF' }}
+          className="absolute top-20 sm:top-24 left-1/2 -translate-x-1/2 z-30 w-[92vw] max-w-[480px] border-2 rounded-2xl overflow-hidden shadow-[0_25px_70px_rgba(0,0,0,0.85)] pointer-events-auto animate-fade-in"
+        >
+          <div
+            style={{ backgroundColor: '#111827' }}
+            className="px-3.5 py-2 border-b border-white/10 flex items-center justify-between"
+          >
             <div className="flex items-center gap-2 min-w-0">
-              <span className="px-2 py-0.5 rounded bg-rose-600 text-[10px] font-mono font-black animate-pulse">LIVE SCREEN</span>
-              <span className="text-xs font-bold truncate">
-                {seatedInfo ? `🪑 ${seatedInfo.rowLabel} 착석 예배 중 · ` : ''}{sermonTitle}
+              <span style={{ backgroundColor: '#E11D48', color: '#FFFFFF' }} className="px-2 py-0.5 rounded text-[10px] font-mono font-black">
+                LIVE SCREEN
+              </span>
+              <span style={{ color: '#FFFFFF' }} className="text-xs font-bold truncate">
+                {seatedInfo ? `${seatedInfo.rowLabel} 예배 중 · ` : ''}{sermonTitle}
               </span>
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
               <button
                 onClick={() => setShowVideoModal(true)}
-                className="text-[11px] font-bold text-amber-300 hover:underline px-1.5 cursor-pointer"
+                style={{ color: '#FCD34D' }}
+                className="text-[11px] font-bold hover:underline px-1.5 cursor-pointer"
               >
                 링크변경
               </button>
               <button
                 onClick={() => setIsScreenPlaying(false)}
-                className="text-xs font-bold text-slate-400 hover:text-white px-1.5 cursor-pointer"
+                style={{ color: '#E5E7EB' }}
+                className="text-xs font-bold px-1.5 cursor-pointer"
               >
                 ✕ 닫기
               </button>
@@ -1372,11 +1747,12 @@ export default function Sanctuary3F({ setActiveScreen, onChangeFloor, onExitHome
                 className="w-full h-full"
               />
             ) : (
-              <div className="w-full h-full flex flex-col items-center justify-center p-5 text-center text-white gap-2">
-                <p className="text-xs text-slate-300">등록된 설교 유튜브 링크가 없습니다.</p>
+              <div className="w-full h-full flex flex-col items-center justify-center p-5 text-center gap-2">
+                <p style={{ color: '#D1D5DB' }} className="text-xs">등록된 설교 유튜브 링크가 없습니다.</p>
                 <button
                   onClick={() => setShowVideoModal(true)}
-                  className="px-4 py-2 rounded-xl bg-amber-400 text-slate-950 font-black text-xs cursor-pointer"
+                  style={{ backgroundColor: '#F59E0B', color: '#090D16' }}
+                  className="px-4 py-2 rounded-xl font-black text-xs cursor-pointer"
                 >
                   🔗 유튜브 링크 입력하기
                 </button>
@@ -1387,7 +1763,7 @@ export default function Sanctuary3F({ setActiveScreen, onChangeFloor, onExitHome
       )}
 
       {/* ── 4. 하단 중앙: 5대 독립 원형 캡슐 독 바 ── */}
-      <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2.5 sm:gap-3.5 pointer-events-auto">
+      <div className="absolute bottom-14 sm:bottom-5 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 sm:gap-3 pointer-events-auto max-w-[96vw] overflow-x-auto hide-scrollbar px-2 py-1">
         {[
           { icon: '📖', label: '본문 말씀', sub: '', onClick: () => setModalZone(ZONES_3F[1]) },
           { icon: '📝', label: '자유 메모장', sub: '', onClick: () => setActiveScreen && setActiveScreen('sermon') },
@@ -1398,14 +1774,15 @@ export default function Sanctuary3F({ setActiveScreen, onChangeFloor, onExitHome
           <button
             key={idx}
             onClick={item.onClick}
-            className="w-[74px] h-[68px] sm:w-[86px] sm:h-[76px] rounded-[26px] bg-[#22242A]/92 hover:bg-[#2C2F37] backdrop-blur-xl border border-white/15 shadow-[0_14px_30px_rgba(0,0,0,0.35)] flex flex-col items-center justify-center gap-1 active:scale-95 transition-all cursor-pointer"
+            style={darkPillStyle}
+            className="w-[64px] h-[60px] sm:w-[86px] sm:h-[76px] shrink-0 rounded-[22px] sm:rounded-[26px] backdrop-blur-xl border shadow-[0_14px_30px_rgba(0,0,0,0.55)] flex flex-col items-center justify-center gap-0.5 sm:gap-1 active:scale-95 transition-all cursor-pointer"
           >
-            <span className="text-lg sm:text-xl leading-none">{item.icon}</span>
-            <span className="text-[10.5px] sm:text-[11px] font-extrabold text-white leading-tight whitespace-nowrap">
+            <span className="text-base sm:text-xl leading-none">{item.icon}</span>
+            <span style={{ color: '#FFFFFF' }} className="text-[10px] sm:text-[11px] font-extrabold leading-tight whitespace-nowrap">
               {item.label}
             </span>
             {item.sub && (
-              <span className="text-[9px] font-bold text-stone-300 leading-none -mt-0.5">
+              <span style={{ color: '#D1D5DB' }} className="text-[8.5px] sm:text-[9px] font-bold leading-none">
                 {item.sub}
               </span>
             )}
@@ -1413,37 +1790,33 @@ export default function Sanctuary3F({ setActiveScreen, onChangeFloor, onExitHome
         ))}
       </div>
 
-      {/* ── 5. 메인 3D 캔버스 — 천장 없는 화사한 오픈 탑뷰(Orthographic) + 회전 시 벽 투명화! ── */}
+      {/* ── 5. 메인 3D 캔버스 — 카메라 자유 이동(회전·패닝·줌 100% 개방) ── */}
       <Canvas
         shadows
-        gl={{ toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.32 }}
+        gl={{ toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.18 }}
       >
-        <OrthographicCamera makeDefault position={[-10.5, 9.5, 11.5]} zoom={48} near={-50} far={200} />
+        <PerspectiveCamera makeDefault position={[-7.6, 3.45, 7.8]} fov={34} near={0.1} far={250} />
+        <InitialCameraSetup controlsRef={controlsRef} />
 
-        {/* 그림자 그늘 없이 전체를 뽀얗고 화사하게 비추는 다중 스튜디오 조명 */}
-        <ambientLight intensity={1.55} color="#FFFDF9" />
-        <hemisphereLight args={['#FFFBEB', '#E6D5C3', 1.25]} />
+        <ambientLight intensity={1.3} color="#FFF8EE" />
+        <hemisphereLight args={['#FFF5E4', '#8C7A6B', 1.15]} />
         <directionalLight
-          position={[-8, 18, 12]}
-          intensity={1.65}
-          color="#FFF7ED"
+          position={[-6, 9, 8]}
+          intensity={1.45}
+          color="#FFF3DC"
           castShadow
           shadow-mapSize={[2048, 2048]}
           shadow-bias={-0.0004}
         />
-        <pointLight position={[0, 4.2, -4.2]} intensity={2.2} distance={18} color="#FDE047" />
-
-        <WorshipCameraRig seatedInfo={seatedInfo} controlsRef={controlsRef} />
+        <pointLight position={[-0.8, 4.6, -3.5]} intensity={2.8} distance={18} color="#FDE047" />
+        <pointLight position={[3.5, 3.2, 0.5]} intensity={1.5} distance={15} color="#FEF3C7" />
 
         <mesh
           rotation={[-Math.PI / 2, 0, 0]}
           position={[0, 0.01, 0]}
           onClick={(e) => {
             e.stopPropagation();
-            if (seatedInfo) setSeatedInfo(null);
-            const cx = Math.max(-6.2, Math.min(6.2, e.point.x));
-            const cz = Math.max(-3.6, Math.min(6.5, e.point.z));
-            setTargetPos([cx, 0, cz]);
+            handleWalkToPoint(e.point.x, e.point.z);
           }}
         >
           <planeGeometry args={[16.0, 16.0]} />
@@ -1453,39 +1826,38 @@ export default function Sanctuary3F({ setActiveScreen, onChangeFloor, onExitHome
         <SanctuaryMasterpieceDiorama
           activeZoneId={activeZone?.id}
           onSelectZone={(z) => {
-            setSeatedInfo(null);
-            if (z.pos) setTargetPos([z.pos[0], 0, z.pos[2]]);
+            if (z.pos) handleWalkToPoint(z.pos[0], z.pos[2]);
             setModalZone(z);
           }}
           seatedInfo={seatedInfo}
           onSitOnPew={handleSitOnPew}
           onToggleScreenPlayer={() => setIsScreenPlaying(prev => !prev)}
           sermonTitle={sermonTitle}
+          activeNpcChatIdx={activeNpcChatIdx}
         />
 
         <PlayerController3F
-          targetPos={targetPos}
+          waypoints={waypoints}
           seatedInfo={seatedInfo}
           playerName={playerName}
-          activeZone={activeZone}
           emote={emote}
-          onClickPrompt={() => {
-            if (seatedInfo) handleStandUp();
-            else if (activeZone?.isSeatZone && activeZone.seatTarget) handleSitOnPew(activeZone.seatTarget);
-            else if (activeZone) setModalZone(activeZone);
-          }}
           onPositionUpdate={handlePositionUpdate}
         />
 
-        <ContactShadows position={[0, 0.01, 0]} opacity={0.28} scale={24} blur={2.2} far={4} />
-        <MapControls
+        <ContactShadows position={[0, 0.01, 0]} opacity={0.38} scale={24} blur={2.2} far={4} />
+        
+        {/* 🎥 [핵심 수정 3] 360도 자유 회전 + 상하좌우 카메라 패닝(이동) + 근접/원거리 줌 100% 개방! */}
+        <OrbitControls
           ref={controlsRef}
-          target={[0.2, 1.0, -0.8]}
           enableRotate={true}
+          enablePan={true}
           enableZoom={true}
-          minZoom={32}
-          maxZoom={110}
-          maxPolarAngle={Math.PI / 2.1}
+          screenSpacePanning={true}
+          enableDamping={true}
+          dampingFactor={0.07}
+          minDistance={2.2}
+          maxDistance={32}
+          maxPolarAngle={Math.PI / 2.02}
         />
       </Canvas>
 
@@ -1496,42 +1868,47 @@ export default function Sanctuary3F({ setActiveScreen, onChangeFloor, onExitHome
           onClick={() => setShowVideoModal(false)}
         >
           <div
-            className="w-full max-w-md bg-slate-900 border border-white/20 rounded-3xl p-5 text-white shadow-2xl space-y-4 text-left"
+            style={{ backgroundColor: '#111827', color: '#FFFFFF' }}
+            className="w-full max-w-md border border-white/20 rounded-3xl p-5 shadow-2xl space-y-4 text-left"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
-              <span className="text-sm font-black text-amber-300">📺 3층 대예배당 전면 스크린 유튜브 연동</span>
-              <button onClick={() => setShowVideoModal(false)} className="text-xs text-slate-400 hover:text-white cursor-pointer">
+              <span style={{ color: '#FCD34D' }} className="text-sm font-black">📺 3층 대예배당 전면 스크린 유튜브 연동</span>
+              <button onClick={() => setShowVideoModal(false)} style={{ color: '#9CA3AF' }} className="text-xs cursor-pointer">
                 ✕ 닫기
               </button>
             </div>
             <div className="space-y-2">
-              <label className="text-[11px] font-bold text-slate-300 block">설교 제목</label>
+              <label style={{ color: '#D1D5DB' }} className="text-[11px] font-bold block">설교 제목</label>
               <input
                 type="text"
                 value={sermonTitle}
                 onChange={(e) => setSermonTitle(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-black/50 border border-white/20 text-white text-xs outline-none"
+                style={{ backgroundColor: '#030712', color: '#FFFFFF' }}
+                className="w-full px-3 py-2 rounded-xl border border-white/20 text-xs outline-none"
               />
-              <label className="text-[11px] font-bold text-slate-300 block pt-1">유튜브 영상 링크 (URL)</label>
+              <label style={{ color: '#D1D5DB' }} className="text-[11px] font-bold block pt-1">유튜브 영상 링크 (URL)</label>
               <input
                 type="text"
                 value={videoUrlInput}
                 onChange={(e) => setVideoUrlInput(e.target.value)}
                 placeholder="https://youtu.be/..."
-                className="w-full px-3 py-2 rounded-xl bg-black/50 border border-white/20 text-white text-xs outline-none"
+                style={{ backgroundColor: '#030712', color: '#FFFFFF' }}
+                className="w-full px-3 py-2 rounded-xl border border-white/20 text-xs outline-none"
               />
             </div>
             <div className="flex gap-2 pt-2">
               <button
                 onClick={() => setShowVideoModal(false)}
-                className="flex-1 py-2.5 rounded-xl bg-white/10 text-slate-300 font-bold text-xs cursor-pointer"
+                style={{ backgroundColor: 'rgba(255,255,255,0.1)', color: '#D1D5DB' }}
+                className="flex-1 py-2.5 rounded-xl font-bold text-xs cursor-pointer"
               >
                 취소
               </button>
               <button
                 onClick={handleSaveYoutubeLink}
-                className="flex-1 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs cursor-pointer"
+                style={{ backgroundColor: '#10B981', color: '#030712' }}
+                className="flex-1 py-2.5 rounded-xl font-black text-xs cursor-pointer"
               >
                 본당 스크린에 상영하기
               </button>
@@ -1547,20 +1924,21 @@ export default function Sanctuary3F({ setActiveScreen, onChangeFloor, onExitHome
           onClick={() => setModalZone(null)}
         >
           <div
-            className="w-full max-w-md bg-slate-900 border border-white/20 rounded-3xl p-5 text-white shadow-2xl space-y-4 text-left"
+            style={{ backgroundColor: '#111827', color: '#FFFFFF' }}
+            className="w-full max-w-md border border-white/20 rounded-3xl p-5 shadow-2xl space-y-4 text-left"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
-              <span className="px-2.5 py-1 rounded-full bg-emerald-500 text-slate-950 font-black text-xs">
+              <span style={{ backgroundColor: '#10B981', color: '#030712' }} className="px-2.5 py-1 rounded-full font-black text-xs">
                 {modalZone.badge}
               </span>
-              <button onClick={() => setModalZone(null)} className="text-slate-400 hover:text-white text-xs font-bold cursor-pointer">
+              <button onClick={() => setModalZone(null)} style={{ color: '#9CA3AF' }} className="text-xs font-bold cursor-pointer">
                 ✕ 닫기
               </button>
             </div>
 
-            <h3 className="text-base sm:text-lg font-black">{modalZone.title}</h3>
-            <p className="text-xs text-slate-300 leading-relaxed break-keep">{modalZone.desc}</p>
+            <h3 style={{ color: '#FFFFFF' }} className="text-base sm:text-lg font-black">{modalZone.title}</h3>
+            <p style={{ color: '#D1D5DB' }} className="text-xs leading-relaxed break-keep">{modalZone.desc}</p>
 
             {modalZone.actions && modalZone.actions.length > 0 && (
               <div className="grid grid-cols-2 gap-2 pt-1">
@@ -1571,7 +1949,8 @@ export default function Sanctuary3F({ setActiveScreen, onChangeFloor, onExitHome
                       setModalZone(null);
                       if (setActiveScreen) setActiveScreen(act.screen);
                     }}
-                    className="py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs cursor-pointer shadow-md"
+                    style={{ backgroundColor: '#2563EB', color: '#FFFFFF' }}
+                    className="py-2.5 px-3 rounded-xl font-black text-xs cursor-pointer shadow-md"
                   >
                     {act.label}
                   </button>

@@ -552,9 +552,12 @@ export default function VirtualChurchLobby({ setActiveScreen, onChangeFloor }) {
               </div>
             )}
 
+            {/* 📍 src/pages/VirtualChurchLobby.js 하단 모달 내부의 isElevator 부분 교체 */}
             {modalZone.isElevator && (
               <div className="space-y-2 pt-1">
                 <span className="text-xs font-bold text-emerald-300 block">🛗 이동할 층을 선택하세요:</span>
+                
+                {/* 3층 이동 버튼 */}
                 <button
                   onClick={() => handleJumpToFloor('3F')}
                   className="w-full p-3.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-left text-xs font-black flex justify-between items-center cursor-pointer shadow-lg transition-all"
@@ -562,6 +565,18 @@ export default function VirtualChurchLobby({ setActiveScreen, onChangeFloor }) {
                   <div>
                     <div className="text-sm font-black">3F 대예배당 (본당) 올라가기</div>
                     <div className="text-[10.5px] opacity-80">장의자 착석 모션 & 예배노트 유튜브 스크린 연동</div>
+                  </div>
+                  <span className="px-2.5 py-1 rounded-lg bg-black/15 font-mono">이동 ➔</span>
+                </button>
+
+                {/* 🌟 새로 추가된 6층 이동 버튼! */}
+                <button
+                  onClick={() => handleJumpToFloor('6F')}
+                  className="w-full p-3.5 rounded-2xl bg-sky-400 hover:bg-sky-300 text-slate-950 text-left text-xs font-black flex justify-between items-center cursor-pointer shadow-lg transition-all"
+                >
+                  <div>
+                    <div className="text-sm font-black">6F 다음세대 교육관 · 새가족반 올라가기</div>
+                    <div className="text-[10.5px] opacity-80">유아부 · 유치부 · 초등부 · 새가족 영접실</div>
                   </div>
                   <span className="px-2.5 py-1 rounded-lg bg-black/15 font-mono">이동 ➔</span>
                 </button>
