@@ -6,6 +6,10 @@ import { analyzeHebrewSyntaxFromWords } from '../lib/hebrewSyntaxEngine';
 import { tokenizeGrammarCode } from '../lib/biblicalGrammarWiki';
 import GrammarWikiModal from '../lib/GrammarWikiModal';
 import { supabase } from '../lib/supabase';
+import {
+  ensureKrv4TxtLoaded,
+  splitPericopeAndVerse
+} from '../pages/Bible';
 import bibleData from '../ko_ko.json';
 
 // =====================================================================
@@ -652,7 +656,7 @@ export default function Interlinear({
     return 1;
   });
 
-  // ── 2. 성경 역본 모드 ──
+  // ── 2. 성경 역본 모드 & 개역개정 4판 DB 로드 ──
   const [bibleVersion, setBibleVersion] = useState(() => {
     try {
       return localStorage.getItem('interlinear_bible_version') || 'parallel';
@@ -660,6 +664,7 @@ export default function Interlinear({
       return 'parallel';
     }
   });
+  const [krv4TxtDb, setKrv4TxtDb] = useState(() => (typeof window !== 'undefined' ? window.__GTC_KRV4_DB__ : null));
   const [easyBibleDb, setEasyBibleDb] = useState({});
   const [webBibleDb, setWebBibleDb] = useState({});
 
@@ -780,7 +785,7 @@ export default function Interlinear({
   const [currentTargumPeshitta, setCurrentTargumPeshitta] = useState(null);
   const [currentHebrewSyntax, setCurrentHebrewSyntax] = useState(null);
 
-  // ── 7. 현재 도서 메타데이터 및 본문 텍스트 연산 ──
+  // ── 7. 현재 도서 메타데이터 및 개역개정 4판 최우선 본문 텍스트 연산 ──
   const currentBookMeta = BIBLE_66_BOOKS[selectedBookIndex] || BIBLE_66_BOOKS[0];
   const isOT = currentBookMeta.isOT;
 
@@ -790,19 +795,45 @@ export default function Interlinear({
     return list.find(b => b?.name === currentBookMeta.en || b?.name === currentBookMeta.ko) || {};
   }, [bibles, currentBookMeta, safeGetArr]);
 
-  const chaptersCount = currentBookData?.chapters?.length || currentBookMeta.maxChap;
-  const versesCount = currentBookData?.chapters?.[chapter - 1]?.length || 35;
+  const krv4CurrentBookChaps = useMemo(() => {
+    return krv4TxtDb?.[currentBookMeta.en] || krv4TxtDb?.[currentBookMeta.ko] || null;
+  }, [krv4TxtDb, currentBookMeta]);
+
+  const chaptersCount = krv4CurrentBookChaps?.length || currentBookData?.chapters?.length || currentBookMeta.maxChap;
+  const versesCount = useMemo(() => {
+    const krv4Chap = krv4CurrentBookChaps?.[chapter - 1];
+    if (Array.isArray(krv4Chap) && krv4Chap.length > 0) {
+      return krv4Chap.filter(Boolean).length;
+    }
+    return currentBookData?.chapters?.[chapter - 1]?.length || 35;
+  }, [krv4CurrentBookChaps, chapter, currentBookData]);
+
+  // 🌟 개역개정 4판(krv4TxtDb)에서 구절과 소제목(Pericope)을 최우선으로 가져오는 함수!
+  const getKrvVerseObjByNum = useCallback((vNum) => {
+    const krv4Chap = krv4CurrentBookChaps?.[chapter - 1];
+    let raw = '';
+    if (Array.isArray(krv4Chap) && krv4Chap[vNum - 1]) {
+      raw = krv4Chap[vNum - 1];
+    } else if (currentBookData?.chapters?.[chapter - 1]) {
+      const v = currentBookData.chapters[chapter - 1][vNum - 1];
+      raw = v ? (typeof v === 'string' ? v : v.text || v.content || '') : '';
+    }
+    const decoded = decodeHtmlEntities(raw);
+    return splitPericopeAndVerse(decoded);
+  }, [krv4CurrentBookChaps, currentBookData, chapter]);
 
   const getKrvVerseByNum = useCallback((vNum) => {
-    if (!currentBookData?.chapters?.[chapter - 1]) return '';
-    const v = currentBookData.chapters[chapter - 1][vNum - 1];
-    const raw = v ? (typeof v === 'string' ? v : v.text || v.content || '') : '';
-    return decodeHtmlEntities(raw);
-  }, [currentBookData, chapter]);
+    return getKrvVerseObjByNum(vNum).pureText;
+  }, [getKrvVerseObjByNum]);
 
+  const currentVerseObj = useMemo(() => {
+    return getKrvVerseObjByNum(verse);
+  }, [getKrvVerseObjByNum, verse]);
+
+  const koVersePericope = currentVerseObj.pericope;
   const koVerseText = useMemo(() => {
-    return getKrvVerseByNum(verse) || `${currentBookMeta.ko} ${chapter}장 ${verse}절`;
-  }, [getKrvVerseByNum, verse, currentBookMeta.ko, chapter]);
+    return currentVerseObj.pureText || `${currentBookMeta.ko} ${chapter}장 ${verse}절`;
+  }, [currentVerseObj.pureText, currentBookMeta.ko, chapter, verse]);
 
   const easyVerseText = useMemo(() => {
     const key = `${currentBookMeta.ko}-${chapter}-${verse}`;
@@ -828,24 +859,25 @@ export default function Interlinear({
     return assembleLiteralTranslation(words, isOT);
   }, [words, isOT]);
 
-  // 문단(Paragraph) 맥락 데이터
+  // 문단(Paragraph) 맥락 데이터 (개역개정 4판 소제목 포함)
   const paragraphContextVerses = useMemo(() => {
     const startV = Math.max(1, verse - 1);
     const endV = Math.min(versesCount, verse + 2);
     const list = [];
     for (let v = startV; v <= endV; v++) {
+      const vObj = getKrvVerseObjByNum(v);
       list.push({
         vNum: v,
         isCurrent: v === verse,
-        krv: getKrvVerseByNum(v),
+        pericope: vObj.pericope,
+        krv: vObj.pureText,
         easy: easyBibleDb[`${currentBookMeta.ko}-${chapter}-${v}`] || '',
         web: getWebVerseByNum(v)
       });
     }
     return list;
-  }, [verse, versesCount, getKrvVerseByNum, easyBibleDb, currentBookMeta.ko, chapter, getWebVerseByNum]);
+  }, [verse, versesCount, getKrvVerseObjByNum, easyBibleDb, currentBookMeta.ko, chapter, getWebVerseByNum]);
 
-  // WEB 영어 문장/절(Clause) 단위 자동 분해 및 1:1 한글 직독직해 생성
   useEffect(() => {
     if (webStudyMode !== 'clauses') return;
     const targetEng = webVerseText || enVerseText;
@@ -972,7 +1004,6 @@ export default function Interlinear({
     setIsWebLexiconLoading(false);
   };
 
-  // 한글 본문 인터랙티브 렌더러
   const renderInteractiveKoreanText = (text) => {
     if (!text) return null;
     const tokens = text.split(/(\s+)/);
@@ -1010,7 +1041,6 @@ export default function Interlinear({
     });
   };
 
-  // WEB 영어 본문 인터랙티브 렌더러
   const renderInteractiveWebText = (text) => {
     if (!text) return "WEB 본문 로딩 중...";
     const tokens = text.split(/(\s+|[.,;!?()[\]"]+)/);
@@ -1044,8 +1074,11 @@ export default function Interlinear({
     });
   };
 
-  // 기초 학술 DB 로드
+  // 기초 학술 DB 및 개역개정 4판 최우선 로드
   useEffect(() => {
+    ensureKrv4TxtLoaded().then((parsedMap) => {
+      if (parsedMap) setKrv4TxtDb(parsedMap);
+    });
     fetch('/data/easy_bible.json').then(r => r.ok ? r.json() : {}).then(d => setEasyBibleDb(d || {})).catch(() => {});
     fetch('/data/web_bible.json').then(r => r.ok ? r.json() : {}).then(d => setWebBibleDb(d || {})).catch(() => {});
     fetch('/data/lxx_quotes.json').then(r => r.ok ? r.json() : {}).then(d => setLxxDatabase(d || {})).catch(() => {});
@@ -1149,7 +1182,6 @@ export default function Interlinear({
     } catch (_) {}
   }, []);
 
-  // 🛠️ 모달 열렸을 때 하단 플로팅 독바 안전하게 숨기기
   useEffect(() => {
     const isAnyModalOpen = Boolean(selectedWordDetail || isLibraryOpen || selectedGrammarWikiKey || selectedWebLexiconWord);
     if (!isAnyModalOpen) return;
@@ -1190,7 +1222,6 @@ export default function Interlinear({
       });
   }, []);
 
-  // Supabase 원어 인터리니어 어절 및 사전 결합 파이프라인
   useEffect(() => {
     if (!dictLoaded) return;
     let isMounted = true;
@@ -1403,7 +1434,8 @@ export default function Interlinear({
     let report = `# [원어 강해 종합 학술 리포트] ${currentBookMeta.ko} ${chapter}장 ${verse}절\n`;
     report += `> **연대 및 역사적 배경:** ${currentBookMeta.era} | ${currentBookMeta.empire}\n\n`;
     report += `### 정경 본문 대조\n`;
-    report += `- **개역개정:** ${koVerseText}\n`;
+    if (koVersePericope) report += `- **단락 소제목:** <${koVersePericope}>\n`;
+    report += `- **개역개정 4판:** ${koVerseText}\n`;
     if (literalVerseText) report += `- **원어 어순 직역:** ${literalVerseText}\n`;
     if (easyVerseText) report += `- **쉬운성경:** ${easyVerseText}\n`;
     if (webVerseText) report += `- **WEB Bible:** ${webVerseText}\n`;
@@ -1432,8 +1464,8 @@ export default function Interlinear({
     }
 
     navigator.clipboard.writeText(decodeHtmlEntities(report));
-    alert("학술 서식이 포함된 종합 리포트가 클립보드에 복사되었습니다!");
-  }, [currentBookMeta, chapter, verse, koVerseText, literalVerseText, easyVerseText, webVerseText, enVerseText, words, currentHebrewSyntax, currentCommentary, currentMatthewHenry]);
+    alert("개역개정 4판 및 학술 서식이 포함된 종합 리포트가 클립보드에 복사되었습니다!");
+  }, [currentBookMeta, chapter, verse, koVersePericope, koVerseText, literalVerseText, easyVerseText, webVerseText, enVerseText, words, currentHebrewSyntax, currentCommentary, currentMatthewHenry]);
 
   const handleInsertToQT = useCallback((word) => {
     const today = new Date().toISOString().split('T')[0];
@@ -1445,7 +1477,7 @@ export default function Interlinear({
       const customMemoNotice = word.userCustomNote?.memo ? `\n   ↳ 💡 연구 메모: ${word.userCustomNote.memo}` : '';
       const theologyNotice = word.theologyInsight ? ` [문법 강해: ${word.theologyInsight.stemTitle}]` : '';
 
-      const insightText = `\n[원어묵상] ${word.inflected} ${lemmaNotice} ⇄ ${word.eng} ⇄ ${word.korContextual} [${word.strongs}] (${word.grammarDecoded})${theologyNotice}${customTransNotice}${customMemoNotice}\n`;
+      const insightText = `\n[원어묵상 · 개역개정4판] ${word.inflected} ${lemmaNotice} ⇄ ${word.eng} ⇄ ${word.korContextual} [${word.strongs}] (${word.grammarDecoded})${theologyNotice}${customTransNotice}${customMemoNotice}\n`;
 
       allQt[today] = { ...todayData, qtMeditation: (todayData.qtMeditation || '') + insightText };
       localStorage.setItem('qt_daily', JSON.stringify(allQt));
@@ -1466,7 +1498,7 @@ export default function Interlinear({
         ? `<br/>  ↳ <b>${word.theologyInsight.stemTitle}</b>: <i>${word.theologyInsight.stemDesc}</i>`
         : '';
 
-      const insightHtml = `<p><b>[원어강해] ${word.inflected} ${lemmaNotice} [${word.strongs}]</b>: ${word.korContextual} (${word.eng}) — <i>${word.grammarDecoded}</i>${theologyNotice}${customMemoBlock}</p>`;
+      const insightHtml = `<p><b>[원어강해 · 개역개정4판] ${word.inflected} ${lemmaNotice} [${word.strongs}]</b>: ${word.korContextual} (${word.eng}) — <i>${word.grammarDecoded}</i>${theologyNotice}${customMemoBlock}</p>`;
 
       allDaily[today] = { ...todayData, sermonNotes: (todayData.sermonNotes || '') + insightHtml };
       localStorage.setItem('days_data', JSON.stringify(allDaily));
@@ -1519,6 +1551,11 @@ export default function Interlinear({
           }`}>
             {isOT ? '구약·RTL' : '신약·LTR'}
           </span>
+          {krv4TxtDb && (
+            <span className="hidden sm:inline-block px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-600 dark:text-amber-300 text-[9.5px] font-bold border border-amber-500/30 shrink-0">
+              개역개정 4판
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-1 shrink-0">
@@ -1649,9 +1686,16 @@ export default function Interlinear({
         <div className={`w-full max-w-full p-3 sm:p-4 rounded-2xl border space-y-3 overflow-hidden ${theme.panel}`}>
           
           <div className="flex items-center justify-between gap-2 flex-wrap">
-            <h2 className={`text-[15px] sm:text-[17px] font-black ${theme.textMain} shrink-0`}>
-              {currentBookMeta.ko} {chapter}:{verse}
-            </h2>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className={`text-[15px] sm:text-[17px] font-black ${theme.textMain} shrink-0`}>
+                {currentBookMeta.ko} {chapter}:{verse}
+              </h2>
+              {koVersePericope && (
+                <span className="px-2 py-0.5 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-[11px] font-extrabold">
+                  📌 {koVersePericope}
+                </span>
+              )}
+            </div>
 
             <div className="flex items-center gap-1 flex-wrap">
               <button
@@ -1690,7 +1734,7 @@ export default function Interlinear({
                 }`}
               >
                 <IconVolume />
-                <span>{playingAudioType === 'krv' ? '정지' : '한국어'}</span>
+                <span>{playingAudioType === 'krv' ? '정지' : '개역개정4판'}</span>
               </button>
             </div>
           </div>
@@ -1703,7 +1747,7 @@ export default function Interlinear({
                 { id: 'parallel', label: '동시대조 (3중매칭)' },
                 { id: 'trilingual', label: '3중 어절표' },
                 { id: 'web', label: 'WEB 영한스튜디오' },
-                { id: 'krv', label: '개역개정' },
+                { id: 'krv', label: '개역개정4판' },
                 { id: 'literal', label: '원어직역' },
                 { id: 'easy', label: '쉬운성경' }
               ].map((v) => (
@@ -1804,9 +1848,16 @@ export default function Interlinear({
           {/* 역본별 본문 렌더링 */}
           <div className="text-left space-y-2 w-full max-w-full overflow-hidden">
             {bibleVersion === 'krv' && (
-              <p className={`text-[15px] sm:text-[16px] font-serif font-medium leading-[1.85] break-keep ${theme.textMain}`}>
-                {renderInteractiveKoreanText(koVerseText)}
-              </p>
+              <div className="space-y-1.5">
+                {koVersePericope && (
+                  <div className="px-2.5 py-1 rounded-lg bg-amber-500/10 border-l-4 border-amber-500 text-amber-800 dark:text-amber-300 text-xs font-extrabold">
+                    📌 {koVersePericope}
+                  </div>
+                )}
+                <p className={`text-[15px] sm:text-[16px] font-serif font-medium leading-[1.85] break-keep ${theme.textMain}`}>
+                  {renderInteractiveKoreanText(koVerseText)}
+                </p>
+              </div>
             )}
 
             {bibleVersion === 'literal' && (
@@ -1920,7 +1971,7 @@ export default function Interlinear({
                       {renderInteractiveWebText(webVerseText || enVerseText)}
                     </p>
                     <p className={`text-[13.5px] font-serif leading-[1.75] pt-1.5 border-t border-dashed border-blue-200 dark:border-slate-800 break-keep ${theme.textSub}`}>
-                      <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 mr-1.5">[한글대조]</span>
+                      <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 mr-1.5">[개역개정4판]</span>
                       {renderInteractiveKoreanText(koVerseText)}
                     </p>
                   </div>
@@ -1963,7 +2014,7 @@ export default function Interlinear({
                 {webStudyMode === 'paragraph' && (
                   <div className="space-y-2">
                     <span className="text-[10.5px] font-mono font-bold text-blue-700 dark:text-blue-300 block">
-                      {currentBookMeta.ko} {chapter}장 전후 문단 영·한 대조
+                      {currentBookMeta.ko} {chapter}장 전후 문단 영·한 대조 (개역개정 4판)
                     </span>
                     <div className="space-y-2">
                       {paragraphContextVerses.map(pv => (
@@ -1979,6 +2030,7 @@ export default function Interlinear({
                           <div className="flex items-center justify-between">
                             <span className="text-[11px] font-mono font-black text-blue-600 dark:text-blue-400">
                               {currentBookMeta.en} {chapter}:{pv.vNum} {pv.isCurrent ? ' (현재 절)' : ''}
+                              {pv.pericope ? ` · 📌 <${pv.pericope}>` : ''}
                             </span>
                             <button
                               type="button"
@@ -2005,9 +2057,16 @@ export default function Interlinear({
             {bibleVersion === 'parallel' && (
               <div className="space-y-1.5 pt-0.5">
                 <div className={`p-2.5 rounded-xl border text-left ${isDark ? 'bg-slate-900/40 border-slate-800' : 'bg-stone-50 border-stone-200'}`}>
-                  <span className="text-[9.5px] font-bold text-amber-600 dark:text-amber-400 block mb-0.5">
-                    [개역개정]
-                  </span>
+                  <div className="flex items-center justify-between mb-0.5">
+                    <span className="text-[9.5px] font-bold text-amber-600 dark:text-amber-400">
+                      [개역개정 4판]
+                    </span>
+                    {koVersePericope && (
+                      <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300">
+                        📌 &lt;{koVersePericope}&gt;
+                      </span>
+                    )}
+                  </div>
                   <p className={`text-[14px] sm:text-[15px] font-serif font-medium leading-[1.8] break-keep ${theme.textMain}`}>
                     {renderInteractiveKoreanText(koVerseText)}
                   </p>
@@ -2194,7 +2253,7 @@ export default function Interlinear({
                       </span>
 
                       {word.isInflectedDifferent && (
-                        <span className="text-[9px] font-mono text-stone-500 dark:text-stone-400 block truncate mt-0.5" dir="ltr">
+                        <span className="text-[9px] font-mono text-stone-500 dark:text-slate-400 block truncate mt-0.5" dir="ltr">
                           원형: <b style={originalFontStyle} className="text-stone-800 dark:text-stone-200">{displayLemma}</b>
                         </span>
                       )}

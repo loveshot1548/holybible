@@ -61,8 +61,26 @@ const extractBibleReferences = (text) => {
 };
 
 // =====================================================================
-// 성경 66권 메타데이터 및 원어 형태소 해석기
+// 성경 66권 메타데이터 및 약어 매핑 (스페이스바 자동완성 & 정밀 구절 파서용)
 // =====================================================================
+const BIBLE_ABBR_TO_KO = {
+  "창": "창세기", "출": "출애굽기", "레": "레위기", "민": "민수기", "신": "신명기",
+  "수": "여호수아", "삿": "사사기", "룻": "룻기", "삼상": "사무엘상", "삼하": "사무엘하",
+  "왕상": "열왕기상", "왕하": "열왕기하", "대상": "역대상", "대하": "역대하",
+  "스": "에스라", "느": "느헤미야", "에": "에스더", "욥": "욥기", "시": "시편",
+  "잠": "잠언", "전": "전도서", "아": "아가", "사": "이사야", "렘": "예레미야",
+  "애": "예레미야애가", "겔": "에스겔", "단": "다니엘", "호": "호세아", "욜": "요엘",
+  "암": "아모스", "옵": "오바댜", "욘": "요나", "미": "미가", "나": "나훔",
+  "합": "하박국", "습": "스바냐", "학": "학개", "슥": "스가랴", "말": "말라기",
+  "마": "마태복음", "막": "마가복음", "눅": "누가복음", "요": "요한복음", "행": "사도행전",
+  "롬": "로마서", "고전": "고린도전서", "고후": "고린도후서", "갈": "갈라디아서",
+  "엡": "에베소서", "빌": "빌립보서", "골": "골로새서", "살전": "데살로니가전서",
+  "살후": "데살로니가후서", "딤전": "디모데전서", "딤후": "디모데후서", "딛": "디도서",
+  "몬": "빌레몬서", "히": "히브리서", "약": "야고보서", "벧전": "베드로전서",
+  "벧후": "베드로후서", "요일": "요한일서", "요이": "요한이서", "요삼": "요한삼서",
+  "유": "유다서", "계": "요한계시록"
+};
+
 const BIBLE_66_MAP = {
   "Genesis": { ko: "창세기", isOT: true }, "창세기": { ko: "창세기", isOT: true },
   "Exodus": { ko: "출애굽기", isOT: true }, "출애굽기": { ko: "출애굽기", isOT: true },
@@ -258,55 +276,145 @@ const speakOriginalAudio = (text, isOT) => {
 };
 
 // =====================================================================
-// 🌟 [핵심 고도화] 개역개정 4판(krv4TxtDb)을 최우선으로 참조하는 성경 구절 & 키워드 검색 엔진!
+// 🌟 [핵심 해결 1 & 2]
+// - 내가 적은 구절(예: 창 1:1, 롬 8:28-30)만 정확히 추출하는 파서!
+// - 에디터나 입력창에서 '창1:1 ' 치고 스페이스바 누르면 즉시 본문으로 변환하는 엔진!
 // =====================================================================
+const parseFlexibleBibleRef = (refString) => {
+  if (!refString || typeof refString !== 'string') return null;
+  const trimmed = refString.trim();
+  if (!trimmed) return null;
+
+  // 예: "창 1:1-3", "창세기1:1", "요 3장 16절", "고전 13:4~7", "창 1장"
+  const regex = /^([가-힣a-zA-Z0-9\s]+?)\s*(\d+)\s*(?:장|:)\s*(?:(\d+)\s*(?:[-~]\s*(\d+))?\s*절?)?$/;
+  const match = trimmed.match(regex);
+
+  let rawBook = '';
+  let chapter = 1;
+  let startV = null;
+  let endV = null;
+
+  if (match) {
+    rawBook = match[1].trim().replace(/\s+/g, '');
+    chapter = parseInt(match[2], 10) || 1;
+    if (match[3]) {
+      startV = parseInt(match[3], 10);
+      endV = match[4] ? parseInt(match[4], 10) : startV;
+    }
+  } else {
+    const fallbackInfo = extractBibleRefInfo(trimmed);
+    if (!fallbackInfo) return null;
+    rawBook = fallbackInfo.bookKo;
+    chapter = fallbackInfo.chapter || 1;
+    const rangeMatch = trimmed.match(/:\s*(\d+)\s*[-~]\s*(\d+)/);
+    if (rangeMatch) {
+      startV = parseInt(rangeMatch[1], 10);
+      endV = parseInt(rangeMatch[2], 10);
+    } else if (fallbackInfo.verse && /:|절/.test(trimmed)) {
+      startV = fallbackInfo.verse;
+      endV = startV;
+    }
+  }
+
+  const bookKo = BIBLE_ABBR_TO_KO[rawBook] || rawBook;
+  const canonMeta = BIBLE_66_CANON.find(
+    b => b.ko === bookKo || b.en.toLowerCase() === rawBook.toLowerCase() || b.ko.startsWith(rawBook)
+  );
+  if (!canonMeta) return null;
+
+  return {
+    bookKo: canonMeta.ko,
+    bookEn: canonMeta.en,
+    chapter,
+    startV,
+    endV,
+    hasSpecificVerse: startV !== null
+  };
+};
+
 const getLocalScriptureVerses = (refString, krv4Db = null) => {
-  if (!refString) return { parsed: null, verses: [], isKrv4: false };
-  const info = extractBibleRefInfo(refString);
-  if (!info) return { parsed: null, verses: [], isKrv4: false };
+  const parsed = parseFlexibleBibleRef(refString);
+  if (!parsed) return { parsed: null, verses: [], allChapterVerses: [], isKrv4: false };
 
-  const canonMeta = BIBLE_66_CANON.find(b => b.ko === info.bookKo);
-  if (!canonMeta) return { parsed: info, verses: [], isKrv4: false };
+  const chIdx = Math.max(0, (parsed.chapter || 1) - 1);
 
-  const chIdx = Math.max(0, (info.chapter || 1) - 1);
-
-  // 1순위: 개역개정 4판(public/개역개정4판(구약+신약).txt)에서 조회!
+  // 1순위: 개역개정 4판(public/개역개정4판(구약+신약).txt)에서 조회
   const activeKrv4 = krv4Db || (typeof window !== 'undefined' ? window.__GTC_KRV4_DB__ : null);
   let chapArr =
-    activeKrv4?.[canonMeta.en]?.[chIdx] ||
-    activeKrv4?.[canonMeta.ko]?.[chIdx] ||
-    getKrv4ChapterVerses(canonMeta.en, info.chapter || 1);
+    activeKrv4?.[parsed.bookEn]?.[chIdx] ||
+    activeKrv4?.[parsed.bookKo]?.[chIdx] ||
+    getKrv4ChapterVerses(parsed.bookEn, parsed.chapter || 1);
 
   let isKrv4 = Array.isArray(chapArr) && chapArr.length > 0;
 
-  // 2순위 폴백: 아직 개역개정 4판 텍스트가 로드되기 전이면 ko_ko.json 사용
+  // 2순위 폴백: ko_ko.json
   if (!isKrv4) {
     const rawBook = (Array.isArray(bibleData) ? bibleData : []).find(
-      b => b.name === canonMeta.en || b.name === canonMeta.ko
+      b => b.name === parsed.bookEn || b.name === parsed.bookKo
     );
     chapArr = rawBook?.chapters?.[chIdx] || [];
   }
 
-  const rangeMatch = String(refString).match(/:\s*(\d+)\s*[-~]\s*(\d+)/);
-  const startV = rangeMatch ? parseInt(rangeMatch[1], 10) : (info.verse || 1);
-  const endV = rangeMatch ? parseInt(rangeMatch[2], 10) : Math.min(chapArr.length, startV + 6);
+  const startV = parsed.hasSpecificVerse ? parsed.startV : 1;
+  const endV = parsed.hasSpecificVerse ? parsed.endV : chapArr.length;
 
-  const verses = chapArr.map((txt, idx) => {
+  const allChapterVerses = chapArr.map((txt, idx) => {
     const rawStr = String(txt || '').replace(/&#x27;/g, "'").replace(/&quot;/g, '"').trim();
     const { pericope, pureText } = splitPericopeAndVerse(rawStr);
+    const vNum = idx + 1;
     return {
-      vNum: idx + 1,
+      vNum,
       pericope,
       text: pureText,
       rawText: rawStr,
-      isHighlight: idx + 1 >= startV && idx + 1 <= endV
+      isHighlight: vNum >= startV && vNum <= endV
     };
   });
 
+  // 🌟 사용자가 절을 지정했으면(예: 창 1:1 또는 롬 8:28-30) 장 전체가 아니라 '내가 적은 그 절만' 정확히 반환!
+  const filteredVerses = parsed.hasSpecificVerse
+    ? allChapterVerses.filter(v => v.vNum >= startV && v.vNum <= endV)
+    : allChapterVerses;
+
   return {
-    parsed: { ...info, bookEn: canonMeta.en, startV, endV },
-    verses,
+    parsed: {
+      ...parsed,
+      startV: startV || 1,
+      endV: endV || chapArr.length,
+      displayLabel: parsed.hasSpecificVerse
+        ? `${parsed.bookKo} ${parsed.chapter}:${startV}${endV > startV ? `-${endV}` : ''}`
+        : `${parsed.bookKo} ${parsed.chapter}장`
+    },
+    verses: filteredVerses,
+    allChapterVerses,
     isKrv4
+  };
+};
+
+// ⌨️ [스페이스바 성경구절 자동완성 엔진] 텍스트 끝에 '창1:1' 또는 '요3:16-18' 입력 후 스페이스바 누르면 개역개정 4판 구절로 즉시 변환!
+const resolveInlineVerseAutoComplete = (rawTextBeforeCursor, krv4Db = null) => {
+  if (!rawTextBeforeCursor) return null;
+  // 문장 맨 끝에 위치한 성경 구절 패턴 감지 (예: "창1:1", "창 1:1-3", "요한복음3:16")
+  const match = rawTextBeforeCursor.match(/(?:^|[\s\n(>])([가-힣]{1,6})\s*(\d+):(\d+)(?:[-~](\d+))?$/);
+  if (!match) return null;
+
+  const fullMatchedToken = match[0].replace(/^[\s\n(>]/, '');
+  const [, bookToken, chStr, vStartStr, vEndStr] = match;
+  const refQuery = `${bookToken} ${chStr}:${vStartStr}${vEndStr ? `-${vEndStr}` : ''}`;
+
+  const scriptData = getLocalScriptureVerses(refQuery, krv4Db);
+  if (!scriptData.parsed || scriptData.verses.length === 0) return null;
+
+  const combinedVerseText = scriptData.verses
+    .map(v => (scriptData.verses.length > 1 ? `(${v.vNum}) ${v.text}` : v.text))
+    .join(' ');
+
+  return {
+    matchedToken: fullMatchedToken,
+    refLabel: scriptData.parsed.displayLabel,
+    verseText: combinedVerseText,
+    formattedPlain: `[${scriptData.parsed.displayLabel}] ${combinedVerseText} `,
+    formattedHtml: `<b>[${scriptData.parsed.displayLabel}]</b> ${combinedVerseText}&nbsp;`
   };
 };
 
@@ -345,7 +453,6 @@ const searchBibleByKeyword = (keyword, maxResults = 45, krv4Db = null) => {
     if (results.length > 0) return results;
   }
 
-  // 폴백 검색
   const books = Array.isArray(bibleData) ? bibleData : [];
   for (let bIdx = 0; bIdx < books.length; bIdx++) {
     const bookObj = books[bIdx];
@@ -420,30 +527,104 @@ const OCR_CROP_REGIONS = {
   }
 };
 
-const createHighAccuracyOcrImage = (sourceCanvas, cropMode = 'question_box', playerRect = null) => {
+// 모바일 세로형 전체 스크린샷 속에서 '유튜브 영상 박스'의 상하좌우 위치를 자동 감지하는 비전 알고리즘
+const detectYoutubePlayerBoundsInScreenshot = (sourceCanvas) => {
   const sw = sourceCanvas.width;
   const sh = sourceCanvas.height;
 
-  let baseX = 0, baseY = 0, baseW = sw, baseH = sh;
-  if (playerRect && playerRect.width > 120 && window.innerWidth > 0 && window.innerHeight > 0) {
-    const scaleX = sw / window.innerWidth;
-    const scaleY = sh / window.innerHeight;
-    baseX = Math.max(0, Math.floor(playerRect.left * scaleX));
-    baseY = Math.max(0, Math.floor(playerRect.top * scaleY));
-    baseW = Math.min(sw - baseX, Math.floor(playerRect.width * scaleX));
-    baseH = Math.min(sh - baseY, Math.floor(playerRect.height * scaleY));
+  if (sw >= sh * 1.15) {
+    return { x: 0, y: 0, w: sw, h: sh, isMobilePortrait: false };
   }
 
-  const region = OCR_CROP_REGIONS[cropMode] || OCR_CROP_REGIONS.question_box;
-  const cropX = Math.floor(baseX + baseW * region.xRatio);
-  const cropW = Math.max(80, Math.floor(baseW * region.wRatio));
-  const cropY = Math.floor(baseY + baseH * region.yRatio);
-  const cropH = Math.max(40, Math.floor(baseH * region.hRatio));
+  const ctx = sourceCanvas.getContext('2d');
+  const sampleW = 60;
+  const stepX = Math.max(1, Math.floor(sw / sampleW));
+  const rowDarkness = new Float32Array(sh);
 
-  const scale = 2.4;
-  const pad = 32;
-  const innerW = Math.max(480, Math.floor(cropW * scale));
-  const innerH = Math.max(160, Math.floor(cropH * scale));
+  const imgData = ctx.getImageData(0, 0, sw, sh).data;
+  for (let y = 0; y < sh; y++) {
+    let darkCount = 0;
+    let totalSampled = 0;
+    for (let x = Math.floor(sw * 0.08); x < Math.floor(sw * 0.92); x += stepX) {
+      const idx = (y * sw + x) * 4;
+      const r = imgData[idx], g = imgData[idx + 1], b = imgData[idx + 2];
+      const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+      if (lum < 95) darkCount++;
+      totalSampled++;
+    }
+    rowDarkness[y] = totalSampled > 0 ? darkCount / totalSampled : 0;
+  }
+
+  const expectedVideoH = Math.floor(sw * 0.5625);
+  let bestStartY = Math.floor(sh * 0.18);
+  let maxScore = -1;
+
+  const minSearchY = Math.floor(sh * 0.06);
+  const maxSearchY = Math.max(minSearchY + 10, Math.floor(sh * 0.72) - expectedVideoH);
+
+  for (let y = minSearchY; y <= maxSearchY; y += 4) {
+    let sum = 0;
+    for (let dy = 0; dy < expectedVideoH; dy += 4) {
+      sum += rowDarkness[y + dy] || 0;
+    }
+    if (sum > maxScore) {
+      maxScore = sum;
+      bestStartY = y;
+    }
+  }
+
+  if (maxScore < (expectedVideoH / 4) * 0.18) {
+    bestStartY = Math.floor(sh * 0.22);
+  }
+
+  return {
+    x: Math.floor(sw * 0.02),
+    y: bestStartY,
+    w: Math.floor(sw * 0.96),
+    h: Math.min(sh - bestStartY, Math.floor(expectedVideoH * 1.08)),
+    isMobilePortrait: true
+  };
+};
+
+const createHighAccuracyOcrImage = (sourceCanvas, cropMode = 'question_box', playerRect = null, customBox = null) => {
+  const sw = sourceCanvas.width;
+  const sh = sourceCanvas.height;
+
+  let cropX = 0, cropY = 0, cropW = sw, cropH = sh;
+
+  if (customBox && customBox.w > 0.05 && customBox.h > 0.03) {
+    cropX = Math.max(0, Math.floor(sw * customBox.x));
+    cropY = Math.max(0, Math.floor(sh * customBox.y));
+    cropW = Math.min(sw - cropX, Math.max(60, Math.floor(sw * customBox.w)));
+    cropH = Math.min(sh - cropY, Math.max(30, Math.floor(sh * customBox.h)));
+  } else {
+    let baseX = 0, baseY = 0, baseW = sw, baseH = sh;
+    if (playerRect && playerRect.width > 120 && window.innerWidth > 0 && window.innerHeight > 0) {
+      const scaleX = sw / window.innerWidth;
+      const scaleY = sh / window.innerHeight;
+      baseX = Math.max(0, Math.floor(playerRect.left * scaleX));
+      baseY = Math.max(0, Math.floor(playerRect.top * scaleY));
+      baseW = Math.min(sw - baseX, Math.floor(playerRect.width * scaleX));
+      baseH = Math.min(sh - baseY, Math.floor(playerRect.height * scaleY));
+    } else {
+      const detected = detectYoutubePlayerBoundsInScreenshot(sourceCanvas);
+      baseX = detected.x;
+      baseY = detected.y;
+      baseW = detected.w;
+      baseH = detected.h;
+    }
+
+    const region = OCR_CROP_REGIONS[cropMode] || OCR_CROP_REGIONS.question_box;
+    cropX = Math.floor(baseX + baseW * region.xRatio);
+    cropW = Math.max(80, Math.floor(baseW * region.wRatio));
+    cropY = Math.floor(baseY + baseH * region.yRatio);
+    cropH = Math.max(40, Math.floor(baseH * region.hRatio));
+  }
+
+  const targetScale = Math.min(2.4, 1600 / Math.max(1, cropW));
+  const pad = 28;
+  const innerW = Math.max(360, Math.floor(cropW * targetScale));
+  const innerH = Math.max(110, Math.floor(cropH * targetScale));
   const outW = innerW + pad * 2;
   const outH = innerH + pad * 2;
 
@@ -468,20 +649,20 @@ const createHighAccuracyOcrImage = (sourceCanvas, cropMode = 'question_box', pla
     totalLum += 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
   }
   const avgLum = totalLum / pixelCount;
-  const isDarkSubtitleBox = avgLum < 165;
+  const isDarkSubtitleBox = avgLum < 170;
 
   for (let i = 0; i < data.length; i += 4) {
     const r = data[i], g = data[i + 1], b = data[i + 2];
     const lum = 0.299 * r + 0.587 * g + 0.114 * b;
 
     if (isDarkSubtitleBox) {
-      const isBrightText = lum > 148 || (r > 170 && g > 160);
+      const isBrightText = lum > 142 || (r > 165 && g > 150) || (g > 170 && b > 170);
       const val = isBrightText ? 0 : 255;
       data[i] = val;
       data[i + 1] = val;
       data[i + 2] = val;
     } else {
-      const val = lum < 128 ? 0 : 255;
+      const val = lum < 132 ? 0 : 255;
       data[i] = val;
       data[i + 1] = val;
       data[i + 2] = val;
@@ -498,7 +679,7 @@ const createHighAccuracyOcrImage = (sourceCanvas, cropMode = 'question_box', pla
       prevC.width = Math.max(1, cropW);
       prevC.height = Math.max(1, cropH);
       prevC.getContext('2d').drawImage(sourceCanvas, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
-      return prevC.toDataURL('image/jpeg', 0.94);
+      return prevC.toDataURL('image/jpeg', 0.92);
     })()
   };
 };
@@ -510,7 +691,7 @@ const cleanKoreanOcrText = (rawText) => {
     .map(line =>
       line
         .replace(/[|¦_~`^\\/<>{}[\]§¶©®™£¥€$@#%&*+=]/g, ' ')
-        .replace(/\b[a-zA-Z]{1,4}\b/g, ' ')
+        .replace(/\b[a-zA-Z]{1,3}\b/g, ' ')
         .replace(/\s+/g, ' ')
         .trim()
     )
@@ -593,13 +774,13 @@ export default function Sermon({
   const [selectedWordVerse, setSelectedWordVerse] = useState(1);
   const [customRefQuery, setCustomRefQuery] = useState('');
 
-  // 📖 개역개정 4판 DB 로드 상태 & 말씀·예시구절 멀티 검색 팝업 상태
+  // 📖 개역개정 4판 DB 로드 상태 & 말씀·예시구절 멀티 검색 팝업 상태 (로마서 8장 하드코딩 완전 제거!)
   const [krv4TxtDb, setKrv4TxtDb] = useState(() => (typeof window !== 'undefined' ? window.__GTC_KRV4_DB__ : null));
   const [isBibleFinderOpen, setIsBibleFinderOpen] = useState(false);
   const [finderMode, setFinderMode] = useState('ref');
-  const [finderRefInput, setFinderRefInput] = useState('로마서 8:28-30');
-  const [finderBookKo, setFinderBookKo] = useState('로마서');
-  const [finderChapter, setFinderChapter] = useState(8);
+  const [finderRefInput, setFinderRefInput] = useState('');
+  const [showFullChapterInFinder, setShowFullChapterInFinder] = useState(false);
+  const [finderVersionMode, setFinderVersionMode] = useState('krv4'); // 'krv4' | 'parallel'
   const [finderKeyword, setFinderKeyword] = useState('');
   const [finderKeywordResults, setFinderKeywordResults] = useState([]);
 
@@ -661,7 +842,6 @@ export default function Sermon({
   }, [date, updateDay]);
 
   useEffect(() => {
-    // 앱 진입 시 개역개정 4판(public/개역개정4판(구약+신약).txt) 최우선 로드!
     ensureKrv4TxtLoaded().then((parsedMap) => {
       if (parsedMap) setKrv4TxtDb(parsedMap);
     });
@@ -679,8 +859,12 @@ export default function Sermon({
     } catch (_) {}
   }, []);
 
+  // 🌟 로마서 8:28 하드코딩 완전 제거! 사용자가 적은 설교 본문 구절만 정확히 참조
   const activeReferenceStr = useMemo(() => {
-    return (customRefQuery && customRefQuery.trim()) || safeDay.sermonReference || globalSharedQt?.[date]?.sermonData?.reference || '로마서 8:28';
+    return (customRefQuery && customRefQuery.trim()) ||
+           (safeDay.sermonReference && safeDay.sermonReference.trim()) ||
+           (globalSharedQt?.[date]?.sermonData?.reference && globalSharedQt[date].sermonData.reference.trim()) ||
+           '';
   }, [customRefQuery, safeDay.sermonReference, globalSharedQt, date]);
 
   const localScriptureData = useMemo(() => {
@@ -688,8 +872,8 @@ export default function Sermon({
   }, [activeReferenceStr, krv4TxtDb]);
 
   const finderScriptureData = useMemo(() => {
-    return getLocalScriptureVerses(finderRefInput, krv4TxtDb);
-  }, [finderRefInput, krv4TxtDb]);
+    return getLocalScriptureVerses(finderRefInput || activeReferenceStr, krv4TxtDb);
+  }, [finderRefInput, activeReferenceStr, krv4TxtDb]);
 
   useEffect(() => {
     if (localScriptureData.parsed?.startV) {
@@ -703,7 +887,68 @@ export default function Sermon({
   }, []);
 
   // =====================================================================
-  // 원어 어절 선택 및 10대 학술 원어 강해 로드 (개역개정 4판 본문 연동)
+  // ⌨️ [핵심 복원] 성경구절 적고 스페이스바(Space) 누르면 즉시 개역개정 4판 구절이 자동으로 적히는 기능!
+  // =====================================================================
+  const handleSpacebarVerseAutoCompleteOnInput = useCallback((e, fieldKey, currentVal, customSetter = null) => {
+    if (e.key !== ' ' && e.code !== 'Space') return;
+    const targetEl = e.target;
+    const cursorPos = targetEl.selectionStart ?? (currentVal || '').length;
+    const textBefore = (currentVal || '').slice(0, cursorPos);
+    const textAfter = (currentVal || '').slice(cursorPos);
+
+    const resolved = resolveInlineVerseAutoComplete(textBefore, krv4TxtDb);
+    if (!resolved) return;
+
+    e.preventDefault();
+    const replacedBefore = textBefore.slice(0, textBefore.length - resolved.matchedToken.length) + resolved.formattedPlain;
+    const nextValue = replacedBefore + textAfter;
+
+    if (customSetter) {
+      customSetter(nextValue);
+    } else if (updateDay) {
+      updateDay({ [fieldKey]: nextValue });
+    }
+    showToast(`✨ [${resolved.refLabel}] 개역개정 4판 본문이 자동 완성되었습니다!`);
+  }, [krv4TxtDb, updateDay, showToast]);
+
+  // RichTextEditor(설교 본문 노트) 내부에서도 '창1:1' 치고 스페이스바 누르면 즉시 개역개정 4판 본문으로 자동 변환!
+  const handleEditorContainerKeyDown = useCallback((e) => {
+    if (e.key !== ' ' && e.code !== 'Space') return;
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount) return;
+    const range = sel.getRangeAt(0);
+    const node = range.startContainer;
+    if (!node || node.nodeType !== Node.TEXT_NODE) return;
+
+    const textBefore = (node.textContent || '').slice(0, range.startOffset);
+    const resolved = resolveInlineVerseAutoComplete(textBefore, krv4TxtDb);
+    if (!resolved) return;
+
+    e.preventDefault();
+    const tokenLen = resolved.matchedToken.length;
+    const beforeToken = (node.textContent || '').slice(0, range.startOffset - tokenLen);
+    const afterCursor = (node.textContent || '').slice(range.startOffset);
+
+    const replacementText = `[${resolved.refLabel}] ${resolved.verseText} `;
+    node.textContent = beforeToken + replacementText + afterCursor;
+
+    const newCursorOffset = beforeToken.length + replacementText.length;
+    const newRange = document.createRange();
+    newRange.setStart(node, Math.min(newCursorOffset, node.textContent.length));
+    newRange.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(newRange);
+
+    // RichTextEditor의 onChange 동기화 트리거
+    const editableRoot = node.parentElement?.closest('[contenteditable="true"]');
+    if (editableRoot && updateDay) {
+      updateDay({ sermonNotes: editableRoot.innerHTML });
+    }
+    showToast(`✨ [${resolved.refLabel}] 개역개정 4판 말씀이 노트에 자동 입력되었습니다!`);
+  }, [krv4TxtDb, updateDay, showToast]);
+
+  // =====================================================================
+  // 원어 어절 선택 및 10대 학술 원어 강해 로드
   // =====================================================================
   const handleSelectInspectorWord = useCallback(async (word) => {
     setSelectedWordDetail(word);
@@ -733,17 +978,17 @@ export default function Sermon({
 
   const openMcheyneStyleVerseInspector = useCallback(async (customRefStr, targetVerseNum) => {
     setMinimizedModals(prev => ({ ...prev, inspector: false }));
-    const queryStr = customRefStr || activeReferenceStr || '로마서 8:28';
+    const queryStr = (customRefStr && customRefStr.trim()) || activeReferenceStr || '창세기 1:1';
     const scriptData = getLocalScriptureVerses(queryStr, krv4TxtDb);
-    const parsed = scriptData.parsed || { bookKo: '로마서', bookEn: 'Romans', chapter: 8, startV: 28 };
+    const parsed = scriptData.parsed || { bookKo: '창세기', bookEn: 'Genesis', chapter: 1, startV: 1 };
 
-    const koBook = parsed.bookKo || '로마서';
+    const koBook = parsed.bookKo || '창세기';
     const chNum = parsed.chapter || 1;
     const vNum = targetVerseNum || parsed.startV || 1;
-    const bookInfo = BIBLE_66_MAP[koBook] || BIBLE_66_MAP[parsed.bookEn] || { ko: koBook, isOT: false };
+    const bookInfo = BIBLE_66_MAP[koBook] || BIBLE_66_MAP[parsed.bookEn] || { ko: koBook, isOT: true };
     const isOT = bookInfo.isOT;
 
-    const foundVerseObj = scriptData.verses.find(v => v.vNum === Number(vNum)) || scriptData.verses[0];
+    const foundVerseObj = scriptData.allChapterVerses?.find(v => v.vNum === Number(vNum)) || scriptData.verses[0];
     const verseText = foundVerseObj?.text || `${koBook} ${chNum}장 ${vNum}절 말씀`;
 
     const easyKey = `${koBook}-${chNum}-${vNum}`;
@@ -760,7 +1005,7 @@ export default function Sermon({
       easyText,
       webText,
       isOT,
-      allChapterVerses: scriptData.verses
+      allChapterVerses: scriptData.allChapterVerses || scriptData.verses
     });
     setInspectorWords([]);
     setSelectedWordDetail(null);
@@ -874,7 +1119,11 @@ export default function Sermon({
   // =====================================================================
   // 팝업 가림 없이 유튜브 영상 자막만 도려내는 스마트 OCR 엔진
   // =====================================================================
-  const runOcrOnCaptureItem = useCallback(async (captureItem, customPreset) => {
+  const [touchCropBox, setTouchCropBox] = useState(null);
+  const touchStartRef = useRef(null);
+  const fullPreviewImgRef = useRef(null);
+
+  const runOcrOnCaptureItem = useCallback(async (captureItem, customPreset, customTouchBox = null) => {
     if (!captureItem || !captureItem.imageUrl) return;
     const activePreset = customPreset || ocrCropPreset;
     setOcrLoadingId(captureItem.id);
@@ -886,7 +1135,7 @@ export default function Sermon({
       let targetImgUrl = captureItem.preprocessedUrl || captureItem.subtitleCropUrl || captureItem.imageUrl;
       let nextSubCropUrl = captureItem.subtitleCropUrl;
 
-      if (customPreset && captureItem.imageUrl) {
+      if ((customPreset || customTouchBox) && captureItem.imageUrl) {
         const img = new Image();
         img.crossOrigin = 'anonymous';
         await new Promise((res, rej) => {
@@ -898,7 +1147,12 @@ export default function Sermon({
         tempC.width = img.width;
         tempC.height = img.height;
         tempC.getContext('2d').drawImage(img, 0, 0);
-        const reCropped = createHighAccuracyOcrImage(tempC, activePreset, captureItem.playerRect || null);
+        const reCropped = createHighAccuracyOcrImage(
+          tempC,
+          activePreset,
+          captureItem.playerRect || null,
+          customTouchBox
+        );
         targetImgUrl = reCropped.preprocessedDataUrl;
         nextSubCropUrl = reCropped.croppedPreviewUrl;
       }
@@ -906,7 +1160,7 @@ export default function Sermon({
       const result = await Tesseract.recognize(targetImgUrl, 'kor+eng');
       const cleaned = cleanKoreanOcrText(result?.data?.text || '');
 
-      const finalExtracted = cleaned || '자막을 명확히 인식하지 못했습니다. 상단에서 [스캔 영역]을 변경하여 재추출하거나 아래 입력란에서 직접 다듬어 주세요.';
+      const finalExtracted = cleaned || '자막을 명확히 인식하지 못했습니다. 아래 원본 화면 위에서 자막 부분만 손가락으로 드래그하여 영역을 지정해 보세요!';
 
       const updatedItem = {
         ...captureItem,
@@ -938,8 +1192,8 @@ export default function Sermon({
   }, [ocrCropPreset, date, updateDay, showToast]);
 
   const processCapturedCanvasToItem = useCallback(async (sourceCanvas, label = '유튜브 자막 스캔', playerRect = null) => {
-    const fullDataUrl = sourceCanvas.toDataURL('image/jpeg', 0.92);
-    const { preprocessedDataUrl, croppedPreviewUrl } = createHighAccuracyOcrImage(sourceCanvas, ocrCropPreset, playerRect);
+    const fullDataUrl = sourceCanvas.toDataURL('image/jpeg', 0.90);
+    const { preprocessedDataUrl, croppedPreviewUrl } = createHighAccuracyOcrImage(sourceCanvas, ocrCropPreset, playerRect, null);
 
     const newItem = {
       id: `cap_${Date.now()}`,
@@ -952,6 +1206,7 @@ export default function Sermon({
       ocrText: '유튜브 자막 박스에서 글자를 정밀 판독 중입니다...'
     };
 
+    setTouchCropBox(null);
     setStudioDraftItem(newItem);
     setMinimizedModals(prev => ({ ...prev, ocr: false }));
     setIsOcrStudioOpen(true);
@@ -996,26 +1251,38 @@ export default function Sermon({
           }
         }
       }
-      setMinimizedModals(prev => ({ ...prev, ocr: false }));
-      setIsOcrStudioOpen(true);
-      showToast('유튜브 화면을 캡처(복사)한 뒤 [클립보드 스캔] 또는 Ctrl+V를 눌러주세요.');
+      if (captureInputRef.current) {
+        captureInputRef.current.click();
+      }
     } catch (err) {
-      setMinimizedModals(prev => ({ ...prev, ocr: false }));
-      setIsOcrStudioOpen(true);
+      if (captureInputRef.current) {
+        captureInputRef.current.click();
+      }
     }
   };
 
   const handleDirectTabCapture = async () => {
     if (isCapturingScreen) return;
 
+    const isMobileOrTablet =
+      /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '') ||
+      !navigator.mediaDevices ||
+      typeof navigator.mediaDevices.getDisplayMedia !== 'function';
+
+    if (isMobileOrTablet) {
+      if (captureInputRef.current) {
+        captureInputRef.current.click();
+        showToast('📱 방금 찍은 유튜브 스크린샷 사진을 선택하면 자막만 자동 추출됩니다!');
+      } else {
+        setMinimizedModals(prev => ({ ...prev, ocr: false }));
+        setIsOcrStudioOpen(true);
+      }
+      return;
+    }
+
     if (isOcrStudioOpen) {
       setIsOcrStudioOpen(false);
       await new Promise(r => setTimeout(r, 320));
-    }
-
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
-      await handleReadClipboardImageForOcr();
-      return;
     }
 
     setIsCapturingScreen(true);
@@ -1053,20 +1320,26 @@ export default function Sermon({
   const handleUploadCaptureFile = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const img = new Image();
-      img.onload = async () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0);
-        await processCapturedCanvasToItem(canvas, '스크린샷 자막 스캔', null);
-      };
-      img.src = ev.target.result;
+    const objectUrl = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = async () => {
+      const maxDim = 2200;
+      let w = img.width;
+      let h = img.height;
+      if (w > maxDim || h > maxDim) {
+        const ratio = Math.min(maxDim / w, maxDim / h);
+        w = Math.round(w * ratio);
+        h = Math.round(h * ratio);
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(objectUrl);
+      await processCapturedCanvasToItem(canvas, '모바일 스크린샷 자막 스캔', null);
     };
-    reader.readAsDataURL(file);
+    img.src = objectUrl;
     e.target.value = '';
   };
 
@@ -1137,10 +1410,16 @@ export default function Sermon({
     showToast(`[${refLabel}] 개역개정 4판 말씀이 설교 필기장에 삽입되었습니다.`);
   };
 
-  // [본문 보기] 버튼 클릭 시 개역개정 4판 본문 검색 모달을 최우선으로 오픈!
+  // 🌟 [핵심 해결 1] 본문 보기 클릭 시:
+  // 1) 기존 findBibleText 프롭도 호출하여 기존 구조와 100% 호환 유지
+  // 2) 내가 적은 본문 구절(예: 창 1:1-3)만 정확히 필터링하여 개역개정 4판 모달 오픈!
   const handleOpenKrv4ScriptureView = (refStr) => {
-    const targetRef = (refStr && refStr.trim()) || activeReferenceStr || '로마서 8:28';
-    setFinderRefInput(targetRef);
+    const targetRef = (refStr && refStr.trim()) || activeReferenceStr;
+    if (findBibleText && targetRef) {
+      try { findBibleText(targetRef); } catch (_) {}
+    }
+    setFinderRefInput(targetRef || '');
+    setShowFullChapterInFinder(false); // 장 전체가 아니라 내가 적은 구절만 먼저 딱 뜨도록 설정!
     setFinderMode('ref');
     setMinimizedModals(prev => ({ ...prev, finder: false }));
     setIsBibleFinderOpen(true);
@@ -1508,6 +1787,14 @@ export default function Sermon({
     );
   };
 
+  // 말씀 찾기 모달에서 보여줄 절 목록 (내가 적은 절만 표시 vs 장 전체 펼치기)
+  const displayedFinderVerses = useMemo(() => {
+    if (showFullChapterInFinder) {
+      return finderScriptureData.allChapterVerses || finderScriptureData.verses;
+    }
+    return finderScriptureData.verses;
+  }, [showFullChapterInFinder, finderScriptureData]);
+
   return (
     <div
       ref={rootSermonFullscreenRef}
@@ -1681,20 +1968,25 @@ export default function Sermon({
                       setCustomRefQuery(e.target.value);
                       updateDay && updateDay({ sermonReference: e.target.value });
                     }} 
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleOpenKrv4ScriptureView(safeDay.sermonReference || globalSharedQt?.[date]?.sermonData?.reference);
+                      }
+                    }}
                     onPointerDown={e => e.stopPropagation()} 
-                    placeholder="본문 구절 (예: 롬 8:28-30)" 
+                    placeholder="설교 본문 구절 입력 (예: 창 1:1-5, 요 3:16)" 
                     className={`flex-1 min-w-0 px-3.5 py-2 rounded-lg text-[13px] font-medium outline-none border transition-all ${
                       isDark ? 'bg-[#0E1015] border-white/10 text-white focus:border-stone-400' : 'bg-stone-50 border-stone-200 text-stone-900 focus:border-stone-400'
                     }`} 
                   />
-                  {/* 🌟 [본문 보기] 클릭 시 개역개정 4판 본문 뷰어 모달을 즉시 오픈! */}
                   <button 
                     onClick={() => handleOpenKrv4ScriptureView(safeDay.sermonReference || globalSharedQt?.[date]?.sermonData?.reference)} 
                     className={`shrink-0 px-3 py-2 rounded-lg text-[12px] font-bold border transition-colors flex items-center gap-1 cursor-pointer whitespace-nowrap ${
                       isDark ? 'bg-amber-500/20 border-amber-400/40 text-amber-300 hover:bg-amber-500/30' : 'bg-amber-50 border-amber-300 text-amber-900 hover:bg-amber-100'
                     }`}
                   >
-                    <IconBookOpen/> <span>개역개정4판 본문보기</span>
+                    <IconBookOpen/> <span>본문 보기</span>
                   </button>
                 </div>
               </div>
@@ -1707,6 +1999,7 @@ export default function Sermon({
                     if (isBibleFinderOpen) setIsBibleFinderOpen(false);
                     else {
                       setFinderRefInput(activeReferenceStr);
+                      setShowFullChapterInFinder(false);
                       setMinimizedModals(prev => ({ ...prev, finder: false }));
                       setIsBibleFinderOpen(true);
                     }
@@ -1769,17 +2062,18 @@ export default function Sermon({
                 </button>
               </div>
 
-              {/* 핵심 요약 한 문장 */}
+              {/* 핵심 요약 한 문장 (스페이스바 구절 자동완성 지원) */}
               <div className="pt-0.5 ignore-draw" onPointerDown={e => e.stopPropagation()}>
                 <div className={`p-3 rounded-lg border flex flex-col gap-1 text-left ${isDark ? 'bg-[#0E1015] border-white/10' : 'bg-stone-50/80 border-stone-200/90'}`}>
                   <span className={`text-[11px] font-bold ${isDark ? 'text-stone-400' : 'text-stone-500'}`}>
-                    핵심 요절 및 설교 한 문장 요약
+                    핵심 요절 및 설교 한 문장 요약 <span className="text-[10px] text-amber-500 ml-1">(팁: '창1:1' 치고 스페이스바 누르면 구절 자동완성!)</span>
                   </span>
                   <input 
                     type="text" 
                     value={safeDay.sermonConviction || ''} 
                     onChange={e => updateDay && updateDay({ sermonConviction: e.target.value })} 
-                    placeholder="설교 중 가장 중심이 되는 핵심 문장을 기록하세요" 
+                    onKeyDown={e => handleSpacebarVerseAutoCompleteOnInput(e, 'sermonConviction', safeDay.sermonConviction || '')}
+                    placeholder="설교 중 가장 중심이 되는 핵심 문장을 기록하세요 (예: 요3:16 + 스페이스바)" 
                     className={`w-full bg-transparent outline-none text-[13.5px] font-medium ${isDark ? 'text-white placeholder:text-stone-600' : 'text-stone-900 placeholder:text-stone-400'}`} 
                   />
                 </div>
@@ -1805,7 +2099,7 @@ export default function Sermon({
             </div>
 
             {/* ===================================================================== */}
-            {/* 3. 유튜브 예배 영상 시청 섹션 (개역개정4판 유튜브 링크 최우선 배치!) */}
+            {/* 3. 유튜브 예배 영상 시청 섹션 */}
             {/* ===================================================================== */}
             {!isSanctuaryMode && (
               <div
@@ -1823,9 +2117,8 @@ export default function Sermon({
                   </div>
 
                   <div className="flex items-center gap-2 flex-wrap">
-                    {/* 🌟 1순위: 개역개정 4판 성경 본문 유튜브 링크 최우선 노출 */}
                     <a
-                      href={`https://www.youtube.com/results?search_query=${encodeURIComponent(`개역개정 4판 ${activeReferenceStr} 성경낭독`)}`}
+                      href={`https://www.youtube.com/results?search_query=${encodeURIComponent(`개역개정 4판 ${activeReferenceStr || '성경'} 낭독`)}`}
                       target="_blank"
                       rel="noreferrer"
                       className={`px-2.5 py-1 rounded-md text-[11.5px] font-bold border flex items-center gap-1 transition-colors whitespace-nowrap ${
@@ -1967,12 +2260,12 @@ export default function Sermon({
                         </p>
                         <div className="flex flex-wrap items-center justify-center gap-2">
                           <a
-                            href={`https://www.youtube.com/results?search_query=${encodeURIComponent(`개역개정 4판 ${activeReferenceStr} 성경낭독`)}`}
+                            href={`https://www.youtube.com/results?search_query=${encodeURIComponent(`개역개정 4판 ${activeReferenceStr || '성경'} 낭독`)}`}
                             target="_blank"
                             rel="noreferrer"
                             className="px-3.5 py-1.5 rounded-lg bg-amber-500 text-stone-950 text-[11.5px] font-black flex items-center gap-1.5 shadow-sm"
                           >
-                            <span>📖 개역개정 4판 ({activeReferenceStr}) 유튜브 찾기</span> <IconExternal/>
+                            <span>📖 개역개정 4판 {activeReferenceStr ? `(${activeReferenceStr})` : ''} 유튜브 찾기</span> <IconExternal/>
                           </a>
                           <a
                             href={`https://www.youtube.com/results?search_query=김포좋은나무교회+${ymdStr}`}
@@ -2034,8 +2327,8 @@ export default function Sermon({
                     isDark ? 'border-white/15 bg-white/[0.02] hover:bg-white/[0.04] text-stone-400' : 'border-stone-300 bg-stone-50/70 hover:bg-stone-100 text-stone-500'
                   }`}
                 >
-                  <p className="text-[12px] font-bold">유튜브 영상에 자막이나 적용질문이 나올 때 [영상 자막 즉시캡처]를 눌러보세요</p>
-                  <p className="text-[11px] opacity-80 mt-0.5">팝업이나 카메라가 화면을 가리지 않고 유튜브 영상의 하단 자막만 정밀 추출합니다</p>
+                  <p className="text-[12px] font-bold">PC 화면 직접 캡처 및 모바일/태블릿 스크린샷 자막 자동 인식 지원</p>
+                  <p className="text-[11px] opacity-80 mt-0.5">유튜브 영상에 자막이나 적용질문이 나올 때 클릭하면 자막만 정밀 추출합니다</p>
                 </div>
               ) : (
                 <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1 hide-scrollbar">
@@ -2118,7 +2411,7 @@ export default function Sermon({
             </div>
 
             {/* ===================================================================== */}
-            {/* 5. 설교 3대지 구조화 빌더 */}
+            {/* 5. 설교 3대지 구조화 빌더 (스페이스바 구절 자동완성 지원) */}
             {/* ===================================================================== */}
             <div className={`p-4 rounded-xl border flex flex-col gap-2.5 ${isDark ? 'bg-[#161922] border-white/10' : 'bg-white border-stone-200/90 shadow-2xs'}`}>
               <div 
@@ -2134,7 +2427,7 @@ export default function Sermon({
               {showOutlineBuilder && (
                 <div className="space-y-2.5 pt-2 border-t border-stone-200 dark:border-white/10 ignore-draw" onPointerDown={e => e.stopPropagation()}>
                   {[
-                    { key: 'sermonPoint1', label: '제1대지: 본문 관찰 및 하나님의 성품', code: 'POINT 01', ph: '첫 번째 대지 핵심 내용을 입력하세요' },
+                    { key: 'sermonPoint1', label: '제1대지: 본문 관찰 및 하나님의 성품', code: 'POINT 01', ph: '첫 번째 대지 핵심 내용을 입력하세요 (예: 창1:1 + 스페이스바)' },
                     { key: 'sermonPoint2', label: '제2대지: 직면한 나의 모습과 회개', code: 'POINT 02', ph: '두 번째 대지 핵심 내용을 입력하세요' },
                     { key: 'sermonPoint3', label: '제3대지: 구속사적 결단과 순종', code: 'POINT 03', ph: '세 번째 대지 핵심 내용을 입력하세요' }
                   ].map((pt) => (
@@ -2147,6 +2440,7 @@ export default function Sermon({
                         type="text" 
                         value={safeDay[pt.key] || ''} 
                         onChange={e => updateDay && updateDay({ [pt.key]: e.target.value })} 
+                        onKeyDown={e => handleSpacebarVerseAutoCompleteOnInput(e, pt.key, safeDay[pt.key] || '')}
                         placeholder={pt.ph} 
                         className={`w-full px-3.5 py-2 rounded-lg border text-[13px] font-medium outline-none ${
                           isDark ? 'bg-[#0E1015] border-white/10 text-white focus:border-stone-400' : 'bg-stone-50 border-stone-200 text-stone-900 focus:border-stone-400'
@@ -2232,7 +2526,14 @@ export default function Sermon({
                         const nextA = { ...(safeDay.applyAnswers || {}), [qIdx]: e.target.value };
                         updateDay && updateDay({ applyAnswers: nextA });
                       }}
-                      placeholder="질문에 대한 나의 묵상과 삶의 적용 답변을 기록하세요"
+                      onKeyDown={(e) => {
+                        const curAns = (safeDay.applyAnswers && safeDay.applyAnswers[qIdx]) || '';
+                        handleSpacebarVerseAutoCompleteOnInput(e, null, curAns, (nextVal) => {
+                          const nextA = { ...(safeDay.applyAnswers || {}), [qIdx]: nextVal };
+                          updateDay && updateDay({ applyAnswers: nextA });
+                        });
+                      }}
+                      placeholder="질문에 대한 나의 묵상과 삶의 적용 답변을 기록하세요 ('창1:1' + 스페이스바 자동완성 지원)"
                       className={`w-full p-2.5 rounded-lg border text-[12.5px] outline-none resize-none ${
                         isDark ? 'bg-[#161922] border-white/10 text-stone-200' : 'bg-white border-stone-200 text-stone-800'
                       }`}
@@ -2243,17 +2544,20 @@ export default function Sermon({
             </div>
 
             {/* ===================================================================== */}
-            {/* 7. 설교 본문 리치 텍스트 에디터 & 실시간 음성 필기(STT) */}
+            {/* 7. 설교 본문 리치 텍스트 에디터 (스페이스바 구절 자동완성 + STT 완벽 지원!) */}
             {/* ===================================================================== */}
             <div
               onPointerDown={e => e.stopPropagation()}
               className={`p-4 rounded-xl border flex flex-col gap-3 ignore-draw ${isDark ? 'bg-[#161922] border-white/10' : 'bg-white border-stone-200/90 shadow-2xs'}`}
             >
               <div className="flex items-center justify-between flex-wrap gap-2">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <IconDocument/>
                   <span className={`text-[13.5px] font-bold ${isDark ? 'text-white' : 'text-stone-900'}`}>
                     설교 본문 노트 & 실시간 음성 필기
+                  </span>
+                  <span className="text-[10.5px] font-bold text-amber-500">
+                    (⌨️ 본문에서 '창1:1', '롬8:28' 치고 스페이스바 누르면 구절 즉시 자동완성!)
                   </span>
                 </div>
 
@@ -2294,12 +2598,16 @@ export default function Sermon({
                 </div>
               )}
 
-              <div className="min-h-[320px] rounded-xl overflow-hidden border border-stone-200 dark:border-white/10">
+              {/* 스페이스바 자동완성 감지 래퍼 */}
+              <div
+                onKeyDownCapture={handleEditorContainerKeyDown}
+                className="min-h-[320px] rounded-xl overflow-hidden border border-stone-200 dark:border-white/10"
+              >
                 <RichTextEditor
                   ref={sermonEditorRef}
                   value={safeDay.sermonNotes || ''}
                   onChange={handleRichTextChange}
-                  placeholder="설교 말씀을 들으며 은혜받은 내용과 묵상을 자유롭게 기록하세요..."
+                  placeholder="설교 말씀을 들으며 은혜받은 내용과 묵상을 기록하세요. (예: '창1:1' 입력 후 스페이스바를 누르면 개역개정 4판 구절이 자동으로 완성됩니다!)"
                   isDarkMode={isDark}
                 />
               </div>
@@ -2310,6 +2618,7 @@ export default function Sermon({
                   type="text"
                   value={safeDay.sermonGraceLine || ''}
                   onChange={(e) => handleGraceLineSync(e.target.value)}
+                  onKeyDown={(e) => handleSpacebarVerseAutoCompleteOnInput(e, 'sermonGraceLine', safeDay.sermonGraceLine || '', handleGraceLineSync)}
                   placeholder="오늘 나에게 주신 한 줄 은혜 고백 및 감사 선포를 입력하세요"
                   className={`w-full px-3 py-2 rounded-lg border text-[13px] font-medium outline-none ${
                     isDark ? 'bg-[#161922] border-white/10 text-white' : 'bg-white border-stone-200 text-stone-900'
@@ -2375,7 +2684,7 @@ export default function Sermon({
         {isBibleFinderOpen && minimizedModals.finder && (
           <div className="px-3.5 py-2 rounded-full bg-sky-500 text-stone-950 font-black text-xs shadow-2xl flex items-center gap-2 border border-white/20">
             <button onClick={() => setMinimizedModals(prev => ({ ...prev, finder: false }))} className="cursor-pointer">
-              📖 개역개정4판 찾기 펼치기 ▲
+              📖 개역개정4판 본문창 펼치기 ▲
             </button>
             <button onClick={() => setIsBibleFinderOpen(false)} className="px-1 text-stone-900 font-bold cursor-pointer">✕</button>
           </div>
@@ -2441,7 +2750,7 @@ export default function Sermon({
                   }`}
                 >
                   <div className="text-xs font-black mb-0.5 text-amber-600 dark:text-amber-300">📷 1. 유튜브 영상 자막 캡처</div>
-                  <div className="text-[10.5px] opacity-85">창이 자동으로 숨겨진 뒤 재생 중인 유튜브 자막만 찍습니다</div>
+                  <div className="text-[10.5px] opacity-85">PC는 화면 자동 캡처 / 모바일·태블릿은 스크린샷 즉시 스캔</div>
                 </button>
 
                 <button
@@ -2463,7 +2772,7 @@ export default function Sermon({
                   }`}
                 >
                   <div className="text-xs font-bold mb-0.5">🖼️ 3. 캡처 이미지 파일 열기</div>
-                  <div className="text-[10.5px] opacity-75">저장된 유튜브 캡처 사진을 불러와 글자를 추출합니다</div>
+                  <div className="text-[10.5px] opacity-75">갤러리에 저장된 유튜브 캡처 사진을 불러와 추출합니다</div>
                 </button>
               </div>
 
@@ -2493,10 +2802,10 @@ export default function Sermon({
               </div>
 
               {studioDraftItem?.imageUrl && (
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between flex-wrap gap-1">
                     <span className="text-xs font-bold text-amber-500">
-                      도려낸 유튜브 자막·질문 영역 미리보기
+                      👆 아래 원본 화면에서 추출할 자막 부분만 손가락(또는 마우스)으로 드래그하세요!
                     </span>
                     {ocrLoadingId && (
                       <span className="text-xs font-mono font-bold text-emerald-400 animate-pulse">
@@ -2504,12 +2813,66 @@ export default function Sermon({
                       </span>
                     )}
                   </div>
-                  <div className="p-2 rounded-2xl border border-white/15 bg-black flex flex-col items-center">
-                    <img
-                      src={studioDraftItem.subtitleCropUrl || studioDraftItem.imageUrl}
-                      alt="Cropped Subtitle"
-                      className="max-h-32 w-auto object-contain rounded-lg border border-amber-400/60"
-                    />
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div
+                      className="relative rounded-xl overflow-hidden border border-white/20 bg-black select-none touch-none flex items-center justify-center max-h-56"
+                      onPointerDown={(e) => {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+                        const y = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+                        touchStartRef.current = { x, y };
+                        setTouchCropBox({ x, y, w: 0.01, h: 0.01 });
+                        e.currentTarget.setPointerCapture?.(e.pointerId);
+                      }}
+                      onPointerMove={(e) => {
+                        if (!touchStartRef.current) return;
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const curX = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+                        const curY = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+                        const x = Math.min(touchStartRef.current.x, curX);
+                        const y = Math.min(touchStartRef.current.y, curY);
+                        const w = Math.abs(curX - touchStartRef.current.x);
+                        const h = Math.abs(curY - touchStartRef.current.y);
+                        setTouchCropBox({ x, y, w, h });
+                      }}
+                      onPointerUp={(e) => {
+                        e.currentTarget.releasePointerCapture?.(e.pointerId);
+                        const finalBox = touchCropBox;
+                        touchStartRef.current = null;
+                        if (finalBox && finalBox.w > 0.06 && finalBox.h > 0.03) {
+                          runOcrOnCaptureItem(studioDraftItem, null, finalBox);
+                        }
+                      }}
+                    >
+                      <img
+                        ref={fullPreviewImgRef}
+                        src={studioDraftItem.imageUrl}
+                        alt="Full Capture"
+                        draggable={false}
+                        className="max-h-56 w-full object-contain pointer-events-none"
+                      />
+                      {touchCropBox && (
+                        <div
+                          style={{
+                            left: `${touchCropBox.x * 100}%`,
+                            top: `${touchCropBox.y * 100}%`,
+                            width: `${touchCropBox.w * 100}%`,
+                            height: `${touchCropBox.h * 100}%`
+                          }}
+                          className="absolute border-2 border-amber-400 bg-amber-400/25 pointer-events-none rounded"
+                        />
+                      )}
+                    </div>
+
+                    <div className="p-2 rounded-xl border border-white/15 bg-black flex flex-col items-center justify-center gap-1">
+                      <span className="text-[10px] font-mono text-stone-400">도려낸 자막 영역</span>
+                      <img
+                        src={studioDraftItem.subtitleCropUrl || studioDraftItem.imageUrl}
+                        alt="Cropped Subtitle"
+                        className="max-h-44 w-auto object-contain rounded border border-amber-400/60"
+                      />
+                    </div>
                   </div>
                 </div>
               )}
@@ -2564,7 +2927,7 @@ export default function Sermon({
       )}
 
       {/* ===================================================================== */}
-      {/* 9. [개역개정 4판 최우선] 말씀·예시 구절 멀티 검색 모달 */}
+      {/* 9. [SaaS 멀티바이블 고도화] 내가 적은 구절만 딱 보여주는 개역개정 4판 말씀·예시 모달 */}
       {/* ===================================================================== */}
       {isBibleFinderOpen && !minimizedModals.finder && (
         <div
@@ -2573,13 +2936,13 @@ export default function Sermon({
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className={`w-full max-w-lg rounded-2xl border p-4 sm:p-5 shadow-2xl flex flex-col max-h-[84vh] overflow-hidden ${
+            className={`w-full max-w-xl rounded-2xl border p-4 sm:p-5 shadow-2xl flex flex-col max-h-[86vh] overflow-hidden ${
               isDark ? 'bg-[#121620] border-white/15 text-white' : 'bg-white border-stone-300 text-stone-900'
             }`}
           >
             <div className="flex items-center justify-between border-b border-stone-200 dark:border-white/10 pb-3">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-bold">📖 설교 말씀 · 예시 구절 찾기</span>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm font-bold">📖 설교 본문 · 말씀 구절 뷰어</span>
                 <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-500 text-[10px] font-black border border-amber-500/30">
                   개역개정 4판 표준
                 </span>
@@ -2600,19 +2963,39 @@ export default function Sermon({
               </div>
             </div>
 
-            <div className="flex gap-1.5 my-3">
-              <button
-                onClick={() => setFinderMode('ref')}
-                className={`flex-1 py-1.5 rounded-lg text-xs font-bold cursor-pointer ${finderMode === 'ref' ? 'bg-stone-900 text-white dark:bg-white dark:text-stone-900' : 'bg-stone-100 dark:bg-white/5 text-stone-500'}`}
-              >
-                구절 주소로 찾기 (개역개정4판)
-              </button>
-              <button
-                onClick={() => setFinderMode('keyword')}
-                className={`flex-1 py-1.5 rounded-lg text-xs font-bold cursor-pointer ${finderMode === 'keyword' ? 'bg-stone-900 text-white dark:bg-white dark:text-stone-900' : 'bg-stone-100 dark:bg-white/5 text-stone-500'}`}
-              >
-                단어·키워드로 찾기 (개역개정4판)
-              </button>
+            {/* 상단 모드 탭 & 역본 대조 토글 */}
+            <div className="flex items-center justify-between gap-2 my-3 flex-wrap">
+              <div className="flex gap-1.5 flex-1">
+                <button
+                  onClick={() => setFinderMode('ref')}
+                  className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold cursor-pointer ${finderMode === 'ref' ? 'bg-stone-900 text-white dark:bg-white dark:text-stone-900' : 'bg-stone-100 dark:bg-white/5 text-stone-500'}`}
+                >
+                  구절 주소로 보기
+                </button>
+                <button
+                  onClick={() => setFinderMode('keyword')}
+                  className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold cursor-pointer ${finderMode === 'keyword' ? 'bg-stone-900 text-white dark:bg-white dark:text-stone-900' : 'bg-stone-100 dark:bg-white/5 text-stone-500'}`}
+                >
+                  단어·키워드로 검색
+                </button>
+              </div>
+
+              {finderMode === 'ref' && (
+                <div className="flex p-0.5 rounded-lg border border-stone-200 dark:border-white/10 text-[11px] font-bold">
+                  <button
+                    onClick={() => setFinderVersionMode('krv4')}
+                    className={`px-2.5 py-1 rounded-md cursor-pointer ${finderVersionMode === 'krv4' ? 'bg-amber-500 text-stone-950 font-black' : 'text-stone-400'}`}
+                  >
+                    개역개정4판
+                  </button>
+                  <button
+                    onClick={() => setFinderVersionMode('parallel')}
+                    className={`px-2.5 py-1 rounded-md cursor-pointer ${finderVersionMode === 'parallel' ? 'bg-amber-500 text-stone-950 font-black' : 'text-stone-400'}`}
+                  >
+                    3역본 동시대조
+                  </button>
+                </div>
+              )}
             </div>
 
             {finderMode === 'ref' ? (
@@ -2621,44 +3004,118 @@ export default function Sermon({
                   <input
                     type="text"
                     value={finderRefInput}
-                    onChange={(e) => setFinderRefInput(e.target.value)}
-                    placeholder="예: 창세기 1:1-5 또는 로마서 8:28-30"
+                    onChange={(e) => {
+                      setFinderRefInput(e.target.value);
+                      setShowFullChapterInFinder(false);
+                    }}
+                    placeholder="설교 본문 구절을 입력하세요 (예: 창 1:1, 요 3:16, 롬 8:28-30)"
                     className={`flex-1 px-3 py-2 rounded-lg border text-xs font-bold outline-none ${isDark ? 'bg-[#0E1015] border-white/15 text-white' : 'bg-stone-50 border-stone-200 text-stone-900'}`}
                   />
-                  {/* 개역개정 4판 유튜브 낭독 바로가기 */}
                   <a
-                    href={`https://www.youtube.com/results?search_query=${encodeURIComponent(`개역개정 4판 ${finderRefInput} 성경낭독`)}`}
+                    href={`https://www.youtube.com/results?search_query=${encodeURIComponent(`개역개정 4판 ${finderRefInput || activeReferenceStr || '성경'} 낭독`)}`}
                     target="_blank"
                     rel="noreferrer"
                     className="px-3 py-2 rounded-lg bg-amber-500 text-stone-950 text-xs font-black flex items-center gap-1 shrink-0"
                   >
-                    <span>🎬 개역개정4판 유튜브</span> <IconExternal/>
+                    <span>🎬 유튜브 듣기</span> <IconExternal/>
                   </a>
                 </div>
 
-                <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1 hide-scrollbar text-left">
-                  {finderScriptureData.verses.map((v) => (
-                    <div
-                      key={v.vNum}
-                      onClick={() => handleInsertVerseToSermonNotes(`${finderScriptureData.parsed?.bookKo || ''} ${finderScriptureData.parsed?.chapter || 1}:${v.vNum}`, v.text)}
-                      className={`p-2.5 rounded-lg border text-xs font-serif leading-relaxed cursor-pointer transition-colors ${
-                        v.isHighlight
-                          ? isDark ? 'bg-amber-500/15 border-amber-500/40 text-amber-100' : 'bg-amber-50 border-amber-300 text-stone-900'
-                          : isDark ? 'bg-white/5 border-white/10 text-stone-300 hover:bg-white/10' : 'bg-stone-50 border-stone-200 text-stone-700 hover:bg-stone-100'
-                      }`}
-                    >
-                      {v.pericope && (
-                        <div className="mb-1 px-2 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300 font-sans font-extrabold text-[11px] inline-block">
-                          📌 {v.pericope}
-                        </div>
-                      )}
-                      <div>
-                        <b className="mr-1.5 font-mono text-amber-500">{v.vNum}</b>
-                        {v.text}
-                        <span className="ml-2 text-[10px] font-sans font-bold text-sky-500">[+ 필기장 삽입]</span>
-                      </div>
+                {/* 내가 적은 절만 깔끔하게 표시 + 전체 복사/일괄 삽입/전후 문맥 토글 컨트롤 바 */}
+                {finderScriptureData.parsed && (
+                  <div className={`px-3 py-2 rounded-xl border flex flex-wrap items-center justify-between gap-2 ${
+                    isDark ? 'bg-[#0E1015] border-white/10' : 'bg-stone-50 border-stone-200'
+                  }`}>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-black text-amber-500">
+                        📌 {finderScriptureData.parsed.displayLabel}
+                      </span>
+                      <span className="text-[11px] text-stone-400">
+                        ({displayedFinderVerses.length}개 구절 표시 중)
+                      </span>
                     </div>
-                  ))}
+
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {finderScriptureData.parsed.hasSpecificVerse && (
+                        <button
+                          type="button"
+                          onClick={() => setShowFullChapterInFinder(prev => !prev)}
+                          className={`px-2 py-1 rounded text-[10.5px] font-bold border cursor-pointer ${
+                            showFullChapterInFinder
+                              ? 'bg-sky-500 text-stone-950 border-sky-500'
+                              : isDark ? 'bg-white/5 border-white/15 text-stone-300' : 'bg-white border-stone-200 text-stone-700'
+                          }`}
+                        >
+                          {showFullChapterInFinder ? '선택 구절만 보기' : `${finderScriptureData.parsed.chapter}장 전체 문맥 보기`}
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const combined = displayedFinderVerses.map(v => `${v.vNum}. ${v.text}`).join('\n');
+                          handleInsertVerseToSermonNotes(finderScriptureData.parsed.displayLabel, combined);
+                          setIsBibleFinderOpen(false);
+                        }}
+                        className="px-2.5 py-1 rounded bg-amber-500 text-stone-950 text-[10.5px] font-black cursor-pointer"
+                      >
+                        + 표시된 구절 전체 필기장 삽입
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1 hide-scrollbar text-left">
+                  {displayedFinderVerses.length === 0 ? (
+                    <div className="py-10 text-center text-xs text-stone-400">
+                      위에 성경 구절 주소(예: <b>창 1:1</b>, <b>요 3:16</b>, <b>시 23:1-6</b>)를 입력하시면 내가 적은 구절만 즉시 나타납니다.
+                    </div>
+                  ) : (
+                    displayedFinderVerses.map((v) => {
+                      const koBook = finderScriptureData.parsed?.bookKo || '';
+                      const chNum = finderScriptureData.parsed?.chapter || 1;
+                      const easyText = easyBibleDb[`${koBook}-${chNum}-${v.vNum}`] || '';
+                      const webText = webBibleDb[`${koBook}-${chNum}-${v.vNum}`] || webBibleDb[`${finderScriptureData.parsed?.bookEn}-${chNum}-${v.vNum}`] || '';
+
+                      return (
+                        <div
+                          key={v.vNum}
+                          onClick={() => handleInsertVerseToSermonNotes(`${koBook} ${chNum}:${v.vNum}`, v.text)}
+                          className={`p-3 rounded-xl border text-xs font-serif leading-relaxed cursor-pointer transition-colors ${
+                            v.isHighlight
+                              ? isDark ? 'bg-amber-500/15 border-amber-500/40 text-amber-100' : 'bg-amber-50/90 border-amber-300 text-stone-900'
+                              : isDark ? 'bg-white/5 border-white/10 text-stone-300 hover:bg-white/10' : 'bg-stone-50 border-stone-200 text-stone-700 hover:bg-stone-100'
+                          }`}
+                        >
+                          {v.pericope && (
+                            <div className="mb-1.5 px-2 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300 font-sans font-extrabold text-[11px] inline-block">
+                              📌 {v.pericope}
+                            </div>
+                          )}
+                          <div className="text-[13.5px]">
+                            <b className="mr-1.5 font-mono text-amber-500">{v.vNum}</b>
+                            {v.text}
+                            <span className="ml-2 text-[10px] font-sans font-bold text-sky-500">[+ 클릭 시 필기장 삽입]</span>
+                          </div>
+
+                          {finderVersionMode === 'parallel' && (
+                            <div className="mt-2 pt-2 border-t border-dashed border-stone-300 dark:border-white/15 space-y-1">
+                              {easyText && (
+                                <p className="text-[12px] font-sans text-emerald-700 dark:text-emerald-300">
+                                  <b>[쉬운]</b> {easyText}
+                                </p>
+                              )}
+                              {webText && (
+                                <p className="text-[12px] font-serif text-sky-700 dark:text-sky-300">
+                                  <b>[WEB]</b> {webText}
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
               </div>
             ) : (
@@ -2878,6 +3335,7 @@ export default function Sermon({
                     if (isBibleFinderOpen) setIsBibleFinderOpen(false);
                     else {
                       setFinderRefInput(activeReferenceStr);
+                      setShowFullChapterInFinder(false);
                       setMinimizedModals(prev => ({ ...prev, finder: false }));
                       setIsBibleFinderOpen(true);
                     }
@@ -2989,7 +3447,8 @@ export default function Sermon({
                         type="text"
                         value={safeDay.sermonConviction || ''}
                         onChange={(e) => updateDay && updateDay({ sermonConviction: e.target.value })}
-                        placeholder="핵심 요약 문장 입력"
+                        onKeyDown={(e) => handleSpacebarVerseAutoCompleteOnInput(e, 'sermonConviction', safeDay.sermonConviction || '')}
+                        placeholder="핵심 요약 문장 입력 ('창1:1' + 스페이스바 자동완성)"
                         className="w-full px-3 py-2 rounded-lg bg-black/50 border border-white/15 text-xs text-white outline-none"
                       />
                     </div>
@@ -3004,6 +3463,7 @@ export default function Sermon({
                           rows={2}
                           value={safeDay[pt.key] || ''}
                           onChange={(e) => updateDay && updateDay({ [pt.key]: e.target.value })}
+                          onKeyDown={(e) => handleSpacebarVerseAutoCompleteOnInput(e, pt.key, safeDay[pt.key] || '')}
                           className="w-full p-2.5 rounded-lg bg-black/50 border border-white/15 text-xs text-white outline-none resize-none"
                         />
                       </div>
@@ -3042,11 +3502,14 @@ export default function Sermon({
                 )}
 
                 {cinemaHudTab === 'notes' && (
-                  <div className="h-full min-h-[260px] rounded-xl overflow-hidden border border-white/15">
+                  <div
+                    onKeyDownCapture={handleEditorContainerKeyDown}
+                    className="h-full min-h-[260px] rounded-xl overflow-hidden border border-white/15"
+                  >
                     <RichTextEditor
                       value={safeDay.sermonNotes || ''}
                       onChange={handleRichTextChange}
-                      placeholder="영상을 보며 자유롭게 필기하세요..."
+                      placeholder="영상을 보며 자유롭게 필기하세요... ('창1:1' + 스페이스바 자동완성 지원)"
                       isDarkMode={true}
                     />
                   </div>

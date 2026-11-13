@@ -47,98 +47,91 @@ const decryptField = (cipherText) => {
 };
 
 // =====================================================================
-// 성경 66권 마스터 맵
+// 성경 66권 마스터 리스트 & 양방향 맵 (en / ko / abbr 100% 완비)
 // =====================================================================
-export const BIBLE_66_MAP = {
-  "Genesis": { ko: "창세기", abbr: "창", isOT: true, section: "모세오경" }, "창세기": { ko: "창세기", en: "Genesis", abbr: "창", isOT: true, section: "모세오경" },
-  "Exodus": { ko: "출애굽기", abbr: "출", isOT: true, section: "모세오경" }, "출애굽기": { ko: "출애굽기", en: "Exodus", abbr: "출", isOT: true, section: "모세오경" },
-  "Leviticus": { ko: "레위기", abbr: "레", isOT: true, section: "모세오경" }, "레위기": { ko: "레위기", en: "Leviticus", abbr: "레", isOT: true, section: "모세오경" },
-  "Numbers": { ko: "민수기", abbr: "민", isOT: true, section: "모세오경" }, "민수기": { ko: "민수기", en: "Numbers", abbr: "민", isOT: true, section: "모세오경" },
-  "Deuteronomy": { ko: "신명기", abbr: "신", isOT: true, section: "모세오경" }, "신명기": { ko: "신명기", en: "Deuteronomy", abbr: "신", isOT: true, section: "모세오경" },
-  "Joshua": { ko: "여호수아", abbr: "수", isOT: true, section: "역사서" }, "여호수아": { ko: "여호수아", en: "Joshua", abbr: "수", isOT: true, section: "역사서" },
-  "Judges": { ko: "사사기", abbr: "삿", isOT: true, section: "역사서" }, "사사기": { ko: "사사기", en: "Judges", abbr: "삿", isOT: true, section: "역사서" },
-  "Ruth": { ko: "룻기", abbr: "룻", isOT: true, section: "역사서" }, "룻기": { ko: "룻기", en: "Ruth", abbr: "룻", isOT: true, section: "역사서" },
-  "1 Samuel": { ko: "사무엘상", abbr: "삼상", isOT: true, section: "역사서" }, "사무엘상": { ko: "사무엘상", en: "1 Samuel", abbr: "삼상", isOT: true, section: "역사서" },
-  "2 Samuel": { ko: "사무엘하", abbr: "삼하", isOT: true, section: "역사서" }, "사무엘하": { ko: "사무엘하", en: "2 Samuel", abbr: "삼하", isOT: true, section: "역사서" },
-  "1 Kings": { ko: "열왕기상", abbr: "왕상", isOT: true, section: "역사서" }, "열왕기상": { ko: "열왕기상", en: "1 Kings", abbr: "왕상", isOT: true, section: "역사서" },
-  "2 Kings": { ko: "열왕기하", abbr: "왕하", isOT: true, section: "역사서" }, "열왕기하": { ko: "열왕기하", en: "2 Kings", abbr: "왕하", isOT: true, section: "역사서" },
-  "1 Chronicles": { ko: "역대상", abbr: "대상", isOT: true, section: "역사서" }, "역대상": { ko: "역대상", en: "1 Chronicles", abbr: "대상", isOT: true, section: "역사서" },
-  "2 Chronicles": { ko: "역대하", abbr: "대하", isOT: true, section: "역사서" }, "역대하": { ko: "역대하", en: "2 Chronicles", abbr: "대하", isOT: true, section: "역사서" },
-  "Ezra": { ko: "에스라", abbr: "스", isOT: true, section: "역사서" }, "에스라": { ko: "에스라", en: "Ezra", abbr: "스", isOT: true, section: "역사서" },
-  "Nehemiah": { ko: "느헤미야", abbr: "느", isOT: true, section: "역사서" }, "느헤미야": { ko: "느헤미야", en: "Nehemiah", abbr: "느", isOT: true, section: "역사서" },
-  "Esther": { ko: "에스더", abbr: "에", isOT: true, section: "역사서" }, "에스더": { ko: "에스더", en: "Esther", abbr: "에", isOT: true, section: "역사서" },
-  "Job": { ko: "욥기", abbr: "욥", isOT: true, section: "시가서" }, "욥기": { ko: "욥기", en: "Job", abbr: "욥", isOT: true, section: "시가서" },
-  "Psalms": { ko: "시편", abbr: "시", isOT: true, section: "시가서" }, "시편": { ko: "시편", en: "Psalms", abbr: "시", isOT: true, section: "시가서" },
-  "Proverbs": { ko: "잠언", abbr: "잠", isOT: true, section: "시가서" }, "잠언": { ko: "잠언", en: "Proverbs", abbr: "잠", isOT: true, section: "시가서" },
-  "Ecclesiastes": { ko: "전도서", abbr: "전", isOT: true, section: "시가서" }, "전도서": { ko: "전도서", en: "Ecclesiastes", abbr: "전", isOT: true, section: "시가서" },
-  "Song of Solomon": { ko: "아가", abbr: "아", isOT: true, section: "시가서" }, "아가": { ko: "아가", en: "Song of Solomon", abbr: "아", isOT: true, section: "시가서" },
-  "Isaiah": { ko: "이사야", abbr: "사", isOT: true, section: "선지서" }, "이사야": { ko: "이사야", en: "Isaiah", abbr: "사", isOT: true, section: "선지서" },
-  "Jeremiah": { ko: "예레미야", abbr: "렘", isOT: true, section: "선지서" }, "예레미야": { ko: "예레미야", en: "Jeremiah", abbr: "렘", isOT: true, section: "선지서" },
-  "Lamentations": { ko: "예레미야애가", abbr: "애", isOT: true, section: "선지서" }, "예레미야애가": { ko: "예레미야애가", en: "Lamentations", abbr: "애", isOT: true, section: "선지서" },
-  "Ezekiel": { ko: "에스겔", abbr: "겔", isOT: true, section: "선지서" }, "에스겔": { ko: "에스겔", en: "Ezekiel", abbr: "겔", isOT: true, section: "선지서" },
-  "Daniel": { ko: "다니엘", abbr: "단", isOT: true, section: "선지서" }, "다니엘": { ko: "다니엘", en: "Daniel", abbr: "단", isOT: true, section: "선지서" },
-  "Hosea": { ko: "호세아", abbr: "호", isOT: true, section: "선지서" }, "호세아": { ko: "호세아", en: "Hosea", abbr: "호", isOT: true, section: "선지서" },
-  "Joel": { ko: "요엘", abbr: "욜", isOT: true, section: "선지서" }, "요엘": { ko: "요엘", en: "Joel", abbr: "욜", isOT: true, section: "선지서" },
-  "Amos": { ko: "아모스", abbr: "암", isOT: true, section: "선지서" }, "아모스": { ko: "아모스", en: "Amos", abbr: "암", isOT: true, section: "선지서" },
-  "Obadiah": { ko: "오바댜", abbr: "옵", isOT: true, section: "선지서" }, "오바댜": { ko: "오바댜", en: "Obadiah", abbr: "옵", isOT: true, section: "선지서" },
-  "Jonah": { ko: "요나", abbr: "욘", isOT: true, section: "선지서" }, "요나": { ko: "요나", en: "Jonah", abbr: "욘", isOT: true, section: "선지서" },
-  "Micah": { ko: "미가", abbr: "미", isOT: true, section: "선지서" }, "미가": { ko: "미가", en: "Micah", abbr: "미", isOT: true, section: "선지서" },
-  "Nahum": { ko: "나훔", abbr: "나", isOT: true, section: "선지서" }, "나훔": { ko: "나훔", en: "Nahum", abbr: "나", isOT: true, section: "선지서" },
-  "Habakkuk": { ko: "하박국", abbr: "합", isOT: true, section: "선지서" }, "하박국": { ko: "하박국", en: "Habakkuk", abbr: "합", isOT: true, section: "선지서" },
-  "Zephaniah": { ko: "스바냐", abbr: "습", isOT: true, section: "선지서" }, "스바냐": { ko: "스바냐", en: "Zephaniah", abbr: "습", isOT: true, section: "선지서" },
-  "Haggai": { ko: "학개", abbr: "학", isOT: true, section: "선지서" }, "학개": { ko: "학개", en: "Haggai", abbr: "학", isOT: true, section: "선지서" },
-  "Zechariah": { ko: "스가랴", abbr: "슥", isOT: true, section: "선지서" }, "스가랴": { ko: "스가랴", en: "Zechariah", abbr: "슥", isOT: true, section: "선지서" },
-  "Malachi": { ko: "말라기", abbr: "말", isOT: true, section: "선지서" }, "말라기": { ko: "말라기", en: "Malachi", abbr: "말", isOT: true, section: "선지서" },
-  "Matthew": { ko: "마태복음", abbr: "마", isOT: false, section: "복음/역사" }, "마태복음": { ko: "마태복음", en: "Matthew", abbr: "마", isOT: false, section: "복음/역사" },
-  "Mark": { ko: "마가복음", abbr: "막", isOT: false, section: "복음/역사" }, "마가복음": { ko: "마가복음", en: "Mark", abbr: "막", isOT: false, section: "복음/역사" },
-  "Luke": { ko: "누가복음", abbr: "눅", isOT: false, section: "복음/역사" }, "누가복음": { ko: "누가복음", en: "Luke", abbr: "눅", isOT: false, section: "복음/역사" },
-  "John": { ko: "요한복음", abbr: "요", isOT: false, section: "복음/역사" }, "요한복음": { ko: "요한복음", en: "John", abbr: "요", isOT: false, section: "복음/역사" },
-  "Acts": { ko: "사도행전", abbr: "행", isOT: false, section: "복음/역사" }, "사도행전": { ko: "사도행전", en: "Acts", abbr: "행", isOT: false, section: "복음/역사" },
-  "Romans": { ko: "로마서", abbr: "롬", isOT: false, section: "서신서" }, "로마서": { ko: "로마서", en: "Romans", abbr: "롬", isOT: false, section: "서신서" },
-  "1 Corinthians": { ko: "고린도전서", abbr: "고전", isOT: false, section: "서신서" }, "고린도전서": { ko: "고린도전서", en: "1 Corinthians", abbr: "고전", isOT: false, section: "서신서" },
-  "2 Corinthians": { ko: "고린도후서", abbr: "고후", isOT: false, section: "서신서" }, "고린도후서": { ko: "고린도후서", en: "2 Corinthians", abbr: "고후", isOT: false, section: "서신서" },
-  "Galatians": { ko: "갈라디아서", abbr: "갈", isOT: false, section: "서신서" }, "갈라디아서": { ko: "갈라디아서", en: "Galatians", abbr: "갈", isOT: false, section: "서신서" },
-  "Ephesians": { ko: "에베소서", abbr: "엡", isOT: false, section: "서신서" }, "에베소서": { ko: "에베소서", en: "Ephesians", abbr: "엡", isOT: false, section: "서신서" },
-  "Philippians": { ko: "빌립보서", abbr: "빌", isOT: false, section: "서신서" }, "빌립보서": { ko: "빌립보서", en: "Philippians", abbr: "빌", isOT: false, section: "서신서" },
-  "Colossians": { ko: "골로새서", abbr: "골", isOT: false, section: "서신서" }, "골로새서": { ko: "골로새서", en: "Colossians", abbr: "골", isOT: false, section: "서신서" },
-  "1 Thessalonians": { ko: "데살로니가전서", abbr: "살전", isOT: false, section: "서신서" }, "데살로니가전서": { ko: "데살로니가전서", en: "1 Thessalonians", abbr: "살전", isOT: false, section: "서신서" },
-  "2 Thessalonians": { ko: "데살로니가후서", abbr: "살후", isOT: false, section: "서신서" }, "데살로니가후서": { ko: "데살로니가후서", en: "2 Thessalonians", abbr: "살후", isOT: false, section: "서신서" },
-  "1 Timothy": { ko: "디모데전서", abbr: "딤전", isOT: false, section: "서신서" }, "디모데전서": { ko: "디모데전서", en: "1 Timothy", abbr: "딤전", isOT: false, section: "서신서" },
-  "2 Timothy": { ko: "디모데후서", abbr: "딤후", isOT: false, section: "서신서" }, "디모데후서": { ko: "디모데후서", en: "2 Timothy", abbr: "딤후", isOT: false, section: "서신서" },
-  "Titus": { ko: "디도서", abbr: "딛", isOT: false, section: "서신서" }, "디도서": { ko: "디도서", en: "Titus", abbr: "딛", isOT: false, section: "서신서" },
-  "Philemon": { ko: "빌레몬서", abbr: "몬", isOT: false, section: "서신서" }, "빌레몬서": { ko: "빌레몬서", en: "Philemon", abbr: "몬", isOT: false, section: "서신서" },
-  "Hebrews": { ko: "히브리서", abbr: "히", isOT: false, section: "서신서" }, "히브리서": { ko: "히브리서", en: "Hebrews", abbr: "히", isOT: false, section: "서신서" },
-  "James": { ko: "야고보서", abbr: "약", isOT: false, section: "서신서" }, "야고보서": { ko: "야고보서", en: "James", abbr: "약", isOT: false, section: "서신서" },
-  "1 Peter": { ko: "베드로전서", abbr: "벧전", isOT: false, section: "서신서" }, "베드로전서": { ko: "베드로전서", en: "1 Peter", abbr: "벧전", isOT: false, section: "서신서" },
-  "2 Peter": { ko: "베드로후서", abbr: "벧후", isOT: false, section: "서신서" }, "베드로후서": { ko: "베드로후서", en: "2 Peter", abbr: "벧후", isOT: false, section: "서신서" },
-  "1 John": { ko: "요한일서", abbr: "요일", isOT: false, section: "서신서" }, "요한일서": { ko: "요한일서", en: "1 John", abbr: "요일", isOT: false, section: "서신서" },
-  "2 John": { ko: "요한이서", abbr: "요이", isOT: false, section: "서신서" }, "요한이서": { ko: "요한이서", en: "2 John", abbr: "요이", isOT: false, section: "서신서" },
-  "3 John": { ko: "요한삼서", abbr: "요삼", isOT: false, section: "서신서" }, "요한삼서": { ko: "요한삼서", en: "3 John", abbr: "요삼", isOT: false, section: "서신서" },
-  "Jude": { ko: "유다서", abbr: "유", isOT: false, section: "서신서" }, "유다서": { ko: "유다서", en: "Jude", abbr: "유", isOT: false, section: "서신서" },
-  "Revelation": { ko: "요한계시록", abbr: "계", isOT: false, section: "서신서" }, "요한계시록": { ko: "요한계시록", en: "Revelation", abbr: "계", isOT: false, section: "서신서" }
-};
+export const BIBLE_66_LIST = [
+  { en: "Genesis", ko: "창세기", abbr: "창", isOT: true, section: "모세오경" },
+  { en: "Exodus", ko: "출애굽기", abbr: "출", isOT: true, section: "모세오경" },
+  { en: "Leviticus", ko: "레위기", abbr: "레", isOT: true, section: "모세오경" },
+  { en: "Numbers", ko: "민수기", abbr: "민", isOT: true, section: "모세오경" },
+  { en: "Deuteronomy", ko: "신명기", abbr: "신", isOT: true, section: "모세오경" },
+  { en: "Joshua", ko: "여호수아", abbr: "수", isOT: true, section: "역사서" },
+  { en: "Judges", ko: "사사기", abbr: "삿", isOT: true, section: "역사서" },
+  { en: "Ruth", ko: "룻기", abbr: "룻", isOT: true, section: "역사서" },
+  { en: "1 Samuel", ko: "사무엘상", abbr: "삼상", isOT: true, section: "역사서" },
+  { en: "2 Samuel", ko: "사무엘하", abbr: "삼하", isOT: true, section: "역사서" },
+  { en: "1 Kings", ko: "열왕기상", abbr: "왕상", isOT: true, section: "역사서" },
+  { en: "2 Kings", ko: "열왕기하", abbr: "왕하", isOT: true, section: "역사서" },
+  { en: "1 Chronicles", ko: "역대상", abbr: "대상", isOT: true, section: "역사서" },
+  { en: "2 Chronicles", ko: "역대하", abbr: "대하", isOT: true, section: "역사서" },
+  { en: "Ezra", ko: "에스라", abbr: "스", isOT: true, section: "역사서" },
+  { en: "Nehemiah", ko: "느헤미야", abbr: "느", isOT: true, section: "역사서" },
+  { en: "Esther", ko: "에스더", abbr: "에", isOT: true, section: "역사서" },
+  { en: "Job", ko: "욥기", abbr: "욥", isOT: true, section: "시가서" },
+  { en: "Psalms", ko: "시편", abbr: "시", isOT: true, section: "시가서" },
+  { en: "Proverbs", ko: "잠언", abbr: "잠", isOT: true, section: "시가서" },
+  { en: "Ecclesiastes", ko: "전도서", abbr: "전", isOT: true, section: "시가서" },
+  { en: "Song of Solomon", ko: "아가", abbr: "아", isOT: true, section: "시가서" },
+  { en: "Isaiah", ko: "이사야", abbr: "사", isOT: true, section: "선지서" },
+  { en: "Jeremiah", ko: "예레미야", abbr: "렘", isOT: true, section: "선지서" },
+  { en: "Lamentations", ko: "예레미야애가", abbr: "애", isOT: true, section: "선지서" },
+  { en: "Ezekiel", ko: "에스겔", abbr: "겔", isOT: true, section: "선지서" },
+  { en: "Daniel", ko: "다니엘", abbr: "단", isOT: true, section: "선지서" },
+  { en: "Hosea", ko: "호세아", abbr: "호", isOT: true, section: "선지서" },
+  { en: "Joel", ko: "요엘", abbr: "욜", isOT: true, section: "선지서" },
+  { en: "Amos", ko: "아모스", abbr: "암", isOT: true, section: "선지서" },
+  { en: "Obadiah", ko: "오바댜", abbr: "옵", isOT: true, section: "선지서" },
+  { en: "Jonah", ko: "요나", abbr: "욘", isOT: true, section: "선지서" },
+  { en: "Micah", ko: "미가", abbr: "미", isOT: true, section: "선지서" },
+  { en: "Nahum", ko: "나훔", abbr: "나", isOT: true, section: "선지서" },
+  { en: "Habakkuk", ko: "하박국", abbr: "합", isOT: true, section: "선지서" },
+  { en: "Zephaniah", ko: "스바냐", abbr: "습", isOT: true, section: "선지서" },
+  { en: "Haggai", ko: "학개", abbr: "학", isOT: true, section: "선지서" },
+  { en: "Zechariah", ko: "스가랴", abbr: "슥", isOT: true, section: "선지서" },
+  { en: "Malachi", ko: "말라기", abbr: "말", isOT: true, section: "선지서" },
+  { en: "Matthew", ko: "마태복음", abbr: "마", isOT: false, section: "복음/역사" },
+  { en: "Mark", ko: "마가복음", abbr: "막", isOT: false, section: "복음/역사" },
+  { en: "Luke", ko: "누가복음", abbr: "눅", isOT: false, section: "복음/역사" },
+  { en: "John", ko: "요한복음", abbr: "요", isOT: false, section: "복음/역사" },
+  { en: "Acts", ko: "사도행전", abbr: "행", isOT: false, section: "복음/역사" },
+  { en: "Romans", ko: "로마서", abbr: "롬", isOT: false, section: "서신서" },
+  { en: "1 Corinthians", ko: "고린도전서", abbr: "고전", isOT: false, section: "서신서" },
+  { en: "2 Corinthians", ko: "고린도후서", abbr: "고후", isOT: false, section: "서신서" },
+  { en: "Galatians", ko: "갈라디아서", abbr: "갈", isOT: false, section: "서신서" },
+  { en: "Ephesians", ko: "에베소서", abbr: "엡", isOT: false, section: "서신서" },
+  { en: "Philippians", ko: "빌립보서", abbr: "빌", isOT: false, section: "서신서" },
+  { en: "Colossians", ko: "골로새서", abbr: "골", isOT: false, section: "서신서" },
+  { en: "1 Thessalonians", ko: "데살로니가전서", abbr: "살전", isOT: false, section: "서신서" },
+  { en: "2 Thessalonians", ko: "데살로니가후서", abbr: "살후", isOT: false, section: "서신서" },
+  { en: "1 Timothy", ko: "디모데전서", abbr: "딤전", isOT: false, section: "서신서" },
+  { en: "2 Timothy", ko: "디모데후서", abbr: "딤후", isOT: false, section: "서신서" },
+  { en: "Titus", ko: "디도서", abbr: "딛", isOT: false, section: "서신서" },
+  { en: "Philemon", ko: "빌레몬서", abbr: "몬", isOT: false, section: "서신서" },
+  { en: "Hebrews", ko: "히브리서", abbr: "히", isOT: false, section: "서신서" },
+  { en: "James", ko: "야고보서", abbr: "약", isOT: false, section: "서신서" },
+  { en: "1 Peter", ko: "베드로전서", abbr: "벧전", isOT: false, section: "서신서" },
+  { en: "2 Peter", ko: "베드로후서", abbr: "벧후", isOT: false, section: "서신서" },
+  { en: "1 John", ko: "요한일서", abbr: "요일", isOT: false, section: "서신서" },
+  { en: "2 John", ko: "요한이서", abbr: "요이", isOT: false, section: "서신서" },
+  { en: "3 John", ko: "요한삼서", abbr: "요삼", isOT: false, section: "서신서" },
+  { en: "Jude", ko: "유다서", abbr: "유", isOT: false, section: "서신서" },
+  { en: "Revelation", ko: "요한계시록", abbr: "계", isOT: false, section: "서신서" }
+];
+
+export const BIBLE_66_MAP = {};
+BIBLE_66_LIST.forEach((b) => {
+  BIBLE_66_MAP[b.en] = b;
+  BIBLE_66_MAP[b.ko] = b;
+  BIBLE_66_MAP[b.abbr] = b;
+});
 
 // =====================================================================
 // 📖 [앱 전역 표준] 개역개정 4판 (개역개정4판(구약+신약).txt) 통합 파서 엔진
-// - 맥체인, QT, 예배노트, 원어강해 어디서든 import 하여 즉시 사용 가능!
-// - UTF-8 및 ANSI(EUC-KR/CP949) 인코딩 자동 감지 디코딩 지원!
 // =====================================================================
-export const KRV4_ABBR_TO_EN = {
-  "창": "Genesis", "출": "Exodus", "레": "Leviticus", "민": "Numbers", "신": "Deuteronomy",
-  "수": "Joshua", "삿": "Judges", "룻": "Ruth", "삼상": "1 Samuel", "삼하": "2 Samuel",
-  "왕상": "1 Kings", "왕하": "2 Kings", "대상": "1 Chronicles", "대하": "2 Chronicles",
-  "스": "Ezra", "느": "Nehemiah", "에": "Esther", "욥": "Job", "시": "Psalms",
-  "잠": "Proverbs", "전": "Ecclesiastes", "아": "Song of Solomon", "사": "Isaiah",
-  "렘": "Jeremiah", "애": "Lamentations", "겔": "Ezekiel", "단": "Daniel", "호": "Hosea",
-  "욜": "Joel", "암": "Amos", "옵": "Obadiah", "욘": "Jonah", "미": "Micah",
-  "나": "Nahum", "합": "Habakkuk", "습": "Zephaniah", "학": "Haggai", "슥": "Zechariah", "말": "Malachi",
-  "마": "Matthew", "막": "Mark", "눅": "Luke", "요": "John", "행": "Acts",
-  "롬": "Romans", "고전": "1 Corinthians", "고후": "2 Corinthians", "갈": "Galatians",
-  "엡": "Ephesians", "빌": "Philippians", "골": "Colossians", "살전": "1 Thessalonians",
-  "살후": "2 Thessalonians", "딤전": "1 Timothy", "딤후": "2 Timothy", "딛": "Titus",
-  "몬": "Philemon", "히": "Hebrews", "약": "James", "벧전": "1 Peter", "벧후": "2 Peter",
-  "요일": "1 John", "요이": "2 John", "요삼": "3 John", "유": "Jude", "계": "Revelation"
-};
+export const KRV4_ABBR_TO_EN = {};
+BIBLE_66_LIST.forEach((b) => {
+  KRV4_ABBR_TO_EN[b.abbr] = b.en;
+});
 
 let cachedKrv4Data = null;
 let krv4LoadingPromise = null;
@@ -179,7 +172,6 @@ export const ensureKrv4TxtLoaded = async () => {
         const res = await fetch(encodeURI(path));
         if (!res.ok) continue;
 
-        // UTF-8 우선 디코딩 후 깨짐 문자(\uFFFD)가 많으면 EUC-KR(CP949)로 자동 재디코딩
         const buffer = await res.arrayBuffer();
         let rawText = new TextDecoder('utf-8').decode(buffer);
         const replacementCount = (rawText.slice(0, 4000).match(/\uFFFD/g) || []).length;
@@ -193,13 +185,11 @@ export const ensureKrv4TxtLoaded = async () => {
 
         const bookMap = {};
 
-        // 1) '창50:26 ...입관하였더라출1:1' 처럼 줄바꿈 없이 붙어 있는 구절 자동 줄바꿈 분리
         const normalizedText = rawText
           .replace(
             /([^\n\r])((?:창|출|레|민|신|수|삿|룻|삼상|삼하|왕상|왕하|대상|대하|스|느|에|욥|시|잠|전|아|사|렘|애|겔|단|호|욜|암|옵|욘|미|나|합|습|학|슥|말|마|막|눅|요|행|롬|고전|고후|갈|엡|빌|골|살전|살후|딤전|딤후|딛|몬|히|약|벧전|벧후|요일|요이|요삼|유|계)\d+:\d+\s)/g,
             '$1\n$2'
           )
-          // 2) '창35:야곱의 <야곱의 아들들...>' 처럼 절 번호가 빠진 오타 라인을 바로 앞절(22절) 후반부로 병합 보정
           .replace(/\r?\n[가-힣]{1,2}\d+:([^\d\n\r][^\n\r]*)/g, ' $1');
 
         const lines = normalizedText.split(/\r?\n/);
@@ -222,7 +212,6 @@ export const ensureKrv4TxtLoaded = async () => {
 
           const cleanContent = content.trim();
 
-          // 영문 키("Genesis"), 한글 키("창세기"), 약어 키("창") 모두로 즉시 조회 가능하도록 매핑!
           [enBook, koBook, abbr].forEach((key) => {
             if (!bookMap[key]) bookMap[key] = [];
             if (!bookMap[key][chIdx]) bookMap[key][chIdx] = [];
@@ -246,7 +235,6 @@ export const ensureKrv4TxtLoaded = async () => {
   return krv4LoadingPromise;
 };
 
-// 맥체인·QT·예배노트·원어 페이지에서 특정 장(Chapter) 전체 절 배열을 가져오는 헬퍼
 export const getKrv4ChapterVerses = (bookKey, chapterNum) => {
   const db = cachedKrv4Data || (typeof window !== 'undefined' ? window.__GTC_KRV4_DB__ : null);
   if (!db || !bookKey) return [];
@@ -255,13 +243,64 @@ export const getKrv4ChapterVerses = (bookKey, chapterNum) => {
   return Array.isArray(rawArr) ? rawArr.filter(Boolean) : [];
 };
 
-// 특정 구절 1개의 { pericope, pureText, rawText }를 가져오는 헬퍼
 export const getKrv4VerseObj = (bookKey, chapterNum, verseNum) => {
   const chapVerses = getKrv4ChapterVerses(bookKey, chapterNum);
   const vIdx = Math.max(0, (parseInt(verseNum, 10) || 1) - 1);
   const rawText = chapVerses[vIdx] || '';
   const { pericope, pureText } = splitPericopeAndVerse(rawText);
   return { pericope, pureText, rawText };
+};
+
+// =====================================================================
+// 🌐 다중 역본(쉬운성경 / WEB 영어성경) 스마트 키 탐색기 & 실시간 API 캐시
+// =====================================================================
+const liveWebChapterCache = {};
+
+export const resolveTranslationVerse = (db, bookMeta, chNum, vNum) => {
+  if (!db || !bookMeta) return '';
+  const { ko, en, abbr } = bookMeta;
+  const ch = Number(chNum);
+  const v = Number(vNum);
+
+  const flatCandidates = [
+    `${ko}-${ch}-${v}`,
+    `${en}-${ch}-${v}`,
+    `${abbr}-${ch}-${v}`,
+    `${ko}_${ch}_${v}`,
+    `${en}_${ch}_${v}`,
+    `${ko} ${ch}:${v}`,
+    `${en} ${ch}:${v}`,
+    `${abbr}${ch}:${v}`,
+    `${abbr} ${ch}:${v}`
+  ];
+  for (const key of flatCandidates) {
+    if (db[key] && typeof db[key] === 'string') return db[key];
+  }
+
+  const bookObj = db[ko] || db[en] || db[abbr];
+  if (bookObj) {
+    if (Array.isArray(bookObj)) {
+      const chapArr = bookObj[ch - 1];
+      if (Array.isArray(chapArr) && chapArr[v - 1]) {
+        const val = chapArr[v - 1];
+        return typeof val === 'string' ? val : (val.text || val.content || '');
+      }
+    } else if (typeof bookObj === 'object') {
+      const chapObj = bookObj[ch] || bookObj[String(ch)] || bookObj[ch - 1];
+      if (Array.isArray(chapObj) && chapObj[v - 1]) {
+        const val = chapObj[v - 1];
+        return typeof val === 'string' ? val : (val.text || val.content || '');
+      } else if (chapObj && typeof chapObj === 'object') {
+        const val = chapObj[v] || chapObj[String(v)];
+        if (val) return typeof val === 'string' ? val : (val.text || val.content || '');
+      }
+    }
+  }
+
+  const liveKey = `${en}-${ch}-${v}`;
+  if (liveWebChapterCache[liveKey]) return liveWebChapterCache[liveKey];
+
+  return '';
 };
 
 let cachedMasterStrongs = null;
@@ -298,6 +337,56 @@ const ensureMasterStrongs = async () => {
     });
 
   return masterStrongsLoadingPromise;
+};
+
+// 스트롱 번호 양방향 조회 헬퍼 ("G2774" ⇄ "G02774" 모두 매칭)
+const lookupStrongsEntry = (masterDict, rawId) => {
+  if (!masterDict || !rawId) return {};
+  const cleanId = String(rawId).trim().toUpperCase();
+  if (masterDict[cleanId]) return masterDict[cleanId];
+
+  const prefix = cleanId[0];
+  const numStr = cleanId.slice(1).replace(/^0+/, '') || '0';
+  const candidates = [
+    `${prefix}${numStr}`,
+    `${prefix}${numStr.padStart(4, '0')}`,
+    `${prefix}${numStr.padStart(5, '0')}`
+  ];
+  for (const cand of candidates) {
+    if (masterDict[cand]) return masterDict[cand];
+  }
+  return {};
+};
+
+const applyContextualCaseEnding = (baseKor, caseType, isOT) => {
+  if (!baseKor || baseKor === '원어 어휘') return baseKor;
+  let word = baseKor.trim();
+  if (!isOT) {
+    if (caseType === 'G' && !word.endsWith('의')) return `${word}의`;
+    if (caseType === 'D' && !word.endsWith('에게') && !word.endsWith('에')) return `${word}에게`;
+    if (caseType === 'A') {
+      const lastChar = word.charCodeAt(word.length - 1);
+      const hasBatchim = (lastChar - 0xac00) % 28 > 0;
+      if (!word.endsWith('을') && !word.endsWith('를')) return `${word}${hasBatchim ? '을' : '를'}`;
+    }
+  }
+  if (isOT && caseType === 'CONSTRUCT' && !word.endsWith('의') && !word.includes('의')) {
+    return `${word}의`;
+  }
+  return word;
+};
+
+const fetchQuickKoreanTranslate = async (text) => {
+  if (!text || typeof text !== 'string') return '';
+  try {
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=ko&dt=t&q=${encodeURIComponent(text.slice(0, 1800))}`;
+    const res = await fetch(url);
+    if (!res.ok) return '';
+    const data = await res.json();
+    return data[0]?.map(c => c[0]).join('') || '';
+  } catch {
+    return '';
+  }
 };
 
 const cleanTypography = (text, isOT) => {
@@ -861,6 +950,7 @@ export default function Bible({
   const [sermonSummaryData, setSermonSummaryData] = useState(null);
   const [viewMode, setViewMode] = useState('single'); 
   const [noteContent, setNoteContent] = useState(currDay?.bibleFreeNote || '');
+  const [cellSyncToast, setCellSyncToast] = useState(false);
 
   // 📖 기본 성경 역본을 'krv'(개역개정 4판)으로 고정 세팅!
   const [bibleVersion, setBibleVersion] = useState(() => {
@@ -873,6 +963,7 @@ export default function Bible({
   const [krv4TxtDb, setKrv4TxtDb] = useState(() => cachedKrv4Data);
   const [easyBibleDb, setEasyBibleDb] = useState({});
   const [webBibleDb, setWebBibleDb] = useState({});
+  const [liveWebTick, setLiveWebTick] = useState(0);
 
   const handleVersionChange = (ver) => {
     setBibleVersion(ver);
@@ -902,6 +993,8 @@ export default function Bible({
   const [netNotesDb, setNetNotesDb] = useState({});
   const [targumPeshittaDb, setTargumPeshittaDb] = useState({});
   const [crossRefs, setCrossRefs] = useState([]);
+  const [translatedScholarlyMap, setTranslatedScholarlyMap] = useState({});
+  const [translatingKey, setTranslatingKey] = useState(null);
 
   const longPressTimerRef = useRef(null);
   const isLongPressActiveRef = useRef(false);
@@ -916,8 +1009,8 @@ export default function Bible({
     fetch('/data/easy_bible.json').then(r => r.ok ? r.json() : {}).then(d => setEasyBibleDb(d || {})).catch(() => {});
     fetch('/data/web_bible.json').then(r => r.ok ? r.json() : {}).then(d => setWebBibleDb(d || {})).catch(() => {});
     fetch('/data/lxx_quotes.json').then(r => r.ok ? r.json() : {}).then(d => setLxxDb(d || {})).catch(() => {});
-    fetch('/data/commentaries.json').then(r => r.ok ? r.json() : {}).then(d => setCommentaryDb(d || {})).catch(() => {});
-    fetch('/data/matthew_henry.json').then(r => r.ok ? r.json() : {}).then(d => setMatthewHenryDb(d || {})).catch(() => {});
+    fetch('/data/commentaries.json').then(r => r.ok ? r.json() : {}).then(d => setCommentaryDb(prev => ({ ...d, ...prev }))).catch(() => {});
+    fetch('/data/matthew_henry.json').then(r => r.ok ? r.json() : {}).then(d => setMatthewHenryDb(prev => ({ ...d, ...prev }))).catch(() => {});
     fetch('/data/net_notes.json').then(r => r.ok ? r.json() : {}).then(d => setNetNotesDb(d || {})).catch(() => {});
     fetch('/data/targum_peshitta.json').then(r => r.ok ? r.json() : {}).then(d => setTargumPeshittaDb(d || {})).catch(() => {});
   }, []);
@@ -961,20 +1054,67 @@ export default function Bible({
   const cBk = (getArr ? getArr(bibles) : bibles || []).find(b => b.name === sBk) || (bibles && bibles[0]);
   const currentChapterNum = parseInt(sCh, 10) || 1;
 
-  // 🌟 개역개정 4판(krv4TxtDb)이 로드되었으면 최우선 적용하고, 로딩 전에는 기본 bibles 폴백!
+  const currentBookMeta = useMemo(() => {
+    return BIBLE_66_MAP[sBk] || BIBLE_66_MAP[getKoName ? getKoName(sBk) : sBk] || BIBLE_66_LIST[0];
+  }, [sBk, getKoName]);
+
+  // 🌟 [핵심 해결] 현재 장의 학술 주석(반즈/JFB & 매튜헨리) 및 WEB 영문 성경 실시간 프리패치!
+  useEffect(() => {
+    if (!currentBookMeta || !currentChapterNum) return;
+    let isMounted = true;
+
+    fetch(`/data/commentaries_by_chapter/${currentBookMeta.ko}_${currentChapterNum}.json`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (d && isMounted) setCommentaryDb(prev => ({ ...prev, ...d }));
+      })
+      .catch(() => {});
+
+    fetch(`/data/matthew_henry_by_chapter/${currentBookMeta.ko}_${currentChapterNum}.json`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (d && isMounted) setMatthewHenryDb(prev => ({ ...prev, ...d }));
+      })
+      .catch(() => {});
+
+    const testWeb = resolveTranslationVerse(webBibleDb, currentBookMeta, currentChapterNum, 1);
+    if (!testWeb && !liveWebChapterCache[`${currentBookMeta.en}-${currentChapterNum}-1`]) {
+      fetch(`https://bible-api.com/${encodeURIComponent(`${currentBookMeta.en} ${currentChapterNum}`)}?translation=web`)
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (data && Array.isArray(data.verses)) {
+            data.verses.forEach(vObj => {
+              const vNumber = Number(vObj.verse);
+              const cleanTxt = String(vObj.text || '').replace(/\r?\n/g, ' ').trim();
+              if (vNumber && cleanTxt) {
+                liveWebChapterCache[`${currentBookMeta.en}-${currentChapterNum}-${vNumber}`] = cleanTxt;
+              }
+            });
+            if (isMounted) setLiveWebTick(t => t + 1);
+          }
+        })
+        .catch(() => {});
+    }
+
+    return () => { isMounted = false; };
+  }, [currentBookMeta, currentChapterNum, webBibleDb]);
+
+  // 개역개정 4판(krv4TxtDb) 최우선 본문 배열
   const cVs = useMemo(() => {
-    const koBookName = getKoName ? getKoName(sBk) : (BIBLE_66_MAP[sBk]?.ko || sBk);
-    const txtChap = krv4TxtDb?.[sBk]?.[currentChapterNum - 1] || krv4TxtDb?.[koBookName]?.[currentChapterNum - 1];
+    const txtChap =
+      krv4TxtDb?.[currentBookMeta.en]?.[currentChapterNum - 1] ||
+      krv4TxtDb?.[currentBookMeta.ko]?.[currentChapterNum - 1] ||
+      krv4TxtDb?.[currentBookMeta.abbr]?.[currentChapterNum - 1];
     if (Array.isArray(txtChap) && txtChap.length > 0) {
       return txtChap.filter(Boolean);
     }
     return (cBk && cBk.chapters && Array.isArray(cBk.chapters[currentChapterNum - 1]))
       ? cBk.chapters[currentChapterNum - 1]
       : [];
-  }, [krv4TxtDb, sBk, currentChapterNum, cBk, getKoName]);
+  }, [krv4TxtDb, currentBookMeta, currentChapterNum, cBk]);
 
   const isAllR = cVs.length > 0 && (getArr ? getArr(cVs) : cVs).every((_, i) => (readVerses||{})[`${sBk}-${sCh}-${i}`]);
-  const totalChapters = krv4TxtDb?.[sBk]?.length || (getArr ? getArr(cBk?.chapters) : cBk?.chapters || []).length;
+  const totalChapters = krv4TxtDb?.[currentBookMeta.en]?.length || (getArr ? getArr(cBk?.chapters) : cBk?.chapters || []).length;
   const hasPrevChapter = currentChapterNum > 1;
   const hasNextChapter = currentChapterNum < totalChapters;
 
@@ -1022,7 +1162,6 @@ export default function Bible({
     return null;
   }, [sermonSummaryData]);
 
-  // ⚠️ 주의: App.js의 cleanText가 '<천지 창조>'를 HTML 태그로 오인해 지워버리지 않도록 원본 문자열에서 먼저 소제목을 보호합니다!
   const safeGetVerseText = useCallback((verse) => {
     let verseText = "";
     if (typeof verse === 'string') {
@@ -1036,26 +1175,59 @@ export default function Bible({
     return decodeHtmlEntities(verseText);
   }, []);
 
-  const syncBibleReading = () => {
+  // 🌿 목장 모임 출석부 및 루틴 완벽 동기화
+  const syncBibleReading = useCallback(() => {
     const todayYmd = getLocalToday ? getLocalToday() : new Date().toISOString().slice(0, 10);
     
     if (supabase && (authUser?.name || authUser)) {
       const uName = typeof authUser === 'object' ? authUser?.name : authUser;
+      const cName = authUser?.cell_name || '내 목장';
       if (uName) {
-        supabase.from('attendance_records').upsert({
-          date: todayYmd,
-          user_name: uName,
-          cell_name: authUser?.cell_name || '내 목장',
-          type: '성경',
-          status: '출석'
-        }, { onConflict: 'date,user_name,type' }).then();
+        supabase.from('attendance_records').upsert([
+          { date: todayYmd, user_name: uName, cell_name: cName, type: '성경', status: '출석' }
+        ], { onConflict: 'date,user_name,type' }).then(() => {
+          setCellSyncToast(true);
+          setTimeout(() => setCellSyncToast(false), 2400);
+        });
       }
+    } else {
+      setCellSyncToast(true);
+      setTimeout(() => setCellSyncToast(false), 2400);
     }
 
-    if (updateDay) updateDay({ checks: { ...(currDay?.checks||{}), '성경읽기': true } });
+    if (updateDay) {
+      updateDay({
+        checks: {
+          ...(currDay?.checks || {}),
+          '성경': true,
+          '성경읽기': true,
+          '성경통독': true
+        }
+      });
+    }
+
+    try {
+      const daysData = JSON.parse(localStorage.getItem('days_data') || '{}');
+      const dayRec = daysData[todayYmd] || {};
+      const checks = dayRec.checks || {};
+      checks['성경'] = true;
+      checks['성경읽기'] = true;
+      checks['성경통독'] = true;
+      dayRec.checks = checks;
+      daysData[todayYmd] = dayRec;
+      localStorage.setItem('days_data', JSON.stringify(daysData));
+
+      const routineData = JSON.parse(localStorage.getItem('daily_routine') || '{}');
+      const todayRoutine = routineData[todayYmd] || {};
+      todayRoutine['bible'] = true;
+      todayRoutine['성경'] = true;
+      routineData[todayYmd] = todayRoutine;
+      localStorage.setItem('daily_routine', JSON.stringify(routineData));
+    } catch (_) {}
+
     window.dispatchEvent(new Event('storage'));
     window.dispatchEvent(new CustomEvent('bible-progress-updated'));
-  };
+  }, [getLocalToday, authUser, updateDay, currDay]);
 
   const handleToggleWholeChapter = () => {
     const u = {}; 
@@ -1072,24 +1244,71 @@ export default function Bible({
     if (s) syncBibleReading();
   };
 
-  const openVerseInspector = useCallback(async (chNum, vNum, verseText) => {
-    const rawBookName = sBk || 'Genesis';
-    const bookInfo = BIBLE_66_MAP[rawBookName] || { ko: (getKoName ? getKoName(rawBookName) : rawBookName) || rawBookName, isOT: true, section: '구약' };
-    const koBook = bookInfo.ko;
-    const isOT = bookInfo.isOT;
+  // =====================================================================
+  // 🔬 [원어 강해 인스펙터] 스트롱 번호 양방향 매칭 & 미등록 어휘 자동 번역 복구!
+  // =====================================================================
+  const handleSelectInspectorWord = useCallback(async (word) => {
+    setSelectedWordDetail(word);
+    setConcordanceList([]);
+    setConcordanceTotalCount(0);
 
-    const easyKey = `${koBook}-${chNum}-${vNum}`;
-    const easyText = easyBibleDb[easyKey] || '';
-    const webKey = `${koBook}-${chNum}-${vNum}`;
-    const webText = webBibleDb[webKey] || webBibleDb[`${rawBookName}-${chNum}-${vNum}`] || '';
+    const note = customNotesMap[word.strongs];
+    setCustomInputTrans(note?.translation || '');
+    setCustomInputMemo(note?.memo || '');
+
+    if ((word.korLemma === '원어 어휘' || !word.korLemma) && word.eng && word.eng !== 'n/a') {
+      fetchQuickKoreanTranslate(word.eng).then((koTranslated) => {
+        if (koTranslated) {
+          setSelectedWordDetail(prev => prev && prev.order === word.order ? {
+            ...prev,
+            korLemma: koTranslated,
+            korContextual: applyContextualCaseEnding(koTranslated, word.caseType, word.isOT)
+          } : prev);
+        }
+      });
+    }
+
+    if (supabase && word.strongs && !word.strongs.endsWith('0000')) {
+      try {
+        const cleanId = word.strongs.trim().toUpperCase();
+        const prefix = cleanId[0];
+        const numPart = cleanId.slice(1).replace(/^0+/, '') || '0';
+        const candidateIds = Array.from(new Set([
+          cleanId,
+          `${prefix}${numPart}`,
+          `${prefix}${numPart.padStart(4, '0')}`
+        ]));
+
+        const { data, count, error } = await supabase
+          .from('interlinear_bible')
+          .select('book, chapter, verse, original_word, korean_trans', { count: 'exact' })
+          .in('strongs_id', candidateIds)
+          .order('id', { ascending: true })
+          .limit(40);
+
+        if (!error && data) {
+          setConcordanceTotalCount(count || data.length);
+          setConcordanceList(data);
+        }
+      } catch (_) {}
+    }
+  }, [customNotesMap]);
+
+  const openVerseInspector = useCallback(async (chNum, vNum, verseText) => {
+    const koBook = currentBookMeta.ko;
+    const isOT = currentBookMeta.isOT;
+
+    const easyText = resolveTranslationVerse(easyBibleDb, currentBookMeta, chNum, vNum);
+    const webText = resolveTranslationVerse(webBibleDb, currentBookMeta, chNum, vNum);
 
     setInspectorTarget({
       book: koBook,
+      bookEn: currentBookMeta.en,
       chapter: chNum,
       verse: vNum,
       text: decodeHtmlEntities(verseText),
-      easyText: easyText,
-      webText: webText,
+      easyText,
+      webText,
       isOT
     });
     setInspectorWords([]);
@@ -1115,7 +1334,7 @@ export default function Bible({
         .order('word_order', { ascending: true });
 
       if (wordsData && wordsData.length > 0) {
-        const strongIds = Array.from(new Set(wordsData.map(w => w.strongs_id).filter(Boolean)));
+        const strongIds = Array.from(new Set(wordsData.map(w => (w.strongs_id || '').trim()).filter(Boolean)));
         let dictMap = new Map();
 
         if (strongIds.length > 0) {
@@ -1131,7 +1350,7 @@ export default function Bible({
 
         const enriched = wordsData.map(w => {
           const sId = (w.strongs_id || '').trim();
-          const master = masterDict?.[sId] || {};
+          const master = lookupStrongsEntry(masterDict, sId);
           const dbDict = dictMap.get(sId) || {};
           const morph = decodeExhaustiveMorphology(w.grammar);
 
@@ -1139,9 +1358,20 @@ export default function Bible({
           const lemmaWord = (master.original || dbDict.original_word || inflectedWord).trim();
           const isInflectedDifferent = lemmaWord && inflectedWord && lemmaWord !== inflectedWord;
 
-          const lemmaMeaning = master.korean || dbDict.meaning || w.korean_trans || '원어 어휘';
+          let lemmaMeaning = master.korean || dbDict.meaning || '';
+          if (!lemmaMeaning || !/[가-힣]/.test(lemmaMeaning)) {
+            if (w.korean_trans && /[가-힣]/.test(w.korean_trans)) {
+              lemmaMeaning = w.korean_trans;
+            } else if (master.usage && /[가-힣]/.test(master.usage)) {
+              lemmaMeaning = master.usage.split(',')[0].trim();
+            } else {
+              lemmaMeaning = '원어 어휘';
+            }
+          }
+
+          const contextualKorean = applyContextualCaseEnding(lemmaMeaning, morph.caseType, isOT);
           const finalPron = master.pron || (w.pronunciation ? `[${w.pronunciation.replace(/[[\]]/g, '')}]` : '');
-          const cleanEng = (master.eng || w.gloss || w.korean_trans || 'n/a').toLowerCase();
+          const cleanEng = (master.eng || w.gloss || w.korean_trans || 'n/a').replace(/[[\]]/g, '').toLowerCase();
           const userCustom = customNotesMap[sId] || null;
 
           return {
@@ -1151,10 +1381,12 @@ export default function Bible({
             lemma: lemmaWord,
             isInflectedDifferent,
             pron: finalPron,
-            korContextual: decodeHtmlEntities(userCustom?.translation || lemmaMeaning),
+            korContextual: decodeHtmlEntities(userCustom?.translation || contextualKorean),
             korLemma: decodeHtmlEntities(lemmaMeaning),
             eng: decodeHtmlEntities(cleanEng),
             grammarDecoded: morph.label,
+            caseType: morph.caseType,
+            isOT,
             strongs: sId || (isOT ? 'H0000' : 'G0000'),
             note: decodeHtmlEntities(master.note || ''),
             userCustomNote: userCustom
@@ -1171,38 +1403,38 @@ export default function Bible({
     } finally {
       setIsInspectorLoading(false);
     }
-  }, [sBk, getKoName, customNotesMap, easyBibleDb, webBibleDb]);
+  }, [currentBookMeta, customNotesMap, easyBibleDb, webBibleDb, handleSelectInspectorWord]);
 
-  const handleSelectInspectorWord = useCallback(async (word) => {
-    setSelectedWordDetail(word);
-    setConcordanceList([]);
-    setConcordanceTotalCount(0);
-
-    const note = customNotesMap[word.strongs];
-    setCustomInputTrans(note?.translation || '');
-    setCustomInputMemo(note?.memo || '');
-
-    if (supabase && word.strongs && !word.strongs.endsWith('0000')) {
-      try {
-        const { data, count, error } = await supabase
-          .from('interlinear_bible')
-          .select('book, chapter, verse, original_word, korean_trans', { count: 'exact' })
-          .eq('strongs_id', word.strongs)
-          .order('id', { ascending: true })
-          .limit(40);
-
-        if (!error && data) {
-          setConcordanceTotalCount(count || data.length);
-          setConcordanceList(data);
-        }
-      } catch (_) {}
+  const handleJumpToInterlinearStudio = () => {
+    if (!inspectorTarget) return;
+    try {
+      localStorage.setItem('interlinear_jump', JSON.stringify({
+        book: inspectorTarget.book,
+        chapter: Number(inspectorTarget.chapter),
+        verse: Number(inspectorTarget.verse)
+      }));
+    } catch (_) {}
+    setInspectorTarget(null);
+    if (setActiveScreen) {
+      setActiveScreen('interlinear');
     }
-  }, [customNotesMap]);
+  };
+
+  const handleTranslateScholarlyBlock = async (key, rawText) => {
+    if (translatedScholarlyMap[key]) {
+      setTranslatedScholarlyMap(prev => ({ ...prev, [key]: null }));
+      return;
+    }
+    setTranslatingKey(key);
+    const ko = await fetchQuickKoreanTranslate(rawText);
+    setTranslatedScholarlyMap(prev => ({ ...prev, [key]: ko }));
+    setTranslatingKey(null);
+  };
 
   const handleInsertWordToFreeNote = (word) => {
     const lemmaNotice = word.isInflectedDifferent ? ` (원형: ${word.lemma})` : '';
     const customMemoNotice = word.userCustomNote?.memo ? `\n   ↳ 연구 메모: ${word.userCustomNote.memo}` : '';
-    const insightLine = `\n[원어묵상] ${word.inflected}${lemmaNotice} (${word.strongs}): ${word.korContextual} — ${word.grammarDecoded}${customMemoNotice}\n`;
+    const insightLine = `\n[원어묵상] ${word.inflected}${lemmaNotice} (${word.strongs}): ${word.korContextual} (${word.eng}) — ${word.grammarDecoded}${customMemoNotice}\n`;
     
     const updated = (noteContent || '') + insightLine;
     setNoteContent(updated);
@@ -1239,6 +1471,14 @@ export default function Bible({
   return (
     <div className={`flex-1 flex flex-col h-full ${ui.bgBody} relative overflow-hidden font-sans select-none`}>
        
+       {/* 목장모임 출석 연동 토스트 알림 */}
+       {cellSyncToast && (
+         <div className="fixed top-14 left-1/2 -translate-x-1/2 z-[9999999] bg-emerald-600 text-white text-xs font-bold px-4 py-2 rounded-full shadow-2xl flex items-center gap-2 animate-fade-in">
+           <span>✓</span>
+           <span>성경 통독이 [목장 모임 출석부] 및 [오늘의 루틴]에 자동 반영되었습니다!</span>
+         </div>
+       )}
+
        {bibleViewMode === 'sermonDetail' ? (
           <div className={`flex-1 flex flex-col h-full overflow-y-auto ${ui.bgBody} relative z-10`}>
              <div>
@@ -1289,10 +1529,15 @@ export default function Bible({
              <div className={`${ui.glassCard} px-2.5 sm:px-4 py-1.5 shadow-2xs z-[60] border-b flex flex-col gap-1.5 relative pointer-events-auto rounded-none border-t-0 border-l-0 border-r-0 shrink-0`}>
                <div className="flex justify-between items-center flex-wrap gap-1.5">
                  <div className="flex items-center gap-2">
-                   <span className={`font-bold text-[15px] sm:text-[16px] ${ui.textMain}`}>{getKoName(sBk)} {sCh}장</span>
+                   <span className={`font-bold text-[15px] sm:text-[16px] ${ui.textMain}`}>{currentBookMeta.ko} {sCh}장</span>
                    {krv4TxtDb && (
                      <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
                        개역개정 4판
+                     </span>
+                   )}
+                   {(isAllR || currDay?.checks?.['성경읽기']) && (
+                     <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                       ✓ 목장모임 출석 연동됨
                      </span>
                    )}
                  </div>
@@ -1302,28 +1547,28 @@ export default function Bible({
                    <div className={`flex p-0.5 rounded-lg border text-[10.5px] font-bold ${isDark ? 'bg-black/30 border-white/10' : 'bg-stone-100 border-stone-200'}`}>
                       <button 
                         onClick={() => handleVersionChange('krv')}
-                        className={`px-2 py-0.5 rounded transition-all cursor-pointer ${bibleVersion === 'krv' ? (isDark ? 'bg-slate-800 text-white font-bold shadow-xs' : 'bg-white text-stone-900 font-bold shadow-xs') : ui.textSub}`}
+                        className={`px-2 py-0.5 rounded transition-all cursor-pointer ${bibleVersion === 'krv' ? (isDark ? 'bg-amber-500 text-stone-950 font-black shadow-xs' : 'bg-stone-900 text-white font-black shadow-xs') : ui.textSub}`}
                         title="개역개정 4판 단독"
                       >
                         개역개정4판
                       </button>
                       <button 
                         onClick={() => handleVersionChange('easy')}
-                        className={`px-2 py-0.5 rounded transition-all cursor-pointer ${bibleVersion === 'easy' ? (isDark ? 'bg-slate-800 text-white font-bold shadow-xs' : 'bg-white text-stone-900 font-bold shadow-xs') : ui.textSub}`}
+                        className={`px-2 py-0.5 rounded transition-all cursor-pointer ${bibleVersion === 'easy' ? (isDark ? 'bg-amber-500 text-stone-950 font-black shadow-xs' : 'bg-stone-900 text-white font-black shadow-xs') : ui.textSub}`}
                         title="쉬운성경"
                       >
                         쉬운성경
                       </button>
                       <button 
                         onClick={() => handleVersionChange('web')}
-                        className={`px-2 py-0.5 rounded transition-all cursor-pointer ${bibleVersion === 'web' ? (isDark ? 'bg-slate-800 text-white font-bold shadow-xs' : 'bg-white text-stone-900 font-bold shadow-xs') : ui.textSub}`}
+                        className={`px-2 py-0.5 rounded transition-all cursor-pointer ${bibleVersion === 'web' ? (isDark ? 'bg-amber-500 text-stone-950 font-black shadow-xs' : 'bg-stone-900 text-white font-black shadow-xs') : ui.textSub}`}
                         title="WEB 영어"
                       >
                         WEB
                       </button>
                       <button 
                         onClick={() => handleVersionChange('parallel')}
-                        className={`px-2 py-0.5 rounded transition-all cursor-pointer ${bibleVersion === 'parallel' ? (isDark ? 'bg-slate-800 text-white font-bold shadow-xs' : 'bg-white text-stone-900 font-bold shadow-xs') : ui.textSub}`}
+                        className={`px-2 py-0.5 rounded transition-all cursor-pointer ${bibleVersion === 'parallel' ? (isDark ? 'bg-amber-500 text-stone-950 font-black shadow-xs' : 'bg-stone-900 text-white font-black shadow-xs') : ui.textSub}`}
                         title="동시대조"
                       >
                         동시대조
@@ -1358,39 +1603,37 @@ export default function Bible({
                  <div className="flex flex-col relative z-[45] pointer-events-auto h-full overflow-hidden">
                      
                      {/* 본문 스크롤 영역 */}
-                     <div className="flex-1 overflow-y-auto hide-scrollbar pb-2">
+                     <div className="flex-1 overflow-y-auto hide-scrollbar pb-2" data-live-web-tick={liveWebTick}>
                        <div className={`${ui.glassCard} rounded-2xl p-3 sm:p-5 min-h-[400px]`}>
                        {cVs.length > 0 ? (getArr ? getArr(cVs) : cVs).map((verse, idx) => { 
+                          const vNum = idx + 1;
                           const vId = `${sBk}-${sCh}-${idx}`; 
                           const isR = (readVerses||{})[vId]; 
                           const isSel = selVerses.includes(vId); 
                           const hColor = (bibleHighlights||{})[vId];
 
-                          const koName = getKoName(sBk) || BIBLE_66_MAP[sBk]?.ko || sBk;
-                          
-                          // 설교 인용 정밀 파싱
-                          const matchedKey = checkHasSermon(koName, sBk, sCh, idx + 1);
+                          const koName = currentBookMeta.ko;
+                          const matchedKey = checkHasSermon(koName, currentBookMeta.en, sCh, vNum);
                           const rawVerseStr = safeGetVerseText(verse);
                           const { pericope, pureText: displayVerseText } = splitPericopeAndVerse(rawVerseStr);
 
-                          const easyKey = `${koName}-${sCh}-${idx + 1}`;
-                          const easyText = easyBibleDb[easyKey] || '';
-                          const webKey = `${koName}-${sCh}-${idx + 1}`;
-                          const webText = webBibleDb[webKey] || webBibleDb[`${sBk}-${sCh}-${idx + 1}`] || '';
+                          // 🌟 멀티 키 탐색기로 쉬운성경 & WEB 영어성경 완벽 인출!
+                          const easyText = resolveTranslationVerse(easyBibleDb, currentBookMeta, currentChapterNum, vNum);
+                          const webText = resolveTranslationVerse(webBibleDb, currentBookMeta, currentChapterNum, vNum);
 
                           return (
                             <div 
                               key={idx} 
                               onContextMenu={(e) => {
                                 e.preventDefault();
-                                openVerseInspector(sCh, idx + 1, displayVerseText);
+                                openVerseInspector(currentChapterNum, vNum, displayVerseText);
                               }}
                               onTouchStart={() => {
                                 isLongPressActiveRef.current = false;
                                 longPressTimerRef.current = setTimeout(() => {
                                   isLongPressActiveRef.current = true;
                                   if (window.navigator?.vibrate) window.navigator.vibrate(40);
-                                  openVerseInspector(sCh, idx + 1, displayVerseText);
+                                  openVerseInspector(currentChapterNum, vNum, displayVerseText);
                                 }, 500);
                               }}
                               onTouchMove={() => { if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current); }}
@@ -1400,7 +1643,7 @@ export default function Bible({
                               }`}
                               style={hColor && hColor !== 'transparent' ? { backgroundColor: `${hColor}33`, borderLeft: `3px solid ${hColor}` } : {}}
                             >
-                               {/* 🌟 개역개정 4판의 <천지 창조>, <에덴 동산> 등 단락 소제목(Pericope) 배지 표시! */}
+                               {/* 개역개정 4판 단락 소제목(Pericope) 배지 표시 */}
                                {pericope && (
                                  <div className="mt-2 mb-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 dark:bg-amber-400/10 border-l-4 border-amber-600 dark:border-amber-400 text-amber-900 dark:text-amber-300 font-sans font-extrabold text-[12.5px] sm:text-[13.5px] tracking-tight flex items-center gap-1.5 select-none">
                                    <span>📌</span>
@@ -1412,12 +1655,12 @@ export default function Bible({
                                  <span 
                                    onClick={(e) => {
                                      e.stopPropagation();
-                                     openVerseInspector(sCh, idx + 1, displayVerseText);
+                                     openVerseInspector(currentChapterNum, vNum, displayVerseText);
                                    }}
                                    className="font-bold font-mono text-[12px] sm:text-[13px] text-amber-700 dark:text-amber-400 mt-0.5 min-w-[20px] text-right shrink-0 select-none cursor-pointer hover:underline"
                                    title="절 번호를 누르면 원어 강해 및 연구 도구가 열립니다"
                                  >
-                                   {idx + 1}
+                                   {vNum}
                                  </span>
 
                                  <div 
@@ -1442,19 +1685,29 @@ export default function Bible({
                                  >
                                     {bibleVersion === 'krv' && <span>{displayVerseText}</span>}
                                     {bibleVersion === 'easy' && <span className="font-sans font-medium">{easyText || displayVerseText}</span>}
-                                    {bibleVersion === 'web' && <span className="text-[14px] sm:text-[15px]">{webText || "Loading WEB..."}</span>}
+                                    {bibleVersion === 'web' && (
+                                      <span>
+                                        {webText || displayVerseText}
+                                        {!webText && <span className="ml-2 text-[11px] font-sans text-amber-500">(영문 패치 중...)</span>}
+                                      </span>
+                                    )}
                                     {bibleVersion === 'parallel' && (
-                                      <div className="space-y-1">
-                                        <div>{displayVerseText}</div>
+                                      <div className="space-y-1.5 py-0.5">
+                                        <div>
+                                          <span className="inline-block px-1.5 py-0.2 mr-1.5 rounded text-[9.5px] font-sans font-bold bg-amber-500/15 text-amber-800 dark:text-amber-300">
+                                            개역개정4판
+                                          </span>
+                                          {displayVerseText}
+                                        </div>
                                         {easyText && (
-                                          <div className="text-[13.5px] sm:text-[14px] font-sans text-emerald-800 dark:text-emerald-300">
-                                            <span className="text-[9.5px] font-bold text-emerald-600 dark:text-emerald-400 mr-1">[쉬운]</span>
+                                          <div className="text-[13.5px] sm:text-[14px] font-sans text-emerald-800 dark:text-emerald-300 pl-2.5 border-l-2 border-emerald-500/40">
+                                            <span className="text-[9.5px] font-bold text-emerald-600 dark:text-emerald-400 mr-1.5">[쉬운성경]</span>
                                             {easyText}
                                           </div>
                                         )}
                                         {webText && (
-                                          <div className="text-[13px] sm:text-[13.5px] text-blue-800 dark:text-blue-300">
-                                            <span className="text-[9.5px] font-bold text-blue-600 dark:text-blue-400 mr-1">[WEB]</span>
+                                          <div className="text-[13px] sm:text-[13.5px] text-sky-800 dark:text-sky-300 pl-2.5 border-l-2 border-sky-500/40">
+                                            <span className="text-[9.5px] font-sans font-bold text-sky-600 dark:text-sky-400 mr-1.5">[WEB 영어]</span>
                                             {webText}
                                           </div>
                                         )}
@@ -1519,7 +1772,7 @@ export default function Bible({
                              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                            </svg>
                            <span>
-                             {isAllR ? '완독 완료 (누르면 취소)' : `${getKoName(sBk)} ${sCh}장 전체 완독`}
+                             {isAllR ? '완독 완료 (목장연동 · 누르면 취소)' : `${currentBookMeta.ko} ${sCh}장 전체 완독`}
                            </span>
                          </button>
 
@@ -1547,7 +1800,7 @@ export default function Bible({
                    <div className="flex flex-col h-full relative z-[45] pointer-events-auto min-h-[450px]">
                      <BibleTranscriptionNotePanel
                        currentChapId={currentChapId}
-                       chapterTitle={`${getKoName(sBk)} ${sCh}장`}
+                       chapterTitle={`${currentBookMeta.ko} ${sCh}장`}
                        isDark={isDark}
                        noteContent={noteContent}
                        setNoteContent={setNoteContent}
@@ -1616,20 +1869,35 @@ export default function Bible({
 
        {/* 원어 연구 인스펙터 모달 */}
        {inspectorTarget && (
-        <div className="fixed inset-0 z-[999999] bg-black/75 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-3 animate-fade-in select-none">
-          <div className={`w-full sm:max-w-2xl rounded-t-3xl sm:rounded-2xl border p-3.5 sm:p-5 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden ${
-            isDark ? 'bg-[#0F141F] border-slate-700 text-white' : 'bg-white border-stone-300 text-stone-900'
-          }`}>
+        <div
+          className="fixed inset-0 z-[999999] bg-black/75 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-3 animate-fade-in select-none"
+          onClick={() => setInspectorTarget(null)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className={`w-full sm:max-w-2xl rounded-t-3xl sm:rounded-2xl border p-3.5 sm:p-5 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden ${
+              isDark ? 'bg-[#0F141F] border-slate-700 text-white' : 'bg-white border-stone-300 text-stone-900'
+            }`}
+          >
             
             <div className="border-b pb-2.5 border-stone-200 dark:border-slate-800 shrink-0 space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
+              <div className="flex justify-between items-center flex-wrap gap-1.5">
+                <span className="text-[12.5px] font-bold text-amber-700 dark:text-amber-400">
                   {inspectorTarget.book} {inspectorTarget.chapter}장 {inspectorTarget.verse}절 원어 강해
                 </span>
                 
-                <button onClick={() => setInspectorTarget(null)} className="text-xs font-bold text-stone-400 hover:text-stone-900 dark:hover:text-white p-1 cursor-pointer">
-                  닫기 ✕
-                </button>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={handleJumpToInterlinearStudio}
+                    className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-stone-900 dark:bg-white text-white dark:text-stone-900 cursor-pointer"
+                  >
+                    원어성경연구실 ➔
+                  </button>
+                  <button onClick={() => setInspectorTarget(null)} className="text-xs font-bold text-stone-400 hover:text-stone-900 dark:hover:text-white p-1 cursor-pointer">
+                    닫기 ✕
+                  </button>
+                </div>
               </div>
 
               {selectedWordDetail && (
@@ -1638,20 +1906,24 @@ export default function Bible({
                 }`}>
                   <div className="space-y-0.5 text-left">
                     <span className="text-[9px] font-bold text-stone-400 uppercase tracking-widest block">본문 출현형 (INFLECTED)</span>
-                    <div className="flex items-baseline gap-2">
+                    <div className="flex items-baseline gap-2 flex-wrap">
                       <span style={originalFontStyle(inspectorTarget.isOT)} className="text-2xl font-bold text-stone-900 dark:text-slate-100">
                         {cleanTypography(selectedWordDetail.inflected, inspectorTarget.isOT)}
                       </span>
                       <span className="text-xs font-mono text-stone-500 dark:text-slate-300">{selectedWordDetail.pron}</span>
                     </div>
                     <p className="text-xs font-bold">
-                      번역: <span className="underline underline-offset-2 text-indigo-700 dark:text-indigo-300">{selectedWordDetail.korContextual}</span>
+                      번역: <span className="underline underline-offset-2 text-amber-600 dark:text-amber-300">{selectedWordDetail.korContextual}</span>
+                      {selectedWordDetail.eng && selectedWordDetail.eng !== 'n/a' && (
+                        <span className="ml-1.5 text-[11px] font-mono text-sky-500">({selectedWordDetail.eng})</span>
+                      )}
                     </p>
+                    <p className="text-[10px] text-stone-400">{selectedWordDetail.grammarDecoded}</p>
                   </div>
 
                   <div className="space-y-0.5 border-l pl-2.5 text-left border-stone-200 dark:border-slate-700">
                     <span className="text-[9px] font-bold text-stone-400 uppercase tracking-widest block">원형 표제어 (LEMMA)</span>
-                    <div className="flex items-baseline gap-2">
+                    <div className="flex items-baseline gap-2 flex-wrap">
                       <span style={originalFontStyle(inspectorTarget.isOT)} className="text-2xl font-bold text-stone-900 dark:text-slate-100">
                         {cleanTypography(selectedWordDetail.lemma, inspectorTarget.isOT)}
                       </span>
@@ -1660,7 +1932,7 @@ export default function Bible({
                       </span>
                     </div>
                     <p className="text-xs font-bold">
-                      기본뜻: <b className="text-stone-800 dark:text-slate-200">{selectedWordDetail.korLemma}</b>
+                      기본뜻: <b className="text-emerald-600 dark:text-emerald-400">{selectedWordDetail.korLemma}</b>
                     </p>
                   </div>
                 </div>
@@ -1673,13 +1945,13 @@ export default function Bible({
                 </p>
                 {inspectorTarget.easyText && (
                   <p className="text-[12px] leading-relaxed text-emerald-800 dark:text-emerald-300">
-                    <span className="text-[9.5px] font-bold text-emerald-600 dark:text-emerald-400 mr-1">[쉬운]</span>
+                    <span className="text-[9.5px] font-bold text-emerald-600 dark:text-emerald-400 mr-1">[쉬운성경]</span>
                     {inspectorTarget.easyText}
                   </p>
                 )}
                 {inspectorTarget.webText && (
-                  <p className="text-[11.5px] font-serif leading-relaxed text-blue-800 dark:text-blue-300">
-                    <span className="text-[9.5px] font-bold text-blue-600 dark:text-blue-400 mr-1">[WEB]</span>
+                  <p className="text-[11.5px] font-serif leading-relaxed text-sky-800 dark:text-sky-300">
+                    <span className="text-[9.5px] font-bold text-sky-600 dark:text-sky-400 mr-1">[WEB]</span>
                     {inspectorTarget.webText}
                   </p>
                 )}
@@ -1693,16 +1965,16 @@ export default function Bible({
               <button
                 type="button"
                 onClick={() => setModalTab('scholarly')}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap cursor-pointer ${
+                className={`flex-1 py-1.5 rounded-lg text-[11px] font-bold whitespace-nowrap cursor-pointer ${
                   modalTab === 'scholarly' ? 'bg-stone-900 text-white dark:bg-slate-200 dark:text-stone-900 shadow-2xs' : 'text-stone-500'
                 }`}
               >
-                📜 10대 학술 사료
+                📜 10대 학술 사료 & 주석
               </button>
               <button
                 type="button"
                 onClick={() => setModalTab('concordance')}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap cursor-pointer ${
+                className={`flex-1 py-1.5 rounded-lg text-[11px] font-bold whitespace-nowrap cursor-pointer ${
                   modalTab === 'concordance' ? 'bg-stone-900 text-white dark:bg-slate-200 dark:text-stone-900 shadow-2xs' : 'text-stone-500'
                 }`}
               >
@@ -1711,7 +1983,7 @@ export default function Bible({
               <button
                 type="button"
                 onClick={() => setModalTab('custom_study')}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap cursor-pointer ${
+                className={`flex-1 py-1.5 rounded-lg text-[11px] font-bold whitespace-nowrap cursor-pointer ${
                   modalTab === 'custom_study' ? 'bg-stone-900 text-white dark:bg-slate-200 dark:text-stone-900 shadow-2xs' : 'text-stone-500'
                 }`}
               >
@@ -1722,7 +1994,7 @@ export default function Bible({
             {/* 본문 스크롤 */}
             <div className="overflow-y-auto hide-scrollbar space-y-2 flex-1 text-xs text-left">
               <div className={`p-2.5 rounded-xl border ${isDark ? 'bg-[#141A26] border-slate-700' : 'bg-stone-50 border-stone-200'}`}>
-                <span className="text-[9.5px] font-bold text-stone-400 uppercase tracking-wider block mb-1">어절 선택</span>
+                <span className="text-[9.5px] font-bold text-stone-400 uppercase tracking-wider block mb-1">어절 선택 (터치 시 원어 분석)</span>
                 {isInspectorLoading ? (
                   <div className="py-3 text-center text-stone-400">어휘 로딩 중...</div>
                 ) : (
@@ -1734,7 +2006,7 @@ export default function Bible({
                         style={originalFontStyle(inspectorTarget.isOT)}
                         className={`text-[19px] sm:text-[22px] font-bold px-1.5 py-0.5 rounded cursor-pointer transition-all ${
                           selectedWordDetail?.order === w.order 
-                            ? 'bg-amber-600 text-white ring-2 ring-amber-500' 
+                            ? 'bg-amber-500 text-stone-950 ring-2 ring-amber-400' 
                             : isDark ? 'text-slate-100 hover:bg-white/10' : 'text-stone-900 hover:bg-black/5'
                         }`}
                       >
@@ -1772,15 +2044,37 @@ export default function Bible({
 
                   {currentCommentary && (
                     <div className="p-2.5 rounded-xl border bg-indigo-50/70 border-indigo-200 dark:bg-indigo-950/20 dark:border-indigo-900/60 text-indigo-950 dark:text-indigo-200">
-                      <span className="font-bold text-[11px] block mb-0.5">📖 학술 주석 ({currentCommentary.commentator})</span>
-                      <p className="text-[11.5px] leading-relaxed font-serif">{decodeHtmlEntities(currentCommentary.exegesis)}</p>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-bold text-[11px]">📖 학술 주석 ({currentCommentary.commentator})</span>
+                        <button
+                          type="button"
+                          onClick={() => handleTranslateScholarlyBlock(`comm_${currentKey}`, currentCommentary.exegesis)}
+                          className="px-2 py-0.5 rounded bg-indigo-600 text-white text-[10px] font-bold cursor-pointer"
+                        >
+                          {translatingKey === `comm_${currentKey}` ? '번역 중...' : translatedScholarlyMap[`comm_${currentKey}`] ? '원문 보기' : '한국어 번역'}
+                        </button>
+                      </div>
+                      <p className="text-[11.5px] leading-relaxed font-serif">
+                        {decodeHtmlEntities(translatedScholarlyMap[`comm_${currentKey}`] || currentCommentary.exegesis)}
+                      </p>
                     </div>
                   )}
 
                   {currentMatthewHenry && (
                     <div className="p-2.5 rounded-xl border bg-emerald-50/70 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-900/60 text-emerald-950 dark:text-emerald-200">
-                      <span className="font-bold text-[11px] block mb-0.5">🌿 매튜 헨리 묵상 강해</span>
-                      <p className="text-[11.5px] leading-relaxed font-serif">{decodeHtmlEntities(currentMatthewHenry.devotionalExegesis)}</p>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-bold text-[11px]">🌿 매튜 헨리 묵상 강해</span>
+                        <button
+                          type="button"
+                          onClick={() => handleTranslateScholarlyBlock(`mh_${currentKey}`, currentMatthewHenry.devotionalExegesis)}
+                          className="px-2 py-0.5 rounded bg-emerald-600 text-white text-[10px] font-bold cursor-pointer"
+                        >
+                          {translatingKey === `mh_${currentKey}` ? '번역 중...' : translatedScholarlyMap[`mh_${currentKey}`] ? '원문 보기' : '한국어 번역'}
+                        </button>
+                      </div>
+                      <p className="text-[11.5px] leading-relaxed font-serif">
+                        {decodeHtmlEntities(translatedScholarlyMap[`mh_${currentKey}`] || currentMatthewHenry.devotionalExegesis)}
+                      </p>
                     </div>
                   )}
 
