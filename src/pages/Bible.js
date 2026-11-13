@@ -49,73 +49,219 @@ const decryptField = (cipherText) => {
 // =====================================================================
 // 성경 66권 마스터 맵
 // =====================================================================
-const BIBLE_66_MAP = {
-  "Genesis": { ko: "창세기", isOT: true, section: "모세오경" }, "창세기": { ko: "창세기", isOT: true, section: "모세오경" },
-  "Exodus": { ko: "출애굽기", isOT: true, section: "모세오경" }, "출애굽기": { ko: "출애굽기", isOT: true, section: "모세오경" },
-  "Leviticus": { ko: "레위기", isOT: true, section: "모세오경" }, "레위기": { ko: "레위기", isOT: true, section: "모세오경" },
-  "Numbers": { ko: "민수기", isOT: true, section: "모세오경" }, "민수기": { ko: "민수기", isOT: true, section: "모세오경" },
-  "Deuteronomy": { ko: "신명기", isOT: true, section: "모세오경" }, "신명기": { ko: "신명기", isOT: true, section: "모세오경" },
-  "Joshua": { ko: "여호수아", isOT: true, section: "역사서" }, "여호수아": { ko: "여호수아", isOT: true, section: "역사서" },
-  "Judges": { ko: "사사기", isOT: true, section: "역사서" }, "사사기": { ko: "사사기", isOT: true, section: "역사서" },
-  "Ruth": { ko: "룻기", isOT: true, section: "역사서" }, "룻기": { ko: "룻기", isOT: true, section: "역사서" },
-  "1 Samuel": { ko: "사무엘상", isOT: true, section: "역사서" }, "사무엘상": { ko: "사무엘상", isOT: true, section: "역사서" },
-  "2 Samuel": { ko: "사무엘하", isOT: true, section: "역사서" }, "사무엘하": { ko: "사무엘하", isOT: true, section: "역사서" },
-  "1 Kings": { ko: "열왕기상", isOT: true, section: "역사서" }, "열왕기상": { ko: "열왕기상", isOT: true, section: "역사서" },
-  "2 Kings": { ko: "열왕기하", isOT: true, section: "역사서" }, "열왕기하": { ko: "열왕기하", isOT: true, section: "역사서" },
-  "1 Chronicles": { ko: "역대상", isOT: true, section: "역사서" }, "역대상": { ko: "역대상", isOT: true, section: "역사서" },
-  "2 Chronicles": { ko: "역대하", isOT: true, section: "역사서" }, "역대하": { ko: "역대하", isOT: true, section: "역사서" },
-  "Ezra": { ko: "에스라", isOT: true, section: "역사서" }, "에스라": { ko: "에스라", isOT: true, section: "역사서" },
-  "Nehemiah": { ko: "느헤미야", isOT: true, section: "역사서" }, "느헤미야": { ko: "느헤미야", isOT: true, section: "역사서" },
-  "Esther": { ko: "에스더", isOT: true, section: "역사서" }, "에스더": { ko: "에스더", isOT: true, section: "역사서" },
-  "Job": { ko: "욥기", isOT: true, section: "시가서" }, "욥기": { ko: "욥기", isOT: true, section: "시가서" },
-  "Psalms": { ko: "시편", isOT: true, section: "시가서" }, "시편": { ko: "시편", isOT: true, section: "시가서" },
-  "Proverbs": { ko: "잠언", isOT: true, section: "시가서" }, "잠언": { ko: "잠언", isOT: true, section: "시가서" },
-  "Ecclesiastes": { ko: "전도서", isOT: true, section: "시가서" }, "전도서": { ko: "전도서", isOT: true, section: "시가서" },
-  "Song of Solomon": { ko: "아가", isOT: true, section: "시가서" }, "아가": { ko: "아가", isOT: true, section: "시가서" },
-  "Isaiah": { ko: "이사야", isOT: true, section: "선지서" }, "이사야": { ko: "이사야", isOT: true, section: "선지서" },
-  "Jeremiah": { ko: "예레미야", isOT: true, section: "선지서" }, "예레미야": { ko: "예레미야", isOT: true, section: "선지서" },
-  "Lamentations": { ko: "예레미야애가", isOT: true, section: "선지서" }, "예레미야애가": { ko: "예레미야애가", isOT: true, section: "선지서" },
-  "Ezekiel": { ko: "에스겔", isOT: true, section: "선지서" }, "에스겔": { ko: "에스겔", isOT: true, section: "선지서" },
-  "Daniel": { ko: "다니엘", isOT: true, section: "선지서" }, "다니엘": { ko: "다니엘", isOT: true, section: "선지서" },
-  "Hosea": { ko: "호세아", isOT: true, section: "선지서" }, "호세아": { ko: "호세아", isOT: true, section: "선지서" },
-  "Joel": { ko: "요엘", isOT: true, section: "선지서" }, "요엘": { ko: "요엘", isOT: true, section: "선지서" },
-  "Amos": { ko: "아모스", isOT: true, section: "선지서" }, "아모스": { ko: "아모스", isOT: true, section: "선지서" },
-  "Obadiah": { ko: "오바댜", isOT: true, section: "선지서" }, "오바댜": { ko: "오바댜", isOT: true, section: "선지서" },
-  "Jonah": { ko: "요나", isOT: true, section: "선지서" }, "요나": { ko: "요나", isOT: true, section: "선지서" },
-  "Micah": { ko: "미가", isOT: true, section: "선지서" }, "미가": { ko: "미가", isOT: true, section: "선지서" },
-  "Nahum": { ko: "나훔", isOT: true, section: "선지서" }, "나훔": { ko: "나훔", isOT: true, section: "선지서" },
-  "Habakkuk": { ko: "하박국", isOT: true, section: "선지서" }, "하박국": { ko: "하박국", isOT: true, section: "선지서" },
-  "Zephaniah": { ko: "스바냐", isOT: true, section: "선지서" }, "스바냐": { ko: "스바냐", isOT: true, section: "선지서" },
-  "Haggai": { ko: "학개", isOT: true, section: "선지서" }, "학개": { ko: "학개", isOT: true, section: "선지서" },
-  "Zechariah": { ko: "스가랴", isOT: true, section: "선지서" }, "스가랴": { ko: "스가랴", isOT: true, section: "선지서" },
-  "Malachi": { ko: "말라기", isOT: true, section: "선지서" }, "말라기": { ko: "말라기", isOT: true, section: "선지서" },
-  "Matthew": { ko: "마태복음", isOT: false, section: "복음/역사" }, "마태복음": { ko: "마태복음", isOT: false, section: "복음/역사" },
-  "Mark": { ko: "마가복음", isOT: false, section: "복음/역사" }, "마가복음": { ko: "마가복음", isOT: false, section: "복음/역사" },
-  "Luke": { ko: "누가복음", isOT: false, section: "복음/역사" }, "누가복음": { ko: "누가복음", isOT: false, section: "복음/역사" },
-  "John": { ko: "요한복음", isOT: false, section: "복음/역사" }, "요한복음": { ko: "요한복음", isOT: false, section: "복음/역사" },
-  "Acts": { ko: "사도행전", isOT: false, section: "복음/역사" }, "사도행전": { ko: "사도행전", isOT: false, section: "복음/역사" },
-  "Romans": { ko: "로마서", isOT: false, section: "서신서" }, "로마서": { ko: "로마서", isOT: false, section: "서신서" },
-  "1 Corinthians": { ko: "고린도전서", isOT: false, section: "서신서" }, "고린도전서": { ko: "고린도전서", isOT: false, section: "서신서" },
-  "2 Corinthians": { ko: "고린도후서", isOT: false, section: "서신서" }, "고린도후서": { ko: "고린도후서", isOT: false, section: "서신서" },
-  "Galatians": { ko: "갈라디아서", isOT: false, section: "서신서" }, "갈라디아서": { ko: "갈라디아서", isOT: false, section: "서신서" },
-  "Ephesians": { ko: "에베소서", isOT: false, section: "서신서" }, "에베소서": { ko: "에베소서", isOT: false, section: "서신서" },
-  "Philippians": { ko: "빌립보서", isOT: false, section: "서신서" }, "빌립보서": { ko: "빌립보서", isOT: false, section: "서신서" },
-  "Colossians": { ko: "골로새서", isOT: false, section: "서신서" }, "골로새서": { ko: "골로새서", isOT: false, section: "서신서" },
-  "1 Thessalonians": { ko: "데살로니가전서", isOT: false, section: "서신서" }, "데살로니가전서": { ko: "데살로니가전서", isOT: false, section: "서신서" },
-  "2 Thessalonians": { ko: "데살로니가후서", isOT: false, section: "서신서" }, "데살로니가후서": { ko: "데살로니가후서", isOT: false, section: "서신서" },
-  "1 Timothy": { ko: "디모데전서", isOT: false, section: "서신서" }, "디모데전서": { ko: "디모데전서", isOT: false, section: "서신서" },
-  "2 Timothy": { ko: "디모데후서", isOT: false, section: "서신서" }, "디모데후서": { ko: "디모데후서", isOT: false, section: "서신서" },
-  "Titus": { ko: "디도서", isOT: false, section: "서신서" }, "디도서": { ko: "디도서", isOT: false, section: "서신서" },
-  "Philemon": { ko: "빌레몬서", isOT: false, section: "서신서" }, "빌레몬서": { ko: "빌레몬서", isOT: false, section: "서신서" },
-  "Hebrews": { ko: "히브리서", isOT: false, section: "서신서" }, "히브리서": { ko: "히브리서", isOT: false, section: "서신서" },
-  "James": { ko: "야고보서", isOT: false, section: "서신서" }, "야고보서": { ko: "야고보서", isOT: false, section: "서신서" },
-  "1 Peter": { ko: "베드로전서", isOT: false, section: "서신서" }, "베드로전서": { ko: "베드로전서", isOT: false, section: "서신서" },
-  "2 Peter": { ko: "베드로후서", isOT: false, section: "서신서" }, "베드로후서": { ko: "베드로후서", isOT: false, section: "서신서" },
-  "1 John": { ko: "요한일서", isOT: false, section: "서신서" }, "요한일서": { ko: "요한일서", isOT: false, section: "서신서" },
-  "2 John": { ko: "요한이서", isOT: false, section: "서신서" }, "요한이서": { ko: "요한이서", isOT: false, section: "서신서" },
-  "3 John": { ko: "요한삼서", isOT: false, section: "서신서" }, "요한삼서": { ko: "요한삼서", isOT: false, section: "서신서" },
-  "Jude": { ko: "유다서", isOT: false, section: "서신서" }, "유다서": { ko: "유다서", isOT: false, section: "서신서" },
-  "Revelation": { ko: "요한계시록", isOT: false, section: "서신서" }, "요한계시록": { ko: "요한계시록", isOT: false, section: "서신서" }
+export const BIBLE_66_MAP = {
+  "Genesis": { ko: "창세기", abbr: "창", isOT: true, section: "모세오경" }, "창세기": { ko: "창세기", en: "Genesis", abbr: "창", isOT: true, section: "모세오경" },
+  "Exodus": { ko: "출애굽기", abbr: "출", isOT: true, section: "모세오경" }, "출애굽기": { ko: "출애굽기", en: "Exodus", abbr: "출", isOT: true, section: "모세오경" },
+  "Leviticus": { ko: "레위기", abbr: "레", isOT: true, section: "모세오경" }, "레위기": { ko: "레위기", en: "Leviticus", abbr: "레", isOT: true, section: "모세오경" },
+  "Numbers": { ko: "민수기", abbr: "민", isOT: true, section: "모세오경" }, "민수기": { ko: "민수기", en: "Numbers", abbr: "민", isOT: true, section: "모세오경" },
+  "Deuteronomy": { ko: "신명기", abbr: "신", isOT: true, section: "모세오경" }, "신명기": { ko: "신명기", en: "Deuteronomy", abbr: "신", isOT: true, section: "모세오경" },
+  "Joshua": { ko: "여호수아", abbr: "수", isOT: true, section: "역사서" }, "여호수아": { ko: "여호수아", en: "Joshua", abbr: "수", isOT: true, section: "역사서" },
+  "Judges": { ko: "사사기", abbr: "삿", isOT: true, section: "역사서" }, "사사기": { ko: "사사기", en: "Judges", abbr: "삿", isOT: true, section: "역사서" },
+  "Ruth": { ko: "룻기", abbr: "룻", isOT: true, section: "역사서" }, "룻기": { ko: "룻기", en: "Ruth", abbr: "룻", isOT: true, section: "역사서" },
+  "1 Samuel": { ko: "사무엘상", abbr: "삼상", isOT: true, section: "역사서" }, "사무엘상": { ko: "사무엘상", en: "1 Samuel", abbr: "삼상", isOT: true, section: "역사서" },
+  "2 Samuel": { ko: "사무엘하", abbr: "삼하", isOT: true, section: "역사서" }, "사무엘하": { ko: "사무엘하", en: "2 Samuel", abbr: "삼하", isOT: true, section: "역사서" },
+  "1 Kings": { ko: "열왕기상", abbr: "왕상", isOT: true, section: "역사서" }, "열왕기상": { ko: "열왕기상", en: "1 Kings", abbr: "왕상", isOT: true, section: "역사서" },
+  "2 Kings": { ko: "열왕기하", abbr: "왕하", isOT: true, section: "역사서" }, "열왕기하": { ko: "열왕기하", en: "2 Kings", abbr: "왕하", isOT: true, section: "역사서" },
+  "1 Chronicles": { ko: "역대상", abbr: "대상", isOT: true, section: "역사서" }, "역대상": { ko: "역대상", en: "1 Chronicles", abbr: "대상", isOT: true, section: "역사서" },
+  "2 Chronicles": { ko: "역대하", abbr: "대하", isOT: true, section: "역사서" }, "역대하": { ko: "역대하", en: "2 Chronicles", abbr: "대하", isOT: true, section: "역사서" },
+  "Ezra": { ko: "에스라", abbr: "스", isOT: true, section: "역사서" }, "에스라": { ko: "에스라", en: "Ezra", abbr: "스", isOT: true, section: "역사서" },
+  "Nehemiah": { ko: "느헤미야", abbr: "느", isOT: true, section: "역사서" }, "느헤미야": { ko: "느헤미야", en: "Nehemiah", abbr: "느", isOT: true, section: "역사서" },
+  "Esther": { ko: "에스더", abbr: "에", isOT: true, section: "역사서" }, "에스더": { ko: "에스더", en: "Esther", abbr: "에", isOT: true, section: "역사서" },
+  "Job": { ko: "욥기", abbr: "욥", isOT: true, section: "시가서" }, "욥기": { ko: "욥기", en: "Job", abbr: "욥", isOT: true, section: "시가서" },
+  "Psalms": { ko: "시편", abbr: "시", isOT: true, section: "시가서" }, "시편": { ko: "시편", en: "Psalms", abbr: "시", isOT: true, section: "시가서" },
+  "Proverbs": { ko: "잠언", abbr: "잠", isOT: true, section: "시가서" }, "잠언": { ko: "잠언", en: "Proverbs", abbr: "잠", isOT: true, section: "시가서" },
+  "Ecclesiastes": { ko: "전도서", abbr: "전", isOT: true, section: "시가서" }, "전도서": { ko: "전도서", en: "Ecclesiastes", abbr: "전", isOT: true, section: "시가서" },
+  "Song of Solomon": { ko: "아가", abbr: "아", isOT: true, section: "시가서" }, "아가": { ko: "아가", en: "Song of Solomon", abbr: "아", isOT: true, section: "시가서" },
+  "Isaiah": { ko: "이사야", abbr: "사", isOT: true, section: "선지서" }, "이사야": { ko: "이사야", en: "Isaiah", abbr: "사", isOT: true, section: "선지서" },
+  "Jeremiah": { ko: "예레미야", abbr: "렘", isOT: true, section: "선지서" }, "예레미야": { ko: "예레미야", en: "Jeremiah", abbr: "렘", isOT: true, section: "선지서" },
+  "Lamentations": { ko: "예레미야애가", abbr: "애", isOT: true, section: "선지서" }, "예레미야애가": { ko: "예레미야애가", en: "Lamentations", abbr: "애", isOT: true, section: "선지서" },
+  "Ezekiel": { ko: "에스겔", abbr: "겔", isOT: true, section: "선지서" }, "에스겔": { ko: "에스겔", en: "Ezekiel", abbr: "겔", isOT: true, section: "선지서" },
+  "Daniel": { ko: "다니엘", abbr: "단", isOT: true, section: "선지서" }, "다니엘": { ko: "다니엘", en: "Daniel", abbr: "단", isOT: true, section: "선지서" },
+  "Hosea": { ko: "호세아", abbr: "호", isOT: true, section: "선지서" }, "호세아": { ko: "호세아", en: "Hosea", abbr: "호", isOT: true, section: "선지서" },
+  "Joel": { ko: "요엘", abbr: "욜", isOT: true, section: "선지서" }, "요엘": { ko: "요엘", en: "Joel", abbr: "욜", isOT: true, section: "선지서" },
+  "Amos": { ko: "아모스", abbr: "암", isOT: true, section: "선지서" }, "아모스": { ko: "아모스", en: "Amos", abbr: "암", isOT: true, section: "선지서" },
+  "Obadiah": { ko: "오바댜", abbr: "옵", isOT: true, section: "선지서" }, "오바댜": { ko: "오바댜", en: "Obadiah", abbr: "옵", isOT: true, section: "선지서" },
+  "Jonah": { ko: "요나", abbr: "욘", isOT: true, section: "선지서" }, "요나": { ko: "요나", en: "Jonah", abbr: "욘", isOT: true, section: "선지서" },
+  "Micah": { ko: "미가", abbr: "미", isOT: true, section: "선지서" }, "미가": { ko: "미가", en: "Micah", abbr: "미", isOT: true, section: "선지서" },
+  "Nahum": { ko: "나훔", abbr: "나", isOT: true, section: "선지서" }, "나훔": { ko: "나훔", en: "Nahum", abbr: "나", isOT: true, section: "선지서" },
+  "Habakkuk": { ko: "하박국", abbr: "합", isOT: true, section: "선지서" }, "하박국": { ko: "하박국", en: "Habakkuk", abbr: "합", isOT: true, section: "선지서" },
+  "Zephaniah": { ko: "스바냐", abbr: "습", isOT: true, section: "선지서" }, "스바냐": { ko: "스바냐", en: "Zephaniah", abbr: "습", isOT: true, section: "선지서" },
+  "Haggai": { ko: "학개", abbr: "학", isOT: true, section: "선지서" }, "학개": { ko: "학개", en: "Haggai", abbr: "학", isOT: true, section: "선지서" },
+  "Zechariah": { ko: "스가랴", abbr: "슥", isOT: true, section: "선지서" }, "스가랴": { ko: "스가랴", en: "Zechariah", abbr: "슥", isOT: true, section: "선지서" },
+  "Malachi": { ko: "말라기", abbr: "말", isOT: true, section: "선지서" }, "말라기": { ko: "말라기", en: "Malachi", abbr: "말", isOT: true, section: "선지서" },
+  "Matthew": { ko: "마태복음", abbr: "마", isOT: false, section: "복음/역사" }, "마태복음": { ko: "마태복음", en: "Matthew", abbr: "마", isOT: false, section: "복음/역사" },
+  "Mark": { ko: "마가복음", abbr: "막", isOT: false, section: "복음/역사" }, "마가복음": { ko: "마가복음", en: "Mark", abbr: "막", isOT: false, section: "복음/역사" },
+  "Luke": { ko: "누가복음", abbr: "눅", isOT: false, section: "복음/역사" }, "누가복음": { ko: "누가복음", en: "Luke", abbr: "눅", isOT: false, section: "복음/역사" },
+  "John": { ko: "요한복음", abbr: "요", isOT: false, section: "복음/역사" }, "요한복음": { ko: "요한복음", en: "John", abbr: "요", isOT: false, section: "복음/역사" },
+  "Acts": { ko: "사도행전", abbr: "행", isOT: false, section: "복음/역사" }, "사도행전": { ko: "사도행전", en: "Acts", abbr: "행", isOT: false, section: "복음/역사" },
+  "Romans": { ko: "로마서", abbr: "롬", isOT: false, section: "서신서" }, "로마서": { ko: "로마서", en: "Romans", abbr: "롬", isOT: false, section: "서신서" },
+  "1 Corinthians": { ko: "고린도전서", abbr: "고전", isOT: false, section: "서신서" }, "고린도전서": { ko: "고린도전서", en: "1 Corinthians", abbr: "고전", isOT: false, section: "서신서" },
+  "2 Corinthians": { ko: "고린도후서", abbr: "고후", isOT: false, section: "서신서" }, "고린도후서": { ko: "고린도후서", en: "2 Corinthians", abbr: "고후", isOT: false, section: "서신서" },
+  "Galatians": { ko: "갈라디아서", abbr: "갈", isOT: false, section: "서신서" }, "갈라디아서": { ko: "갈라디아서", en: "Galatians", abbr: "갈", isOT: false, section: "서신서" },
+  "Ephesians": { ko: "에베소서", abbr: "엡", isOT: false, section: "서신서" }, "에베소서": { ko: "에베소서", en: "Ephesians", abbr: "엡", isOT: false, section: "서신서" },
+  "Philippians": { ko: "빌립보서", abbr: "빌", isOT: false, section: "서신서" }, "빌립보서": { ko: "빌립보서", en: "Philippians", abbr: "빌", isOT: false, section: "서신서" },
+  "Colossians": { ko: "골로새서", abbr: "골", isOT: false, section: "서신서" }, "골로새서": { ko: "골로새서", en: "Colossians", abbr: "골", isOT: false, section: "서신서" },
+  "1 Thessalonians": { ko: "데살로니가전서", abbr: "살전", isOT: false, section: "서신서" }, "데살로니가전서": { ko: "데살로니가전서", en: "1 Thessalonians", abbr: "살전", isOT: false, section: "서신서" },
+  "2 Thessalonians": { ko: "데살로니가후서", abbr: "살후", isOT: false, section: "서신서" }, "데살로니가후서": { ko: "데살로니가후서", en: "2 Thessalonians", abbr: "살후", isOT: false, section: "서신서" },
+  "1 Timothy": { ko: "디모데전서", abbr: "딤전", isOT: false, section: "서신서" }, "디모데전서": { ko: "디모데전서", en: "1 Timothy", abbr: "딤전", isOT: false, section: "서신서" },
+  "2 Timothy": { ko: "디모데후서", abbr: "딤후", isOT: false, section: "서신서" }, "디모데후서": { ko: "디모데후서", en: "2 Timothy", abbr: "딤후", isOT: false, section: "서신서" },
+  "Titus": { ko: "디도서", abbr: "딛", isOT: false, section: "서신서" }, "디도서": { ko: "디도서", en: "Titus", abbr: "딛", isOT: false, section: "서신서" },
+  "Philemon": { ko: "빌레몬서", abbr: "몬", isOT: false, section: "서신서" }, "빌레몬서": { ko: "빌레몬서", en: "Philemon", abbr: "몬", isOT: false, section: "서신서" },
+  "Hebrews": { ko: "히브리서", abbr: "히", isOT: false, section: "서신서" }, "히브리서": { ko: "히브리서", en: "Hebrews", abbr: "히", isOT: false, section: "서신서" },
+  "James": { ko: "야고보서", abbr: "약", isOT: false, section: "서신서" }, "야고보서": { ko: "야고보서", en: "James", abbr: "약", isOT: false, section: "서신서" },
+  "1 Peter": { ko: "베드로전서", abbr: "벧전", isOT: false, section: "서신서" }, "베드로전서": { ko: "베드로전서", en: "1 Peter", abbr: "벧전", isOT: false, section: "서신서" },
+  "2 Peter": { ko: "베드로후서", abbr: "벧후", isOT: false, section: "서신서" }, "베드로후서": { ko: "베드로후서", en: "2 Peter", abbr: "벧후", isOT: false, section: "서신서" },
+  "1 John": { ko: "요한일서", abbr: "요일", isOT: false, section: "서신서" }, "요한일서": { ko: "요한일서", en: "1 John", abbr: "요일", isOT: false, section: "서신서" },
+  "2 John": { ko: "요한이서", abbr: "요이", isOT: false, section: "서신서" }, "요한이서": { ko: "요한이서", en: "2 John", abbr: "요이", isOT: false, section: "서신서" },
+  "3 John": { ko: "요한삼서", abbr: "요삼", isOT: false, section: "서신서" }, "요한삼서": { ko: "요한삼서", en: "3 John", abbr: "요삼", isOT: false, section: "서신서" },
+  "Jude": { ko: "유다서", abbr: "유", isOT: false, section: "서신서" }, "유다서": { ko: "유다서", en: "Jude", abbr: "유", isOT: false, section: "서신서" },
+  "Revelation": { ko: "요한계시록", abbr: "계", isOT: false, section: "서신서" }, "요한계시록": { ko: "요한계시록", en: "Revelation", abbr: "계", isOT: false, section: "서신서" }
+};
+
+// =====================================================================
+// 📖 [앱 전역 표준] 개역개정 4판 (개역개정4판(구약+신약).txt) 통합 파서 엔진
+// - 맥체인, QT, 예배노트, 원어강해 어디서든 import 하여 즉시 사용 가능!
+// - UTF-8 및 ANSI(EUC-KR/CP949) 인코딩 자동 감지 디코딩 지원!
+// =====================================================================
+export const KRV4_ABBR_TO_EN = {
+  "창": "Genesis", "출": "Exodus", "레": "Leviticus", "민": "Numbers", "신": "Deuteronomy",
+  "수": "Joshua", "삿": "Judges", "룻": "Ruth", "삼상": "1 Samuel", "삼하": "2 Samuel",
+  "왕상": "1 Kings", "왕하": "2 Kings", "대상": "1 Chronicles", "대하": "2 Chronicles",
+  "스": "Ezra", "느": "Nehemiah", "에": "Esther", "욥": "Job", "시": "Psalms",
+  "잠": "Proverbs", "전": "Ecclesiastes", "아": "Song of Solomon", "사": "Isaiah",
+  "렘": "Jeremiah", "애": "Lamentations", "겔": "Ezekiel", "단": "Daniel", "호": "Hosea",
+  "욜": "Joel", "암": "Amos", "옵": "Obadiah", "욘": "Jonah", "미": "Micah",
+  "나": "Nahum", "합": "Habakkuk", "습": "Zephaniah", "학": "Haggai", "슥": "Zechariah", "말": "Malachi",
+  "마": "Matthew", "막": "Mark", "눅": "Luke", "요": "John", "행": "Acts",
+  "롬": "Romans", "고전": "1 Corinthians", "고후": "2 Corinthians", "갈": "Galatians",
+  "엡": "Ephesians", "빌": "Philippians", "골": "Colossians", "살전": "1 Thessalonians",
+  "살후": "2 Thessalonians", "딤전": "1 Timothy", "딤후": "2 Timothy", "딛": "Titus",
+  "몬": "Philemon", "히": "Hebrews", "약": "James", "벧전": "1 Peter", "벧후": "2 Peter",
+  "요일": "1 John", "요이": "2 John", "요삼": "3 John", "유": "Jude", "계": "Revelation"
+};
+
+let cachedKrv4Data = null;
+let krv4LoadingPromise = null;
+
+// 구절 문자열에서 '<천지 창조>' 같은 소제목(Pericope)과 순수 말씀 본문을 분리
+export const splitPericopeAndVerse = (rawVerseStr) => {
+  if (!rawVerseStr || typeof rawVerseStr !== 'string') {
+    return { pericope: null, pureText: rawVerseStr || '' };
+  }
+  const match = rawVerseStr.match(/^\s*<([^>]+)>\s*(.*)$/);
+  if (match) {
+    return {
+      pericope: match[1].trim(),
+      pureText: match[2].trim()
+    };
+  }
+  return { pericope: null, pureText: rawVerseStr.trim() };
+};
+
+export const ensureKrv4TxtLoaded = async () => {
+  if (cachedKrv4Data) return cachedKrv4Data;
+  if (typeof window !== 'undefined' && window.__GTC_KRV4_DB__) {
+    cachedKrv4Data = window.__GTC_KRV4_DB__;
+    return cachedKrv4Data;
+  }
+  if (krv4LoadingPromise) return krv4LoadingPromise;
+
+  const candidatePaths = [
+    '/개역개정4판(구약+신약).txt',
+    '/data/개역개정4판(구약+신약).txt',
+    '/krv4.txt',
+    '/data/krv4.txt'
+  ];
+
+  krv4LoadingPromise = (async () => {
+    for (const path of candidatePaths) {
+      try {
+        const res = await fetch(encodeURI(path));
+        if (!res.ok) continue;
+
+        // UTF-8 우선 디코딩 후 깨짐 문자(\uFFFD)가 많으면 EUC-KR(CP949)로 자동 재디코딩
+        const buffer = await res.arrayBuffer();
+        let rawText = new TextDecoder('utf-8').decode(buffer);
+        const replacementCount = (rawText.slice(0, 4000).match(/\uFFFD/g) || []).length;
+        if (replacementCount > 5) {
+          try {
+            rawText = new TextDecoder('euc-kr').decode(buffer);
+          } catch (_) {}
+        }
+
+        if (!rawText || rawText.trim().startsWith('<!DOCTYPE') || rawText.length < 1000) continue;
+
+        const bookMap = {};
+
+        // 1) '창50:26 ...입관하였더라출1:1' 처럼 줄바꿈 없이 붙어 있는 구절 자동 줄바꿈 분리
+        const normalizedText = rawText
+          .replace(
+            /([^\n\r])((?:창|출|레|민|신|수|삿|룻|삼상|삼하|왕상|왕하|대상|대하|스|느|에|욥|시|잠|전|아|사|렘|애|겔|단|호|욜|암|옵|욘|미|나|합|습|학|슥|말|마|막|눅|요|행|롬|고전|고후|갈|엡|빌|골|살전|살후|딤전|딤후|딛|몬|히|약|벧전|벧후|요일|요이|요삼|유|계)\d+:\d+\s)/g,
+            '$1\n$2'
+          )
+          // 2) '창35:야곱의 <야곱의 아들들...>' 처럼 절 번호가 빠진 오타 라인을 바로 앞절(22절) 후반부로 병합 보정
+          .replace(/\r?\n[가-힣]{1,2}\d+:([^\d\n\r][^\n\r]*)/g, ' $1');
+
+        const lines = normalizedText.split(/\r?\n/);
+        const lineRegex = /^([가-힣]{1,2})(\d+):(\d+)\s+(.*)$/;
+
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i].trim();
+          if (!line) continue;
+          const match = line.match(lineRegex);
+          if (!match) continue;
+
+          const [, abbr, chStr, vStr, content] = match;
+          const enBook = KRV4_ABBR_TO_EN[abbr];
+          if (!enBook) continue;
+
+          const koBook = BIBLE_66_MAP[enBook]?.ko || enBook;
+          const chIdx = parseInt(chStr, 10) - 1;
+          const vIdx = parseInt(vStr, 10) - 1;
+          if (chIdx < 0 || vIdx < 0) continue;
+
+          const cleanContent = content.trim();
+
+          // 영문 키("Genesis"), 한글 키("창세기"), 약어 키("창") 모두로 즉시 조회 가능하도록 매핑!
+          [enBook, koBook, abbr].forEach((key) => {
+            if (!bookMap[key]) bookMap[key] = [];
+            if (!bookMap[key][chIdx]) bookMap[key][chIdx] = [];
+            bookMap[key][chIdx][vIdx] = cleanContent;
+          });
+        }
+
+        if (Object.keys(bookMap).length > 0) {
+          cachedKrv4Data = bookMap;
+          if (typeof window !== 'undefined') {
+            window.__GTC_KRV4_DB__ = bookMap;
+            window.dispatchEvent(new CustomEvent('krv4-bible-loaded'));
+          }
+          return cachedKrv4Data;
+        }
+      } catch (_) {}
+    }
+    return null;
+  })();
+
+  return krv4LoadingPromise;
+};
+
+// 맥체인·QT·예배노트·원어 페이지에서 특정 장(Chapter) 전체 절 배열을 가져오는 헬퍼
+export const getKrv4ChapterVerses = (bookKey, chapterNum) => {
+  const db = cachedKrv4Data || (typeof window !== 'undefined' ? window.__GTC_KRV4_DB__ : null);
+  if (!db || !bookKey) return [];
+  const chIdx = Math.max(0, (parseInt(chapterNum, 10) || 1) - 1);
+  const rawArr = db[bookKey]?.[chIdx] || db[BIBLE_66_MAP[bookKey]?.ko]?.[chIdx] || [];
+  return Array.isArray(rawArr) ? rawArr.filter(Boolean) : [];
+};
+
+// 특정 구절 1개의 { pericope, pureText, rawText }를 가져오는 헬퍼
+export const getKrv4VerseObj = (bookKey, chapterNum, verseNum) => {
+  const chapVerses = getKrv4ChapterVerses(bookKey, chapterNum);
+  const vIdx = Math.max(0, (parseInt(verseNum, 10) || 1) - 1);
+  const rawText = chapVerses[vIdx] || '';
+  const { pericope, pureText } = splitPericopeAndVerse(rawText);
+  return { pericope, pureText, rawText };
 };
 
 let cachedMasterStrongs = null;
@@ -336,8 +482,8 @@ const renderStroke = (ctx, stroke, isDark) => {
 // 🏛️ [2단 필사 전용 고성능 필기 & 타이핑 노트 패널]
 // =====================================================================
 const BibleTranscriptionNotePanel = ({ currentChapId, chapterTitle, isDark, noteContent, setNoteContent, updateDay }) => {
-  const [panelTab, setPanelTab] = useState('handwriting'); // 'handwriting' | 'typing'
-  const [paperStyle, setPaperStyle] = useState('line'); // 'dot', 'line', 'grid', 'blank'
+  const [panelTab, setPanelTab] = useState('handwriting');
+  const [paperStyle, setPaperStyle] = useState('line');
 
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
@@ -556,7 +702,6 @@ const BibleTranscriptionNotePanel = ({ currentChapId, chapterTitle, isDark, note
     <div className={`flex flex-col h-full rounded-2xl border overflow-hidden ${
       isDark ? 'bg-[#121620] border-slate-700/80' : 'bg-white border-stone-200/90 shadow-2xs'
     }`}>
-      {/* 1. 상단 모드 스위처 & 툴바 헤더 */}
       <div className={`p-2 sm:p-2.5 border-b flex flex-wrap items-center justify-between gap-1.5 shrink-0 ${
         isDark ? 'bg-[#181F2C] border-slate-700' : 'bg-stone-50 border-stone-200'
       }`}>
@@ -583,7 +728,6 @@ const BibleTranscriptionNotePanel = ({ currentChapId, chapterTitle, isDark, note
           </button>
         </div>
 
-        {/* 용지 선택기 */}
         <div className="flex items-center gap-1">
           <div className={`flex p-0.5 rounded-lg border text-[10px] font-bold ${
             isDark ? 'bg-black/30 border-slate-700' : 'bg-stone-200/70 border-stone-300'
@@ -613,12 +757,10 @@ const BibleTranscriptionNotePanel = ({ currentChapId, chapterTitle, isDark, note
         </div>
       </div>
 
-      {/* 2. 손필기 전용 정밀 제어 툴바 */}
       {panelTab === 'handwriting' && (
         <div className={`px-2 py-1.5 border-b flex items-center justify-between gap-1.5 overflow-x-auto hide-scrollbar shrink-0 text-xs ${
           isDark ? 'bg-[#151B27] border-slate-700/60' : 'bg-stone-100/70 border-stone-200'
         }`}>
-          {/* 브러시 6종 */}
           <div className="flex items-center gap-1 shrink-0">
             {tools.map(t => (
               <button
@@ -635,7 +777,6 @@ const BibleTranscriptionNotePanel = ({ currentChapId, chapterTitle, isDark, note
             ))}
           </div>
 
-          {/* 굵기 */}
           <div className="flex items-center gap-1 shrink-0 px-1">
             <span className="text-[10px] font-mono text-stone-400">{strokeWidth.toFixed(1)}px</span>
             <input
@@ -646,7 +787,6 @@ const BibleTranscriptionNotePanel = ({ currentChapId, chapterTitle, isDark, note
             />
           </div>
 
-          {/* 팔레트 */}
           <div className="flex items-center gap-1 shrink-0">
             {colorPalette.map(c => (
               <button
@@ -660,7 +800,6 @@ const BibleTranscriptionNotePanel = ({ currentChapId, chapterTitle, isDark, note
             ))}
           </div>
 
-          {/* Undo / Redo / Clear */}
           <div className="flex items-center gap-0.5 shrink-0 ml-1">
             <button onClick={handleUndo} disabled={strokes.length === 0} className="px-1.5 py-0.5 rounded text-[10px] font-bold text-stone-500 disabled:opacity-30 cursor-pointer">
               ↩ 취소
@@ -675,7 +814,6 @@ const BibleTranscriptionNotePanel = ({ currentChapId, chapterTitle, isDark, note
         </div>
       )}
 
-      {/* 3. 본문 뷰포트 (손필기 캔버스 vs 텍스트 타이핑) */}
       <div className="flex-1 relative overflow-hidden" style={getPaperBg()}>
         {panelTab === 'handwriting' ? (
           <div ref={containerRef} className="absolute inset-0 w-full h-full touch-none cursor-crosshair">
@@ -724,7 +862,7 @@ export default function Bible({
   const [viewMode, setViewMode] = useState('single'); 
   const [noteContent, setNoteContent] = useState(currDay?.bibleFreeNote || '');
 
-  // 📖 성경 번역본 모드: 'krv'(개역개정) | 'easy'(쉬운성경) | 'web'(World English Bible) | 'parallel'(동시대조)
+  // 📖 기본 성경 역본을 'krv'(개역개정 4판)으로 고정 세팅!
   const [bibleVersion, setBibleVersion] = useState(() => {
     try {
       return localStorage.getItem('bible_version_mode') || 'krv';
@@ -732,6 +870,7 @@ export default function Bible({
       return 'krv';
     }
   });
+  const [krv4TxtDb, setKrv4TxtDb] = useState(() => cachedKrv4Data);
   const [easyBibleDb, setEasyBibleDb] = useState({});
   const [webBibleDb, setWebBibleDb] = useState({});
 
@@ -767,7 +906,11 @@ export default function Bible({
   const longPressTimerRef = useRef(null);
   const isLongPressActiveRef = useRef(false);
 
+  // 앱 진입 시 개역개정 4판 텍스트 파일 최우선 로드
   useEffect(() => {
+    ensureKrv4TxtLoaded().then((parsedMap) => {
+      if (parsedMap) setKrv4TxtDb(parsedMap);
+    });
     ensureMasterStrongs();
 
     fetch('/data/easy_bible.json').then(r => r.ok ? r.json() : {}).then(d => setEasyBibleDb(d || {})).catch(() => {});
@@ -816,11 +959,22 @@ export default function Bible({
 
   const [sBk, sCh] = String(currentChapId || "Genesis-1").split('-');
   const cBk = (getArr ? getArr(bibles) : bibles || []).find(b => b.name === sBk) || (bibles && bibles[0]);
-  const cVs = (cBk && cBk.chapters && Array.isArray(cBk.chapters[parseInt(sCh, 10)-1])) ? cBk.chapters[parseInt(sCh, 10)-1] : [];
-  const isAllR = cVs.length > 0 && (getArr ? getArr(cVs) : cVs).every((_, i) => (readVerses||{})[`${sBk}-${sCh}-${i}`]);
-
-  const totalChapters = (getArr ? getArr(cBk?.chapters) : cBk?.chapters || []).length;
   const currentChapterNum = parseInt(sCh, 10) || 1;
+
+  // 🌟 개역개정 4판(krv4TxtDb)이 로드되었으면 최우선 적용하고, 로딩 전에는 기본 bibles 폴백!
+  const cVs = useMemo(() => {
+    const koBookName = getKoName ? getKoName(sBk) : (BIBLE_66_MAP[sBk]?.ko || sBk);
+    const txtChap = krv4TxtDb?.[sBk]?.[currentChapterNum - 1] || krv4TxtDb?.[koBookName]?.[currentChapterNum - 1];
+    if (Array.isArray(txtChap) && txtChap.length > 0) {
+      return txtChap.filter(Boolean);
+    }
+    return (cBk && cBk.chapters && Array.isArray(cBk.chapters[currentChapterNum - 1]))
+      ? cBk.chapters[currentChapterNum - 1]
+      : [];
+  }, [krv4TxtDb, sBk, currentChapterNum, cBk, getKoName]);
+
+  const isAllR = cVs.length > 0 && (getArr ? getArr(cVs) : cVs).every((_, i) => (readVerses||{})[`${sBk}-${sCh}-${i}`]);
+  const totalChapters = krv4TxtDb?.[sBk]?.length || (getArr ? getArr(cBk?.chapters) : cBk?.chapters || []).length;
   const hasPrevChapter = currentChapterNum > 1;
   const hasNextChapter = currentChapterNum < totalChapters;
 
@@ -868,6 +1022,7 @@ export default function Bible({
     return null;
   }, [sermonSummaryData]);
 
+  // ⚠️ 주의: App.js의 cleanText가 '<천지 창조>'를 HTML 태그로 오인해 지워버리지 않도록 원본 문자열에서 먼저 소제목을 보호합니다!
   const safeGetVerseText = useCallback((verse) => {
     let verseText = "";
     if (typeof verse === 'string') {
@@ -878,9 +1033,8 @@ export default function Bible({
     } else if (typeof verse === 'object' && verse !== null) {
        verseText = verse.text || verse.content || verse.verse || JSON.stringify(verse);
     }
-    const cleaned = cleanText ? cleanText(verseText) || verseText : verseText;
-    return decodeHtmlEntities(cleaned);
-  }, [cleanText]);
+    return decodeHtmlEntities(verseText);
+  }, []);
 
   const syncBibleReading = () => {
     const todayYmd = getLocalToday ? getLocalToday() : new Date().toISOString().slice(0, 10);
@@ -1101,7 +1255,7 @@ export default function Bible({
           </div>
        ) : bibleViewMode === 'index' ? (
           <div className="flex-1 overflow-y-auto px-2 sm:px-4 pb-24 space-y-3 relative z-10 w-full max-w-5xl mx-auto hide-scrollbar">
-             <div className="pt-1"><SubPageHeader title="성경 전체 66권" onBack={() => setActiveScreen('home')} t={t} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} /></div>
+             <div className="pt-1"><SubPageHeader title="성경 전체 66권 (개역개정 4판)" onBack={() => setActiveScreen('home')} t={t} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} /></div>
              
              <div className={`${ui.glassCard} p-4 sm:p-5 rounded-2xl text-center shadow-2xs relative z-[45] pointer-events-auto`}>
                 <span className={`text-[12px] font-bold ${isDark ? 'text-slate-300' : 'text-stone-700'} mb-2 flex items-center justify-center gap-1.5`}>📅 말씀과 함께하는 365일 기간 설정</span>
@@ -1114,14 +1268,14 @@ export default function Bible({
              </div>
              
              <div className="mt-3 relative z-[45] pointer-events-auto">
-               <h3 className={`font-bold ${ui.textMain} text-[14px] mb-2 border-b ${isDark ? 'border-white/10' : 'border-stone-200'} pb-1.5`}>구약 성경</h3>
+               <h3 className={`font-bold ${ui.textMain} text-[14px] mb-2 border-b ${isDark ? 'border-white/10' : 'border-stone-200'} pb-1.5`}>구약 성경 (39권)</h3>
                <div className="flex flex-wrap gap-1.5">
                  {(getArr ? getArr(bibles) : bibles || []).slice(0, 39).map(b => <button key={b.name} onClick={()=>{openModal('bibleChapterSelect', b);}} className={`px-2.5 py-1.5 rounded-lg text-[12px] font-semibold border ${ui.bgSubCard} ${ui.textMain} shadow-2xs hover:border-stone-400 transition-all whitespace-nowrap cursor-pointer`}>{getKoName(b.name)}</button>)}
                </div>
              </div>
              
              <div className="mt-4 relative z-[45] pointer-events-auto">
-               <h3 className={`font-bold ${ui.textMain} text-[14px] mb-2 border-b ${isDark ? 'border-white/10' : 'border-stone-200'} pb-1.5`}>신약 성경</h3>
+               <h3 className={`font-bold ${ui.textMain} text-[14px] mb-2 border-b ${isDark ? 'border-white/10' : 'border-stone-200'} pb-1.5`}>신약 성경 (27권)</h3>
                <div className="flex flex-wrap gap-1.5">
                  {(getArr ? getArr(bibles) : bibles || []).slice(39, 66).map(b => <button key={b.name} onClick={()=>{openModal('bibleChapterSelect', b);}} className={`px-2.5 py-1.5 rounded-lg text-[12px] font-semibold border ${ui.bgSubCard} ${ui.textMain} shadow-2xs hover:border-stone-400 transition-all whitespace-nowrap cursor-pointer`}>{getKoName(b.name)}</button>)}
                </div>
@@ -1134,7 +1288,14 @@ export default function Bible({
              {/* 상단 컨트롤 바 */}
              <div className={`${ui.glassCard} px-2.5 sm:px-4 py-1.5 shadow-2xs z-[60] border-b flex flex-col gap-1.5 relative pointer-events-auto rounded-none border-t-0 border-l-0 border-r-0 shrink-0`}>
                <div className="flex justify-between items-center flex-wrap gap-1.5">
-                 <span className={`font-bold text-[15px] sm:text-[16px] ${ui.textMain}`}>{getKoName(sBk)} {sCh}장</span>
+                 <div className="flex items-center gap-2">
+                   <span className={`font-bold text-[15px] sm:text-[16px] ${ui.textMain}`}>{getKoName(sBk)} {sCh}장</span>
+                   {krv4TxtDb && (
+                     <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                       개역개정 4판
+                     </span>
+                   )}
+                 </div>
                  
                  <div className="flex items-center gap-1.5 flex-wrap">
                    {/* 4대 역본 스위치 */}
@@ -1142,9 +1303,9 @@ export default function Bible({
                       <button 
                         onClick={() => handleVersionChange('krv')}
                         className={`px-2 py-0.5 rounded transition-all cursor-pointer ${bibleVersion === 'krv' ? (isDark ? 'bg-slate-800 text-white font-bold shadow-xs' : 'bg-white text-stone-900 font-bold shadow-xs') : ui.textSub}`}
-                        title="개역개정 단독"
+                        title="개역개정 4판 단독"
                       >
-                        개역개정
+                        개역개정4판
                       </button>
                       <button 
                         onClick={() => handleVersionChange('easy')}
@@ -1188,7 +1349,7 @@ export default function Bible({
                </div>
              </div>
 
-             {/* 🌟 메인 성경 뷰포트 & 모바일 최적화 하단 고정 바 */}
+             {/* 메인 성경 뷰포트 & 모바일 최적화 하단 고정 바 */}
              <div className={`flex-1 px-2 sm:px-3 md:px-4 pt-1.5 pb-2 grid gap-3 h-full relative z-10 overflow-hidden ${
                viewMode === 'split' ? 'grid-cols-1 md:grid-cols-2 max-w-[1500px]' : 'grid-cols-1 max-w-4xl'
              } mx-auto w-full`}>
@@ -1209,7 +1370,8 @@ export default function Bible({
                           
                           // 설교 인용 정밀 파싱
                           const matchedKey = checkHasSermon(koName, sBk, sCh, idx + 1);
-                          const displayVerseText = safeGetVerseText(verse);
+                          const rawVerseStr = safeGetVerseText(verse);
+                          const { pericope, pureText: displayVerseText } = splitPericopeAndVerse(rawVerseStr);
 
                           const easyKey = `${koName}-${sCh}-${idx + 1}`;
                           const easyText = easyBibleDb[easyKey] || '';
@@ -1238,8 +1400,15 @@ export default function Bible({
                               }`}
                               style={hColor && hColor !== 'transparent' ? { backgroundColor: `${hColor}33`, borderLeft: `3px solid ${hColor}` } : {}}
                             >
+                               {/* 🌟 개역개정 4판의 <천지 창조>, <에덴 동산> 등 단락 소제목(Pericope) 배지 표시! */}
+                               {pericope && (
+                                 <div className="mt-2 mb-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 dark:bg-amber-400/10 border-l-4 border-amber-600 dark:border-amber-400 text-amber-900 dark:text-amber-300 font-sans font-extrabold text-[12.5px] sm:text-[13.5px] tracking-tight flex items-center gap-1.5 select-none">
+                                   <span>📌</span>
+                                   <span>{pericope}</span>
+                                 </div>
+                               )}
+
                                <div className="flex items-start gap-2">
-                                 {/* 🌟 [핵심 수정 1] 절 번호만 깔끔하게 남기고 지저분한 [원어] [설교] 배지는 삭제했습니다! */}
                                  <span 
                                    onClick={(e) => {
                                      e.stopPropagation();
@@ -1292,7 +1461,6 @@ export default function Bible({
                                       </div>
                                     )}
 
-                                    {/* 🌟 [핵심 수정 2] 설교 데이터가 실제로 존재하는 절에만 감성적인 [✍️ 설교] 배지가 나타납니다! */}
                                     <span className="inline-flex items-center gap-1 ml-2 align-middle select-none">
                                       {matchedKey && (
                                         <button 
@@ -1421,10 +1589,16 @@ export default function Bible({
                onClick={() => { 
                  const vData = selVerses.map(id => { 
                    const [b, ch, vIdx] = id.split('-'); 
-                   const bD = (getArr ? getArr(bibles) : bibles || []).find(x => x.name === b) || (bibles && bibles[0]); 
-                   const verseRaw = (getArr ? getArr(getArr(bD?.chapters)[parseInt(ch, 10)-1]) : [])[parseInt(vIdx, 10)]; 
-                   const verseText = safeGetVerseText(verseRaw); 
-                   return { id, ref: `${getKoName(b)} ${ch}:${parseInt(vIdx, 10)+1}`, text: verseText }; 
+                   const koName = getKoName ? getKoName(b) : b;
+                   const krvVerse = krv4TxtDb?.[b]?.[parseInt(ch, 10) - 1]?.[parseInt(vIdx, 10)] ||
+                                    krv4TxtDb?.[koName]?.[parseInt(ch, 10) - 1]?.[parseInt(vIdx, 10)];
+                   let rawStr = krvVerse;
+                   if (!rawStr) {
+                     const bD = (getArr ? getArr(bibles) : bibles || []).find(x => x.name === b) || (bibles && bibles[0]); 
+                     rawStr = (getArr ? getArr(getArr(bD?.chapters)[parseInt(ch, 10)-1]) : [])[parseInt(vIdx, 10)]; 
+                   }
+                   const { pureText } = splitPericopeAndVerse(safeGetVerseText(rawStr)); 
+                   return { id, ref: `${koName} ${ch}:${parseInt(vIdx, 10)+1}`, text: pureText }; 
                  }); 
                  const combinedText = vData.map(v => `[${v.ref}] ${v.text}`).join('\n');
                  const updated = (noteContent || '') + (noteContent ? '\n\n' : '') + combinedText;
@@ -1494,7 +1668,7 @@ export default function Bible({
 
               <div className="space-y-1 text-left">
                 <p className={`text-[12.5px] font-serif font-medium leading-relaxed ${ui.textMain}`}>
-                  <span className="text-[9.5px] font-bold text-stone-400 mr-1">[개역]</span>
+                  <span className="text-[9.5px] font-bold text-amber-600 dark:text-amber-400 mr-1">[개역개정4판]</span>
                   {inspectorTarget.text}
                 </p>
                 {inspectorTarget.easyText && (

@@ -1,6 +1,7 @@
 // src/metaverse/MetaverseHub.js
 import React, { useState } from 'react';
 import VirtualChurchLobby from '../pages/VirtualChurchLobby';
+import CafeOffice2F from './CafeOffice2F';
 import Sanctuary3F from './Sanctuary3F';
 import MediaParents4F from './MediaParents4F';
 import Fellowship5F from './Dining5F';
@@ -8,6 +9,7 @@ import Education6F from './Education6F';
 
 const ACTIVE_FLOORS = [
   { id: '1F', label: '1F 로비' },
+  { id: '2F', label: '2F 카페·목양' },
   { id: '3F', label: '3F 본당' },
   { id: '4F', label: '4F 유아실' },
   { id: '5F', label: '5F 친교·찬양' },
@@ -15,8 +17,8 @@ const ACTIVE_FLOORS = [
 ];
 
 export default function MetaverseHub({ setActiveScreen }) {
-  // 방금 완성한 5층을 바로 확인하실 수 있도록 초기값을 '5F'로 설정했습니다!
-  const [currentFloor, setCurrentFloor] = useState('5F');
+  // 방금 완성한 2층을 바로 확인하실 수 있도록 초기값을 '2F'로 설정했습니다!
+  const [currentFloor, setCurrentFloor] = useState('2F');
   const [isFloorBarOpen, setIsFloorBarOpen] = useState(true);
 
   const handleExitHome = () => {
@@ -24,7 +26,7 @@ export default function MetaverseHub({ setActiveScreen }) {
   };
 
   const handleFloorChange = (targetFl) => {
-    if (['1F', '3F', '4F', '5F', '6F'].includes(targetFl)) {
+    if (['1F', '2F', '3F', '4F', '5F', '6F'].includes(targetFl)) {
       setCurrentFloor(targetFl);
     } else {
       alert(`🚧 ${targetFl} 공간은 순차 오픈 예정입니다!`);
@@ -33,7 +35,7 @@ export default function MetaverseHub({ setActiveScreen }) {
 
   return (
     <div className="w-full h-full flex flex-col relative overflow-hidden select-none">
-      {/* 우측 하단: 1F · 3F · 4F · 5F · 6F 즉시 전환 스마트 리모컨 */}
+      {/* 우측 하단: 1F · 2F · 3F · 4F · 5F · 6F 즉시 전환 스마트 리모컨 */}
       <div className="fixed bottom-2.5 right-2.5 sm:bottom-4 sm:right-4 z-40 flex items-center">
         {isFloorBarOpen ? (
           <div
@@ -81,6 +83,13 @@ export default function MetaverseHub({ setActiveScreen }) {
           <VirtualChurchLobby
             setActiveScreen={setActiveScreen}
             onChangeFloor={handleFloorChange}
+          />
+        )}
+        {currentFloor === '2F' && (
+          <CafeOffice2F
+            setActiveScreen={setActiveScreen}
+            onChangeFloor={handleFloorChange}
+            onExitHome={handleExitHome}
           />
         )}
         {currentFloor === '3F' && (

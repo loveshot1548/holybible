@@ -8,6 +8,10 @@ import {
   BibleGalaxyArcModal,
   extractAllBibleRefsFromText
 } from '../pages/BibleKnowledgeGalaxy';
+import {
+  ensureKrv4TxtLoaded,
+  splitPericopeAndVerse
+} from '../pages/Bible';
 
 // =====================================================================
 // 암호화 표준화 유틸리티
@@ -412,7 +416,7 @@ const renderStroke = (ctx, stroke, isDark) => {
 };
 
 // =====================================================================
-// 맥체인 전용 필사 & 묵상 노트 패널 (정갈한 무채색 SaaS 디자인)
+// 맥체인 전용 필사 & 묵상 노트 패널
 // =====================================================================
 const McheyneTranscriptionNotePanel = ({
   currentPlanKey,
@@ -423,7 +427,7 @@ const McheyneTranscriptionNotePanel = ({
   updateDay,
   onOpenGalaxyPopup
 }) => {
-  const [panelTab, setPanelTab] = useState('handwriting'); // 'handwriting' | 'typing'
+  const [panelTab, setPanelTab] = useState('handwriting');
   const [paperStyle, setPaperStyle] = useState('line');
 
   const canvasRef = useRef(null);
@@ -647,7 +651,6 @@ const McheyneTranscriptionNotePanel = ({
     <div className={`flex flex-col h-full rounded-xl border overflow-hidden ${
       isDark ? 'bg-[#131720] border-white/10' : 'bg-white border-stone-200/90 shadow-2xs'
     }`}>
-      {/* 상단 모드 스위처 헤더 */}
       <div className={`px-3 py-2 border-b flex flex-wrap items-center justify-between gap-1.5 shrink-0 ${
         isDark ? 'bg-[#181C26] border-white/10' : 'bg-stone-50 border-stone-200'
       }`}>
@@ -704,7 +707,6 @@ const McheyneTranscriptionNotePanel = ({
         </div>
       </div>
 
-      {/* 손필기 도구 바 */}
       {panelTab === 'handwriting' && (
         <div className={`px-3 py-1.5 border-b flex items-center justify-between gap-2 overflow-x-auto hide-scrollbar shrink-0 text-xs ${
           isDark ? 'bg-[#141821] border-white/10' : 'bg-stone-100/60 border-stone-200'
@@ -762,7 +764,6 @@ const McheyneTranscriptionNotePanel = ({
         </div>
       )}
 
-      {/* 타이핑 탭 감지구절 바 */}
       {panelTab === 'typing' && detectedTypingRefs.length > 0 && onOpenGalaxyPopup && (
         <div className={`px-3 py-1.5 border-b flex items-center gap-1.5 overflow-x-auto hide-scrollbar shrink-0 ${
           isDark ? 'bg-[#141821] border-white/10' : 'bg-stone-50 border-stone-200'
@@ -783,7 +784,6 @@ const McheyneTranscriptionNotePanel = ({
         </div>
       )}
 
-      {/* 본문 뷰포트 */}
       <div className="flex-1 relative overflow-hidden" style={getPaperBg()}>
         {panelTab === 'handwriting' ? (
           <div ref={containerRef} className="absolute inset-0 w-full h-full touch-none cursor-crosshair">
@@ -842,14 +842,12 @@ export default function Mcheyne({
   const audioChunksRef = useRef([]);
 
   const [isFocusMode, setIsFocusMode] = useState(false);
-  const [viewMode, setViewMode] = useState('split'); // 'single'(본문집중) | 'split'(2단필사) | 'mobileNote'(모바일 노트탭)
-  const [fontSizeLevel, setFontSizeLevel] = useState(1); // 0: 작게, 1: 기본, 2: 크게
+  const [viewMode, setViewMode] = useState('split');
+  const [fontSizeLevel, setFontSizeLevel] = useState(1);
   const [noteContent, setNoteContent] = useState(currDay?.mcheyneNote || '');
 
-  // 구절 선택 시 해당 절 하단에 열리는 슬림 컨텍스트 액션 바 상태 (`${ch}-${vNum}`)
   const [selectedVerseKey, setSelectedVerseKey] = useState(null);
 
-  // 맥체인 장별 강해/해설 아코디언 오픈 상태 및 외부 JSON DB
   const [showDevotionGuide, setShowDevotionGuide] = useState(false);
   const [mcheyneDevotionsDb, setMcheyneDevotionsDb] = useState({});
 
@@ -863,6 +861,7 @@ export default function Mcheyne({
     refQuery: ''
   });
 
+  // 📖 기본 성경 역본을 'krv'(개역개정 4판)으로 고정 세팅!
   const [bibleVersion, setBibleVersion] = useState(() => {
     try {
       return localStorage.getItem('mcheyne_bible_version_mode') || 'krv';
@@ -870,6 +869,7 @@ export default function Mcheyne({
       return 'krv';
     }
   });
+  const [krv4TxtDb, setKrv4TxtDb] = useState(() => (typeof window !== 'undefined' ? window.__GTC_KRV4_DB__ : null));
   const [easyBibleDb, setEasyBibleDb] = useState({});
   const [webBibleDb, setWebBibleDb] = useState({});
 
@@ -901,6 +901,10 @@ export default function Mcheyne({
   const [crossRefs, setCrossRefs] = useState([]);
 
   useEffect(() => {
+    // 개역개정 4판 텍스트 파일 최우선 로드 및 캐시 연동
+    ensureKrv4TxtLoaded().then((parsedMap) => {
+      if (parsedMap) setKrv4TxtDb(parsedMap);
+    });
     ensureMasterStrongs();
 
     fetch('/data/easy_bible.json').then(r => r.ok ? r.json() : {}).then(d => setEasyBibleDb(d || {})).catch(() => {});
@@ -923,7 +927,6 @@ export default function Mcheyne({
     setNoteContent(currDay?.mcheyneNote || '');
   }, [currDay?.mcheyneNote]);
 
-  // 플랜 전환 시 선택된 절 컨텍스트 바 초기화
   useEffect(() => {
     setSelectedVerseKey(null);
   }, [mcheynePlanIdx, date]);
@@ -1059,8 +1062,19 @@ export default function Mcheyne({
     setViewMode('split');
   }, [noteContent, updateDay]);
 
+  // 🌟 [개역개정 4판 최우선 연동] 해당 장의 절 목록을 가져올 때 krv4TxtDb에서 먼저 로드하고, 없으면 기본 bibles 폴백!
   const getDisplayVersesForChapter = useCallback((chNum) => {
-    const allVerses = (getArr ? getArr(mBookD?.chapters) : mBookD?.chapters || [])[chNum - 1] || [];
+    const rawBookName = mBookD?.name || mp?.book || 'Genesis';
+    const koBookName = BIBLE_66_MAP[rawBookName]?.ko || rawBookName;
+
+    const krv4ChapVerses =
+      krv4TxtDb?.[rawBookName]?.[chNum - 1] ||
+      krv4TxtDb?.[koBookName]?.[chNum - 1];
+
+    const allVerses = (Array.isArray(krv4ChapVerses) && krv4ChapVerses.length > 0)
+      ? krv4ChapVerses.filter(Boolean)
+      : ((getArr ? getArr(mBookD?.chapters) : mBookD?.chapters || [])[chNum - 1] || []);
+
     if (!mVerseRange || !mVerseRange[chNum]) {
       return allVerses.map((text, idx) => ({ vNum: idx + 1, text }));
     }
@@ -1068,7 +1082,7 @@ export default function Mcheyne({
     return allVerses
       .map((text, idx) => ({ vNum: idx + 1, text }))
       .filter(item => item.vNum >= start && item.vNum <= end);
-  }, [mBookD, mVerseRange, getArr]);
+  }, [krv4TxtDb, mBookD, mp, mVerseRange, getArr]);
 
   const isChapterAllRead = useCallback((chNum) => {
     const verses = getDisplayVersesForChapter(chNum);
@@ -1319,17 +1333,14 @@ export default function Mcheyne({
     }
   };
 
-  // 📍 src/pages/Mcheyne.js 내 activeBookMeta 부분을 아래로 교체하세요
   const activeBookMeta = useMemo(() => {
     const rawName = mBookD?.name || mp?.book || '창세기';
     const mapped = BIBLE_66_MAP[rawName] || { ko: rawName, isOT: true, section: '성경', theme: '하나님의 구속사와 언약 성취' };
     const firstChap = mChaps[0] || 1;
     const chapterKey = `${mapped.ko}_${firstChap}`;
 
-    // 1) 방금 1,189장 전수 생성한 장별 고유 분석 데이터 로드
     const chapData = mcheyneDevotionsDb?.chapters?.[chapterKey] || null;
 
-    // 2) 내장된 commentaries.json 및 matthew_henry.json에서 해당 장(1절~끝절)의 주석들을 자동 수집
     const chapterCommentaries = [];
     for (let v = 1; v <= 50; v++) {
       const vKey = `${mapped.ko}-${firstChap}-${v}`;
@@ -1427,6 +1438,11 @@ export default function Mcheyne({
           <h1 className={`text-[15.5px] sm:text-[16.5px] font-bold tracking-tight whitespace-nowrap ${theme.textMain}`}>
             오늘의 맥체인
           </h1>
+          {krv4TxtDb && (
+            <span className="px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300 text-[10px] font-bold border border-amber-500/30">
+              개역개정 4판
+            </span>
+          )}
           {isMoHana && partnerActivity && (
             <span className="px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10.5px] font-bold border border-emerald-500/30">
               동행 묵상 중
@@ -1435,7 +1451,6 @@ export default function Mcheyne({
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
-          {/* 글자 크기 조절 */}
           <div className={`flex items-center p-0.5 rounded-lg border text-[11px] font-bold ${isDark ? 'bg-black/30 border-white/10' : 'bg-stone-100 border-stone-200'}`}>
             <button
               onClick={() => setFontSizeLevel(l => Math.max(0, l - 1))}
@@ -1473,11 +1488,10 @@ export default function Mcheyne({
         </div>
       </header>
 
-      {/* 2. 상단 컨트롤 바 (플랜 탭 + 역본 선택 + 오디오/연구 툴바) */}
+      {/* 2. 상단 컨트롤 바 */}
       <div className={`w-full flex-col shrink-0 border-b ${theme.border} ${isFocusMode ? 'hidden' : 'flex'} ${
         isDark ? 'bg-[#121620]' : 'bg-white'
       }`}>
-        {/* 2-1. 오늘의 맥체인 4대 본문 탭 바 + 레이아웃 전환 */}
         <div className={`px-3 sm:px-5 py-2 border-b ${theme.border} flex items-center justify-between gap-2 flex-wrap`}>
           <div className="flex items-center gap-1.5 overflow-x-auto hide-scrollbar py-0.5">
             {(getArr ? getArr(mpList) : mpList || []).map((planItem, idx) => {
@@ -1499,10 +1513,10 @@ export default function Mcheyne({
           </div>
 
           <div className="flex items-center gap-1.5 shrink-0 ml-auto">
-            {/* 4대 역본 전환 */}
+            {/* 4대 역본 전환 (기본: 개역개정4판) */}
             <div className={`flex p-0.5 rounded-lg border text-[11px] font-bold ${isDark ? 'bg-[#0B0E14] border-white/10' : 'bg-stone-100 border-stone-200'}`}>
               {[
-                { id: 'krv', label: '개역개정' },
+                { id: 'krv', label: '개역개정4판' },
                 { id: 'easy', label: '쉬운성경' },
                 { id: 'web', label: 'WEB' },
                 { id: 'parallel', label: '동시대조' }
@@ -1521,7 +1535,6 @@ export default function Mcheyne({
               ))}
             </div>
 
-            {/* 뷰 모드 전환 (본문 집중 / 2단 필사) */}
             <div className={`flex p-0.5 rounded-lg border text-[11px] font-bold ${isDark ? 'bg-[#0B0E14] border-white/10' : 'bg-stone-100 border-stone-200'}`}>
               <button 
                 onClick={() => setViewMode('single')}
@@ -1566,7 +1579,9 @@ export default function Mcheyne({
                     const easyKey = `${koBookName}-${ch}-${v.vNum}`;
                     const webKey = `${koBookName}-${ch}-${v.vNum}`;
                     
-                    let textToRead = decodeHtmlEntities(safeCleanText(v.text));
+                    // 소제목(<천지 창조>)을 분리한 순수 말씀만 TTS로 낭독!
+                    const { pureText } = splitPericopeAndVerse(decodeHtmlEntities(String(v.text || '')));
+                    let textToRead = pureText;
                     if (bibleVersion === 'easy' && easyBibleDb[easyKey]) {
                       textToRead = easyBibleDb[easyKey];
                     } else if (bibleVersion === 'web' && (webBibleDb[webKey] || webBibleDb[`${mBookD?.name}-${ch}-${v.vNum}`])) {
@@ -1662,7 +1677,7 @@ export default function Mcheyne({
         </div>
       </div>
 
-      {/* 3. 본문 메인 레이아웃 (좌측 성경 리딩 뷰 + 우측 필사 노트) */}
+      {/* 3. 본문 메인 레이아웃 */}
       <div className={`flex-1 px-2.5 sm:px-4 md:px-6 pt-2.5 pb-20 grid gap-4 h-full relative z-10 overflow-hidden ${
         viewMode === 'split' ? 'grid-cols-1 lg:grid-cols-12 max-w-[1560px]' : 'grid-cols-1 max-w-4xl'
       } mx-auto w-full`}>
@@ -1670,10 +1685,7 @@ export default function Mcheyne({
         {/* 좌측 성경 본문 스트림 */}
         <div className={`${viewMode === 'split' ? 'lg:col-span-7' : ''} flex flex-col relative z-[45] pointer-events-auto h-full overflow-y-auto hide-scrollbar space-y-3`}>
           
-          {/* ===================================================================== */}
           {/* 맥체인 장별 강해 및 신학적 배경 아코디언 패널 */}
-          {/* ===================================================================== */}
-          {/* src/pages/Mcheyne.js 본문 상단 강해 카드 */}
           <div className={`rounded-xl border transition-all overflow-hidden shrink-0 ${
             isDark ? 'bg-[#121620] border-white/10' : 'bg-white border-stone-200/90 shadow-2xs'
           }`}>
@@ -1752,10 +1764,9 @@ export default function Mcheyne({
           </div>
 
           {/* ===================================================================== */}
-          {/* 성경 본문 카드 (구절별 지저분한 버튼 완전 제거 & 고밀도 리딩 뷰) */}
+          {/* 성경 본문 카드 (개역개정 4판 전문 + <천지 창조> 단락 소제목 배지 렌더링!) */}
           {/* ===================================================================== */}
           <div className={`border ${theme.panel} rounded-xl p-4 sm:p-6 min-h-[420px]`}>
-            {/* 상단 사용 안내 힌트 바 */}
             <div className={`mb-4 pb-2.5 border-b ${theme.border} flex items-center justify-between text-[11.5px] ${theme.textSub}`}>
               <span>절 번호 클릭: <b>원어 강해</b> · 본문 클릭: <b>읽음 체크 및 연구 도구</b></span>
               {audioUrl && (
@@ -1801,14 +1812,18 @@ export default function Mcheyne({
                     </button>
                   </div>
 
-                  {/* 클린 성경 본문 리스트 (각 절 우측의 원어/아크/은하계 버튼 완전 제거!) */}
+                  {/* 성경 본문 리스트 */}
                   <div className="space-y-1">
                     {displayVerses.map(({ vNum, text }) => { 
                       const vId = `${mBookD?.name}-${ch}-${vNum - 1}`; 
                       const verseKey = `${ch}-${vNum}`;
                       const isRead = (readVerses || {})[vId]; 
                       const isSelectedVerse = selectedVerseKey === verseKey;
-                      const displayVerseText = decodeHtmlEntities(safeCleanText(text));
+
+                      // ⚠️ cleanText가 '<천지 창조>'를 HTML 태그로 삭제하기 전에 먼저 소제목과 본문을 분리!
+                      const rawDecoded = decodeHtmlEntities(typeof text === 'string' ? text : (text?.text || ''));
+                      const { pericope, pureText } = splitPericopeAndVerse(rawDecoded);
+                      const displayVerseText = safeCleanText(pureText);
 
                       const koBookName = BIBLE_66_MAP[mBookD?.name]?.ko || mBookD?.name || mp?.book;
                       const easyKey = `${koBookName}-${ch}-${vNum}`;
@@ -1818,6 +1833,14 @@ export default function Mcheyne({
 
                       return ( 
                         <div key={vNum} className="rounded-lg transition-colors">
+                          {/* 🌟 개역개정 4판의 <천지 창조>, <에덴 동산> 등 단락 소제목(Pericope) 배지 표시! */}
+                          {pericope && (
+                            <div className="mt-2.5 mb-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 dark:bg-amber-400/10 border-l-4 border-amber-600 dark:border-amber-400 text-amber-900 dark:text-amber-300 font-sans font-extrabold text-[12.5px] sm:text-[13.5px] tracking-tight flex items-center gap-1.5 select-none">
+                              <span>📌</span>
+                              <span>{pericope}</span>
+                            </div>
+                          )}
+
                           <div 
                             className={`py-2 px-2.5 rounded-lg transition-all flex items-baseline gap-3 ${
                               isSelectedVerse
@@ -1835,14 +1858,14 @@ export default function Mcheyne({
                               className={`font-mono font-bold text-[12.5px] min-w-[24px] text-right shrink-0 select-none cursor-pointer transition-colors ${
                                 isRead
                                   ? 'text-stone-400 dark:text-slate-600'
-                                  : 'text-stone-500 dark:text-slate-400 hover:text-stone-950 dark:hover:text-white underline-offset-4 hover:underline'
+                                  : 'text-amber-700 dark:text-amber-400 hover:text-stone-950 dark:hover:text-white underline-offset-4 hover:underline'
                               }`}
                               title={`${vNum}절 원어 강해 열기`}
                             >
                               {vNum}
                             </button>
 
-                            {/* 성경 본문 텍스트 (클릭 시 읽음 토글 + 슬림 컨텍스트 액션 바 표시) */}
+                            {/* 성경 본문 텍스트 */}
                             <div 
                               onClick={() => { 
                                 const willBeRead = !isRead;
@@ -2008,7 +2031,7 @@ export default function Mcheyne({
       </div>
 
       {/* ===================================================================== */}
-      {/* 4. 원어 연구 인스펙터 모달 (10대 학술 코퍼스 전수 연동) */}
+      {/* 4. 원어 연구 인스펙터 모달 */}
       {/* ===================================================================== */}
       {inspectorTarget && (
         <div
@@ -2093,7 +2116,7 @@ export default function Mcheyne({
 
               <div className="space-y-1 text-left">
                 <p className={`text-[13px] font-serif font-medium leading-relaxed ${theme.textMain}`}>
-                  <span className="text-[10px] font-bold text-stone-400 mr-1.5">[개역]</span>
+                  <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 mr-1.5">[개역개정4판]</span>
                   {inspectorTarget.text}
                 </p>
                 {inspectorTarget.easyText && (
