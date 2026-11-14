@@ -680,8 +680,37 @@ export default function AdminConsole({ authUser = {}, onClose = () => {} }) {
     return null;
   }, [reports]);
 
-  const visibleCells = isMasterAdmin ? (cells || []) : (cells || []).filter(c => c.shepherd_name === currentUserName || c.name.includes(currentUserName));
-  const visibleUsers = isMasterAdmin ? (users || []) : (users || []).filter(u => (cellMembers || []).filter(m => visibleCells.map(c=>c.id).includes(m.cell_id)).map(m=>m.user_name).includes(u.name));
+  // 기존 509~510번째 줄의 visibleCells, visibleUsers를 아래 코드로 교체
+  const visibleCells = useMemo(() => {
+    if (isMasterAdmin) return cells || [];
+    const cleanUser = (currentUserName || '').trim();
+    return (cells || []).filter(c => {
+      const isShepherdMatch = (c.shepherd_name || '').trim() === cleanUser || (c.name || '').includes(cleanUser);
+      const isLeaderInMembers = (cellMembers || []).some(
+        m =>
+          String(m.cell_id) === String(c.id) &&
+          (m.user_name || '').trim() === cleanUser &&
+          ['목자', '부목자', '간사'].includes(m.assigned_role)
+      );
+      return isShepherdMatch || isLeaderInMembers;
+    });
+  }, [isMasterAdmin, cells, cellMembers, currentUserName]);
+
+  const visibleUsers = useMemo(() => {
+    const allowedCellIds = new Set(visibleCells.map(c => String(c.id)));
+    const assignedUserNames = new Set(
+      (cellMembers || [])
+        .filter(m => allowedCellIds.has(String(m.cell_id)))
+        .map(m => (m.user_name || '').trim())
+    );
+    // 목자 본인도 명단에 포함
+    visibleCells.forEach(c => {
+      if (c.shepherd_name) assignedUserNames.add(c.shepherd_name.trim());
+    });
+
+    // 마스터 관리자든 목자든 모바일 출석부에는 '실제 해당 목장에 배정된 성도'만 전달!
+    return (users || []).filter(u => assignedUserNames.has((u.name || '').trim()));
+  }, [users, visibleCells, cellMembers]);
 
   const activeCellMemberList = useMemo(() => {
     if (!activeChecklistCell) return [];

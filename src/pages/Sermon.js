@@ -1266,20 +1266,47 @@ export default function Sermon({
 
     const isMobileOrTablet =
       /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '') ||
+      (navigator.maxTouchPoints && navigator.maxTouchPoints > 2) ||
       !navigator.mediaDevices ||
       typeof navigator.mediaDevices.getDisplayMedia !== 'function';
 
+    // 📱 모바일 & 태블릿 환경: 카메라가 켜지는 현상을 원천 차단!
     if (isMobileOrTablet) {
-      if (captureInputRef.current) {
-        captureInputRef.current.click();
-        showToast('📱 방금 찍은 유튜브 스크린샷 사진을 선택하면 자막만 자동 추출됩니다!');
-      } else {
-        setMinimizedModals(prev => ({ ...prev, ocr: false }));
-        setIsOcrStudioOpen(true);
+      // 1순위: 방금 기기에서 스크린샷을 찍어 클립보드에 이미지가 들어있는지 먼저 확인 후 즉시 자동 OCR 실행!
+      try {
+        if (navigator.clipboard && navigator.clipboard.read) {
+          const items = await navigator.clipboard.read();
+          for (const item of items) {
+            const imageType = item.types.find(tp => tp.startsWith('image/'));
+            if (imageType) {
+              const blob = await item.getType(imageType);
+              const url = URL.createObjectURL(blob);
+              const img = new Image();
+              img.onload = async () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                canvas.getContext('2d').drawImage(img, 0, 0);
+                URL.revokeObjectURL(url);
+                await processCapturedCanvasToItem(canvas, '모바일 화면 캡처 스캔', null);
+              };
+              img.src = url;
+              return;
+            }
+          }
+        }
+      } catch (_) {
+        // 클립보드 권한이 없거나 비어있으면 아래 스캔 스튜디오 모달 오픈
       }
+
+      // 2순위: 카메라를 강제로 켜지 않고, 스캔 스튜디오 창을 열어 클립보드 붙여넣기 또는 갤러리 스크린샷 선택 유도
+      setMinimizedModals(prev => ({ ...prev, ocr: false }));
+      setIsOcrStudioOpen(true);
+      showToast('📱 현재 화면을 스크린샷 찍은 뒤 [클립보드 붙여넣기] 또는 [갤러리 캡처 열기]를 눌러주세요!');
       return;
     }
 
+    // 💻 PC 환경: 기존처럼 브라우저 탭 화면을 즉시 다이렉트 캡처
     if (isOcrStudioOpen) {
       setIsOcrStudioOpen(false);
       await new Promise(r => setTimeout(r, 320));
@@ -1802,13 +1829,7 @@ export default function Sermon({
     >
       <BacklinkPanel/>
 
-      <input
-        ref={captureInputRef}
-        type="file"
-        accept="image/png,image/jpeg,image/webp"
-        onChange={handleUploadCaptureFile}
-        className="hidden"
-      />
+     
 
       {/* ===================================================================== */}
       {/* 1. 상단 글로벌 헤더 바 */}
@@ -2744,35 +2765,45 @@ export default function Sermon({
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <button
                   type="button"
-                  onClick={handleDirectTabCapture}
+                  onClick={handleReadClipboardImageForOcr}
                   className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
                     isDark ? 'bg-amber-500/20 hover:bg-amber-500/30 border-amber-400/50' : 'bg-amber-50 hover:bg-amber-100 border-amber-300'
                   }`}
                 >
-                  <div className="text-xs font-black mb-0.5 text-amber-600 dark:text-amber-300">📷 1. 유튜브 영상 자막 캡처</div>
-                  <div className="text-[10.5px] opacity-85">PC는 화면 자동 캡처 / 모바일·태블릿은 스크린샷 즉시 스캔</div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleReadClipboardImageForOcr}
-                  className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
-                    isDark ? 'bg-white/5 hover:bg-white/10 border-white/15' : 'bg-stone-50 hover:bg-stone-100 border-stone-200'
-                  }`}
-                >
-                  <div className="text-xs font-bold mb-0.5">📋 2. 복사한 캡처 붙여넣기</div>
-                  <div className="text-[10.5px] opacity-75">방금 찍은 스크린샷(클립보드)에서 자막만 추출합니다</div>
+                  <div className="text-xs font-black mb-0.5 text-amber-600 dark:text-amber-300">
+                    📋 1. 방금 찍은 화면캡처 바로 스캔
+                  </div>
+                  <div className="text-[10.5px] opacity-85">
+                    폰·태블릿 화면을 캡처(복사)한 직후 누르면 유튜브 자막만 즉시 추출합니다
+                  </div>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => captureInputRef.current?.click()}
                   className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                    isDark ? 'bg-sky-500/20 hover:bg-sky-500/30 border-sky-400/50' : 'bg-sky-50 hover:bg-sky-100 border-sky-300'
+                  }`}
+                >
+                  <div className="text-xs font-black mb-0.5 text-sky-600 dark:text-sky-300">
+                    🖼️ 2. 갤러리 최근 스크린샷 선택
+                  </div>
+                  <div className="text-[10.5px] opacity-85">
+                    전체화면이 아닌 일반 화면 캡처 사진도 유튜브 위치만 자동 감지해 읽습니다
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleDirectTabCapture}
+                  className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
                     isDark ? 'bg-white/5 hover:bg-white/10 border-white/15' : 'bg-stone-50 hover:bg-stone-100 border-stone-200'
                   }`}
                 >
-                  <div className="text-xs font-bold mb-0.5">🖼️ 3. 캡처 이미지 파일 열기</div>
-                  <div className="text-[10.5px] opacity-75">갤러리에 저장된 유튜브 캡처 사진을 불러와 추출합니다</div>
+                  <div className="text-xs font-bold mb-0.5">💻 3. PC 화면 원터치 자동캡처</div>
+                  <div className="text-[10.5px] opacity-75">
+                    PC 브라우저에서 별도 캡처 없이 재생 중인 유튜브 자막만 바로 찍습니다
+                  </div>
                 </button>
               </div>
 

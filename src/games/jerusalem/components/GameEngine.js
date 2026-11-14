@@ -1,16 +1,14 @@
 // src/games/jerusalem/components/GameEngine.js
-import React, { useEffect, useRef } from 'react';
-import * as PIXI from 'pixi.js';
-import { Viewport } from 'pixi-viewport';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { OrbitControls, Billboard } from '@react-three/drei';
+import * as THREE from 'three';
 import { useTycoonStore, MAP_SIZE } from '../core/store';
 import { BUILDINGS } from '../data/buildings';
 
-const TILE_W = 92;
-const TILE_H = 46;
-const ORIG_X = 0;
-const ORIG_Y = -220;
+const TILE_SIZE = 2.0;
+const HALF_MAP = (MAP_SIZE * TILE_SIZE) / 2;
 
-// 🏛️ 시저 3식 배회자(Walker) 대사 풀
 const WALKER_THOUGHTS = {
   jesus: {
     name: '예수 그리스도',
@@ -23,15 +21,15 @@ const WALKER_THOUGHTS = {
   disciple: {
     name: '열두 제자 & 물동이 배급원',
     thoughts: [
-      '생명의 빵과 갈릴리 생선을 백성들의 집으로 나르고 있습니다!',
-      '실로암 우물물이 이 거리까지 시원하게 공급되고 있군요.',
+      '생명의 빵과 갈릴리 생선을 백성들의 집으로 부지런히 나르고 있습니다!',
+      '실로암 아치 수로교의 맑은 물이 이 거리까지 시원하게 공급되고 있군요.',
       '성전 예배의 기쁨이 온 예루살렘 거리에 가득합니다!'
     ]
   },
   merchant: {
-    name: '예루살렘 무역 대상',
+    name: '예루살렘 낙타 무역상단',
     thoughts: [
-      '감람산의 순수한 올리브 기름과 가나의 포도주를 싣고 갑니다.',
+      '감람산의 순수한 올리브 기름과 가나의 포도주를 낙타에 싣고 갑니다.',
       '장터마다 곡식과 물고기가 넘쳐나니 성읍이 날마다 번창합니다!',
       '다윗의 성문 안으로 평안을 비는 순례자들이 몰려옵니다.'
     ]
@@ -39,9 +37,9 @@ const WALKER_THOUGHTS = {
 };
 
 // =====================================================================
-// ⛰️ 2.5D 지형 고도(Elevation) 및 자연 생태계 판별기
+// ⛰️ 지형 고도(Elevation) 및 자연 생태계 판별기
 // =====================================================================
-const getNaturalTerrainType = (r, c) => {
+export const getNaturalTerrainType = (r, c) => {
   if (c === MAP_SIZE - 1 || (r >= MAP_SIZE - 2 && c >= MAP_SIZE - 3)) {
     return 'water';
   }
@@ -59,491 +57,1576 @@ const getNaturalTerrainType = (r, c) => {
   return 'sand';
 };
 
-const getTileElevation = (r, c, cell) => {
+export const getTileElevation3D = (r, c, cell) => {
   const terrain = getNaturalTerrainType(r, c);
-  if (!cell && terrain === 'water') return -10;
-  if (terrain === 'zion_plateau') return 14;
-  return 0;
+  if (!cell && terrain === 'water') return -0.32;
+  if (terrain === 'zion_plateau') return 0.55;
+  return 0.0;
+};
+
+export const gridToWorld3D = (r, c, w = 1, h = 1, elev = 0) => {
+  const centerR = r + (h - 1) / 2;
+  const centerC = c + (w - 1) / 2;
+  const wx = (centerC - (MAP_SIZE - 1) / 2) * TILE_SIZE;
+  const wz = (centerR - (MAP_SIZE - 1) / 2) * TILE_SIZE;
+  return [wx, elev, wz];
 };
 
 // =====================================================================
-// 🎨 고해상도 2.5D 카툰 시티빌더 프로시저럴 텍스처 베이커 (Canvas 2D)
-// - PixiJS v8 폴리곤 찢어짐(Tearing) 원천 차단
-// - 타운십/시저3 스타일의 둥글고 디테일한 카툰 셰이딩, 기와, 벽돌, 아치, 차양막 구현
+// 🎨 고해상도 프로시저럴 텍스처 & 유기적 곡면 지오메트리(Lathe / Extrude) 캐시
 // =====================================================================
-const bakedCartoonTextures = new Map();
-
-function drawIsoBox2D(ctx, cx, by, rx, ry, h, topCol, leftCol, rightCol, strokeCol = '#2B1810', lineW = 2.2) {
-  // 좌측 면
-  ctx.beginPath();
-  ctx.moveTo(cx - rx, by - ry - h);
-  ctx.lineTo(cx, by - h);
-  ctx.lineTo(cx, by);
-  ctx.lineTo(cx - rx, by - ry);
-  ctx.closePath();
-  ctx.fillStyle = leftCol;
-  ctx.fill();
-  ctx.lineWidth = lineW;
-  ctx.strokeStyle = strokeCol;
-  ctx.stroke();
-
-  // 우측 면
-  ctx.beginPath();
-  ctx.moveTo(cx, by - h);
-  ctx.lineTo(cx + rx, by - ry - h);
-  ctx.lineTo(cx + rx, by - ry);
-  ctx.lineTo(cx, by);
-  ctx.closePath();
-  ctx.fillStyle = rightCol;
-  ctx.fill();
-  ctx.stroke();
-
-  // 상단 면
-  ctx.beginPath();
-  ctx.moveTo(cx, by - ry * 2 - h);
-  ctx.lineTo(cx + rx, by - ry - h);
-  ctx.lineTo(cx, by - h);
-  ctx.lineTo(cx - rx, by - ry - h);
-  ctx.closePath();
-  ctx.fillStyle = topCol;
-  ctx.fill();
-  ctx.stroke();
-}
-
-function drawPitchedRoof2D(ctx, cx, by, rx, ry, wallH, peakH, leftRoofCol, rightRoofCol, frontGableCol = '#FFFBEB', strokeCol = '#2B1810') {
-  const topY = by - wallH;
-  const frontPeakX = cx - rx * 0.5;
-  const frontPeakY = topY - ry * 0.5 - peakH;
-  const backPeakX = cx + rx * 0.5;
-  const backPeakY = topY - ry * 1.5 - peakH;
-
-  // 서북쪽 지붕 경사면
-  ctx.beginPath();
-  ctx.moveTo(cx - rx, topY - ry);
-  ctx.lineTo(frontPeakX, frontPeakY);
-  ctx.lineTo(backPeakX, backPeakY);
-  ctx.lineTo(cx, topY - ry * 2);
-  ctx.closePath();
-  ctx.fillStyle = leftRoofCol;
-  ctx.fill();
-  ctx.lineWidth = 2.2;
-  ctx.strokeStyle = strokeCol;
-  ctx.stroke();
-
-  // 동남쪽 지붕 경사면
-  ctx.beginPath();
-  ctx.moveTo(frontPeakX, frontPeakY);
-  ctx.lineTo(cx, topY);
-  ctx.lineTo(cx + rx, topY - ry);
-  ctx.lineTo(backPeakX, backPeakY);
-  ctx.closePath();
-  ctx.fillStyle = rightRoofCol;
-  ctx.fill();
-  ctx.stroke();
-
-  // 정면 박공 삼각벽
-  ctx.beginPath();
-  ctx.moveTo(cx - rx, topY - ry);
-  ctx.lineTo(cx, topY);
-  ctx.lineTo(frontPeakX, frontPeakY);
-  ctx.closePath();
-  ctx.fillStyle = frontGableCol;
-  ctx.fill();
-  ctx.stroke();
-}
-
-function drawIsoArchLeftWall(ctx, cx, by, rx, ry, tCenter, archW, archH, fillCol = '#1E110A') {
-  const ax = cx - rx * (1 - tCenter);
-  const ay = by - ry * (1 - tCenter);
-  ctx.beginPath();
-  ctx.moveTo(ax - archW, ay - archW * 0.5);
-  ctx.lineTo(ax - archW, ay - archW * 0.5 - archH * 0.65);
-  ctx.quadraticCurveTo(ax, ay - archH * 1.15, ax + archW, ay + archW * 0.5 - archH * 0.65);
-  ctx.lineTo(ax + archW, ay + archW * 0.5);
-  ctx.closePath();
-  ctx.fillStyle = fillCol;
-  ctx.fill();
-  ctx.lineWidth = 1.6;
-  ctx.strokeStyle = '#D97706';
-  ctx.stroke();
-}
-
-function drawIsoWindowsRightWall(ctx, cx, by, rx, ry, wallH, count = 2, isNight = false) {
-  const winCol = isNight ? '#FACC15' : '#38BDF8';
-  for (let i = 1; i <= count; i++) {
-    const t = i / (count + 1);
-    const wx = cx + rx * t;
-    const wy = by - ry * t - wallH * 0.52;
-    ctx.beginPath();
-    ctx.roundRect(wx - 4, wy - 6, 8, 11, 3);
-    ctx.fillStyle = winCol;
-    ctx.fill();
-    ctx.lineWidth = 1.5;
-    ctx.strokeStyle = '#2B1810';
-    ctx.stroke();
-  }
-}
-
-function getBakedBuildingTexture(type, level = 1, wTiles = 1, hTiles = 1, isNight = false) {
-  const cacheKey = `${type}_${level}_${wTiles}x${hTiles}_${isNight ? 'night' : 'day'}`;
-  if (bakedCartoonTextures.has(cacheKey)) {
-    return bakedCartoonTextures.get(cacheKey);
-  }
-
+function makeCanvasTex(drawFn, w = 512, h = 512) {
   const canvas = document.createElement('canvas');
-  const scale = 2; // 고해상도 레티나 베이킹
-  const span = Math.max(wTiles, hTiles);
-  const cw = (span * TILE_W + 60) * scale;
-  const ch = (span * TILE_H + 170) * scale;
-  canvas.width = cw;
-  canvas.height = ch;
-
+  canvas.width = w;
+  canvas.height = h;
   const ctx = canvas.getContext('2d');
-  ctx.scale(scale, scale);
-  ctx.lineJoin = 'round';
-  ctx.lineCap = 'round';
+  drawFn(ctx, w, h);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.needsUpdate = true;
+  return tex;
+}
 
-  const cx = cw / (2 * scale);
-  const by = ch / scale - 18; // 바닥 남쪽 꼭짓점(S) 기준점
-  const rx = (span * TILE_W) * 0.44;
-  const ry = (span * TILE_H) * 0.44;
+function makeAshlarWallTexture(baseHex = '#F5EBE0', mortarHex = '#D0BFA6') {
+  return makeCanvasTex((ctx, w, h) => {
+    ctx.fillStyle = baseHex;
+    ctx.fillRect(0, 0, w, h);
+    const rows = 8;
+    const rowH = h / rows;
+    for (let r = 0; r < rows; r++) {
+      const y = r * rowH;
+      ctx.fillStyle = r % 2 === 0 ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.03)';
+      ctx.fillRect(0, y, w, rowH);
+      ctx.strokeStyle = mortarHex;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(w, y);
+      ctx.stroke();
 
-  // 1. 공통 바닥 카툰 석조 주춧돌(Plinth)
-  const plinthH = type === 'temple' ? 14 : 6;
-  drawIsoBox2D(ctx, cx, by, rx, ry, plinthH, '#EDE0CC', '#DFCBB0', '#BFA582', '#3E2723', 2.2);
+      const cols = 4;
+      const colW = w / cols;
+      for (let c = 0; c < cols; c++) {
+        const x = c * colW + (r % 2) * (colW / 2);
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x, y + rowH);
+        ctx.stroke();
+      }
+    }
+  }, 512, 512);
+}
 
-  const pBy = by - plinthH;
-  const inRx = rx * 0.84;
-  const inRy = ry * 0.84;
+function makeBubbleBadgeTexture(icon = '🍞') {
+  return makeCanvasTex((ctx, w, h) => {
+    ctx.clearRect(0, 0, w, h);
+    const grad = ctx.createRadialGradient(w / 2, h / 2 - 10, 8, w / 2, h / 2 - 10, 76);
+    grad.addColorStop(0, '#FFFFFF');
+    grad.addColorStop(0.75, '#FEF3C7');
+    grad.addColorStop(1, '#FDE68A');
 
-  // ── 🏠 주택 1~5단계 진화 ──
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(w / 2, h / 2 - 14, 72, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.lineWidth = 8;
+    ctx.strokeStyle = '#F59E0B';
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(w / 2 - 18, h / 2 + 52);
+    ctx.lineTo(w / 2 + 18, h / 2 + 52);
+    ctx.lineTo(w / 2, h / 2 + 82);
+    ctx.closePath();
+    ctx.fillStyle = '#F59E0B';
+    ctx.fill();
+
+    ctx.font = '76px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(icon, w / 2, h / 2 - 10);
+  }, 200, 200);
+}
+
+// =====================================================================
+// 🏺 [유기적 3D 지오메트리 컴포넌트] — 박스(Box) 완전 배제!
+// 1) 진짜 반원통 기와골(Barrel Tiles)이 얹힌 지중해식 테라코타 박공지붕
+// 2) 아치 구멍이 실제로 뚫린 로마식 수로교 아치(ExtrudeGeometry)
+// 3) 물결치는 장터 패브릭 캐노피 & 물레 성형 암포라 항아리(LatheGeometry)
+// =====================================================================
+function MediterraneanTiledRoof3D({
+  width = 1.4,
+  length = 1.4,
+  height = 0.48,
+  color = '#C84B20',
+  ridgeColor = '#FDE68A',
+  position = [0, 0, 0],
+  rotationY = 0
+}) {
+  const slopeLen = Math.hypot(width / 2, height);
+  const slopeAngle = Math.atan2(height, width / 2);
+  const ribCount = Math.max(4, Math.floor(length / 0.24));
+
+  return (
+    <group position={position} rotation={[0, rotationY, 0]}>
+      {/* 앞뒤 삼각 박공벽(Pediment Gable) */}
+      {[-length / 2 + 0.04, length / 2 - 0.04].map((gz, gi) => (
+        <mesh key={gi} position={[0, height / 2, gz]} rotation={[0, Math.PI / 4, 0]} scale={[width * 0.7, 1, 0.08]} castShadow>
+          <coneGeometry args={[1, height, 4]} />
+          <meshStandardMaterial color="#F5EBE0" roughness={0.6} />
+        </mesh>
+      ))}
+
+      {/* 좌측 경사 지붕판 & 반원통 기와골(Imbrex Ribs) */}
+      <group position={[-width / 4, height / 2, 0]} rotation={[0, 0, slopeAngle]}>
+        <mesh castShadow receiveShadow>
+          <boxGeometry args={[slopeLen + 0.12, 0.05, length + 0.14]} />
+          <meshStandardMaterial color={color} roughness={0.55} />
+        </mesh>
+        {Array.from({ length: ribCount }).map((_, ri) => {
+          const rz = -length / 2 + 0.1 + (ri / Math.max(1, ribCount - 1)) * (length - 0.2);
+          return (
+            <mesh key={ri} position={[0, 0.035, rz]} rotation={[0, 0, Math.PI / 2]} castShadow>
+              <cylinderGeometry args={[0.038, 0.042, slopeLen + 0.14, 8, 1, false, 0, Math.PI]} />
+              <meshStandardMaterial color={ri % 2 === 0 ? '#E05A2B' : '#B83D14'} roughness={0.5} />
+            </mesh>
+          );
+        })}
+      </group>
+
+      {/* 우측 경사 지붕판 & 반원통 기와골 */}
+      <group position={[width / 4, height / 2, 0]} rotation={[0, 0, -slopeAngle]}>
+        <mesh castShadow receiveShadow>
+          <boxGeometry args={[slopeLen + 0.12, 0.05, length + 0.14]} />
+          <meshStandardMaterial color={color} roughness={0.55} />
+        </mesh>
+        {Array.from({ length: ribCount }).map((_, ri) => {
+          const rz = -length / 2 + 0.1 + (ri / Math.max(1, ribCount - 1)) * (length - 0.2);
+          return (
+            <mesh key={ri} position={[0, 0.035, rz]} rotation={[0, 0, Math.PI / 2]} castShadow>
+              <cylinderGeometry args={[0.038, 0.042, slopeLen + 0.14, 8, 1, false, 0, Math.PI]} />
+              <meshStandardMaterial color={ri % 2 === 0 ? '#E05A2B' : '#B83D14'} roughness={0.5} />
+            </mesh>
+          );
+        })}
+      </group>
+
+      {/* 상단 원통형 용마루(Ridge Tile) */}
+      <mesh position={[0, height + 0.03, 0]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+        <cylinderGeometry args={[0.055, 0.055, length + 0.18, 10]} />
+        <meshStandardMaterial color={ridgeColor} roughness={0.4} />
+      </mesh>
+    </group>
+  );
+}
+
+// 물레 성형 암포라(Amphora) 도자기 항아리 컴포넌트
+function ClayAmphora3D({ position = [0, 0, 0], scale = 1.0, color = '#C2410C' }) {
+  const latheGeo = useMemo(() => {
+    const pts = [
+      new THREE.Vector2(0.0, 0.0),
+      new THREE.Vector2(0.08, 0.02),
+      new THREE.Vector2(0.16, 0.14),
+      new THREE.Vector2(0.14, 0.26),
+      new THREE.Vector2(0.06, 0.34),
+      new THREE.Vector2(0.09, 0.40),
+      new THREE.Vector2(0.05, 0.41)
+    ];
+    return new THREE.LatheGeometry(pts, 14);
+  }, []);
+
+  return (
+    <mesh geometry={latheGeo} position={position} scale={[scale, scale, scale]} castShadow>
+      <meshStandardMaterial color={color} roughness={0.55} />
+    </mesh>
+  );
+}
+
+// 🌲 유기적 지중해 자연 나무 & 바위 컴포넌트
+function MediterraneanTree3D({ position, type = 'cypress', scale = 1.0 }) {
+  const groupRef = useRef();
+
+  useFrame(({ clock }) => {
+    if (groupRef.current) {
+      groupRef.current.rotation.z = Math.sin(clock.elapsedTime * 1.6 + position[0]) * 0.03;
+    }
+  });
+
+  if (type === 'palm_tree') {
+    return (
+      <group ref={groupRef} position={position} scale={[scale, scale, scale]}>
+        {/* 살짝 휘어진 유기적 야자수 기둥 */}
+        <mesh position={[0, 0.24, 0]} rotation={[0.05, 0, -0.06]} castShadow>
+          <cylinderGeometry args={[0.07, 0.11, 0.5, 10]} />
+          <meshStandardMaterial color="#78350F" roughness={0.85} />
+        </mesh>
+        <mesh position={[0.03, 0.68, -0.02]} rotation={[-0.04, 0, 0.08]} castShadow>
+          <cylinderGeometry args={[0.045, 0.07, 0.5, 10]} />
+          <meshStandardMaterial color="#854D0E" roughness={0.85} />
+        </mesh>
+        {/* 코코넛 열매 & 7장 아치형 야자 잎사귀 */}
+        {[0, 1, 2, 3, 4, 5, 6].map((i) => {
+          const ang = (i * Math.PI * 2) / 7;
+          return (
+            <group key={i} position={[0.05, 0.92, -0.03]} rotation={[0, ang, 0]}>
+              <mesh position={[0.28, -0.05, 0]} rotation={[0, 0, -0.42]} scale={[1.15, 0.12, 0.32]} castShadow>
+                <sphereGeometry args={[0.32, 10, 8]} />
+                <meshStandardMaterial color={i % 2 === 0 ? '#15803D' : '#22C55E'} roughness={0.55} />
+              </mesh>
+            </group>
+          );
+        })}
+      </group>
+    );
+  }
+
+  if (type === 'olive_tree') {
+    return (
+      <group ref={groupRef} position={position} scale={[scale, scale, scale]}>
+        <mesh position={[0, 0.25, 0]} rotation={[0.08, 0, -0.08]} castShadow>
+          <cylinderGeometry args={[0.07, 0.13, 0.5, 10]} />
+          <meshStandardMaterial color="#5C381E" roughness={0.9} />
+        </mesh>
+        {[
+          [0, 0.62, 0, 0.34, '#4D7C0F'],
+          [-0.20, 0.54, 0.14, 0.25, '#65A30D'],
+          [0.20, 0.56, -0.12, 0.26, '#3F6212'],
+          [0.08, 0.72, 0.15, 0.22, '#84CC16']
+        ].map(([lx, ly, lz, lr, col], idx) => (
+          <mesh key={idx} position={[lx, ly, lz]} scale={[1.15, 0.82, 1.05]} castShadow>
+            <dodecahedronGeometry args={[lr, 1]} />
+            <meshStandardMaterial color={col} roughness={0.75} />
+          </mesh>
+        ))}
+      </group>
+    );
+  }
+
+  if (type === 'desert_rock') {
+    return (
+      <group position={position} scale={[scale, scale, scale]}>
+        <mesh position={[0, 0.14, 0]} rotation={[0.2, 0.5, -0.1]} scale={[1.3, 0.75, 1.1]} castShadow receiveShadow>
+          <dodecahedronGeometry args={[0.28, 1]} />
+          <meshStandardMaterial color="#A8A29E" roughness={0.9} />
+        </mesh>
+        <mesh position={[0.22, 0.09, 0.14]} rotation={[-0.3, 0.2, 0.4]} scale={[1.1, 0.65, 0.9]} castShadow>
+          <dodecahedronGeometry args={[0.18, 1]} />
+          <meshStandardMaterial color="#78716C" roughness={0.9} />
+        </mesh>
+      </group>
+    );
+  }
+
+  // 기본: 다층 원추형 지중해 사이프러스(Cypress) 나무
+  return (
+    <group ref={groupRef} position={position} scale={[scale, scale, scale]}>
+      <mesh position={[0, 0.18, 0]} castShadow>
+        <cylinderGeometry args={[0.05, 0.08, 0.36, 8]} />
+        <meshStandardMaterial color="#451A03" roughness={0.85} />
+      </mesh>
+      <mesh position={[0, 0.55, 0]} castShadow>
+        <coneGeometry args={[0.25, 0.65, 12]} />
+        <meshStandardMaterial color="#14532D" roughness={0.65} />
+      </mesh>
+      <mesh position={[0, 0.82, 0]} castShadow>
+        <coneGeometry args={[0.20, 0.60, 12]} />
+        <meshStandardMaterial color="#15803D" roughness={0.6} />
+      </mesh>
+      <mesh position={[0, 1.06, 0]} castShadow>
+        <coneGeometry args={[0.13, 0.48, 12]} />
+        <meshStandardMaterial color="#16A34A" roughness={0.55} />
+      </mesh>
+    </group>
+  );
+}
+
+// =====================================================================
+// ⛵ 곡선 선체(`Lathe` + `Sphere`)를 가진 고대 로마/갈릴리 범선(Galley)
+// =====================================================================
+function SailingRomanGalley({ startZ = -14, xPos = 20.5, speed = 1.2, dir = 1 }) {
+  const shipRef = useRef();
+
+  useFrame(({ clock }, delta) => {
+    if (!shipRef.current) return;
+    shipRef.current.position.z += delta * speed * dir;
+    if (dir > 0 && shipRef.current.position.z > 20) shipRef.current.position.z = -20;
+    if (dir < 0 && shipRef.current.position.z < -20) shipRef.current.position.z = 20;
+
+    shipRef.current.position.y = -0.24 + Math.sin(clock.elapsedTime * 2.4 + xPos) * 0.05;
+    shipRef.current.rotation.z = Math.sin(clock.elapsedTime * 1.9) * 0.04;
+  });
+
+  return (
+    <group ref={shipRef} position={[xPos, -0.24, startZ]} rotation={[0, dir > 0 ? 0 : Math.PI, 0]}>
+      {/* 유선형 배 선체 (반구를 길게 늘린 형태 — 박스 아님!) */}
+      <mesh position={[0, 0.22, 0]} scale={[0.52, 0.38, 1.45]} castShadow>
+        <sphereGeometry args={[1.0, 20, 14, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2]} />
+        <meshStandardMaterial color="#78350F" roughness={0.55} side={THREE.DoubleSide} />
+      </mesh>
+      {/* 갑판 */}
+      <mesh position={[0, 0.21, 0]} rotation={[-Math.PI / 2, 0, 0]} scale={[0.48, 1.38, 1]}>
+        <circleGeometry args={[1.0, 20]} />
+        <meshStandardMaterial color="#B45309" roughness={0.7} />
+      </mesh>
+      {/* 선수/선미 우아한 백조 곡선 기둥 */}
+      <mesh position={[0, 0.42, 1.32]} rotation={[0.45, 0, 0]} castShadow>
+        <cylinderGeometry args={[0.025, 0.065, 0.65, 10]} />
+        <meshStandardMaterial color="#F59E0B" metalness={0.6} />
+      </mesh>
+      <mesh position={[0, 0.46, -1.32]} rotation={[-0.45, 0, 0]} castShadow>
+        <cylinderGeometry args={[0.025, 0.065, 0.72, 10]} />
+        <meshStandardMaterial color="#F59E0B" metalness={0.6} />
+      </mesh>
+      {/* 마스트 & 바람에 부풀어 오른 볼록한 돛 */}
+      <mesh position={[0, 1.0, 0]} castShadow>
+        <cylinderGeometry args={[0.03, 0.045, 1.6, 10]} />
+        <meshStandardMaterial color="#451A03" />
+      </mesh>
+      <mesh position={[0, 1.08, 0.1]} scale={[0.95, 0.85, 0.28]} castShadow>
+        <sphereGeometry args={[0.72, 18, 14, 0, Math.PI]} />
+        <meshStandardMaterial color="#FFFBEB" roughness={0.4} side={THREE.DoubleSide} />
+      </mesh>
+      {/* 양옆 노(Oars) 6개 */}
+      {[-0.45, 0, 0.45].map((oz, oi) => (
+        <React.Fragment key={oi}>
+          <mesh position={[-0.52, 0.1, oz]} rotation={[0, 0, -1.1]}>
+            <cylinderGeometry args={[0.012, 0.018, 0.65, 6]} />
+            <meshStandardMaterial color="#D97706" />
+          </mesh>
+          <mesh position={[0.52, 0.1, oz]} rotation={[0, 0, 1.1]}>
+            <cylinderGeometry args={[0.012, 0.018, 0.65, 6]} />
+            <meshStandardMaterial color="#D97706" />
+          </mesh>
+        </React.Fragment>
+      ))}
+    </group>
+  );
+}
+
+// =====================================================================
+// 🏛️ 24종 건물별 비(非)박스 유기적 고품격 3D 건축 렌더러
+// =====================================================================
+function AnnoBuilding3D({
+  cell,
+  grid,
+  textures,
+  sharedGeos,
+  isNight,
+  onSelectBuilding
+}) {
+  const { r, c, type, level = 1, w = 1, h = 1 } = cell;
+  const elev = getTileElevation3D(r, c, cell);
+  const [wx, wy, wz] = gridToWorld3D(r, c, w, h, elev);
+
+  const bw = w * TILE_SIZE * 0.88;
+  const bh = h * TILE_SIZE * 0.88;
+
+  const sailRef = useRef();
+  const smokeRef = useRef();
+
+  useFrame(({ clock }, delta) => {
+    if (sailRef.current) {
+      sailRef.current.rotation.z -= delta * 1.8;
+    }
+    if (smokeRef.current) {
+      smokeRef.current.position.y = 2.6 + Math.sin(clock.elapsedTime * 2.2) * 0.15;
+    }
+  });
+
+  const handleClick = (e) => {
+    e.stopPropagation();
+    if (onSelectBuilding) onSelectBuilding(r, c, cell);
+  };
+
+  // ── 🏠 1. 5단계 진화 주택 (유목민 천막 ➔ 돔 아도비 하우스 ➔ 아치 석조가옥 ➔ 중정 기와 빌라 ➔ 황금 돔 궁정) ──
   if (type === 'house') {
     if (level === 1) {
-      // 1단계: 유목민 카툰 텐트 + 줄무늬 러그 + 모닥불
-      ctx.beginPath();
-      ctx.moveTo(cx - inRx, pBy - inRy);
-      ctx.lineTo(cx, pBy);
-      ctx.lineTo(cx, pBy - inRy - 32);
-      ctx.closePath();
-      ctx.fillStyle = '#78350F';
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.beginPath();
-      ctx.moveTo(cx, pBy);
-      ctx.lineTo(cx + inRx, pBy - inRy);
-      ctx.lineTo(cx, pBy - inRy - 32);
-      ctx.closePath();
-      ctx.fillStyle = '#451A03';
-      ctx.fill();
-      ctx.stroke();
-
-      // 텐트 황금빛 줄무늬 장식
-      ctx.beginPath();
-      ctx.moveTo(cx - inRx * 0.5, pBy - inRy * 0.5);
-      ctx.lineTo(cx, pBy - inRy - 32);
-      ctx.lineTo(cx + inRx * 0.5, pBy - inRy * 0.5);
-      ctx.strokeStyle = '#F59E0B';
-      ctx.lineWidth = 2.5;
-      ctx.stroke();
-
-      drawIsoArchLeftWall(ctx, cx, pBy, inRx, inRy, 0.5, 6, 13, isNight ? '#F59E0B' : '#1C1917');
-    } else if (level === 2) {
-      // 2단계: 갈릴리 흙벽돌집 + 나무 서까래 + 옥상 양탄자 & 항아리
-      const wH = 26;
-      drawIsoBox2D(ctx, cx, pBy, inRx, inRy, wH, '#D9A773', '#F3C697', '#C28D58', '#3E2723');
-      drawIsoArchLeftWall(ctx, cx, pBy, inRx, inRy, 0.5, 6, 14, '#451A03');
-      drawIsoWindowsRightWall(ctx, cx, pBy, inRx, inRy, wH, 1, isNight);
-
-      // 돌출 나무 서까래(Vigas) 3개
-      [0.25, 0.5, 0.75].forEach(t => {
-        const vx = cx - inRx * (1 - t);
-        const vy = pBy - inRy * (1 - t) - wH + 4;
-        ctx.beginPath();
-        ctx.arc(vx, vy, 2.2, 0, Math.PI * 2);
-        ctx.fillStyle = '#451A03';
-        ctx.fill();
-      });
-
-      // 옥상 점토 물항아리 2개
-      ctx.beginPath();
-      ctx.arc(cx - 5, pBy - inRy - wH - 3, 4.5, 0, Math.PI * 2);
-      ctx.fillStyle = '#B45309';
-      ctx.fill();
-      ctx.stroke();
-    } else if (level === 3) {
-      // 3단계: 석회암 평지붕 가옥 + 다락방 + 옥상 야자수 화분
-      const wH = 32;
-      drawIsoBox2D(ctx, cx, pBy, inRx, inRy, wH, '#EAE0D0', '#FFFDF9', '#D6C7B2', '#334155');
-      drawIsoArchLeftWall(ctx, cx, pBy, inRx, inRy, 0.45, 6.5, 16, '#5C2E0B');
-      drawIsoWindowsRightWall(ctx, cx, pBy, inRx, inRy, wH, 2, isNight);
-
-      // 옥상 테라코타 다락방
-      drawIsoBox2D(ctx, cx, pBy - inRy * 0.4 - wH, inRx * 0.55, inRy * 0.55, 13, '#EA580C', '#FFFBEB', '#CBD5E1', '#334155', 1.8);
-    } else if (level === 4) {
-      // 4단계: 다윗성 2층 테라코타 기와 빌라
-      const wH = 38;
-      drawIsoBox2D(ctx, cx, pBy, inRx, inRy, wH, '#F8FAFC', '#FFFFFF', '#E2E8F0', '#1E293B');
-      drawIsoArchLeftWall(ctx, cx, pBy, inRx, inRy, 0.5, 7, 17, '#7C2D12');
-      drawIsoWindowsRightWall(ctx, cx, pBy, inRx, inRy, wH, 2, isNight);
-      drawPitchedRoof2D(ctx, cx, pBy, inRx * 1.06, inRy * 1.06, wH, 16, '#EA580C', '#C2410C', '#FFFBEB', '#431407');
-    } else {
-      // 5단계: 로마-헤롯식 황금 대리석 궁정
-      const wH = 44;
-      drawIsoBox2D(ctx, cx, pBy, inRx, inRy, wH, '#FFFFFF', '#FFFFFF', '#E2E8F0', '#1E293B');
-      drawIsoArchLeftWall(ctx, cx, pBy, inRx, inRy, 0.5, 8, 20, '#9A3412');
-      drawIsoWindowsRightWall(ctx, cx, pBy, inRx, inRy, wH, 3, isNight);
-      drawPitchedRoof2D(ctx, cx, pBy, inRx * 1.08, inRy * 1.08, wH, 19, '#FACC15', '#D97706', '#FEF08A', '#78350F');
+      // Tier 1: 유목민 드리프트 천막 + 원형 러그 + 돌 화덕 모닥불 + 암포라 항아리
+      return (
+        <group position={[wx, wy, wz]} onClick={handleClick}>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]} receiveShadow>
+            <circleGeometry args={[0.82, 24]} />
+            <meshStandardMaterial color="#B91C1C" roughness={0.85} />
+          </mesh>
+          {/* 유선형 벨 텐트(Bell Tent) */}
+          <mesh position={[-0.12, 0.22, -0.08]} castShadow>
+            <cylinderGeometry args={[0.48, 0.62, 0.42, 12]} />
+            <meshStandardMaterial color="#5C4033" roughness={0.8} />
+          </mesh>
+          <mesh position={[-0.12, 0.58, -0.08]} castShadow>
+            <coneGeometry args={[0.52, 0.38, 12]} />
+            <meshStandardMaterial color="#78350F" roughness={0.75} />
+          </mesh>
+          {/* 돌 화덕 & 모닥불 */}
+          <mesh position={[0.42, 0.14, 0.35]}>
+            <coneGeometry args={[0.14, 0.28, 10]} />
+            <meshBasicMaterial color="#F97316" />
+          </mesh>
+          <ClayAmphora3D position={[0.38, 0.02, -0.32]} scale={0.7} />
+        </group>
+      );
     }
-  }
 
-  // ── 👑 헤롯 제2성전 (3x3 대성전 랜드마크) ──
-  else if (type === 'temple') {
-    // 1) 외소 성전 뜰 회랑 성벽
-    drawIsoBox2D(ctx, cx, pBy, rx * 0.94, ry * 0.94, 18, '#F8FAFC', '#FFFFFF', '#CBD5E1', '#334155', 2.2);
-
-    // 2) 성전 본관(Heikhal) 대리석 & 황금 성소
-    const sBy = pBy - ry * 0.25 - 18;
-    const sRx = rx * 0.56;
-    const sRy = ry * 0.56;
-    const sH = 68;
-    drawIsoBox2D(ctx, cx, sBy, sRx, sRy, sH, '#FACC15', '#FFFBEB', '#E2E8F0', '#78350F', 2.5);
-
-    // 3) 성소 전면 4대 황금 기둥과 거대한 성전 문
-    [0.2, 0.4, 0.6, 0.8].forEach(t => {
-      const colX = cx - sRx * (1 - t);
-      const colY = sBy - sRy * (1 - t);
-      ctx.fillStyle = '#FDE047';
-      ctx.strokeStyle = '#78350F';
-      ctx.lineWidth = 1.6;
-      ctx.fillRect(colX - 3, colY - sH + 8, 6, sH - 8);
-      ctx.strokeRect(colX - 3, colY - sH + 8, 6, sH - 8);
-    });
-    drawIsoArchLeftWall(ctx, cx, sBy, sRx, sRy, 0.5, 12, 42, '#7C2D12');
-
-    // 4) 상단 황금 면류관 지붕 장식
-    drawIsoBox2D(ctx, cx, sBy - sH, sRx * 1.06, sRy * 1.06, 10, '#FEF08A', '#FACC15', '#CA8A04', '#713F12', 2.2);
-
-    // 5) 마당의 놋번제단
-    ctx.beginPath();
-    ctx.arc(cx + 22, pBy - 24, 10, 0, Math.PI * 2);
-    ctx.fillStyle = '#9A3412';
-    ctx.fill();
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(cx + 22, pBy - 28, 6, 0, Math.PI * 2);
-    ctx.fillStyle = '#EF4444';
-    ctx.fill();
-  }
-
-  // ── 🕍 가버나움 백색 회당 (2x2) ──
-  else if (type === 'synagogue') {
-    const wH = 40;
-    drawIsoBox2D(ctx, cx, pBy, inRx, inRy, wH, '#F1F5F9', '#FFFFFF', '#CBD5E1', '#1E293B');
-    drawIsoArchLeftWall(ctx, cx, pBy, inRx, inRy, 0.5, 10, 24, '#1E3A8A');
-    drawIsoWindowsRightWall(ctx, cx, pBy, inRx, inRy, wH, 3, isNight);
-    drawPitchedRoof2D(ctx, cx, pBy, inRx * 1.05, inRy * 1.05, wH, 18, '#0284C7', '#0369A1', '#F8FAFC', '#0C4A6E');
-  }
-
-  // ── 🌉 실로암 수로교 (1x1 아치형 교각 — 검은 줄 버그 완전 해결!) ──
-  else if (type === 'aqueduct') {
-    const aH = 30;
-    drawIsoBox2D(ctx, cx, pBy, inRx, inRy, aH, '#38BDF8', '#F5EBE0', '#CBD5E1', '#334155');
-    // 교각 아치 통로
-    drawIsoArchLeftWall(ctx, cx, pBy, inRx, inRy, 0.5, 9, 19, '#18120C');
-    // 상단 푸른 수로 물길
-    drawIsoBox2D(ctx, cx, pBy - aH + 2, inRx * 1.02, inRy * 1.02, 6, '#0EA5E9', '#E2E8F0', '#94A3B8', '#1E293B');
-  }
-
-  // ── 💧 야곱의 우물 & ⛲ 대리석 분수 ──
-  else if (type === 'well' || type === 'fountain') {
-    const centerY = pBy - inRy;
-    const radX = type === 'fountain' ? 38 : 20;
-    const radY = type === 'fountain' ? 21 : 11;
-
-    // 원형 대리석 수조
-    ctx.beginPath();
-    ctx.ellipse(cx, centerY, radX, radY, 0, 0, Math.PI * 2);
-    ctx.fillStyle = '#E2E8F0';
-    ctx.fill();
-    ctx.lineWidth = 2.2;
-    ctx.strokeStyle = '#334155';
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.ellipse(cx, centerY - 2, radX * 0.78, radY * 0.78, 0, 0, Math.PI * 2);
-    ctx.fillStyle = '#0284C7';
-    ctx.fill();
-    ctx.stroke();
-
-    if (type === 'well') {
-      // 목조 지붕 프레임
-      ctx.strokeStyle = '#78350F';
-      ctx.lineWidth = 3.5;
-      ctx.beginPath();
-      ctx.moveTo(cx - 12, centerY);
-      ctx.lineTo(cx - 12, centerY - 24);
-      ctx.moveTo(cx + 12, centerY);
-      ctx.lineTo(cx + 12, centerY - 24);
-      ctx.stroke();
-      drawPitchedRoof2D(ctx, cx, centerY + 6, 18, 9, 26, 9, '#B45309', '#78350F', '#FDE68A', '#451A03');
-    } else {
-      // 분수 중앙 조각 탑
-      drawIsoBox2D(ctx, cx, centerY + 4, 10, 5, 26, '#38BDF8', '#FFFFFF', '#CBD5E1', '#334155', 1.8);
+    if (level === 2) {
+      // Tier 2: 고대 유대 돔 지붕 아도비 가옥 (네모 상자 대신 둥근 돔 지붕 + 아치 포치 + 나무 그늘막!)
+      return (
+        <group position={[wx, wy, wz]} onClick={handleClick}>
+          {/* 둥근 모서리 마당 석재 바닥 */}
+          <mesh position={[0, 0.05, 0]} rotation={[0, Math.PI / 4, 0]} receiveShadow>
+            <cylinderGeometry args={[1.05, 1.12, 0.10, 4]} />
+            <meshStandardMaterial color="#D6C5AF" roughness={0.8} />
+          </mesh>
+          {/* 본채 & 부드러운 반구형 진흙 돔(Mudbrick Dome) */}
+          <mesh position={[-0.12, 0.45, -0.1]} castShadow receiveShadow>
+            <boxGeometry args={[1.05, 0.72, 0.95]} />
+            <meshStandardMaterial map={textures.mudWall} roughness={0.75} />
+          </mesh>
+          <mesh position={[-0.12, 0.80, -0.1]} scale={[1.0, 0.62, 0.95]} castShadow>
+            <sphereGeometry args={[0.48, 18, 12, 0, Math.PI * 2, 0, Math.PI / 2]} />
+            <meshStandardMaterial color="#E6BA8E" roughness={0.7} />
+          </mesh>
+          {/* 정면 아치형 출입구 */}
+          <mesh position={[-0.12, 0.32, 0.38]} rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[0.18, 0.18, 0.06, 12, 1, false, 0, Math.PI]} />
+            <meshStandardMaterial color="#3E2009" />
+          </mesh>
+          {/* 마당 올리브 나무 & 암포라 항아리 2개 */}
+          <ClayAmphora3D position={[0.48, 0.10, 0.32]} scale={0.85} />
+          <ClayAmphora3D position={[0.32, 0.10, 0.46]} scale={0.7} color="#9A3412" />
+          <MediterraneanTree3D position={[0.48, 0.10, -0.38]} type="olive_tree" scale={0.7} />
+        </group>
+      );
     }
+
+    if (level === 3) {
+      // Tier 3: 예루살렘 아치 회랑 석조 가옥 + 반원통 테라코타 기와지붕 + 사이프러스 정원
+      return (
+        <group position={[wx, wy, wz]} onClick={handleClick}>
+          <mesh position={[0, 0.06, 0]} rotation={[0, Math.PI / 4, 0]} receiveShadow>
+            <cylinderGeometry args={[1.12, 1.18, 0.12, 4]} />
+            <meshStandardMaterial map={textures.ashlarWall} />
+          </mesh>
+          {/* ㄱ자 복합 건물: 2층 주동 + 1층 아치 윙 */}
+          <mesh position={[-0.18, 0.62, -0.15]} castShadow receiveShadow>
+            <boxGeometry args={[0.96, 1.02, 0.92]} />
+            <meshStandardMaterial map={textures.ashlarWall} roughness={0.5} />
+          </mesh>
+          <MediterraneanTiledRoof3D
+            width={1.06}
+            length={1.02}
+            height={0.38}
+            position={[-0.18, 1.13, -0.15]}
+          />
+          {/* 우측 1층 아치 포치 & 반구형 소형 돔 */}
+          <mesh position={[0.38, 0.42, 0.15]} castShadow receiveShadow>
+            <boxGeometry args={[0.62, 0.62, 0.72]} />
+            <meshStandardMaterial map={textures.ashlarWall} />
+          </mesh>
+          <mesh position={[0.38, 0.72, 0.15]} scale={[1, 0.65, 1]} castShadow>
+            <sphereGeometry args={[0.28, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2]} />
+            <meshStandardMaterial color="#FAF5EB" />
+          </mesh>
+          <MediterraneanTree3D position={[-0.48, 0.12, 0.52]} type="cypress" scale={0.82} />
+          <ClayAmphora3D position={[0.12, 0.12, 0.55]} scale={0.75} />
+        </group>
+      );
+    }
+
+    if (level === 4) {
+      // Tier 4: 《Anno 117》 스타일 로마-유대 아트리움 중정 빌라 (기둥 회랑 + 분수 연못 + 입체 기와지붕)
+      return (
+        <group position={[wx, wy, wz]} onClick={handleClick}>
+          <mesh position={[0, 0.07, 0]} rotation={[0, Math.PI / 4, 0]} receiveShadow>
+            <cylinderGeometry args={[1.16, 1.22, 0.14, 4]} />
+            <meshStandardMaterial color="#F1ECE1" />
+          </mesh>
+          {/* 북쪽 2층 본관 + 진짜 기와골 박공지붕 */}
+          <mesh position={[0, 0.74, -0.28]} castShadow receiveShadow>
+            <boxGeometry args={[1.48, 1.22, 0.78]} />
+            <meshStandardMaterial map={textures.ashlarWall} roughness={0.4} />
+          </mesh>
+          <MediterraneanTiledRoof3D
+            width={1.60}
+            length={0.90}
+            height={0.46}
+            position={[0, 1.35, -0.28]}
+            rotationY={Math.PI / 2}
+          />
+          {/* 남쪽 중정 원형 분수 수조 & 원통 대리석 기둥 4개 */}
+          <mesh position={[0, 0.18, 0.36]} castShadow>
+            <cylinderGeometry args={[0.34, 0.38, 0.16, 20]} />
+            <meshStandardMaterial color="#FFFFFF" />
+          </mesh>
+          <mesh position={[0, 0.27, 0.36]} rotation={[-Math.PI / 2, 0, 0]}>
+            <circleGeometry args={[0.28, 20]} />
+            <meshStandardMaterial color="#0EA5E9" roughness={0.1} metalness={0.4} />
+          </mesh>
+          {[-0.58, -0.22, 0.22, 0.58].map((cx, ci) => (
+            <mesh key={ci} position={[cx, 0.42, 0.12]} castShadow>
+              <cylinderGeometry args={[0.045, 0.055, 0.62, 12]} />
+              <meshStandardMaterial color="#FFFFFF" />
+            </mesh>
+          ))}
+          <MediterraneanTree3D position={[-0.62, 0.14, 0.48]} type="cypress" scale={0.9} />
+          <MediterraneanTree3D position={[0.62, 0.14, 0.48]} type="cypress" scale={0.9} />
+        </group>
+      );
+    }
+
+    // Tier 5: 로마-헤롯식 황금 돔 & 열주 대리석 궁정 (최고 등급 귀족 Domus)
+    return (
+      <group position={[wx, wy, wz]} onClick={handleClick}>
+        <mesh position={[0, 0.09, 0]} rotation={[0, Math.PI / 4, 0]} receiveShadow>
+          <cylinderGeometry args={[1.20, 1.26, 0.18, 4]} />
+          <meshStandardMaterial color="#FFFFFF" roughness={0.2} />
+        </mesh>
+        {/* 백색 대리석 궁전 본관 */}
+        <mesh position={[0, 0.82, -0.18]} castShadow receiveShadow>
+          <boxGeometry args={[1.52, 1.32, 0.96]} />
+          <meshStandardMaterial color="#FFFFFF" roughness={0.2} />
+        </mesh>
+        {/* 양옆 테라코타 기와 날개 지붕 + 중앙 황금 판테온 돔(Golden Dome)! */}
+        <MediterraneanTiledRoof3D
+          width={1.64}
+          length={1.06}
+          height={0.42}
+          color="#B91C1C"
+          ridgeColor="#FACC15"
+          position={[0, 1.48, -0.18]}
+          rotationY={Math.PI / 2}
+        />
+        <mesh position={[0, 1.68, -0.18]} castShadow>
+          <sphereGeometry args={[0.42, 24, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
+          <meshStandardMaterial color="#FACC15" metalness={0.85} roughness={0.15} />
+        </mesh>
+        {/* 전면 6개 대리석 코린트 원통 기둥 회랑 */}
+        {[-0.62, -0.37, -0.12, 0.12, 0.37, 0.62].map((cx, ci) => (
+          <mesh key={ci} position={[cx, 0.68, 0.36]} castShadow>
+            <cylinderGeometry args={[0.05, 0.06, 1.05, 14]} />
+            <meshStandardMaterial color="#F8FAFC" roughness={0.18} />
+          </mesh>
+        ))}
+        <MediterraneanTree3D position={[-0.68, 0.18, 0.56]} type="cypress" scale={1.0} />
+        <MediterraneanTree3D position={[0.68, 0.18, 0.56]} type="cypress" scale={1.0} />
+      </group>
+    );
   }
 
-  // ── 🍞 장터 · 수산시장 · 제물시장 · 환전소 · 캐러밴 (화려한 줄무늬 천막과 상품 매대) ──
-  else if (['bread_market', 'fish_market', 'sacrifice_market', 'money_changer', 'caravan'].includes(type)) {
-    const awningCol =
+  // ── 👑 2. 헤롯 제2성전 (3x3 대성전 — 28개 원통 대리석 열주 회랑 & 아치 성문 & 황금 성소) ──
+  if (type === 'temple') {
+    return (
+      <group position={[wx, wy, wz]} onClick={handleClick}>
+        {/* 2단 경사 석조 성전산 기단 */}
+        <mesh position={[0, 0.22, 0]} rotation={[0, Math.PI / 4, 0]} castShadow receiveShadow>
+          <cylinderGeometry args={[3.75, 3.98, 0.44, 4]} />
+          <meshStandardMaterial map={textures.ashlarWall} roughness={0.35} />
+        </mesh>
+        <mesh position={[0, 0.52, 0]} rotation={[0, Math.PI / 4, 0]} receiveShadow>
+          <cylinderGeometry args={[3.55, 3.68, 0.18, 4]} />
+          <meshStandardMaterial color="#F5EFE6" roughness={0.3} />
+        </mesh>
+
+        {/* 솔로몬의 행각(Royal Stoa) — 사방을 둘러싼 28개의 진짜 원통형 대리석 열주(Columns)와 기와 지붕! */}
+        {[-2.25, 2.25].map((posZ, zIdx) => (
+          <group key={`stoa_row_z_${zIdx}`} position={[0, 0.60, posZ]}>
+            {[-2.1, -1.5, -0.9, -0.3, 0.3, 0.9, 1.5, 2.1].map((colX, ci) => (
+              <mesh key={ci} position={[colX, 0.42, 0]} castShadow>
+                <cylinderGeometry args={[0.065, 0.075, 0.84, 12]} />
+                <meshStandardMaterial color="#FFFFFF" roughness={0.25} />
+              </mesh>
+            ))}
+            <MediterraneanTiledRoof3D
+              width={0.62}
+              length={4.65}
+              height={0.24}
+              position={[0, 0.84, 0]}
+              rotationY={Math.PI / 2}
+            />
+          </group>
+        ))}
+        {[-2.25, 2.25].map((posX, xIdx) => (
+          <group key={`stoa_row_x_${xIdx}`} position={[posX, 0.60, 0]}>
+            {[-1.5, -0.9, -0.3, 0.3, 0.9, 1.5].map((colZ, ci) => (
+              <mesh key={ci} position={[0, 0.42, colZ]} castShadow>
+                <cylinderGeometry args={[0.065, 0.075, 0.84, 12]} />
+                <meshStandardMaterial color="#FFFFFF" roughness={0.25} />
+              </mesh>
+            ))}
+            <MediterraneanTiledRoof3D
+              width={0.62}
+              length={3.85}
+              height={0.24}
+              position={[0, 0.84, 0]}
+              rotationY={0}
+            />
+          </group>
+        ))}
+
+        {/* 내소 성소 본관(Heikhal) — 원통 코린트 황금 기둥 6개 & 아치형 성전 황금문 & 상단 황금 크라운 */}
+        <group position={[0, 0.62, -0.38]}>
+          {/* 성소 입구 5단 대리석 계단 */}
+          {[0, 1, 2, 3].map((st) => (
+            <mesh key={st} position={[0, 0.06 + st * 0.08, 1.15 - st * 0.10]} receiveShadow>
+              <boxGeometry args={[1.65 - st * 0.1, 0.08, 0.22]} />
+              <meshStandardMaterial color="#FFFFFF" />
+            </mesh>
+          ))}
+          {/* 성소 백색 대리석 본체 */}
+          <mesh position={[0, 1.35, 0]} castShadow receiveShadow>
+            <boxGeometry args={[2.55, 2.45, 1.95]} />
+            <meshStandardMaterial color="#FFFDF9" roughness={0.2} />
+          </mesh>
+          {/* 정면 6대 원통 황금 기둥 */}
+          {[-1.02, -0.64, -0.32, 0.32, 0.64, 1.02].map((colX, ci) => (
+            <group key={ci} position={[colX, 1.32, 1.02]}>
+              <mesh castShadow>
+                <cylinderGeometry args={[0.085, 0.105, 2.38, 16]} />
+                <meshStandardMaterial color="#FDE047" metalness={0.82} roughness={0.18} />
+              </mesh>
+              <mesh position={[0, 1.20, 0]}>
+                <cylinderGeometry args={[0.13, 0.085, 0.12, 12]} />
+                <meshStandardMaterial color="#F59E0B" metalness={0.9} />
+              </mesh>
+            </group>
+          ))}
+          {/* 아치형 성소 황금문(Golden Archway) */}
+          <mesh position={[0, 0.85, 0.99]}>
+            <boxGeometry args={[0.56, 1.35, 0.06]} />
+            <meshStandardMaterial color="#92400E" metalness={0.7} />
+          </mesh>
+          <mesh position={[0, 1.52, 0.99]} rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[0.28, 0.28, 0.06, 16, 1, false, 0, Math.PI]} />
+            <meshStandardMaterial color="#FACC15" metalness={0.9} />
+          </mesh>
+          {/* 상단 순금 코니스 & 황금 첨탑 스파이크 난간 */}
+          <mesh position={[0, 2.65, 0]} castShadow>
+            <boxGeometry args={[2.75, 0.28, 2.15]} />
+            <meshStandardMaterial color="#FACC15" metalness={0.88} roughness={0.14} />
+          </mesh>
+          {Array.from({ length: 9 }).map((_, si) => (
+            <mesh key={si} position={[-1.2 + si * 0.3, 2.92, 1.02]} castShadow>
+              <coneGeometry args={[0.045, 0.26, 8]} />
+              <meshStandardMaterial color="#FEF08A" metalness={0.95} />
+            </mesh>
+          ))}
+        </group>
+
+        {/* 원통형 청동 바다(물두멍) & 놋번제단 연기 */}
+        <mesh position={[-0.85, 0.82, 1.15]} castShadow>
+          <cylinderGeometry args={[0.36, 0.24, 0.32, 20]} />
+          <meshStandardMaterial color="#D97706" metalness={0.75} roughness={0.25} />
+        </mesh>
+        <group position={[0.78, 0.62, 1.15]}>
+          <mesh position={[0, 0.22, 0]} rotation={[0, Math.PI / 4, 0]} castShadow>
+            <cylinderGeometry args={[0.48, 0.58, 0.44, 4]} />
+            <meshStandardMaterial color="#78350F" roughness={0.6} />
+          </mesh>
+          <mesh position={[0, 0.52, 0]}>
+            <coneGeometry args={[0.22, 0.38, 12]} />
+            <meshBasicMaterial color="#EF4444" />
+          </mesh>
+          <group ref={smokeRef} position={[0, 1.1, 0]}>
+            {[0, 0.42, 0.85].map((sy, si) => (
+              <mesh key={si} position={[Math.sin(si * 2) * 0.12, sy, 0]}>
+                <sphereGeometry args={[0.16 + si * 0.08, 12, 12]} />
+                <meshBasicMaterial color="#F8FAFC" transparent opacity={0.55 - si * 0.15} />
+              </mesh>
+            ))}
+          </group>
+        </group>
+
+        <MediterraneanTree3D position={[-1.65, 0.62, 1.55]} type="cypress" scale={1.1} />
+        <MediterraneanTree3D position={[1.65, 0.62, 1.55]} type="cypress" scale={1.1} />
+      </group>
+    );
+  }
+
+  // ── 🕍 3. 가버나움 백색회당 (원통 코린트 열주 10개 & 진짜 기와 박공지붕 & 상단 원형 장미창) ──
+  if (type === 'synagogue') {
+    return (
+      <group position={[wx, wy, wz]} onClick={handleClick}>
+        <mesh position={[0, 0.12, 0]} rotation={[0, Math.PI / 4, 0]} receiveShadow>
+          <cylinderGeometry args={[2.25, 2.38, 0.24, 4]} />
+          <meshStandardMaterial color="#E2E8F0" />
+        </mesh>
+        <mesh position={[0, 0.92, 0]} castShadow receiveShadow>
+          <boxGeometry args={[2.45, 1.38, 2.65]} />
+          <meshStandardMaterial map={textures.ashlarWall} color="#FFFFFF" roughness={0.25} />
+        </mesh>
+        <MediterraneanTiledRoof3D
+          width={2.68}
+          length={2.85}
+          height={0.72}
+          color="#1D4ED8"
+          ridgeColor="#F8FAFC"
+          position={[0, 1.61, 0]}
+        />
+        {/* 전면 6개 대리석 원통 기둥 & 아치 출입문 */}
+        {[-1.0, -0.6, -0.2, 0.2, 0.6, 1.0].map((cx, ci) => (
+          <mesh key={ci} position={[cx, 0.90, 1.38]} castShadow>
+            <cylinderGeometry args={[0.065, 0.075, 1.32, 14]} />
+            <meshStandardMaterial color="#FFFFFF" />
+          </mesh>
+        ))}
+        <MediterraneanTree3D position={[-1.38, 0.22, 1.38]} type="cypress" scale={0.95} />
+        <MediterraneanTree3D position={[1.38, 0.22, 1.38]} type="cypress" scale={0.95} />
+      </group>
+    );
+  }
+
+  // ── 🌉 4. 실로암 수로교 (ExtrudeGeometry로 진짜 반원형 아치 구멍이 뚫린 로마 석조 수로교!) ──
+  if (type === 'aqueduct') {
+    const hasWest = grid[r]?.[c - 1]?.type === 'aqueduct';
+    const hasEast = grid[r]?.[c + 1]?.type === 'aqueduct';
+    const hasNorth = grid[r - 1]?.[c]?.type === 'aqueduct';
+    const hasSouth = grid[r + 1]?.[c]?.type === 'aqueduct';
+    const rotY = (hasWest || hasEast) && !hasNorth && !hasSouth ? 0 : Math.PI / 2;
+
+    return (
+      <group position={[wx, wy, wz]} rotation={[0, rotY, 0]} onClick={handleClick}>
+        {/* 진짜 아치 구멍이 뚫린 압출 메쉬 */}
+        <mesh geometry={sharedGeos.aqueductArch} position={[0, 0, -0.24]} castShadow receiveShadow>
+          <meshStandardMaterial map={textures.ashlarWall} roughness={0.45} />
+        </mesh>
+        {/* 상단 흐르는 푸른 수로 물길 */}
+        <mesh position={[0, 1.48, 0]}>
+          <boxGeometry args={[2.02, 0.08, 0.34]} />
+          <meshStandardMaterial color="#0EA5E9" roughness={0.1} metalness={0.45} />
+        </mesh>
+      </group>
+    );
+  }
+
+  // ── 💧 5. 야곱의 우물 & ⛲ 광장 대리석 분수 (3단 원형 수반 & 물줄기) ──
+  if (type === 'well' || type === 'fountain') {
+    const isFountain = type === 'fountain';
+    const rad = isFountain ? 1.32 : 0.64;
+    return (
+      <group position={[wx, wy, wz]} onClick={handleClick}>
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]} receiveShadow>
+          <circleGeometry args={[rad * 1.25, 28]} />
+          <meshStandardMaterial color="#F1ECE1" roughness={0.5} />
+        </mesh>
+        {/* 1단 원형 대리석 수조 (토러스 림 + 수면) */}
+        <mesh position={[0, 0.22, 0]} castShadow receiveShadow>
+          <cylinderGeometry args={[rad, rad * 1.06, 0.28, 28]} />
+          <meshStandardMaterial color="#FFFFFF" roughness={0.22} />
+        </mesh>
+        <mesh position={[0, 0.36, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[rad, 0.07, 12, 28]} />
+          <meshStandardMaterial color="#E2E8F0" roughness={0.25} />
+        </mesh>
+        <mesh position={[0, 0.35, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <circleGeometry args={[rad * 0.92, 28]} />
+          <meshStandardMaterial color="#0284C7" roughness={0.08} metalness={0.5} />
+        </mesh>
+        {isFountain ? (
+          <>
+            {/* 2단 조각 수반 & 3단 물줄기 구체 */}
+            <mesh position={[0, 0.68, 0]} castShadow>
+              <cylinderGeometry args={[0.24, 0.36, 0.65, 18]} />
+              <meshStandardMaterial color="#FFFFFF" />
+            </mesh>
+            <mesh position={[0, 1.02, 0]} castShadow>
+              <cylinderGeometry args={[0.58, 0.18, 0.16, 20]} />
+              <meshStandardMaterial color="#F8FAFC" />
+            </mesh>
+            <mesh position={[0, 1.35, 0]}>
+              <sphereGeometry args={[0.24, 16, 16]} />
+              <meshStandardMaterial color="#BAE6FD" transparent opacity={0.78} />
+            </mesh>
+            {[
+              [-1.28, -1.28],
+              [1.28, -1.28],
+              [-1.28, 1.28],
+              [1.28, 1.28]
+            ].map(([tx, tz], ti) => (
+              <MediterraneanTree3D key={ti} position={[tx, 0.04, tz]} type="cypress" scale={0.9} />
+            ))}
+          </>
+        ) : (
+          <>
+            {/* 우물 양쪽 원통 기둥 & 기와 지붕 */}
+            {[-0.48, 0.48].map((px, pi) => (
+              <mesh key={pi} position={[px, 0.62, 0]} castShadow>
+                <cylinderGeometry args={[0.045, 0.055, 0.65, 10]} />
+                <meshStandardMaterial color="#78350F" />
+              </mesh>
+            ))}
+            <MediterraneanTiledRoof3D width={0.85} length={1.15} height={0.28} position={[0, 0.92, 0]} />
+            <ClayAmphora3D position={[0.55, 0.04, 0.42]} scale={0.85} />
+          </>
+        )}
+      </group>
+    );
+  }
+
+  // ── 🌾 6. 밀밭 풍차 · 포도원(나무 퍼골라 덩굴 & 오크통) · 올리브원 · 어선 선착장 · 곡물창고 ──
+  if (['wheat_farm', 'vineyard', 'olive_grove', 'fishery', 'granary'].includes(type)) {
+    return (
+      <group position={[wx, wy, wz]} onClick={handleClick}>
+        {/* 네모 박스 바닥 대신 자연스러운 원형/타원형 경작지 마운드! */}
+        <mesh position={[0, 0.04, 0]} scale={[1.0, 0.12, 1.0]} receiveShadow>
+          <cylinderGeometry args={[1.72, 1.85, 0.6, 24]} />
+          <meshStandardMaterial
+            color={
+              type === 'wheat_farm'
+                ? '#D97706'
+                : type === 'fishery'
+                ? '#0284C7'
+                : '#4D7C0F'
+            }
+            roughness={0.85}
+          />
+        </mesh>
+
+        {type === 'wheat_farm' && (
+          <>
+            {/* 둥근 이랑 능선 & 황금 짚단 롤(Hay Bales) */}
+            {[-1.05, -0.55, -0.05, 0.45, 0.95].map((fz, fi) => (
+              <mesh key={fi} position={[0, 0.12, fz]} rotation={[0, 0, Math.PI / 2]} castShadow>
+                <cylinderGeometry args={[0.14, 0.16, 2.8, 12, 1, false, 0, Math.PI]} />
+                <meshStandardMaterial color={fi % 2 === 0 ? '#FACC15' : '#EAB308'} roughness={0.8} />
+              </mesh>
+            ))}
+            {/* 테이퍼드 원통형 풍차 방앗간 & 반구형 돔 지붕 & 회전 돛 */}
+            <mesh position={[0, 0.88, -0.35]} castShadow receiveShadow>
+              <cylinderGeometry args={[0.42, 0.62, 1.55, 20]} />
+              <meshStandardMaterial map={textures.ashlarWall} />
+            </mesh>
+            <mesh position={[0, 1.64, -0.35]} castShadow>
+              <sphereGeometry args={[0.44, 20, 14, 0, Math.PI * 2, 0, Math.PI / 2]} />
+              <meshStandardMaterial color="#B45309" roughness={0.5} />
+            </mesh>
+            <group ref={sailRef} position={[0, 1.28, 0.16]}>
+              {[0, 1, 2, 3].map((bi) => (
+                <group key={bi} rotation={[0, 0, (bi * Math.PI) / 2]}>
+                  <mesh position={[0, 0.58, 0]} castShadow>
+                    <cylinderGeometry args={[0.02, 0.025, 1.15, 6]} />
+                    <meshStandardMaterial color="#451A03" />
+                  </mesh>
+                  <mesh position={[0.09, 0.64, 0]} castShadow>
+                    <planeGeometry args={[0.16, 0.92]} />
+                    <meshStandardMaterial color="#FFFBEB" side={THREE.DoubleSide} />
+                  </mesh>
+                </group>
+              ))}
+            </group>
+          </>
+        )}
+
+        {type === 'vineyard' && (
+          <>
+            {/* 네모 보라색 판자 완전 제거! ➔ 아치형 원목 포도 시렁(Trellis) 3열 & 주렁주렁 열린 보라색 포도송이 클러스터 & 와인 오크통! */}
+            {[-0.85, 0.0, 0.85].map((vz, vi) => (
+              <group key={vi} position={[0.25, 0.1, vz]}>
+                {[-0.9, 0, 0.9].map((px, pi) => (
+                  <mesh key={pi} position={[px, 0.28, 0]} castShadow>
+                    <cylinderGeometry args={[0.03, 0.04, 0.56, 8]} />
+                    <meshStandardMaterial color="#5C381E" />
+                  </mesh>
+                ))}
+                <mesh position={[0, 0.54, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
+                  <cylinderGeometry args={[0.025, 0.025, 2.1, 8]} />
+                  <meshStandardMaterial color="#78350F" />
+                </mesh>
+                {/* 풍성한 초록 덩굴 잎 & 보라색 포도송이 구체들 */}
+                {[-0.7, -0.35, 0, 0.35, 0.7].map((gx, gi) => (
+                  <group key={gi} position={[gx, 0.52, 0]}>
+                    <mesh scale={[1.3, 0.7, 1.1]} castShadow>
+                      <dodecahedronGeometry args={[0.18, 1]} />
+                      <meshStandardMaterial color="#15803D" roughness={0.7} />
+                    </mesh>
+                    <mesh position={[0, -0.14, 0.05]} castShadow>
+                      <sphereGeometry args={[0.09, 10, 10]} />
+                      <meshStandardMaterial color="#9333EA" roughness={0.35} />
+                    </mesh>
+                  </group>
+                ))}
+              </group>
+            ))}
+            {/* 좌측 와이너리 석조 오두막 & 오크 와인 숙성통 */}
+            <mesh position={[-1.05, 0.45, -0.75]} castShadow>
+              <cylinderGeometry args={[0.45, 0.52, 0.75, 16]} />
+              <meshStandardMaterial map={textures.ashlarWall} />
+            </mesh>
+            <mesh position={[-1.05, 0.98, -0.75]} castShadow>
+              <coneGeometry args={[0.55, 0.45, 16]} />
+              <meshStandardMaterial color="#B91C1C" />
+            </mesh>
+          </>
+        )}
+
+        {type === 'olive_grove' && (
+          <>
+            {/* 원형 석조 올리브 기름틀(Olive Press Millstone) & 6그루 고목 올리브 과수원 */}
+            <group position={[-0.85, 0.12, -0.85]}>
+              <mesh position={[0, 0.15, 0]} castShadow>
+                <cylinderGeometry args={[0.48, 0.54, 0.28, 20]} />
+                <meshStandardMaterial color="#D6C5AF" />
+              </mesh>
+              <mesh position={[0, 0.38, 0.18]} rotation={[0, 0, Math.PI / 2]} castShadow>
+                <cylinderGeometry args={[0.24, 0.24, 0.14, 18]} />
+                <meshStandardMaterial color="#78716C" />
+              </mesh>
+            </group>
+            {[
+              [0.65, -0.85],
+              [-0.85, 0.65],
+              [0.10, 0.05],
+              [0.95, 0.15],
+              [0.15, 0.95],
+              [0.95, 0.95]
+            ].map(([tx, tz], ti) => (
+              <MediterraneanTree3D key={ti} position={[tx, 0.08, tz]} type="olive_tree" scale={0.92} />
+            ))}
+          </>
+        )}
+
+        {type === 'granary' && (
+          <>
+            {/* 물레 성형 곡선형 점토 곡물 사일로(Domed Beehive Silos) 3기 */}
+            {[
+              [-0.65, -0.35, 1.05],
+              [0.65, -0.35, 1.05],
+              [0.0, 0.55, 0.88]
+            ].map(([sx, sz, sScale], gi) => (
+              <group key={gi} position={[sx, 0.08, sz]} scale={[sScale, sScale, sScale]}>
+                <mesh position={[0, 0.62, 0]} castShadow receiveShadow>
+                  <cylinderGeometry args={[0.42, 0.58, 1.24, 20]} />
+                  <meshStandardMaterial map={textures.mudWall} roughness={0.65} />
+                </mesh>
+                <mesh position={[0, 1.22, 0]} castShadow>
+                  <sphereGeometry args={[0.43, 20, 14, 0, Math.PI * 2, 0, Math.PI / 2]} />
+                  <meshStandardMaterial color="#B45309" roughness={0.5} />
+                </mesh>
+              </group>
+            ))}
+          </>
+        )}
+
+        {type === 'fishery' && (
+          <>
+            {/* 원통 말뚝 목조 부두 & 곡선 선체 어선 */}
+            {[-0.8, -0.3, 0.2, 0.7].map((px, pi) => (
+              <mesh key={pi} position={[px, 0.24, -0.45]} castShadow>
+                <cylinderGeometry args={[0.05, 0.06, 0.55, 8]} />
+                <meshStandardMaterial color="#451A03" />
+              </mesh>
+            ))}
+            <mesh position={[-0.05, 0.48, -0.45]} castShadow>
+              <boxGeometry args={[1.8, 0.08, 0.55]} />
+              <meshStandardMaterial color="#78350F" />
+            </mesh>
+            {/* 곡선 어선 */}
+            <group position={[0.45, 0.18, 0.45]} rotation={[0, 0.4, 0]}>
+              <mesh scale={[0.42, 0.28, 1.05]} castShadow>
+                <sphereGeometry args={[0.8, 16, 12, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2]} />
+                <meshStandardMaterial color="#78350F" side={THREE.DoubleSide} />
+              </mesh>
+              <mesh position={[0, 0.55, 0]} scale={[0.7, 0.7, 0.2]} castShadow>
+                <sphereGeometry args={[0.55, 14, 10, 0, Math.PI]} />
+                <meshStandardMaterial color="#FFFFFF" side={THREE.DoubleSide} />
+              </mesh>
+            </group>
+          </>
+        )}
+      </group>
+    );
+  }
+
+  // ── 🍞 7. 상업 장터 (네모 지붕 완전 제거! ➔ 아치형 베두인/로마 마켓 텐트 캐노피 & 원통 광주리 & 암포라 항아리) ──
+  if (['bread_market', 'fish_market', 'sacrifice_market', 'money_changer', 'caravan'].includes(type)) {
+    const awningColor =
       type === 'fish_market' ? '#0284C7' :
       type === 'bread_market' ? '#EA580C' :
       type === 'sacrifice_market' ? '#9333EA' :
       type === 'money_changer' ? '#EAB308' : '#B45309';
 
-    // 하단 나무 카운터 매대
-    drawIsoBox2D(ctx, cx, pBy, inRx, inRy, 12, '#FDE68A', '#A16207', '#78350F', '#271810');
+    return (
+      <group position={[wx, wy, wz]} onClick={handleClick}>
+        {/* 원형 모자이크 장터 광장 바닥 */}
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]} receiveShadow>
+          <circleGeometry args={[bw * 0.54, 28]} />
+          <meshStandardMaterial color="#F5EFE6" roughness={0.5} />
+        </mesh>
 
-    // 매대 위 상품 바구니 (빵, 생선, 금화 등)
-    [-14, 0, 14].forEach((dx, i) => {
-      ctx.beginPath();
-      ctx.arc(cx + dx, pBy - inRy - 13, 5.5, 0, Math.PI * 2);
-      ctx.fillStyle = i === 1 ? '#FEF08A' : awningCol;
-      ctx.fill();
-      ctx.lineWidth = 1.5;
-      ctx.strokeStyle = '#271810';
-      ctx.stroke();
+        {/* 뒤쪽 아치형 석조 아케이드 & 반구형 황금/화이트 돔 */}
+        <mesh position={[0, 0.52, -bh * 0.22]} castShadow receiveShadow>
+          <cylinderGeometry args={[bw * 0.36, bw * 0.40, 0.88, 18]} />
+          <meshStandardMaterial map={textures.ashlarWall} />
+        </mesh>
+        <mesh position={[0, 0.94, -bh * 0.22]} castShadow>
+          <sphereGeometry args={[bw * 0.36, 20, 14, 0, Math.PI * 2, 0, Math.PI / 2]} />
+          <meshStandardMaterial color={awningColor} roughness={0.45} />
+        </mesh>
+
+        {/* 앞쪽 곡선형 볼트 텐트 캐노피(Vaulted Market Awning) 2동 & 원통 나무 기둥 */}
+        {[-0.55, 0.55].map((tx, ti) => (
+          <group key={ti} position={[tx, 0.68, bh * 0.18]}>
+            <mesh rotation={[Math.PI / 2, 0, 0]} scale={[1.0, 0.55, 1.0]} castShadow>
+              <cylinderGeometry args={[0.46, 0.46, 0.95, 16, 1, false, 0, Math.PI]} />
+              <meshStandardMaterial color={ti === 0 ? awningColor : '#FFFBEB'} side={THREE.DoubleSide} roughness={0.5} />
+            </mesh>
+            {[-0.38, 0.38].map((px, pi) => (
+              <mesh key={pi} position={[px, -0.34, 0.38]} castShadow>
+                <cylinderGeometry args={[0.025, 0.03, 0.68, 8]} />
+                <meshStandardMaterial color="#451A03" />
+              </mesh>
+            ))}
+          </group>
+        ))}
+
+        {/* 장터 매대 위 둥근 곡물/생선 자루 & 암포라 항아리들 */}
+        {[-0.65, -0.22, 0.22, 0.65].map((bx, bi) => (
+          <group key={bi} position={[bx, 0.18, bh * 0.22]}>
+            <mesh castShadow>
+              <cylinderGeometry args={[0.16, 0.13, 0.24, 14]} />
+              <meshStandardMaterial color="#A16207" />
+            </mesh>
+            <mesh position={[0, 0.14, 0]}>
+              <sphereGeometry args={[0.14, 12, 10]} />
+              <meshStandardMaterial color={bi % 2 === 0 ? '#FDE047' : awningColor} />
+            </mesh>
+          </group>
+        ))}
+        <ClayAmphora3D position={[-0.95, 0.03, 0.45]} scale={0.9} />
+        <ClayAmphora3D position={[0.95, 0.03, 0.45]} scale={0.85} color="#9A3412" />
+      </group>
+    );
+  }
+
+  // ── ✝️ 8. 골고다 언덕 · 팔복 동산 · 겟세마네 (다면체 자연 바위 암반 언덕!) ──
+  if (['golgotha', 'beatitudes', 'gethsemane'].includes(type)) {
+    const isGolgotha = type === 'golgotha';
+    return (
+      <group position={[wx, wy, wz]} onClick={handleClick}>
+        {/* 네모 박스 대신 겹쳐진 다면체 자연 바위 언덕(Organic Rock Mound) */}
+        <mesh position={[0, 0.28, 0]} scale={[1.45, 0.55, 1.35]} castShadow receiveShadow>
+          <dodecahedronGeometry args={[1.15, 1]} />
+          <meshStandardMaterial color={isGolgotha ? '#78716C' : '#65A30D'} roughness={0.9} />
+        </mesh>
+        <mesh position={[-0.25, 0.56, -0.15]} scale={[1.15, 0.65, 1.05]} castShadow receiveShadow>
+          <dodecahedronGeometry args={[0.82, 1]} />
+          <meshStandardMaterial color={isGolgotha ? '#57534E' : '#4D7C0F'} roughness={0.88} />
+        </mesh>
+        {isGolgotha ? (
+          [-0.58, 0, 0.58].map((cx, ci) => (
+            <group key={ci} position={[cx, 0.78, 0]}>
+              <mesh position={[0, ci === 1 ? 0.58 : 0.42, 0]} castShadow>
+                <cylinderGeometry args={[0.045, 0.055, ci === 1 ? 1.15 : 0.85, 8]} />
+                <meshStandardMaterial color="#451A03" />
+              </mesh>
+              <mesh position={[0, ci === 1 ? 0.82 : 0.58, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
+                <cylinderGeometry args={[0.04, 0.04, 0.52, 8]} />
+                <meshStandardMaterial color="#451A03" />
+              </mesh>
+            </group>
+          ))
+        ) : (
+          <>
+            <MediterraneanTree3D position={[-0.65, 0.68, -0.35]} type="olive_tree" scale={1.1} />
+            <MediterraneanTree3D position={[0.55, 0.58, 0.35]} type="olive_tree" scale={1.05} />
+            <MediterraneanTree3D position={[0.15, 0.72, -0.45]} type="cypress" scale={0.95} />
+          </>
+        )}
+      </group>
+    );
+  }
+
+  // ── 🧱 9. 원통형 망대(Tower) · 아치 성문(Gate) · 성벽(Wall) ──
+  if (type === 'tower') {
+    return (
+      <group position={[wx, wy, wz]} onClick={handleClick}>
+        <mesh position={[0, 0.95, 0]} castShadow receiveShadow>
+          <cylinderGeometry args={[0.62, 0.76, 1.9, 18]} />
+          <meshStandardMaterial map={textures.ashlarWall} roughness={0.5} />
+        </mesh>
+        <mesh position={[0, 2.15, 0]} castShadow>
+          <coneGeometry args={[0.74, 0.65, 18]} />
+          <meshStandardMaterial color="#B91C1C" roughness={0.45} />
+        </mesh>
+      </group>
+    );
+  }
+
+  return (
+    <group position={[wx, wy, wz]} onClick={handleClick}>
+      <mesh position={[0, 0.55, 0]} castShadow receiveShadow>
+        <cylinderGeometry args={[bw * 0.48, bw * 0.52, 1.1, 12]} />
+        <meshStandardMaterial map={textures.ashlarWall} roughness={0.5} />
+      </mesh>
+    </group>
+  );
+}
+
+// =====================================================================
+// 🚶‍♂️ 유선형 3D 시민·제자·예수님·낙타 상단 보행자(Walker)
+// =====================================================================
+function AnnoWalker3D({ walker, idx, grid, onWalkerClick }) {
+  const groupRef = useRef();
+  const interpRef = useRef({ r: walker.r, c: walker.c });
+
+  useFrame(({ clock }, delta) => {
+    if (!groupRef.current) return;
+    const prev = interpRef.current;
+    prev.r += (walker.r - prev.r) * Math.min(1, delta * 5.0);
+    prev.c += (walker.c - prev.c) * Math.min(1, delta * 5.0);
+
+    const gr = Math.max(0, Math.min(MAP_SIZE - 1, Math.round(prev.r)));
+    const gc = Math.max(0, Math.min(MAP_SIZE - 1, Math.round(prev.c)));
+    const elev = getTileElevation3D(gr, gc, grid[gr]?.[gc]);
+    const [wx, wy, wz] = gridToWorld3D(prev.r, prev.c, 1, 1, elev);
+
+    const bounce = Math.abs(Math.sin(clock.elapsedTime * 7.5 + idx)) * 0.06;
+    groupRef.current.position.set(wx, wy + 0.12 + bounce, wz);
+  });
+
+  return (
+    <group
+      ref={groupRef}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (onWalkerClick) {
+          const pool = WALKER_THOUGHTS[walker.type] || WALKER_THOUGHTS.merchant;
+          const randomThought = pool.thoughts[idx % pool.thoughts.length];
+          onWalkerClick({ type: walker.type, name: pool.name, thought: randomThought });
+        }
+      }}
+    >
+      {walker.type === 'jesus' ? (
+        <group>
+          <mesh position={[0, 0.25, 0]} castShadow>
+            <capsuleGeometry args={[0.11, 0.22, 8, 12]} />
+            <meshStandardMaterial color="#FFFFFF" />
+          </mesh>
+          <mesh position={[0, 0.54, 0]} castShadow>
+            <sphereGeometry args={[0.12, 14, 14]} />
+            <meshStandardMaterial color="#FDE68A" />
+          </mesh>
+          <mesh position={[0, 0.62, -0.02]}>
+            <ringGeometry args={[0.14, 0.19, 20]} />
+            <meshBasicMaterial color="#FACC15" side={THREE.DoubleSide} />
+          </mesh>
+        </group>
+      ) : walker.type === 'disciple' ? (
+        <group>
+          <mesh position={[0, 0.22, 0]} castShadow>
+            <capsuleGeometry args={[0.10, 0.20, 8, 12]} />
+            <meshStandardMaterial color={idx % 2 === 0 ? '#0284C7' : '#15803D'} />
+          </mesh>
+          <mesh position={[0, 0.48, 0]} castShadow>
+            <sphereGeometry args={[0.11, 12, 12]} />
+            <meshStandardMaterial color="#FDE68A" />
+          </mesh>
+          <ClayAmphora3D position={[0, 0.58, 0]} scale={0.42} />
+        </group>
+      ) : (
+        <group>
+          <mesh position={[0, 0.24, 0]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+            <capsuleGeometry args={[0.13, 0.24, 8, 12]} />
+            <meshStandardMaterial color="#B45309" />
+          </mesh>
+          <mesh position={[0, 0.38, 0]} castShadow>
+            <sphereGeometry args={[0.15, 12, 12]} />
+            <meshStandardMaterial color="#FACC15" />
+          </mesh>
+          <mesh position={[0, 0.44, 0.24]} castShadow>
+            <sphereGeometry args={[0.10, 12, 12]} />
+            <meshStandardMaterial color="#92400E" />
+          </mesh>
+        </group>
+      )}
+    </group>
+  );
+}
+
+function HarvestBubble3D({ bubble, grid, onHarvestBubbleClick }) {
+  const bRef = useRef();
+  const elev = getTileElevation3D(bubble.r, bubble.c, grid[bubble.r]?.[bubble.c]);
+  const [wx, wy, wz] = gridToWorld3D(bubble.r, bubble.c, 1, 1, elev);
+  const badgeTex = useMemo(() => makeBubbleBadgeTexture(bubble.icon || '🍞'), [bubble.icon]);
+
+  useFrame(({ clock }) => {
+    if (bRef.current) {
+      bRef.current.position.y = wy + 2.45 + Math.sin(clock.elapsedTime * 3.5 + bubble.r) * 0.14;
+    }
+  });
+
+  return (
+    <Billboard
+      ref={bRef}
+      position={[wx, wy + 2.45, wz]}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (onHarvestBubbleClick) onHarvestBubbleClick(bubble);
+      }}
+    >
+      <mesh>
+        <planeGeometry args={[1.15, 1.15]} />
+        <meshBasicMaterial map={badgeTex} transparent depthTest={false} />
+      </mesh>
+    </Billboard>
+  );
+}
+
+// =====================================================================
+// 🌍 《Anno 117: Pax Romana》 유기적 해안선 섬 지형 & 도시 마스터 씬
+// =====================================================================
+function AnnoJerusalemScene({
+  overlayMode,
+  timeOfDay,
+  harvestBubbles,
+  onHarvestBubbleClick,
+  onWalkerClick
+}) {
+  const { grid, walkers, selectedTool, buildAt, demolishAt, setInspectedTile } = useTycoonStore();
+  const [hoverCoord, setHoverCoord] = useState(null);
+
+  const controlsRef = useRef();
+  const { camera } = useThree();
+
+  useEffect(() => {
+    window.tycoonViewport = {
+      scale: {
+        x: 1.0,
+        set: (nextScale) => {
+          const factor = 1 / Math.max(0.45, Math.min(2.2, nextScale));
+          camera.position.set(22 * factor, 23 * factor, 22 * factor);
+          camera.updateProjectionMatrix();
+        }
+      },
+      moveCenter: (worldX, worldY) => {
+        if (!controlsRef.current) return;
+        const tx = THREE.MathUtils.clamp(worldX / 35, -12, 12);
+        const tz = THREE.MathUtils.clamp((worldY - 100) / 25, -12, 12);
+        controlsRef.current.target.set(tx, 0, tz);
+        controlsRef.current.update();
+      }
+    };
+    return () => {
+      delete window.tycoonViewport;
+    };
+  }, [camera]);
+
+  const textures = useMemo(() => ({
+    ashlarWall: makeAshlarWallTexture('#F5EBE0', '#D0BFA6'),
+    mudWall: makeAshlarWallTexture('#D9A773', '#A47551')
+  }), []);
+
+  // 진짜 아치 구멍이 뚫린 수로교 ExtrudeGeometry 캐시
+  const sharedGeos = useMemo(() => {
+    const shape = new THREE.Shape();
+    shape.moveTo(-1.0, 0);
+    shape.lineTo(-1.0, 1.48);
+    shape.lineTo(1.0, 1.48);
+    shape.lineTo(1.0, 0);
+    shape.lineTo(0.58, 0);
+    shape.lineTo(0.58, 0.62);
+    shape.absarc(0, 0.62, 0.58, 0, Math.PI, false);
+    shape.lineTo(-0.58, 0);
+    shape.closePath();
+
+    const aqueductArch = new THREE.ExtrudeGeometry(shape, {
+      depth: 0.48,
+      bevelEnabled: true,
+      bevelSegments: 3,
+      steps: 1,
+      bevelSize: 0.03,
+      bevelThickness: 0.03
     });
+    return { aqueductArch };
+  }, []);
 
-    // 4개 목조 기둥
-    const postH = 28;
-    [
-      [cx - inRx * 0.85, pBy - inRy],
-      [cx + inRx * 0.85, pBy - inRy],
-      [cx, pBy - 2],
-      [cx, pBy - inRy * 1.85]
-    ].forEach(([px, py]) => {
-      ctx.beginPath();
-      ctx.moveTo(px, py - 10);
-      ctx.lineTo(px, py - postH);
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = '#451A03';
-      ctx.stroke();
-    });
+  const isNight = timeOfDay === 'night' || timeOfDay === 'sunset';
 
-    // 상단 카툰 줄무늬 차양막 지붕
-    drawPitchedRoof2D(ctx, cx, pBy, inRx * 1.06, inRy * 1.06, postH, 12, awningCol, '#FFFBEB', awningCol, '#271810');
-  }
-
-  // ── 🌾 밀밭 · 포도원 · 올리브원 · 어선 선착장 · 곡물창고 ──
-  else if (['wheat_farm', 'vineyard', 'olive_grove', 'fishery', 'granary'].includes(type)) {
-    const fieldC =
-      type === 'wheat_farm' ? '#FACC15' :
-      type === 'vineyard' ? '#4ADE80' :
-      type === 'fishery' ? '#0284C7' : '#84CC16';
-
-    drawIsoBox2D(ctx, cx, pBy, rx * 0.92, ry * 0.92, 5, fieldC, '#65A30D', '#3F6212', '#14532D');
-
-    if (type === 'wheat_farm' || type === 'granary') {
-      // 이랑 무늬 + 풍차 타워 본체
-      drawIsoBox2D(ctx, cx, pBy - ry * 0.35 - 5, inRx * 0.45, inRy * 0.45, 42, '#D97706', '#FFFBEB', '#E7D8C1', '#451A03');
-      drawPitchedRoof2D(ctx, cx, pBy - ry * 0.35 - 5, inRx * 0.5, inRy * 0.5, 42, 14, '#B45309', '#78350F', '#FDE68A', '#271810');
-    } else if (type === 'olive_grove' || type === 'vineyard') {
-      // 풍성한 카툰 과수원 나무 4그루
-      [
-        [cx - 22, pBy - inRy - 4],
-        [cx + 22, pBy - inRy - 4],
-        [cx, pBy - inRy - 16],
-        [cx, pBy - inRy + 8]
-      ].forEach(([tx, ty]) => {
-        ctx.fillStyle = '#5C2E0B';
-        ctx.fillRect(tx - 2.5, ty - 16, 5, 14);
-        ctx.beginPath();
-        ctx.arc(tx, ty - 20, 10, 0, Math.PI * 2);
-        ctx.fillStyle = type === 'vineyard' ? '#16A34A' : '#4D7C0F';
-        ctx.fill();
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = '#14532D';
-        ctx.stroke();
-
-        // 열매 송이
-        ctx.beginPath();
-        ctx.arc(tx + 3, ty - 19, 3, 0, Math.PI * 2);
-        ctx.fillStyle = type === 'vineyard' ? '#9333EA' : '#1E293B';
-        ctx.fill();
-      });
-    } else if (type === 'fishery') {
-      // 목조 부두 & 갈릴리 돛단배
-      const centerY = pBy - inRy - 6;
-      ctx.beginPath();
-      ctx.moveTo(cx - 20, centerY);
-      ctx.lineTo(cx + 20, centerY);
-      ctx.lineTo(cx + 13, centerY + 9);
-      ctx.lineTo(cx - 13, centerY + 9);
-      ctx.closePath();
-      ctx.fillStyle = '#78350F';
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.beginPath();
-      ctx.moveTo(cx, centerY - 28);
-      ctx.lineTo(cx + 16, centerY - 3);
-      ctx.lineTo(cx - 10, centerY - 3);
-      ctx.closePath();
-      ctx.fillStyle = '#FFFFFF';
-      ctx.fill();
-      ctx.stroke();
+  const handleTileInteraction = (r, c) => {
+    const clicked = grid[r]?.[c];
+    if (selectedTool === 'inspect') {
+      if (clicked) {
+        const rootR = clicked.isRoot ? r : clicked.rootR;
+        const rootC = clicked.isRoot ? c : clicked.rootC;
+        const rootCell = grid[rootR]?.[rootC];
+        if (rootCell) setInspectedTile({ ...rootCell, r: rootR, c: rootC });
+      }
+      return;
     }
-  }
 
-  // ── ✝️ 골고다 언덕 · 팔복 동산 · 겟세마네 ──
-  else if (['golgotha', 'beatitudes', 'gethsemane'].includes(type)) {
-    const topC = type === 'golgotha' ? '#A8A29E' : '#84CC16';
-    drawIsoBox2D(ctx, cx, pBy, inRx, inRy, 12, topC, '#78716C', '#57534E', '#292524');
-    drawIsoBox2D(ctx, cx, pBy - inRy * 0.3 - 12, inRx * 0.65, inRy * 0.65, 12, topC, '#78716C', '#44403C', '#292524');
-
-    const topY = pBy - inRy - 24;
-    if (type === 'golgotha') {
-      [[-18, 4, 22], [0, 0, 34], [18, 4, 22]].forEach(([dx, dy, ch]) => {
-        ctx.beginPath();
-        ctx.moveTo(cx + dx, topY + dy);
-        ctx.lineTo(cx + dx, topY + dy - ch);
-        ctx.moveTo(cx + dx - 8, topY + dy - ch * 0.7);
-        ctx.lineTo(cx + dx + 8, topY + dy - ch * 0.7);
-        ctx.lineWidth = dx === 0 ? 4 : 3;
-        ctx.strokeStyle = '#451A03';
-        ctx.stroke();
-      });
-    } else {
-      ctx.beginPath();
-      ctx.arc(cx, topY - 12, 14, 0, Math.PI * 2);
-      ctx.fillStyle = '#15803D';
-      ctx.fill();
-      ctx.stroke();
+    if (selectedTool === 'demolish') {
+      demolishAt(r, c);
+      return;
     }
-  }
 
-  // ── 🧱 성벽 · 성문 · 망대 ──
-  else if (['wall', 'gate', 'tower'].includes(type)) {
-    const h = type === 'tower' ? 52 : type === 'gate' ? 38 : 28;
-    drawIsoBox2D(ctx, cx, pBy, inRx, inRy, h, '#D6C7B2', '#EDE0CC', '#B8A68E', '#292524');
-    // 상단 성가퀴 요철
-    drawIsoBox2D(ctx, cx, pBy - h, inRx * 1.04, inRy * 1.04, 6, '#EDE0CC', '#F5EBE0', '#C8B6A6', '#292524');
-    if (type === 'gate') {
-      drawIsoArchLeftWall(ctx, cx, pBy, inRx, inRy, 0.5, 12, 24, '#1E110A');
+    const bMeta = BUILDINGS[selectedTool];
+    if (bMeta) {
+      const built = buildAt(r, c, bMeta);
+      if (!built && clicked) {
+        const rootR = clicked.isRoot ? r : clicked.rootR;
+        const rootC = clicked.isRoot ? c : clicked.rootC;
+        const rootCell = grid[rootR]?.[rootC];
+        if (rootCell) setInspectedTile({ ...rootCell, r: rootR, c: rootC });
+      }
     }
-  } else {
-    drawIsoBox2D(ctx, cx, pBy, inRx, inRy, 26, '#E7D8C1', '#F5EBE0', '#C8B6A6', '#3E2723');
-  }
-
-  const tex = PIXI.Texture.from(canvas);
-  const result = {
-    tex,
-    anchorX: 0.5,
-    anchorY: (ch / scale - 18) / (ch / scale)
   };
-  bakedCartoonTextures.set(cacheKey, result);
-  return result;
+
+  const rootBuildings = useMemo(() => {
+    const list = [];
+    for (let r = 0; r < MAP_SIZE; r++) {
+      for (let c = 0; c < MAP_SIZE; c++) {
+        const cell = grid[r]?.[c];
+        if (cell && cell.isRoot && cell.type !== 'road' && cell.type !== 'plaza') {
+          list.push({ ...cell, r, c });
+        }
+      }
+    }
+    return list;
+  }, [grid]);
+
+  return (
+    <group>
+      {/* 1. 지중해/갈릴리 에메랄드빛 대해(Ocean) & 유기적인 둥근 해안선 백사장(Organic Island Coastline) */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.36, 0]} receiveShadow>
+        <planeGeometry args={[140, 140]} />
+        <meshStandardMaterial color="#0369A1" roughness={0.14} metalness={0.38} />
+      </mesh>
+      {/* 네모 판자 대신 부드럽게 경사진 팔각/원형 해안 모래톱과 암반 기단 */}
+      <mesh position={[-1.2, -0.32, -1.2]} receiveShadow>
+        <cylinderGeometry args={[23.5, 25.8, 0.36, 36]} />
+        <meshStandardMaterial color="#E6D2B2" roughness={0.85} />
+      </mesh>
+      <mesh position={[-1.2, -0.16, -1.2]} receiveShadow>
+        <cylinderGeometry args={[21.2, 23.2, 0.24, 36]} />
+        <meshStandardMaterial color="#DFC9A6" roughness={0.82} />
+      </mesh>
+
+      {/* 바다를 항해하는 로마/갈릴리 범선 2척 */}
+      <SailingRomanGalley startZ={-12} xPos={HALF_MAP + 4.2} speed={1.3} dir={1} />
+      <SailingRomanGalley startZ={10} xPos={HALF_MAP + 7.2} speed={0.95} dir={-1} />
+
+      {/* 2. 16x16 유기적 지형 마운드 & 둥근 조약돌 도로 & 자연 식생 */}
+      {Array.from({ length: MAP_SIZE }).map((_, r) =>
+        Array.from({ length: MAP_SIZE }).map((__, c) => {
+          const cell = grid[r]?.[c];
+          const terrain = getNaturalTerrainType(r, c);
+          const elev = getTileElevation3D(r, c, cell);
+          const [wx, wy, wz] = gridToWorld3D(r, c, 1, 1, 0);
+          const isHovered = hoverCoord && hoverCoord.r === r && hoverCoord.c === c;
+
+          if (!cell && terrain === 'water') {
+            return (
+              <mesh
+                key={`tile_${r}_${c}`}
+                rotation={[-Math.PI / 2, 0, 0]}
+                position={[wx, -0.30, wz]}
+                onPointerMove={(e) => {
+                  e.stopPropagation();
+                  if (!hoverCoord || hoverCoord.r !== r || hoverCoord.c !== c) setHoverCoord({ r, c });
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleTileInteraction(r, c);
+                }}
+              >
+                <planeGeometry args={[TILE_SIZE, TILE_SIZE]} />
+                <meshBasicMaterial color={isHovered ? '#38BDF8' : '#0284C7'} transparent opacity={isHovered ? 0.45 : 0.0} />
+              </mesh>
+            );
+          }
+
+          let topColor = (r + c) % 2 === 0 ? '#E5D3B3' : '#DEC9A4';
+          if (terrain === 'zion_plateau') topColor = '#F3EAE0';
+          if (!cell && terrain === 'meadow') topColor = (r + c) % 2 === 0 ? '#65A30D' : '#4D7C0F';
+          if (isHovered) topColor = '#FDE047';
+
+          const hasNorthRoad = ['road', 'plaza', 'gate'].includes(grid[r - 1]?.[c]?.type);
+          const hasSouthRoad = ['road', 'plaza', 'gate'].includes(grid[r + 1]?.[c]?.type);
+          const hasWestRoad = ['road', 'plaza', 'gate'].includes(grid[r]?.[c - 1]?.type);
+          const hasEastRoad = ['road', 'plaza', 'gate'].includes(grid[r]?.[c + 1]?.type);
+
+          return (
+            <group key={`tile_${r}_${c}`} position={[wx, elev, wz]}>
+              {/* 시온산 고지대는 부드러운 원추형 언덕 마운드로 융기 (네모 절벽 배제!) */}
+              {elev > 0 && (
+                <mesh position={[0, -elev / 2, 0]} receiveShadow castShadow>
+                  <cylinderGeometry args={[TILE_SIZE * 0.78, TILE_SIZE * 0.96, elev, 16]} />
+                  <meshStandardMaterial color="#D6C1A0" roughness={0.85} />
+                </mesh>
+              )}
+
+              {/* 타일 바닥면 (각진 테두리 없이 매끄럽게 블렌딩) */}
+              <mesh
+                rotation={[-Math.PI / 2, 0, 0]}
+                position={[0, 0.01, 0]}
+                receiveShadow
+                onPointerMove={(e) => {
+                  e.stopPropagation();
+                  if (!hoverCoord || hoverCoord.r !== r || hoverCoord.c !== c) {
+                    setHoverCoord({ r, c });
+                  }
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleTileInteraction(r, c);
+                }}
+              >
+                <circleGeometry args={[TILE_SIZE * 0.74, 16]} />
+                <meshStandardMaterial color={topColor} roughness={0.82} />
+              </mesh>
+
+              {/* 🛤️ 유기적 조약돌 로마 도로(Cobblestone Path) & 원형 광장 메달리온 */}
+              {(cell?.type === 'road' || cell?.type === 'plaza') && (
+                <group position={[0, 0.025, 0]}>
+                  <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+                    <circleGeometry args={[cell.type === 'plaza' ? 0.88 : 0.56, 20]} />
+                    <meshStandardMaterial color={cell.type === 'plaza' ? '#F8FAFC' : '#B8A68E'} roughness={0.65} />
+                  </mesh>
+                  {cell.type === 'plaza' && (
+                    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
+                      <ringGeometry args={[0.52, 0.64, 24]} />
+                      <meshBasicMaterial color="#D97706" side={THREE.DoubleSide} />
+                    </mesh>
+                  )}
+                  {hasNorthRoad && (
+                    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, -0.5]}>
+                      <planeGeometry args={[0.92, 1.0]} />
+                      <meshStandardMaterial color="#B8A68E" roughness={0.65} />
+                    </mesh>
+                  )}
+                  {hasSouthRoad && (
+                    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0.5]}>
+                      <planeGeometry args={[0.92, 1.0]} />
+                      <meshStandardMaterial color="#B8A68E" roughness={0.65} />
+                    </mesh>
+                  )}
+                  {hasWestRoad && (
+                    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-0.5, 0, 0]}>
+                      <planeGeometry args={[1.0, 0.92]} />
+                      <meshStandardMaterial color="#B8A68E" roughness={0.65} />
+                    </mesh>
+                  )}
+                  {hasEastRoad && (
+                    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0.5, 0, 0]}>
+                      <planeGeometry args={[1.0, 0.92]} />
+                      <meshStandardMaterial color="#B8A68E" roughness={0.65} />
+                    </mesh>
+                  )}
+                </group>
+              )}
+
+              {/* 자연 나무 & 바위 생태계 */}
+              {!cell && ['palm_tree', 'olive_tree', 'cypress_tree', 'desert_rock'].includes(terrain) && (
+                <MediterraneanTree3D
+                  position={[0, 0.02, 0]}
+                  type={terrain}
+                  scale={0.95}
+                />
+              )}
+            </group>
+          );
+        })
+      )}
+
+      {/* 3. 건설 프리뷰 원형/타원형 홀로그램 링 */}
+      {hoverCoord && selectedTool !== 'inspect' && selectedTool !== 'demolish' && BUILDINGS[selectedTool] && (() => {
+        const bMeta = BUILDINGS[selectedTool];
+        const w = bMeta.w || 1;
+        const h = bMeta.h || 1;
+        const { r, c } = hoverCoord;
+        const elev = getTileElevation3D(r, c, grid[r]?.[c]);
+        const [px, py, pz] = gridToWorld3D(r, c, w, h, elev);
+
+        let canBuild = true;
+        for (let dr = 0; dr < h; dr++) {
+          for (let dc = 0; dc < w; dc++) {
+            if (r + dr >= MAP_SIZE || c + dc >= MAP_SIZE || grid[r + dr]?.[c + dc]) {
+              canBuild = false;
+            }
+          }
+        }
+
+        const rad = Math.max(w, h) * TILE_SIZE * 0.48;
+        return (
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[px, py + 0.08, pz]}>
+            <circleGeometry args={[rad, 32]} />
+            <meshBasicMaterial color={canBuild ? '#34D399' : '#F87171'} transparent opacity={0.55} />
+          </mesh>
+        );
+      })()}
+
+      {/* 4. 오버레이 반경 링 표시 */}
+      {overlayMode !== 'normal' &&
+        rootBuildings.map((b) => {
+          let rad = 0;
+          let col = '#38BDF8';
+          if (overlayMode === 'water' && ['well', 'aqueduct', 'fountain'].includes(b.type)) {
+            rad = b.type === 'fountain' ? 9.5 : 7.0;
+            col = '#0284C7';
+          } else if (overlayMode === 'food' && ['bread_market', 'fish_market', 'wheat_farm', 'fishery', 'granary'].includes(b.type)) {
+            rad = 9.0;
+            col = '#22C55E';
+          } else if (overlayMode === 'faith' && ['synagogue', 'temple', 'golgotha', 'beatitudes'].includes(b.type)) {
+            rad = b.type === 'temple' ? 14.0 : 9.5;
+            col = '#F59E0B';
+          }
+          if (rad <= 0) return null;
+          const elev = getTileElevation3D(b.r, b.c, b);
+          const [bx, by, bz] = gridToWorld3D(b.r, b.c, b.w, b.h, elev);
+          return (
+            <mesh key={`ov_${b.r}_${b.c}`} rotation={[-Math.PI / 2, 0, 0]} position={[bx, by + 0.12, bz]}>
+              <ringGeometry args={[rad * 0.92, rad, 48]} />
+              <meshBasicMaterial color={col} transparent opacity={0.75} side={THREE.DoubleSide} />
+            </mesh>
+          );
+        })}
+
+      {/* 5. 유기적 3D 건축물 렌더링 */}
+      {rootBuildings.map((cell) => (
+        <AnnoBuilding3D
+          key={`bldg_${cell.r}_${cell.c}`}
+          cell={cell}
+          grid={grid}
+          textures={textures}
+          sharedGeos={sharedGeos}
+          isNight={isNight}
+          onSelectBuilding={(r, c) => handleTileInteraction(r, c)}
+        />
+      ))}
+
+      {/* 6. 3D 보행자(Walkers) 렌더링 */}
+      {(walkers || []).map((wk, idx) => (
+        <AnnoWalker3D
+          key={wk.id || idx}
+          walker={wk}
+          idx={idx}
+          grid={grid}
+          onWalkerClick={onWalkerClick}
+        />
+      ))}
+
+      {/* 7. 3D 터치 수확 버블 렌더링 */}
+      {(harvestBubbles || []).map((bubble) => (
+        <HarvestBubble3D
+          key={bubble.id}
+          bubble={bubble}
+          grid={grid}
+          onHarvestBubbleClick={onHarvestBubbleClick}
+        />
+      ))}
+
+      <OrbitControls
+        ref={controlsRef}
+        enableRotate={true}
+        enablePan={true}
+        enableZoom={true}
+        screenSpacePanning={true}
+        enableDamping={true}
+        dampingFactor={0.07}
+        minDistance={7}
+        maxDistance={52}
+        maxPolarAngle={Math.PI / 2.15}
+      />
+    </group>
+  );
 }
 
 export default function GameEngine({
@@ -554,752 +1637,55 @@ export default function GameEngine({
   onHarvestBubbleClick,
   onWalkerClick
 }) {
-  const containerRef = useRef(null);
-  const pixiAppRef = useRef(null);
-  const viewportRef = useRef(null);
-
-  const { grid, walkers, selectedTool, buildAt, demolishAt, setInspectedTile } = useTycoonStore();
-  const stateRef = useRef({
-    grid,
-    walkers,
-    selectedTool,
-    overlayMode,
-    timeOfDay,
-    floatingEvents,
-    harvestBubbles,
-    onHarvestBubbleClick,
-    onWalkerClick
-  });
-  stateRef.current = {
-    grid,
-    walkers,
-    selectedTool,
-    overlayMode,
-    timeOfDay,
-    floatingEvents,
-    harvestBubbles,
-    onHarvestBubbleClick,
-    onWalkerClick
-  };
-
-  const walkerInterpRef = useRef(new Map());
-  const floatTextPoolRef = useRef(new Map());
-  const bubbleTextPoolRef = useRef(new Map());
-  const bldgSpritePoolRef = useRef(new Map());
-  const spawnTimeMapRef = useRef(new Map());
-
-  const getTileCenter = (r, c, elev = 0) => ({
-    x: (c - r) * (TILE_W / 2) + ORIG_X,
-    y: (c + r) * (TILE_H / 2) + ORIG_Y - elev
-  });
-
-  const getMultiTileBase = (r, c, w = 1, h = 1, elev = 0) => {
-    const hw = TILE_W / 2;
-    const hh = TILE_H / 2;
-    return {
-      N: { x: (c - r) * hw + ORIG_X, y: (c + r) * hh - hh + ORIG_Y - elev },
-      E: { x: (c + w - r) * hw + ORIG_X, y: (c + w + r) * hh - hh + ORIG_Y - elev },
-      S: { x: (c + w - (r + h)) * hw + ORIG_X, y: (c + w + r + h) * hh - hh + ORIG_Y - elev },
-      W: { x: (c - (r + h)) * hw + ORIG_X, y: (c + r + h) * hh - hh + ORIG_Y - elev }
-    };
-  };
-
-  const worldToTile = (wx, wy) => {
-    const dx = wx - ORIG_X;
-    const dy = wy - ORIG_Y;
-    const yTerm = dy / (TILE_H / 2);
-    const xTerm = dx / (TILE_W / 2);
-    const c = Math.floor((yTerm + xTerm) / 2 + 0.5);
-    const r = Math.floor((yTerm - xTerm) / 2 + 0.5);
-    return { r, c };
-  };
-
-  useEffect(() => {
-    if (!containerRef.current) return;
-    let isMounted = true;
-
-    const app = new PIXI.Application();
-    let viewport = null;
-
-    app.init({
-      resizeTo: containerRef.current,
-      backgroundColor: 0x18120C,
-      antialias: true,
-      resolution: Math.min(window.devicePixelRatio || 1, 2),
-      autoDensity: true
-    }).then(() => {
-      if (!isMounted || !containerRef.current) {
-        app.destroy(true, { children: true });
-        return;
-      }
-
-      containerRef.current.appendChild(app.canvas);
-      pixiAppRef.current = app;
-
-      viewport = new Viewport({
-        screenWidth: containerRef.current.clientWidth,
-        screenHeight: containerRef.current.clientHeight,
-        worldWidth: MAP_SIZE * TILE_W * 3,
-        worldHeight: MAP_SIZE * TILE_H * 3,
-        events: app.renderer.events
-      });
-
-      viewportRef.current = viewport;
-      window.tycoonViewport = viewport;
-
-      app.stage.addChild(viewport);
-      viewport
-        .drag({ clampWheel: true })
-        .pinch()
-        .wheel()
-        .decelerate()
-        .clampZoom({ minScale: 0.45, maxScale: 2.35 });
-
-      viewport.moveCenter(0, 110);
-
-      // 🌟 다층 카툰 디오라마 레이어
-      const bedrockGfx = new PIXI.Graphics();
-      const groundGfx = new PIXI.Graphics();
-      const overlayGfx = new PIXI.Graphics();
-      const castShadowGfx = new PIXI.Graphics();
-      const bldgSpriteContainer = new PIXI.Container();
-      bldgSpriteContainer.sortableChildren = true;
-      const animPartsGfx = new PIXI.Graphics();
-      const walkerGfx = new PIXI.Graphics();
-      const previewGfx = new PIXI.Graphics();
-      const fxGfx = new PIXI.Graphics();
-      const bubbleGfx = new PIXI.Graphics();
-      const bubbleTextContainer = new PIXI.Container();
-      const floatTextContainer = new PIXI.Container();
-      const nightGlowGfx = new PIXI.Graphics();
-
-      viewport.addChild(bedrockGfx);
-      viewport.addChild(groundGfx);
-      viewport.addChild(overlayGfx);
-      viewport.addChild(castShadowGfx);
-      viewport.addChild(bldgSpriteContainer);
-      viewport.addChild(animPartsGfx);
-      viewport.addChild(walkerGfx);
-      viewport.addChild(previewGfx);
-      viewport.addChild(fxGfx);
-      viewport.addChild(bubbleGfx);
-      viewport.addChild(bubbleTextContainer);
-      viewport.addChild(floatTextContainer);
-      viewport.addChild(nightGlowGfx);
-
-      let hoverTile = null;
-      let isDragBuilding = false;
-      let lastDragBuiltKey = '';
-
-      viewport.on('pointermove', (e) => {
-        const worldPos = viewport.toWorld(e.global.x, e.global.y);
-        const tile = worldToTile(worldPos.x, worldPos.y);
-        if (tile.r >= 0 && tile.r < MAP_SIZE && tile.c >= 0 && tile.c < MAP_SIZE) {
-          hoverTile = tile;
-
-          const { selectedTool: curTool } = stateRef.current;
-          if (isDragBuilding && ['road', 'plaza', 'wall'].includes(curTool)) {
-            const tileKey = `${tile.r}-${tile.c}`;
-            if (tileKey !== lastDragBuiltKey) {
-              lastDragBuiltKey = tileKey;
-              const bMeta = BUILDINGS[curTool];
-              if (bMeta) {
-                const ok = buildAt(tile.r, tile.c, bMeta);
-                if (ok) spawnTimeMapRef.current.set(tileKey, Date.now());
-              }
-            }
-          }
-        } else {
-          hoverTile = null;
-        }
-      });
-
-      let touchStartTime = 0;
-      let touchStartPos = { x: 0, y: 0 };
-
-      viewport.on('pointerdown', (e) => {
-        touchStartTime = Date.now();
-        touchStartPos = { x: e.global.x, y: e.global.y };
-
-        // 1) 수확 버블 터치 최우선 감지
-        const worldPos = viewport.toWorld(e.global.x, e.global.y);
-        const { harvestBubbles: curBubbles, onHarvestBubbleClick: harvestCb, grid: curGrid } = stateRef.current;
-        if (curBubbles && curBubbles.length > 0 && harvestCb) {
-          for (let i = 0; i < curBubbles.length; i++) {
-            const b = curBubbles[i];
-            const elev = getTileElevation(b.r, b.c, curGrid[b.r]?.[b.c]);
-            const pos = getTileCenter(b.r, b.c, elev);
-            if (Math.hypot(worldPos.x - pos.x, worldPos.y - (pos.y - 58)) < 28) {
-              harvestCb(b);
-              return;
-            }
-          }
-        }
-
-        const { selectedTool: curTool } = stateRef.current;
-        if (['road', 'plaza', 'wall'].includes(curTool) && hoverTile) {
-          isDragBuilding = true;
-          const tKey = `${hoverTile.r}-${hoverTile.c}`;
-          lastDragBuiltKey = tKey;
-          viewport.plugins.pause('drag');
-          const bMeta = BUILDINGS[curTool];
-          if (bMeta) {
-            const ok = buildAt(hoverTile.r, hoverTile.c, bMeta);
-            if (ok) spawnTimeMapRef.current.set(tKey, Date.now());
-          }
-        }
-      });
-
-      viewport.on('pointerup', (e) => {
-        if (isDragBuilding) {
-          isDragBuilding = false;
-          viewport.plugins.resume('drag');
-          return;
-        }
-
-        const elapsed = Date.now() - touchStartTime;
-        const dist = Math.hypot(e.global.x - touchStartPos.x, e.global.y - touchStartPos.y);
-
-        if (elapsed < 350 && dist < 12) {
-          const worldPos = viewport.toWorld(e.global.x, e.global.y);
-
-          const {
-            harvestBubbles: curBubbles,
-            onHarvestBubbleClick: harvestCb,
-            walkers: curWalkers,
-            onWalkerClick: walkerCb,
-            grid: curGrid,
-            selectedTool: curTool
-          } = stateRef.current;
-
-          if (curBubbles && curBubbles.length > 0 && harvestCb) {
-            for (let i = 0; i < curBubbles.length; i++) {
-              const b = curBubbles[i];
-              const elev = getTileElevation(b.r, b.c, curGrid[b.r]?.[b.c]);
-              const pos = getTileCenter(b.r, b.c, elev);
-              if (Math.hypot(worldPos.x - pos.x, worldPos.y - (pos.y - 58)) < 28) {
-                harvestCb(b);
-                return;
-              }
-            }
-          }
-
-          for (let i = 0; i < curWalkers.length; i++) {
-            const wk = curWalkers[i];
-            const interp = walkerInterpRef.current.get(wk.id || i) || { r: wk.r, c: wk.c };
-            const elev = getTileElevation(Math.round(interp.r), Math.round(interp.c), curGrid[Math.round(interp.r)]?.[Math.round(interp.c)]);
-            const wPos = getTileCenter(interp.r, interp.c, elev);
-            if (Math.hypot(worldPos.x - wPos.x, worldPos.y - (wPos.y - 12)) < 24) {
-              if (walkerCb) {
-                const pool = WALKER_THOUGHTS[wk.type] || WALKER_THOUGHTS.merchant;
-                const randomThought = pool.thoughts[i % pool.thoughts.length];
-                walkerCb({ type: wk.type, name: pool.name, thought: randomThought });
-              }
-              return;
-            }
-          }
-
-          if (hoverTile) {
-            const { r, c } = hoverTile;
-            const clicked = curGrid[r]?.[c];
-
-            if (curTool === 'inspect') {
-              if (clicked) {
-                const rootR = clicked.isRoot ? r : clicked.rootR;
-                const rootC = clicked.isRoot ? c : clicked.rootC;
-                const rootCell = curGrid[rootR]?.[rootC];
-                if (rootCell) setInspectedTile({ ...rootCell, r: rootR, c: rootC });
-              }
-              return;
-            }
-
-            if (curTool === 'demolish') {
-              demolishAt(r, c);
-              return;
-            }
-
-            const bMeta = BUILDINGS[curTool];
-            if (bMeta) {
-              const built = buildAt(r, c, bMeta);
-              if (built) {
-                spawnTimeMapRef.current.set(`${r}-${c}`, Date.now());
-              } else if (clicked) {
-                const rootR = clicked.isRoot ? r : clicked.rootR;
-                const rootC = clicked.isRoot ? c : clicked.rootC;
-                const rootCell = curGrid[rootR]?.[rootC];
-                if (rootCell) setInspectedTile({ ...rootCell, r: rootR, c: rootC });
-              }
-            }
-          }
-        }
-      });
-
-      let simTick = 0;
-
-      // ── 🔄 60FPS 메인 루프 ──
-      app.ticker.add((time) => {
-        simTick += time.deltaTime * 0.05;
-        const nowMs = Date.now();
-        const {
-          grid: curGrid,
-          walkers: curWalkers,
-          selectedTool: curTool,
-          overlayMode: curOverlay,
-          timeOfDay: curTimeOfDay,
-          floatingEvents: curFloating,
-          harvestBubbles: curBubbles
-        } = stateRef.current;
-
-        const isNight = curTimeOfDay === 'night' || curTimeOfDay === 'sunset';
-        if (curTimeOfDay === 'night') app.renderer.background.color = 0x090D16;
-        else if (curTimeOfDay === 'sunset') app.renderer.background.color = 0x2B1206;
-        else app.renderer.background.color = 0x18120C;
-
-        // [1] 3D 디오라마 대지 암반 두께
-        bedrockGfx.clear();
-        const wholeMapBase = getMultiTileBase(0, 0, MAP_SIZE, MAP_SIZE, 0);
-        const slabDepth = 46;
-
-        bedrockGfx.poly([
-          wholeMapBase.N.x, wholeMapBase.N.y + slabDepth + 20,
-          wholeMapBase.E.x + 14, wholeMapBase.E.y + slabDepth + 20,
-          wholeMapBase.S.x, wholeMapBase.S.y + slabDepth + 28,
-          wholeMapBase.W.x - 14, wholeMapBase.W.y + slabDepth + 20
-        ]);
-        bedrockGfx.fill({ color: 0x000000, alpha: 0.6 });
-
-        bedrockGfx.poly([
-          wholeMapBase.W.x, wholeMapBase.W.y,
-          wholeMapBase.S.x, wholeMapBase.S.y,
-          wholeMapBase.S.x, wholeMapBase.S.y + slabDepth,
-          wholeMapBase.W.x, wholeMapBase.W.y + slabDepth
-        ]);
-        bedrockGfx.fill(0x8C6D46);
-        bedrockGfx.stroke({ width: 2, color: 0x3E2723 });
-
-        bedrockGfx.poly([
-          wholeMapBase.S.x, wholeMapBase.S.y,
-          wholeMapBase.E.x, wholeMapBase.E.y,
-          wholeMapBase.E.x, wholeMapBase.E.y + slabDepth,
-          wholeMapBase.S.x, wholeMapBase.S.y + slabDepth
-        ]);
-        bedrockGfx.fill(0x5C4328);
-        bedrockGfx.stroke({ width: 2, color: 0x271810 });
-
-        // [2] 지형 타일 & 도로 렌더링
-        groundGfx.clear();
-        for (let r = 0; r < MAP_SIZE; r++) {
-          for (let c = 0; c < MAP_SIZE; c++) {
-            const cell = curGrid[r]?.[c];
-            const terrain = getNaturalTerrainType(r, c);
-            const elev = getTileElevation(r, c, cell);
-            const { x: cx, y: cy } = getTileCenter(r, c, elev);
-            const isHov = hoverTile && hoverTile.r === r && hoverTile.c === c;
-
-            if (elev > 0) {
-              const tBase = getMultiTileBase(r, c, 1, 1, 0);
-              // 시온산 고지대 절벽 측면
-              groundGfx.poly([
-                tBase.W.x, tBase.W.y - elev,
-                tBase.S.x, tBase.S.y - elev,
-                tBase.S.x, tBase.S.y,
-                tBase.W.x, tBase.W.y
-              ]);
-              groundGfx.fill(0xD6C1A0);
-              groundGfx.poly([
-                tBase.S.x, tBase.S.y - elev,
-                tBase.E.x, tBase.E.y - elev,
-                tBase.E.x, tBase.E.y,
-                tBase.S.x, tBase.S.y
-              ]);
-              groundGfx.fill(0xA68A64);
-            }
-
-            let tileColor = (r + c) % 2 === 0 ? 0xEFE2C8 : 0xE7D6B7;
-            if (terrain === 'zion_plateau') tileColor = (r + c) % 2 === 0 ? 0xFBF6EE : 0xF3E9D8;
-            if (!cell) {
-              if (terrain === 'water') tileColor = 0x0284C7;
-              else if (terrain === 'meadow') tileColor = 0x86EFAC;
-            } else if (cell.type === 'road') {
-              tileColor = 0xD6C5A9;
-            } else if (cell.type === 'plaza') {
-              tileColor = 0xF8FAFC;
-            }
-
-            if (isHov) tileColor = 0xFDE047;
-
-            groundGfx.poly([
-              cx, cy - TILE_H / 2,
-              cx + TILE_W / 2, cy,
-              cx, cy + TILE_H / 2,
-              cx - TILE_W / 2, cy
-            ]);
-            groundGfx.fill(tileColor);
-            groundGfx.stroke({
-              width: isHov ? 2 : 0.9,
-              color: isHov ? 0xD97706 : terrain === 'water' ? 0x0369A1 : 0xCBB592
-            });
-
-            if (!cell && terrain === 'water') {
-              const wave = Math.sin(simTick * 2.2 + r * 0.8 + c) * 5;
-              groundGfx.moveTo(cx - 12 + wave, cy - 3);
-              groundGfx.lineTo(cx + 4 + wave, cy - 3);
-              groundGfx.moveTo(cx - 6 - wave, cy + 4);
-              groundGfx.lineTo(cx + 10 - wave, cy + 4);
-              groundGfx.stroke({ width: 1.8, color: 0xBAE6FD, alpha: 0.85 });
-            }
-
-            if (!cell && terrain === 'palm_tree') {
-              const sway = Math.sin(simTick * 1.6 + r) * 2.5;
-              groundGfx.ellipse(cx + 4, cy + 2, 9, 4.5);
-              groundGfx.fill({ color: 0x1E140A, alpha: 0.25 });
-              groundGfx.moveTo(cx, cy + 2);
-              groundGfx.quadraticCurveTo(cx + 3, cy - 12, cx + sway, cy - 24);
-              groundGfx.stroke({ width: 4, color: 0x78350F });
-              [-8, 0, 8].forEach((dx, i) => {
-                groundGfx.ellipse(cx + sway + dx, cy - 24 + Math.abs(dx) * 0.3, 7, 3.5);
-                groundGfx.fill(i === 1 ? 0x22C55E : 0x15803D);
-              });
-            }
-
-            if (cell?.type === 'road') {
-              const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
-              dirs.forEach(([dr, dc]) => {
-                const nb = curGrid[r + dr]?.[c + dc];
-                if (nb && ['road', 'plaza', 'gate'].includes(nb.type)) {
-                  const nElev = getTileElevation(r + dr, c + dc, nb);
-                  const nPos = getTileCenter(r + dr, c + dc, nElev);
-                  groundGfx.moveTo(cx, cy);
-                  groundGfx.lineTo((cx + nPos.x) / 2, (cy + nPos.y) / 2);
-                  groundGfx.stroke({ width: 20, color: 0x8C7355 });
-                  groundGfx.moveTo(cx, cy);
-                  groundGfx.lineTo((cx + nPos.x) / 2, (cy + nPos.y) / 2);
-                  groundGfx.stroke({ width: 14, color: 0xE5D3B3 });
-                }
-              });
-            }
-          }
-        }
-
-        // [3] 오버레이 히트맵
-        overlayGfx.clear();
-        if (curOverlay !== 'normal') {
-          for (let r = 0; r < MAP_SIZE; r++) {
-            for (let c = 0; c < MAP_SIZE; c++) {
-              const cell = curGrid[r]?.[c];
-              if (!cell || !cell.isRoot) continue;
-              const elev = getTileElevation(r, c, cell);
-              const { x: cx, y: cy } = getTileCenter(r, c, elev);
-
-              let radiusTiles = 0;
-              let auraColor = 0x38BDF8;
-              if (curOverlay === 'water' && ['well', 'aqueduct', 'fountain'].includes(cell.type)) {
-                radiusTiles = cell.type === 'fountain' ? 4.5 : 3.5;
-                auraColor = 0x0284C7;
-              } else if (curOverlay === 'food' && ['bread_market', 'fish_market', 'wheat_farm', 'fishery', 'granary'].includes(cell.type)) {
-                radiusTiles = 4.5;
-                auraColor = 0x16A34A;
-              } else if (curOverlay === 'faith' && ['synagogue', 'temple', 'golgotha', 'beatitudes'].includes(cell.type)) {
-                radiusTiles = cell.type === 'temple' ? 6.5 : 4.5;
-                auraColor = 0x9333EA;
-              }
-
-              if (radiusTiles > 0) {
-                overlayGfx.ellipse(cx, cy, radiusTiles * (TILE_W * 0.62), radiusTiles * (TILE_H * 0.62));
-                overlayGfx.fill({ color: auraColor, alpha: 0.2 });
-                overlayGfx.stroke({ width: 2.5, color: auraColor, alpha: 0.85 });
-              }
-            }
-          }
-        }
-
-        // [4 & 5] 고해상도 베이크드 카툰 스프라이트 배치 (폴리곤 찢어짐 0% 보장!)
-        castShadowGfx.clear();
-        animPartsGfx.clear();
-        nightGlowGfx.clear();
-
-        const activeSpriteKeys = new Set();
-
-        for (let r = 0; r < MAP_SIZE; r++) {
-          for (let c = 0; c < MAP_SIZE; c++) {
-            const cell = curGrid[r]?.[c];
-            if (!cell || !cell.isRoot || cell.type === 'road' || cell.type === 'plaza') continue;
-
-            const { type, level = 1, w = 1, h = 1 } = cell;
-            const elev = getTileElevation(r, c, cell);
-            const base = getMultiTileBase(r, c, w, h, elev);
-            const sKey = `${r}-${c}`;
-            activeSpriteKeys.add(sKey);
-
-            // 건설 스프링 바운스 애니메이션
-            const builtAt = spawnTimeMapRef.current.get(sKey) || 0;
-            const ageMs = nowMs - builtAt;
-            let scaleY = 1.0;
-            if (ageMs < 550) {
-              const t = ageMs / 550;
-              scaleY = Math.min(1.12, Math.sin(t * Math.PI * 0.75) * 1.12);
-            }
-
-            // 바닥 밀착 그림자
-            castShadowGfx.poly([
-              base.N.x, base.N.y - 2,
-              base.E.x + 6, base.E.y + 2,
-              base.S.x, base.S.y + 7,
-              base.W.x - 6, base.W.y + 2
-            ]);
-            castShadowGfx.fill({ color: 0x0F0904, alpha: 0.45 });
-
-            // 베이크드 카툰 텍스처 가져오기
-            const baked = getBakedBuildingTexture(type, level, w, h, isNight);
-            let spr = bldgSpritePoolRef.current.get(sKey);
-            if (!spr) {
-              spr = new PIXI.Sprite(baked.tex);
-              bldgSpriteContainer.addChild(spr);
-              bldgSpritePoolRef.current.set(sKey, spr);
-            } else if (spr.texture !== baked.tex) {
-              spr.texture = baked.tex;
-            }
-
-            spr.anchor.set(baked.anchorX, baked.anchorY);
-            spr.x = base.S.x;
-            spr.y = base.S.y;
-            spr.scale.set(0.5, 0.5 * scaleY);
-            spr.zIndex = (r + h) + (c + w);
-
-            // 🎡 풍차 회전 날개
-            if (type === 'wheat_farm' || type === 'granary') {
-              const hubX = base.S.x;
-              const hubY = base.S.y - 64 * scaleY;
-              for (let bIdx = 0; bIdx < 4; bIdx++) {
-                const angle = simTick * 1.6 + (bIdx * Math.PI) / 2;
-                const tipX = hubX + Math.cos(angle) * 24;
-                const tipY = hubY + Math.sin(angle) * 24;
-                const sideX = hubX + Math.cos(angle + 0.28) * 18;
-                const sideY = hubY + Math.sin(angle + 0.28) * 18;
-
-                animPartsGfx.poly([hubX, hubY, tipX, tipY, sideX, sideY]);
-                animPartsGfx.fill(0xFFFBEB);
-                animPartsGfx.stroke({ width: 1.5, color: 0x451A03 });
-              }
-            }
-
-            // ⛲ 분수대 물줄기
-            if (type === 'fountain') {
-              const fX = base.S.x;
-              const fY = base.S.y - 46 * scaleY;
-              for (let d = 0; d < 4; d++) {
-                const t = (simTick * 1.8 + d * 0.25) % 1;
-                const dropX = fX + (d % 2 === 0 ? 1 : -1) * (t * 18);
-                const dropY = fY - Math.sin(t * Math.PI) * 15 + t * 14;
-                animPartsGfx.circle(dropX, dropY, 3);
-                animPartsGfx.fill({ color: 0xE0F2FE, alpha: 1 - t * 0.6 });
-              }
-            }
-
-            if (isNight) {
-              nightGlowGfx.circle(base.S.x, base.S.y - 28, type === 'temple' ? 65 : 26);
-              nightGlowGfx.fill({ color: 0xF59E0B, alpha: curTimeOfDay === 'night' ? 0.24 : 0.12 });
-            }
-          }
-        }
-
-        // 철거된 건물 스프라이트 정리
-        bldgSpritePoolRef.current.forEach((spr, key) => {
-          if (!activeSpriteKeys.has(key)) {
-            bldgSpriteContainer.removeChild(spr);
-            spr.destroy();
-            bldgSpritePoolRef.current.delete(key);
-          }
-        });
-
-        // [6] 보행자(Walker) 렌더링
-        walkerGfx.clear();
-        curWalkers.forEach((w, wIdx) => {
-          const wKey = w.id || wIdx;
-          const prevInterp = walkerInterpRef.current.get(wKey) || { r: w.r, c: w.c };
-          const nextR = prevInterp.r + (w.r - prevInterp.r) * 0.08;
-          const nextC = prevInterp.c + (w.c - prevInterp.c) * 0.08;
-          walkerInterpRef.current.set(wKey, { r: nextR, c: nextC });
-
-          const gridR = Math.max(0, Math.min(MAP_SIZE - 1, Math.round(nextR)));
-          const gridC = Math.max(0, Math.min(MAP_SIZE - 1, Math.round(nextC)));
-          const elev = getTileElevation(gridR, gridC, curGrid[gridR]?.[gridC]);
-          const { x: cx, y: cy } = getTileCenter(nextR, nextC, elev);
-          const bounce = Math.abs(Math.sin(simTick * 4.5 + wIdx)) * 3;
-          const charY = cy - bounce;
-
-          walkerGfx.ellipse(cx, cy + 2, 7, 3.5);
-          walkerGfx.fill({ color: 0x1A0F07, alpha: 0.4 });
-
-          if (w.type === 'jesus') {
-            walkerGfx.circle(cx, charY - 21, 10);
-            walkerGfx.fill({ color: 0xFBBF24, alpha: 0.85 });
-            walkerGfx.circle(cx, charY - 18, 5.5);
-            walkerGfx.fill(0xFDE68A);
-            walkerGfx.stroke({ width: 1.4, color: 0x271810 });
-            walkerGfx.rect(cx - 4.5, charY - 12, 9, 13);
-            walkerGfx.fill(0xFFFFFF);
-            walkerGfx.stroke({ width: 1.4, color: 0x271810 });
-          } else if (w.type === 'disciple') {
-            walkerGfx.circle(cx, charY - 16, 5);
-            walkerGfx.fill(0xFDE68A);
-            walkerGfx.stroke({ width: 1.4, color: 0x271810 });
-            walkerGfx.rect(cx - 3.5, charY - 11, 7, 11);
-            walkerGfx.fill(0x0284C7);
-            walkerGfx.stroke({ width: 1.4, color: 0x271810 });
-          } else {
-            walkerGfx.rect(cx - 5.5, charY - 8, 11, 7);
-            walkerGfx.fill(0xD97706);
-            walkerGfx.stroke({ width: 1.4, color: 0x271810 });
-          }
-        });
-
-        // [7] 건설 홀로그램 타일 표시
-        previewGfx.clear();
-        if (hoverTile && curTool !== 'demolish' && curTool !== 'inspect') {
-          const bMeta = BUILDINGS[curTool];
-          if (bMeta) {
-            const { r, c } = hoverTile;
-            const w = bMeta.w || 1;
-            const h = bMeta.h || 1;
-            const elev = getTileElevation(r, c, curGrid[r]?.[c]);
-            const base = getMultiTileBase(r, c, w, h, elev);
-
-            let canBuild = true;
-            for (let dr = 0; dr < h; dr++) {
-              for (let dc = 0; dc < w; dc++) {
-                if (r + dr >= MAP_SIZE || c + dc >= MAP_SIZE || curGrid[r + dr]?.[c + dc]) {
-                  canBuild = false;
-                }
-              }
-            }
-
-            previewGfx.poly([
-              base.N.x, base.N.y,
-              base.E.x, base.E.y,
-              base.S.x, base.S.y,
-              base.W.x, base.W.y
-            ]);
-            previewGfx.fill({ color: canBuild ? 0x34D399 : 0xF87171, alpha: 0.45 });
-            previewGfx.stroke({ width: 2.5, color: 0xFFFFFF });
-          }
-        }
-
-        // [8] 떠다니는 수확 버블(Tap-to-Harvest Bubbles) 렌더링
-        bubbleGfx.clear();
-        const activeBubbleIds = new Set();
-        (curBubbles || []).forEach((b, bIdx) => {
-          activeBubbleIds.add(b.id);
-          const elev = getTileElevation(b.r, b.c, curGrid[b.r]?.[b.c]);
-          const pos = getTileCenter(b.r, b.c, elev);
-          const floatY = Math.sin(simTick * 3.2 + bIdx) * 4;
-          const bx = pos.x;
-          const by = pos.y - 58 + floatY;
-
-          bubbleGfx.poly([bx - 5, by + 12, bx + 5, by + 12, bx, by + 20]);
-          bubbleGfx.fill(0xFFFBEB);
-          bubbleGfx.circle(bx, by, 16);
-          bubbleGfx.fill(0xFFFBEB);
-          bubbleGfx.stroke({ width: 2.5, color: 0xF59E0B });
-
-          let bTxt = bubbleTextPoolRef.current.get(b.id);
-          if (!bTxt) {
-            bTxt = new PIXI.Text({
-              text: b.icon || '💰',
-              style: { fontSize: 16 }
-            });
-            bTxt.anchor.set(0.5, 0.5);
-            bubbleTextContainer.addChild(bTxt);
-            bubbleTextPoolRef.current.set(b.id, bTxt);
-          }
-          bTxt.x = bx;
-          bTxt.y = by;
-        });
-
-        bubbleTextPoolRef.current.forEach((spr, id) => {
-          if (!activeBubbleIds.has(id)) {
-            bubbleTextContainer.removeChild(spr);
-            spr.destroy();
-            bubbleTextPoolRef.current.delete(id);
-          }
-        });
-
-        // [9] 성전 번제단 연기 & 수확 텍스트
-        fxGfx.clear();
-        for (let r = 0; r < MAP_SIZE; r++) {
-          for (let c = 0; c < MAP_SIZE; c++) {
-            const cell = curGrid[r]?.[c];
-            if (cell?.type === 'temple' && cell.isRoot) {
-              const elev = getTileElevation(r, c, cell);
-              const tBase = getMultiTileBase(r, c, 3, 3, elev);
-              const altarX = tBase.S.x + 22;
-              const altarY = tBase.S.y - 34;
-
-              for (let i = 1; i <= 5; i++) {
-                const progress = (simTick * 0.4 + i * 0.2) % 1;
-                const py = altarY - progress * 64;
-                const px = altarX + Math.sin(simTick + i) * (progress * 14);
-                fxGfx.circle(px, py, 4 + progress * 8);
-                fxGfx.fill({ color: 0xFFFFFF, alpha: 0.75 - progress * 0.55 });
-              }
-            }
-          }
-        }
-
-        const activeFloatIds = new Set();
-        (curFloating || []).forEach(ev => {
-          const age = nowMs - ev.createdAt;
-          if (age > 2200) return;
-          activeFloatIds.add(ev.id);
-
-          let txtSpr = floatTextPoolRef.current.get(ev.id);
-          if (!txtSpr) {
-            txtSpr = new PIXI.Text({
-              text: ev.text,
-              style: {
-                fontFamily: 'sans-serif',
-                fontSize: 13,
-                fontWeight: '900',
-                fill: ev.color || '#FDE047',
-                stroke: { color: '#1E140A', width: 3.5 }
-              }
-            });
-            txtSpr.anchor.set(0.5, 0.5);
-            floatTextContainer.addChild(txtSpr);
-            floatTextPoolRef.current.set(ev.id, txtSpr);
-          }
-
-          const progress = age / 2200;
-          const elev = getTileElevation(ev.r, ev.c, curGrid[ev.r]?.[ev.c]);
-          const pos = getTileCenter(ev.r, ev.c, elev);
-          txtSpr.x = pos.x;
-          txtSpr.y = pos.y - 48 - progress * 38;
-          txtSpr.alpha = 1 - Math.pow(progress, 2);
-        });
-
-        floatTextPoolRef.current.forEach((spr, id) => {
-          if (!activeFloatIds.has(id)) {
-            floatTextContainer.removeChild(spr);
-            spr.destroy();
-            floatTextPoolRef.current.delete(id);
-          }
-        });
-      });
-    });
-
-    return () => {
-      isMounted = false;
-      floatTextPoolRef.current.clear();
-      bubbleTextPoolRef.current.clear();
-      bldgSpritePoolRef.current.clear();
-      if (pixiAppRef.current) {
-        pixiAppRef.current.destroy(true, { children: true, texture: false });
-        pixiAppRef.current = null;
-      }
-    };
-  }, []);
+  const bgStyle =
+    timeOfDay === 'night'
+      ? '#090D16'
+      : timeOfDay === 'sunset'
+      ? '#2B1206'
+      : '#0C4A6E';
 
   return (
-    <div ref={containerRef} className="flex-1 relative overflow-hidden w-full h-full cursor-grab active:cursor-grabbing touch-none" />
+    <div
+      style={{ backgroundColor: bgStyle }}
+      className="flex-1 relative overflow-hidden w-full h-full cursor-grab active:cursor-grabbing touch-none select-none"
+    >
+      <Canvas
+        shadows
+        camera={{ position: [20, 21, 20], fov: 35, near: 0.1, far: 250 }}
+        gl={{ toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: timeOfDay === 'night' ? 0.85 : 1.22 }}
+      >
+        <ambientLight
+          intensity={timeOfDay === 'night' ? 0.55 : timeOfDay === 'sunset' ? 0.95 : 1.35}
+          color={timeOfDay === 'night' ? '#93C5FD' : timeOfDay === 'sunset' ? '#FDBA74' : '#FFFBEB'}
+        />
+        <hemisphereLight
+          args={[
+            timeOfDay === 'night' ? '#1E3A8A' : '#FFF7ED',
+            '#78350F',
+            timeOfDay === 'night' ? 0.45 : 1.1
+          ]}
+        />
+        <directionalLight
+          position={timeOfDay === 'sunset' ? [-28, 16, 22] : [-20, 32, 24]}
+          intensity={timeOfDay === 'night' ? 0.6 : 1.85}
+          color={timeOfDay === 'sunset' ? '#FB923C' : '#FFFBEB'}
+          castShadow
+          shadow-mapSize={[2048, 2048]}
+          shadow-camera-left={-26}
+          shadow-camera-right={26}
+          shadow-camera-top={26}
+          shadow-camera-bottom={-26}
+          shadow-bias={-0.0005}
+        />
+
+        <AnnoJerusalemScene
+          overlayMode={overlayMode}
+          timeOfDay={timeOfDay}
+          harvestBubbles={harvestBubbles}
+          onHarvestBubbleClick={onHarvestBubbleClick}
+          onWalkerClick={onWalkerClick}
+        />
+      </Canvas>
+    </div>
   );
 }

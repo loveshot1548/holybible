@@ -99,7 +99,7 @@ export default function AdminMobileSimulator({
   const [simNoticeBody, setSimNoticeBody] = useState('');
 
   // 고도화 상태: 목장 필터, 성도 검색, 출결 상태 필터, 공지 타겟 목장, 복사/전송 피드백
-  const [selectedCellFilter, setSelectedCellFilter] = useState('ALL');
+  const [selectedCellFilter, setSelectedCellFilter] = useState(() => cells[0]?.name || 'ALL');
   const [memberSearchQuery, setMemberSearchQuery] = useState('');
   const [attFilterMode, setAttFilterMode] = useState('ALL'); // 'ALL' | 'SUN_PRESENT' | 'SUN_ABSENT'
   const [targetNoticeCell, setTargetNoticeCell] = useState(() => cells[0]?.name || '전체 공지');
@@ -143,50 +143,53 @@ export default function AdminMobileSimulator({
     const sunStr = currentWeek?.sunStr;
     const weekDates = currentWeek?.dates || [];
 
-    return (users || []).map(u => {
-      const trimmedName = (u.name || '').trim();
-      const realCellName =
-        userToCellNameMap.get(trimmedName) || u.cell_name || cells[0]?.name || '미배정';
+    return (users || [])
+      .map(u => {
+        const trimmedName = (u.name || '').trim();
+        // 🚨 버그 수정: cells[0]?.name 폴백을 제거하여 미배정 성도가 첫 번째 목장(박근옥 목장 등)으로 강제 편입되는 현상 차단!
+        const realCellName = userToCellNameMap.get(trimmedName) || '미배정';
 
-      const stWed =
-        (attendance || []).find(
-          a => (a.user_name || '').trim() === trimmedName && a.date === wedStr && a.type === '수요'
-        )?.status || '결석';
+        const stWed =
+          (attendance || []).find(
+            a => (a.user_name || '').trim() === trimmedName && a.date === wedStr && a.type === '수요'
+          )?.status || '결석';
 
-      const stFri =
-        (attendance || []).find(
-          a => (a.user_name || '').trim() === trimmedName && a.date === friStr && a.type === '금요'
-        )?.status || '결석';
+        const stFri =
+          (attendance || []).find(
+            a => (a.user_name || '').trim() === trimmedName && a.date === friStr && a.type === '금요'
+          )?.status || '결석';
 
-      const stSun =
-        (attendance || []).find(
-          a =>
-            (a.user_name || '').trim() === trimmedName &&
-            a.date === sunStr &&
-            (a.type === '주일' || a.type === '주일예배')
-        )?.status || '결석';
+        const stSun =
+          (attendance || []).find(
+            a =>
+              (a.user_name || '').trim() === trimmedName &&
+              a.date === sunStr &&
+              (a.type === '주일' || a.type === '주일예배')
+          )?.status || '결석';
 
-      const stCell =
-        (attendance || []).find(
-          a =>
-            (a.user_name || '').trim() === trimmedName &&
-            (a.type === '목장' || a.type === '목장모임') &&
-            (a.date === sunStr || weekDates.some(d => d.full === a.date))
-        )?.status || '결석';
+        const stCell =
+          (attendance || []).find(
+            a =>
+              (a.user_name || '').trim() === trimmedName &&
+              (a.type === '목장' || a.type === '목장모임') &&
+              (a.date === sunStr || weekDates.some(d => d.full === a.date))
+          )?.status || '결석';
 
-      const presentCount = [stWed, stFri, stSun, stCell].filter(s => s === '출석').length;
+        const presentCount = [stWed, stFri, stSun, stCell].filter(s => s === '출석').length;
 
-      return {
-        ...u,
-        realCellName,
-        stWed,
-        stFri,
-        stSun,
-        stCell,
-        presentCount
-      };
-    });
-  }, [users, userToCellNameMap, cells, attendance, currentWeek]);
+        return {
+          ...u,
+          realCellName,
+          stWed,
+          stFri,
+          stSun,
+          stCell,
+          presentCount
+        };
+      })
+      // 🌟 핵심: 모바일 출석부에서는 '미배정' 성도를 아예 제외하고 실제 목장에 배정된 목원들만 표시!
+      .filter(u => u.realCellName !== '미배정');
+  }, [users, userToCellNameMap, attendance, currentWeek]);
 
   // 목장 필터 + 검색어 + 출결 상태 필터 적용
   const filteredUsers = useMemo(() => {
@@ -497,7 +500,9 @@ export default function AdminMobileSimulator({
                     onChange={e => setSelectedCellFilter(e.target.value)}
                     className="px-2.5 py-1.5 rounded-lg bg-zinc-50 border border-zinc-200 text-[11.5px] font-black text-zinc-800 outline-none cursor-pointer shrink-0"
                   >
-                    <option value="ALL">전체 목장 ({enrichedUsers.length}명)</option>
+                    {cells.length > 1 && (
+                      <option value="ALL">전체 배정 목원 ({enrichedUsers.length}명)</option>
+                    )}
                     {cells.map(c => (
                       <option key={c.id} value={c.name}>{c.name}</option>
                     ))}

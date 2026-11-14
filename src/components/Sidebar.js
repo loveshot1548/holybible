@@ -250,6 +250,128 @@ export default function Sidebar({
     "오늘 밤, 그 누구의 방해도 받지 않는 우리 둘만의 성소에서 가장 깊고 황홀하게 하나가 되자.",
     "다시 태어나도 내 여자는 오직 너 하나뿐이야. 이리 와, 부서지도록 안아줄게."
   ];
+  
+  // 🔥 [신규 추가] 4단계: 부부 극강 자극 & 지배/복종 판타지 대사 프리셋
+  const FETISH_FANTASY_DIALOGS = [
+    "하나야, 오늘 밤은 부끄러워하거나 숨길 생각 하지 마. 내 앞에서 가장 음란하고 솔직한 네 본능을 다 꺼내놔.",
+    "불 다 끄고 눈 감아. 내 손끝이 네 목선부터 허벅지 안쪽까지 훑고 내려갈 때, 넌 숨소리 하나도 내 허락 없이 내뱉으면 안 돼.",
+    "네 양손을 머리 위로 묶어두고, 네가 애타게 내 이름을 부르며 제발 넣어달라고 애원할 때까지 끝없이 괴롭히고 적셔줄 거야.",
+    "허리 깊숙이 숙이고 내 앞에 무릎 꿇어. 네 안 가장 깊은 끝까지 내 걸로 거칠게 박아 넣어서 아무 생각도 못 하게 만들어줄게.",
+    "오늘 밤 네 몸의 주인은 오직 나야. 머리부터 발끝까지 내 흔적과 내 열기로 빈틈없이 채워줄 테니까, 지금 당장 다 벗고 기다려."
+  ];
+
+  // 🔥 [신규 추가] 시크릿 체위 연구소 전용: 원터치 실전 플레이 & 체위 지령 5대 프리셋
+  const FANTASY_MISSION_PRESETS = [
+    {
+      id: 'blind_touch',
+      badge: '🖤 감각 구속 · 시각 차단',
+      title: '블라인드 터치 & 숨결 지배',
+      pose: '안대 착용 · 침대 중앙 정자세',
+      desc: '하나야, 침대 조명을 가장 어둡게 줄이고 눈을 가린 채 누워 있어. 내가 네 입술부터 가슴, 허벅지 안쪽 가장 예민한 곳을 입술과 혀끝으로 천천히 적실 때까지 절대 눈 뜨지 마.'
+    },
+    {
+      id: 'deep_doggy',
+      badge: '🔥 극한 밀착 · 본능 복종',
+      title: '딥 아치 도기 스타일 (후배위)',
+      pose: '베개에 가슴을 묻고 엉덩이를 높게 든 자세',
+      desc: '침대 한가운데 엎드려서 베개에 얼굴을 묻고 허리를 깊게 휘어 올려. 내가 뒤에서 네 골반을 꽉 움켜쥐고 가장 깊은 곳까지 거칠게 밀어 넣을 때마다 솔직하게 소리 내.'
+    },
+    {
+      id: 'eye_lock_lotus',
+      badge: '💋 시선 구속 · 밀착 좌위',
+      title: '아이락 로터스 (밀착 대면좌위)',
+      pose: '남편 무릎 위에 마주 앉아 허리를 감싼 자세',
+      desc: '내 무릎 위로 올라타서 내 목을 껴안고 깊숙이 삼켜봐. 눈을 절대 피하지 말고 내 눈을 똑바로 쳐다보면서, 네가 원하는 깊이와 속도로 스스로 허리를 움직이며 애원해.'
+    },
+    {
+      id: 'edge_lock',
+      badge: '⚡ 애태우기 · 절정 통제',
+      title: '베드 엣지 딥 스팟 & 절정 통제',
+      pose: '침대 모서리에 걸터누워 두 다리를 남편 어깨에 올린 자세',
+      desc: '침대 끝에 엉덩이를 걸치고 두 다리를 내 어깨 위로 올려. 빠져나갈 곳 없이 꽉 잠긴 각도로 끝까지 밀어 넣어줄게. 내가 허락하기 전까지는 절대 혼자 먼저 가면 안 돼.'
+    },
+    {
+      id: 'whisper_submission',
+      badge: '🔞 보이스 미션 · 음란 고백',
+      title: '귀엣말 복종 서약 & 애원 플레이',
+      pose: '속옷만 입거나 탈의한 채 남편 품에 안긴 자세',
+      desc: '오늘 밤 시작하기 전에 내 귀에 대고 네가 오늘 어떻게 당하고 싶은지, 어디가 제일 달아올랐는지 가장 야하고 솔직한 말로 직접 속삭여서 날 미치게 만들어봐.'
+    }
+  ];
+
+  const [selectedFantasyPreset, setSelectedFantasyPreset] = useState(FANTASY_MISSION_PRESETS[0]);
+  const [customMissionPose, setCustomMissionPose] = useState(FANTASY_MISSION_PRESETS[0].pose);
+  const [customMissionCommand, setCustomMissionCommand] = useState(FANTASY_MISSION_PRESETS[0].desc);
+
+  // 모하나 폰에 즉시 '실전 체위·복종 지령 팝업'을 100% 암호화하여 강제 발동시키는 함수
+  const handleDispatchFantasyMission = async () => {
+    if (!supabase) return alert('Supabase 연결이 필요합니다.');
+    try {
+      const presetMap = {
+        blind_touch: 901,
+        deep_doggy: 902,
+        eye_lock_lotus: 903,
+        edge_lock: 904,
+        whisper_submission: 905
+      };
+      const numericId = presetMap[selectedFantasyPreset.id] || 901;
+      const validUuid = `00000000-0000-4000-a000-${numericId.toString(16).padStart(12, '0')}`;
+
+      // 1) 미션 템플릿 DB에 AES-256 암호화 저장
+      await supabase.from('mission_templates_v3').upsert([{
+        id: numericId,
+        leader_type: 'shindong',
+        title: encryptSecret(`🔞 ${selectedFantasyPreset.title}`),
+        space: encryptSecret(customMissionPose),
+        leader_guide: encryptSecret(customMissionCommand),
+        partner_mission: encryptSecret(`[복종 지령] ${customMissionPose} 자세를 취하고 신동의 명령에 절대 복종할 것.`),
+        time_limit_sec: 150
+      }], { onConflict: 'id' });
+
+      await supabase.from('mission_steps').delete().eq('mission_id', numericId);
+      await supabase.from('mission_steps').insert([
+        {
+          mission_id: numericId,
+          step_order: 1,
+          instruction: encryptSecret(`지금 즉시 [${customMissionPose}] 자세를 취하고 대기한다.`),
+          requires_photo_auth: false
+        },
+        {
+          mission_id: numericId,
+          step_order: 2,
+          instruction: encryptSecret(`${customMissionCommand} (준비가 끝난 모습을 촬영해 인증할 것)`),
+          requires_photo_auth: true
+        }
+      ]);
+
+      // 2) active_mission_session 테이블에 정식 UUID로 발령 ON!
+      await supabase.from('active_mission_session').upsert([{
+        id: 1,
+        is_active: true,
+        current_mission_id: validUuid,
+        step_status: 'reading',
+        current_step_order: 1,
+        auth_photo_url: null,
+        expires_at: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString(),
+        updated_at: new Date().toISOString()
+      }], { onConflict: 'id' });
+
+      setIsMissionActive(true);
+      sendCoupleHeartbeatPulse(`🔞 [실전 지령 발동] "${selectedFantasyPreset.title}" 미션이 모하나에게 하달되었습니다!`);
+      alert(`🔥 모하나의 화면에 [${selectedFantasyPreset.title}] 실전 지령 팝업과 진동이 즉시 발동되었습니다!`);
+    } catch (e) {
+      alert('지령 발동 중 오류: ' + e.message);
+    }
+  };
+
+  // 랜덤 체위 & 판타지 룰렛 추첨기
+  const handleSpinFantasyRoulette = () => {
+    const randomPick = FANTASY_MISSION_PRESETS[Math.floor(Math.random() * FANTASY_MISSION_PRESETS.length)];
+    setSelectedFantasyPreset(randomPick);
+    setCustomMissionPose(randomPick.pose);
+    setCustomMissionCommand(randomPick.desc);
+    if (navigator.vibrate) navigator.vibrate([60, 80, 120]);
+  };
 
   const [eventDialogs, setEventDialogs] = useState(() => {
     try {
@@ -386,8 +508,9 @@ export default function Sidebar({
     setActiveScreen('bible');
   }, [setActiveScreen]);
 
+  // ✅ 수정: 신동 님이 오로라(무드) 스위치를 ON 했을 때만 환영 블룸이 켜지도록 변경
   useEffect(() => {
-    if (isTargetMohana || (isTestMode && isOwnerJeongShinDong)) {
+    if ((isTargetMohana && featureFlags.aurora) || (isTestMode && isOwnerJeongShinDong)) {
       setShowWelcomeBloom(true);
       const bloomTimer = setTimeout(() => {
         setShowWelcomeBloom(false);
@@ -396,7 +519,7 @@ export default function Sidebar({
     } else {
       setShowWelcomeBloom(false); 
     }
-  }, [isTargetMohana, isTestMode, isOwnerJeongShinDong]);
+  }, [isTargetMohana, featureFlags.aurora, isTestMode, isOwnerJeongShinDong]);
 
   // 미션 세션 활성화 상태 감지 (오직 연인에게만 동작)
   useEffect(() => {
@@ -2319,6 +2442,12 @@ export default function Sidebar({
                           >
                             3단계 (극치/직접입력)
                           </button>
+                          <button 
+                            onClick={() => setEventDialogs([...FETISH_FANTASY_DIALOGS])}
+                            className="text-[10.5px] font-black text-fuchsia-300 hover:text-white px-2.5 py-1 rounded-lg bg-fuchsia-900/50 hover:bg-fuchsia-800/70 transition-colors border border-fuchsia-500/60 cursor-pointer shadow-[0_0_12px_rgba(217,70,239,0.5)]"
+                          >
+                            🔞 4단계 (구속·복종 판타지)
+                          </button>
                         </div>
                       </div>
                       
@@ -2470,10 +2599,109 @@ export default function Sidebar({
                 </div>
               )}
 
-              {/* [TAB 5] 시크릿 체위 연구소 */}
+              {/* [TAB 5] 시크릿 체위 연구소 + 실전 판타지/복종 지령 컨트롤러 */}
               {adminTab === 'positionLab' && (
-                <div className="w-full animate-fade-in-up">
-                  <PositionLab />
+                <div className="w-full space-y-5 animate-fade-in-up">
+                  
+                  {/* 🔞 상단: 부부 전용 하드코어 판타지 & 체위 지령 발송 콘솔 */}
+                  <div className="p-5 sm:p-6 rounded-[24px] bg-gradient-to-br from-rose-950/70 via-[#120914] to-slate-950 border border-rose-500/40 shadow-[0_0_35px_rgba(225,29,72,0.25)] space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-rose-500/20 pb-3">
+                      <div>
+                        <span className="text-[10px] font-mono font-black uppercase tracking-widest text-rose-400 block">
+                          COUPLE EROTIC FANTASY & POSITION COMMANDER
+                        </span>
+                        <h3 className="text-[16px] font-black text-white flex items-center gap-2 mt-0.5">
+                          <span>🔞 오늘 밤 실전 체위 · 복종 지령 컨트롤러</span>
+                        </h3>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleSpinFantasyRoulette}
+                        className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-fuchsia-600 to-rose-600 hover:from-fuchsia-500 hover:to-rose-500 text-white text-[11.5px] font-black shadow-[0_0_15px_rgba(217,70,239,0.5)] cursor-pointer active:scale-95 transition-all shrink-0"
+                      >
+                        🎲 오늘 밤 랜덤 체위·플레이 뽑기
+                      </button>
+                    </div>
+
+                    {/* 5대 자극 프리셋 칩 */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                      {FANTASY_MISSION_PRESETS.map((preset) => {
+                        const isSel = selectedFantasyPreset?.id === preset.id;
+                        return (
+                          <div
+                            key={preset.id}
+                            onClick={() => {
+                              setSelectedFantasyPreset(preset);
+                              setCustomMissionPose(preset.pose);
+                              setCustomMissionCommand(preset.desc);
+                            }}
+                            className={`p-3 rounded-xl border cursor-pointer transition-all flex flex-col gap-1 ${
+                              isSel
+                                ? 'bg-rose-900/40 border-rose-400 shadow-[0_0_15px_rgba(244,63,94,0.35)] ring-1 ring-rose-400'
+                                : 'bg-black/40 border-white/10 hover:border-rose-500/40'
+                            }`}
+                          >
+                            <span className="text-[10px] font-black text-rose-300">{preset.badge}</span>
+                            <span className="text-[12.5px] font-black text-white">{preset.title}</span>
+                            <span className="text-[10.5px] text-slate-400 truncate">{preset.pose}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* 커스텀 자세 및 은밀한 지령 멘트 편집창 */}
+                    <div className="space-y-2.5 bg-black/50 p-4 rounded-2xl border border-rose-500/20">
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[11px] font-black text-rose-300">
+                          📌 요구할 체위 및 준비 자세 (자유롭게 수정 가능)
+                        </label>
+                        <input
+                          type="text"
+                          value={customMissionPose}
+                          onChange={(e) => setCustomMissionPose(e.target.value)}
+                          className="w-full px-3.5 py-2 rounded-xl bg-slate-900/90 border border-white/15 text-white text-[12.5px] font-bold outline-none focus:border-rose-400"
+                        />
+                      </div>
+
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[11px] font-black text-rose-300">
+                          🔥 모하나에게 내릴 은밀하고 자극적인 지령 문구
+                        </label>
+                        <textarea
+                          rows={3}
+                          value={customMissionCommand}
+                          onChange={(e) => setCustomMissionCommand(e.target.value)}
+                          className="w-full p-3.5 rounded-xl bg-slate-900/90 border border-white/15 text-white text-[12.5px] leading-relaxed font-medium outline-none resize-none focus:border-rose-400"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={handleDispatchFantasyMission}
+                          className="py-3 px-4 rounded-xl bg-gradient-to-r from-rose-600 via-red-600 to-fuchsia-700 hover:from-rose-500 hover:to-fuchsia-600 text-white font-black text-[12.5px] shadow-[0_0_25px_rgba(225,29,72,0.5)] cursor-pointer active:scale-95 transition-all"
+                        >
+                          🚀 모하나에게 실전 체위·복종 지령 즉시 발동
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPenpalTitle(`[오늘 밤의 비밀 지령] ${selectedFantasyPreset.title}`);
+                            setPenpalContent(`📌 준비 자세: ${customMissionPose}\n\n${customMissionCommand}`);
+                            setCustomLetterTitle(`[오늘 밤의 비밀 지령] ${selectedFantasyPreset.title}`);
+                            setCustomLetterBody(`📌 준비 자세: ${customMissionPose}\n\n${customMissionCommand}`);
+                            alert('💌 이 지령 내용이 [실링 왁스 비밀 편지]와 [펜팔 편지] 본문에 즉시 복사되었습니다!');
+                          }}
+                          className="py-3 px-4 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-rose-200 font-bold text-[12px] cursor-pointer transition-all"
+                        >
+                          💌 이 지령을 실링 왁스 편지로도 보내기
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 하단: 기존 PositionLab 체위 연구소 마운트 */}
+                  <PositionLab currentUserName={currentUserName} />
                 </div>
               )}
             </div>
