@@ -4,9 +4,101 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { PerspectiveCamera, OrbitControls, RoundedBox, ContactShadows, Billboard } from '@react-three/drei';
 import * as THREE from 'three';
 import { useAppStore } from '../store/useAppStore';
+import { supabase } from '../lib/supabase';
 
 // =====================================================================
-// 🎵 6층 다음세대 교육관 오르골 BGM
+// 👑 축도 권한 목사님 판별 & 기본 아바타 설정
+// =====================================================================
+const BLESSING_PASTORS = ['이성현', '방희곤', '최수경'];
+
+const isAuthorizedPastor = (name = '', office = '') => {
+  const clean = String(name).trim();
+  if (BLESSING_PASTORS.some((p) => clean.includes(p))) return true;
+  if (String(office).includes('목사')) return true;
+  return false;
+};
+
+const DEFAULT_AVATAR_CONFIG = {
+  gender: 'male',
+  hairStyle: 'parted',
+  isSkirt: false,
+  shirtColor: '#FACC15',
+  pantsColor: '#0284C7',
+  hairColor: '#27272A',
+  hasSunglasses: false
+};
+
+// =====================================================================
+// 🔗 매일예배 설교 & 주일학교 찬양 유튜브 실시간 동기화 헬퍼
+// =====================================================================
+const parseYoutubeId = (url) => {
+  if (!url || typeof url !== 'string') return '';
+  const trimmed = url.trim();
+  if (/^[a-zA-Z0-9_-]{11}$/.test(trimmed)) return trimmed;
+  const match = trimmed.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|live\/|shorts\/))([a-zA-Z0-9_-]{11})/);
+  return match ? match[1] : '';
+};
+
+const getSyncedWorshipVideo6F = (storeDailyData = null) => {
+  try {
+    const directKeys = [
+      'daily_worship_video_url',
+      'sermon_active_video_url',
+      'app_active_gisangogi_url',
+      'qt_active_video_url'
+    ];
+    for (const key of directKeys) {
+      const val = localStorage.getItem(key);
+      if (val && parseYoutubeId(val)) {
+        return {
+          url: val,
+          id: parseYoutubeId(val),
+          title: localStorage.getItem('daily_worship_video_title') || '좋은나무교회 다음세대 말씀 & 매일예배'
+        };
+      }
+    }
+
+    const sources = [];
+    if (storeDailyData && typeof storeDailyData === 'object') sources.push(storeDailyData);
+    ['qt_daily', 'dailyData', 'goodtree_daily_data', 'days_data'].forEach((k) => {
+      const raw = localStorage.getItem(k);
+      if (raw) {
+        try { sources.push(JSON.parse(raw)); } catch (_) {}
+      }
+    });
+
+    for (const parsed of sources) {
+      const dates = Object.keys(parsed).sort().reverse();
+      for (const d of dates) {
+        const entry = parsed[d];
+        if (!entry || typeof entry !== 'object') continue;
+        const vUrl =
+          entry.sermonVideoUrl ||
+          entry.sermonVideoId ||
+          entry.videoUrl ||
+          entry.videoId ||
+          entry.youtubeUrl ||
+          entry.qtVideoUrl ||
+          entry.url;
+        if (vUrl && parseYoutubeId(String(vUrl))) {
+          return {
+            url: String(vUrl),
+            id: parseYoutubeId(String(vUrl)),
+            title: entry.sermonTitle || entry.qtTitle || entry.title || `${d} 다음세대 예배 말씀`
+          };
+        }
+      }
+    }
+  } catch (_) {}
+  return {
+    url: 'https://www.youtube.com/watch?v=jfKfPfyJRdk',
+    id: 'jfKfPfyJRdk',
+    title: '다윗처럼 믿음으로 승리해요! (다음세대 예배)'
+  };
+};
+
+// =====================================================================
+// 🎵 6층 사운드 신시사이저 (오르골 BGM · 엘리베이터 벨 · 축도 오르간 화음)
 // =====================================================================
 let bgmInterval6F = null;
 const togglePraiseBgm6F = (play) => {
@@ -29,7 +121,7 @@ const togglePraiseBgm6F = (play) => {
       const gain = ctx.createGain();
       osc.type = 'sine';
       osc.frequency.setValueAtTime(melody[step % melody.length], now);
-      gain.gain.setValueAtTime(0.05, now);
+      gain.gain.setValueAtTime(0.045, now);
       gain.gain.exponentialRampToValueAtTime(0.002, now + 0.32);
       osc.connect(gain);
       gain.connect(ctx.destination);
@@ -40,8 +132,52 @@ const togglePraiseBgm6F = (play) => {
   }, 380);
 };
 
+const playElevatorDingSound = () => {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const now = ctx.currentTime;
+
+    [659.25, 523.25].forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.22);
+      gain.gain.setValueAtTime(0.08, now + idx * 0.22);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.22 + 0.45);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + idx * 0.22);
+      osc.stop(now + idx * 0.22 + 0.45);
+    });
+  } catch (_) {}
+};
+
+const playHolyBlessingSound = () => {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const now = ctx.currentTime;
+
+    [349.23, 440.0, 523.25, 659.25, 698.46, 880.0, 1046.5].forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.11);
+      gain.gain.setValueAtTime(0.06, now + idx * 0.11);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.11 + 1.8);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + idx * 0.11);
+      osc.stop(now + idx * 0.11 + 1.8);
+    });
+  } catch (_) {}
+};
+
 // =====================================================================
-// 🎨 고해상도 프로시저럴 텍스처 생성기 (나뭇결 · 퍼즐매트 · 타일 · 거울)
+// 🎨 고해상도 프로시저럴 텍스처 생성기 (나뭇결 · 퍼즐매트 · 스틸 · 타일 · 거울)
 // =====================================================================
 function makeCanvasTexture(drawFn, width = 512, height = 256) {
   const canvas = document.createElement('canvas');
@@ -72,6 +208,29 @@ function makeWoodGrainTexture(baseHex = '#D49552', lineHex = '#AD6E2F') {
   }, 512, 512);
 }
 
+function makeBrushedSteelTexture() {
+  return makeCanvasTexture((ctx, w, h) => {
+    const grad = ctx.createLinearGradient(0, 0, w, h);
+    grad.addColorStop(0, '#CBD5E1');
+    grad.addColorStop(0.3, '#F8FAFC');
+    grad.addColorStop(0.5, '#94A3B8');
+    grad.addColorStop(0.75, '#E2E8F0');
+    grad.addColorStop(1, '#CBD5E1');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 240; i++) {
+      const y = (i / 240) * h;
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(w, y);
+      ctx.stroke();
+    }
+  }, 512, 512);
+}
+
 function makePuzzleMatTexture() {
   return makeCanvasTexture((ctx, w, h) => {
     const colors = [
@@ -93,7 +252,7 @@ function makePuzzleMatTexture() {
   }, 512, 512);
 }
 
-function makeTileGridTexture(bgHex = '#F8FAFC', lineHex = '#CBD5E1', gridCount = 8) {
+function makeTileGridTexture(bgHex = '#8E939B', lineHex = '#6C717A', gridCount = 8) {
   return makeCanvasTexture((ctx, w, h) => {
     ctx.fillStyle = bgHex;
     ctx.fillRect(0, 0, w, h);
@@ -154,26 +313,26 @@ function makeRoomSignTexture(title, subTitle, badgeColor = '#0284C7') {
     ctx.fillText(subTitle, w / 2, 56);
 
     ctx.fillStyle = '#0F172A';
-    ctx.font = '900 48px sans-serif';
+    ctx.font = '900 46px sans-serif';
     ctx.fillText(title, w / 2, 126);
-  }, 400, 180);
+  }, 420, 180);
 }
 
 // =====================================================================
-// 📍 6층 8대 인터랙션 존 정의
+// 📍 6층 8대 인터랙션 존 정의 (원본 위치 100% 보존 + 2F 포함 전 층 이동!)
 // =====================================================================
 const ZONES_6F = [
   {
     id: 'zone_6f_elev',
     code: '01',
     subCode: 'ELV',
-    name: '6F 엘리베이터 홀 (하단 중앙)',
-    prompt: '01 엘리베이터 탑승 (전 층 이동)',
+    name: '6F 스테인리스 자동문 엘리베이터 홀 (하단 중앙)',
+    prompt: '01 엘리베이터 탑승 (1F~6F 전 층 이동)',
     pos: [0.0, 0, 4.5],
     isElevator: true,
-    badge: '01 엘리베이터',
-    title: '🛗 6층 다음세대 교육관 엘리베이터 홀',
-    desc: '도면 하단 정중앙에 위치한 6층 엘리베이터 홀입니다. 1층 로비, 3층 대예배당, 4층 유아실, 5층 친교·찬양홀로 즉시 이동할 수 있습니다.'
+    badge: '01 6F 엘리베이터',
+    title: '🛗 6층 다음세대 교육관 스테인리스 자동문 엘리베이터',
+    desc: '다가가면 "띵동~" 차임벨과 함께 스테인리스 양문이 열리며 1층 로비, 2층 북카페·목양실, 3층 대예배당, 4층 유아실, 5층 친교·찬양홀로 즉시 이동할 수 있습니다.'
   },
   {
     id: 'zone_6f_stairs',
@@ -191,83 +350,84 @@ const ZONES_6F = [
     id: 'zone_6f_infant',
     code: '03',
     subCode: '유아',
-    name: '좌측 중단 유아부실 (0~3세 키즈 놀이방)',
+    name: '좌측 중단 유아부실 (0~3세 몬테소리 키즈 놀이방)',
     prompt: '03 유아부 키즈 놀이방 들어가기',
     pos: [-1.8, 0, 1.85],
     roomTarget: [-4.2, 1.85],
     badge: '03 유아부 (좌측)',
     title: '👶 예수님 품 안에서 자라는 유아부 키즈 놀이방 (0~3세)',
-    desc: '알록달록한 EVA 퍼즐매트 위에 실내 미끄럼틀, 파스텔 볼풀장, 흔들목마, 곰돌이 인형, 그림책 교구장이 완비된 유아부 전용 공간입니다.',
+    desc: '알록달록한 EVA 퍼즐매트 위에 구름 슬라이드 미끄럼틀, 파스텔 볼풀장, 흔들목마, 자이언트 테디베어 인형, 원뿔 고리끼우기 교구, 아기 체육관이 완비된 유아부 전용 공간입니다.',
     schedule: '주일 오전 11:00 | 6층 좌측 유아부실'
   },
   {
     id: 'zone_6f_elem_left',
     code: '04',
     subCode: '초등L',
-    name: '좌측 상단 초등부 분반실',
+    name: '좌측 상단 초등부 분반실 (모둠 원탁 & 성경교구)',
     prompt: '04 좌측 초등부 분반실 보기',
     pos: [-1.8, 0, -1.8],
     roomTarget: [-4.1, -1.8],
     badge: '04 초등부 분반실',
     title: '📘 초등부 말씀 분반 & 소그룹 교육실 (좌측 상단)',
-    desc: '원목 이젤 화이트보드와 도서 책장, 등받이 의자가 갖춰진 원형 모둠 테이블에서 소그룹 성경 공부가 진행됩니다.',
+    desc: '원목 이젤 화이트보드와 전면 성경 동화책 서가, 교실용 지구본, 둥근 등받이 의자가 갖춰진 원형 모둠 테이블에서 소그룹 성경 공부가 진행됩니다.',
     schedule: '주일 오전 11:00 | 6층 좌측 초등부실'
   },
   {
     id: 'zone_6f_newfamily',
     code: '05',
     subCode: '새가족',
-    name: '상단 정면 새가족반 카페 라운지',
+    name: '상단 정면 새가족반 스페셜티 카페 라운지',
     prompt: '05 새가족반 영접 라운지 안내',
     pos: [-0.2, 0, -3.8],
     roomTarget: [-1.5, -5.5],
     badge: '05 새가족반 (상단)',
     title: '🤝 환영합니다! 좋은나무교회 새가족반 카페 라운지',
-    desc: '에스프레소 커피머신과 다과 바, 원목 테이블과 푹신한 체어가 마련된 새가족 전용 환영 라운지입니다.',
+    desc: '스테인리스 상판 바 카운터와 크롬 2그룹 에스프레소 머신, 2단 유리 돔 디저트 트레이, 원목 라운지 테이블과 최수경 목사님의 새가족 축복 안수가 진행되는 환영 라운지입니다.',
     schedule: '주일 오후 1:00 | 6층 상단 새가족반실'
   },
   {
     id: 'zone_6f_elem_right',
     code: '06',
     subCode: '초등R',
-    name: '우측 상단 초등부 본관 (Sunday School)',
-    prompt: '06 우측 초등부 본관 들어가기',
+    name: '우측 상단 초등부 본관 (Sunday School & 예배 스크린)',
+    prompt: '06 우측 초등부 본관 들어가기 & 말씀 영상 보기',
     pos: [1.8, 0, -1.8],
     roomTarget: [4.2, -2.0],
+    isTvZone: true,
     badge: '06 초등부 본관',
     title: '🏫 초등부 Sunday School 메인 예배실 (우측 상단)',
-    desc: '2단 발판이 있는 십자가 원목 강대상과 대형 말씀 스크린, 성경책과 필통이 놓인 2인용 학습 책상 6세트가 정갈하게 배치된 초등부 본관입니다.',
+    desc: '구스넥 마이크가 달린 십자가 원목 강대상과 실시간 예배 유튜브 스크린, 성경책과 연필꽂이가 놓인 2인용 라운드 학습 책상 6세트가 정갈하게 배치된 초등부 본관입니다.',
     schedule: '주일 오전 11:00 | 6층 우측 초등부실'
   },
   {
     id: 'zone_6f_kinder',
     code: '07',
     subCode: '유치',
-    name: '우측 중단 유치부실 (4~7세 율동·찬양실)',
+    name: '우측 중단 유치부실 (4~7세 무지개 무대 · 꽃잎 원탁)',
     prompt: '07 유치부 예배실 보기',
     pos: [1.8, 0, 1.4],
     roomTarget: [4.0, 1.4],
     badge: '07 유치부 (우측)',
     title: '🎨 무지개 무대 위에서 찬양하는 유치부 (4~7세)',
-    desc: '파스텔 무지개 아치 무대와 찬양 TV, 미니 전자건반, 크레파스와 스케치북이 놓인 꽃모양 원탁이 있는 유치부 예배실입니다.',
+    desc: '파스텔 무지개 아치 무대와 88건반 디지털 피아노, 노아의 방주 입체 교구 모형, 크레파스와 미술 팔레트가 놓인 6잎 꽃모양 원탁이 있는 유치부 예배실입니다.',
     schedule: '주일 오전 11:00 | 6층 우측 유치부실'
   },
   {
     id: 'zone_6f_restroom',
     code: '08',
     subCode: '화장실',
-    name: '우측 하단 남·여 화장실 & 파우더룸',
+    name: '우측 하단 남·여 화장실 & 파우더룸 (큐비클 부스 · 핸드드라이어)',
     prompt: '08 6층 화장실 및 세면대 위치',
     pos: [1.8, 0, 3.6],
     roomTarget: [3.8, 3.6],
     badge: '08 화장실 (우측하단)',
     title: '🚻 6층 남·여 화장실 및 어린이 세면대 (우측 하단)',
-    desc: '밝은 대형 거울과 크롬 수전이 달린 세면대 3기, 남·여 개별 도어 부스와 정밀 양변기가 설치된 쾌적한 화장실입니다.'
+    desc: '2층과 동일한 그레이 포세린 타일 바닥, 옐로우 포인트 세면대 3기와 대형 거울, 아이보리 도어 & 실버 잠금쇠 큐비클 부스 4칸, 벽걸이 곡면 핸드드라이어가 완비된 화장실입니다.'
   }
 ];
 
 // =====================================================================
-// 🚧 물리 충돌 박스 & 문(Doorway) 통과 네비게이션
+// 🚧 물리 충돌 박스 & 문(Doorway) 통과 네비게이션 (원본 100% 보존!)
 // =====================================================================
 const SOLID_WALL_BOXES_6F = [
   { minX: -3.25, maxX: -2.75, minZ: -4.8, maxZ: -2.45 },
@@ -349,13 +509,36 @@ function computePath6F(sx, sz, rawEx, rawEz) {
 }
 
 // =====================================================================
-// 👥 6층 다음세대 교역자 · 교사 · 어린이 · 새가족팀 NPC (남녀 헤어스타일 & 1:1 대화 연동)
+// 👥 6층 다음세대 교역자 · 목사님 · 교사 · 어린이 · 새가족팀 NPC
 // =====================================================================
 const NPCS_6F = [
   {
+    id: 'pastor_choi_6f',
+    name: '최수경 목사님 (교육·새가족 축도)',
+    role: '다음세대 교육관 · 새가족 축복 사역',
+    isPastor: true,
+    canBless: true,
+    x: -2.35,
+    y: 0,
+    z: -5.55,
+    rotY: 0.35,
+    gender: 'female',
+    hairStyle: 'bob',
+    isSkirt: true,
+    autoWave: true,
+    shirt: '#8B5CF6',
+    pants: '#EDE9FE',
+    hair: '#3F2305',
+    dialogues: [
+      '할렐루야! 6층 다음세대 교육관과 새가족반 라운지에 오신 성도님들을 축복합니다 🥰',
+      '저를 클릭하시면 다음세대 자녀들과 새가족을 위한 [✨ 거룩한 축도(홀리라이트)]를 받으실 수 있어요 🙏'
+    ]
+  },
+  {
     id: 'npc_6f_pastor',
-    name: '김전도사 (초등부 인도)',
+    name: '전도사님 (초등부 인도)',
     role: '초등부 담당교역자',
+    isPraiseOrWord: true,
     x: 4.8,
     y: 0.28,
     z: -5.95,
@@ -367,7 +550,7 @@ const NPCS_6F = [
     hair: '#18181B',
     dialogues: [
       '얘들아 할렐루야! 오늘 초등부 말씀 제목은 "다윗처럼 담대하게"란다 ✝️',
-      '책상 위에 펼쳐진 성경책을 함께 읽으며 하나님의 지혜를 배워보자!'
+      '강대상 뒤 스크린이나 저를 클릭하면 오늘의 예배 유튜브 영상을 함께 볼 수 있어!'
     ]
   },
   {
@@ -385,7 +568,7 @@ const NPCS_6F = [
     hair: '#451A03',
     dialogues: [
       '반갑습니다! 6층은 유아부·유치부·초등부와 새가족반이 모이는 다음세대 교육관입니다 😊',
-      '각 교실마다 미끄럼틀, 볼풀장, 무지개 무대, 성경책상이 예쁘게 준비되어 있어요!'
+      '구름 미끄럼틀, 볼풀장, 테디베어, 꽃잎 원탁, 노아의 방주 모형까지 모든 교구가 새 단장되었어요!'
     ]
   },
   {
@@ -405,7 +588,7 @@ const NPCS_6F = [
     hair: '#5C3A21',
     dialogues: [
       '우리 유치부 친구들 여기 오른쪽 무지개 무대 방으로 모이세요 🎨',
-      '꽃모양 테이블에서 크레파스로 성경 색칠놀이도 하고 신나게 찬양해요!'
+      '6잎 꽃모양 원탁에서 성경 색칠놀이도 하고 노아의 방주 모형도 구경해요!'
     ]
   },
   {
@@ -425,7 +608,7 @@ const NPCS_6F = [
     hair: '#5C3A21',
     dialogues: [
       '아기와 부모님이 함께 드리는 유아부는 왼쪽 방입니다 👶',
-      '푹신한 퍼즐매트 위에 미끄럼틀과 볼풀장, 흔들목마가 있어서 아기들이 정말 좋아해요~'
+      '구름 미끄럼틀과 볼풀장, 흔들목마, 커다란 곰돌이 인형이 있어서 아기들이 정말 좋아해요~'
     ]
   },
   {
@@ -443,14 +626,15 @@ const NPCS_6F = [
     pants: '#D1FAE5',
     hair: '#27272A',
     dialogues: [
-      '주일 오후 1시 새가족반 카페 라운지에 오신 것을 진심으로 환영합니다 🤝',
-      '향긋한 커피와 다과를 나누시면서 좋은나무교회 가족이 되어보세요!'
+      '주일 오후 1시 새가족반 스페셜티 카페 라운지에 오신 것을 진심으로 환영합니다 🤝',
+      '안쪽에 계신 최수경 목사님께 새가족 축복 안수(홀리라이트)도 꼭 받고 가세요!'
     ]
   },
   {
     id: 'npc_6f_kid1',
     name: '다윗 (초등부 5학년)',
     role: '초등부 어린이 회장',
+    isChild: true,
     x: 3.65,
     y: 0,
     z: -3.88,
@@ -462,7 +646,7 @@ const NPCS_6F = [
     pants: '#334155',
     hair: '#78350F',
     dialogues: [
-      '전도사님! 책상 위 성경책 펴놓고 말씀 필기 준비 완료했어요 🙋‍♂️',
+      '전도사님! 저요 저요! ✋ 책상 위 성경책 펴놓고 말씀 퀴즈 발표할 준비 됐어요!',
       '친구들아 같이 초등부 본관 앞자리에 앉아서 말씀 듣자!'
     ]
   },
@@ -470,6 +654,7 @@ const NPCS_6F = [
     id: 'npc_6f_kid2',
     name: '에스더 (초등부 4학년)',
     role: '초등부 찬양리더 어린이',
+    isChild: true,
     x: 5.95,
     y: 0,
     z: -2.58,
@@ -483,11 +668,135 @@ const NPCS_6F = [
     hair: '#5C3A21',
     dialogues: [
       '초등부 예배실 강대상이랑 스크린이 진짜 본당처럼 멋져요 ✨',
-      '예배 끝나고 왼쪽 분반실 원탁에서 간식 먹으며 모둠 나눔 해요!'
+      '예배 끝나고 왼쪽 분반실 원탁에서 지구본 보며 세계 선교 기도 해요!'
     ]
   }
 ];
 
+// =====================================================================
+// ✨ 축도(Benediction) 시 하늘에서 내려쬐는 홀리라이트(Holy Light) 이펙트
+// =====================================================================
+function HolyLightBeamEffect6F({ targetPos, pastorName, targetName }) {
+  const beamRef = useRef();
+  const ring1Ref = useRef();
+  const ring2Ref = useRef();
+  const particlesRef = useRef();
+
+  const blessingBannerTex = useMemo(() => {
+    return makeCanvasTexture((ctx, w, h) => {
+      ctx.clearRect(0, 0, w, h);
+      const grad = ctx.createLinearGradient(0, 0, w, 0);
+      grad.addColorStop(0, 'rgba(120, 53, 15, 0.94)');
+      grad.addColorStop(0.5, 'rgba(217, 119, 6, 0.98)');
+      grad.addColorStop(1, 'rgba(120, 53, 15, 0.94)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.roundRect(10, 10, w - 20, h - 20, 32);
+      ctx.fill();
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = '#FEF08A';
+      ctx.stroke();
+
+      ctx.fillStyle = '#FEF08A';
+      ctx.font = '900 22px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`✝️ ${pastorName || '목사님'}의 다음세대·새가족 축도`, w / 2, 46);
+
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = '900 27px serif';
+      ctx.fillText(`${targetName} 성도님과 다음세대 위에 다윗과 같은 믿음과`, w / 2, 88);
+      ctx.fillText(`하늘의 지혜와 평강이 영원토록 함께할지어다! 아멘 🙏`, w / 2, 126);
+    }, 640, 156);
+  }, [pastorName, targetName]);
+
+  useFrame(({ clock }) => {
+    const t = clock.elapsedTime;
+    if (beamRef.current) {
+      const pulse = 1 + Math.sin(t * 5) * 0.08;
+      beamRef.current.scale.set(pulse, 1, pulse);
+      beamRef.current.material.opacity = 0.36 + Math.sin(t * 4) * 0.08;
+    }
+    if (ring1Ref.current) {
+      ring1Ref.current.rotation.z = t * 1.8;
+      const s = 1 + Math.sin(t * 3) * 0.12;
+      ring1Ref.current.scale.set(s, s, 1);
+    }
+    if (ring2Ref.current) {
+      ring2Ref.current.rotation.z = -t * 2.2;
+      ring2Ref.current.position.y = 0.5 + ((t * 0.8) % 2.2);
+    }
+    if (particlesRef.current) {
+      particlesRef.current.rotation.y = t * 1.2;
+      particlesRef.current.position.y = (t * 0.9) % 2.0;
+    }
+  });
+
+  if (!targetPos) return null;
+
+  return (
+    <group position={[targetPos[0], 0.05, targetPos[2]]}>
+      <mesh ref={beamRef} position={[0, 2.8, 0]}>
+        <cylinderGeometry args={[0.88, 0.62, 5.6, 32, 1, true]} />
+        <meshBasicMaterial
+          color="#FDE047"
+          transparent
+          opacity={0.38}
+          side={THREE.DoubleSide}
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+        />
+      </mesh>
+      <mesh position={[0, 2.8, 0]}>
+        <cylinderGeometry args={[0.35, 0.25, 5.6, 24, 1, true]} />
+        <meshBasicMaterial
+          color="#FFFFFF"
+          transparent
+          opacity={0.45}
+          side={THREE.DoubleSide}
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+        />
+      </mesh>
+
+      <mesh ref={ring1Ref} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
+        <ringGeometry args={[0.50, 0.72, 36]} />
+        <meshBasicMaterial color="#FACC15" side={THREE.DoubleSide} transparent opacity={0.9} />
+      </mesh>
+
+      <mesh ref={ring2Ref} rotation={[-Math.PI / 2, 0, 0]} position={[0, 1.0, 0]}>
+        <ringGeometry args={[0.42, 0.50, 32]} />
+        <meshBasicMaterial color="#FFFFFF" side={THREE.DoubleSide} transparent opacity={0.85} />
+      </mesh>
+
+      <group ref={particlesRef}>
+        {Array.from({ length: 12 }).map((_, i) => {
+          const ang = (i / 12) * Math.PI * 2;
+          const rad = 0.34 + (i % 3) * 0.12;
+          const py = (i / 12) * 2.0;
+          return (
+            <mesh key={i} position={[Math.cos(ang) * rad, py, Math.sin(ang) * rad]}>
+              <sphereGeometry args={[0.04, 8, 8]} />
+              <meshBasicMaterial color={i % 2 === 0 ? '#FFFFFF' : '#FDE047'} />
+            </mesh>
+          );
+        })}
+      </group>
+
+      <pointLight position={[0, 2.4, 0]} intensity={5.2} distance={6.0} color="#FDE047" />
+
+      <Billboard position={[0, 2.25, 0]}>
+        <mesh renderOrder={30}>
+          <planeGeometry args={[2.5, 0.62]} />
+          <meshBasicMaterial map={blessingBannerTex} transparent depthTest={false} />
+        </mesh>
+      </Billboard>
+    </group>
+  );
+}
+
+// =====================================================================
+// 👁️ 카메라 회전 시 외벽 자동 투명화 컴포넌트
+// =====================================================================
 function SmartCutawayWall6F({ wallSide, minOpacity = 0.08, children }) {
   const groupRef = useRef();
 
@@ -502,7 +811,7 @@ function SmartCutawayWall6F({ wallSide, minOpacity = 0.08, children }) {
     const targetOpacity = shouldFade ? minOpacity : 1.0;
 
     groupRef.current.traverse((child) => {
-      if (child.isMesh && child.material) {
+      if (child.isMesh && child.material && !child.userData?.keepOpaque) {
         child.material.transparent = true;
         child.material.opacity = THREE.MathUtils.lerp(child.material.opacity, targetOpacity, 0.16);
         child.material.depthWrite = child.material.opacity > 0.45;
@@ -582,7 +891,7 @@ function HologramMarker6F({ zone, isSelected, onSelect }) {
 }
 
 // =====================================================================
-// 🚶‍♀️ 3층 본당과 동일한 유선형(Sphere/Capsule) 캐릭터 & 뿔 없는 남녀 헤어스타일 & 멀티라인 말풍선
+// 🚶‍♀️ 3D 유선형(Sphere/Capsule) 아바타 (원격 보간 + 손들고 발표·춤·기도·축도 지원)
 // =====================================================================
 function wrapKoreanSpeechText(text, maxCharsPerLine = 19) {
   if (!text) return [];
@@ -682,16 +991,18 @@ function CharacterHairStyle6F({ style = 'short', hairColor = '#27272A' }) {
 
 function SmoothChibiAvatar6F({
   position = [0, 0, 0],
+  targetPosition = null,
   patrolZ = null,
   rotationY = 0,
   isWalking = false,
   isSeated = false,
+  isChild = false,
   gender = 'male',
   hairStyle = 'short',
   isSkirt = false,
   autoWave = false,
   hasSunglasses = false,
-  emote = null,
+  emote = null, // 'wave' | 'raise_hand' | 'dance' | 'pray' | 'bless'
   shirtColor = '#FACC15',
   pantsColor = '#2563EB',
   hairColor = '#B45309',
@@ -711,6 +1022,7 @@ function SmoothChibiAvatar6F({
 
   const isFemale = gender === 'female' || isSkirt;
   const patrolState = useRef({ z: position[2], dir: 1, pauseTimer: 0 });
+  const scaleVal = isChild ? 0.82 : 1.0;
 
   const bubbleData = useMemo(() => {
     if (!speechBubbleText) return null;
@@ -762,7 +1074,19 @@ function SmoothChibiAvatar6F({
     const t = clock.elapsedTime + seedOffset;
     let walkingNow = isWalking;
 
-    if (patrolZ && outerGroupRef.current) {
+    if (targetPosition && outerGroupRef.current) {
+      const curX = outerGroupRef.current.position.x;
+      const curZ = outerGroupRef.current.position.z;
+      const dx = targetPosition[0] - curX;
+      const dz = targetPosition[2] - curZ;
+      const dist = Math.hypot(dx, dz);
+      if (dist > 0.03) {
+        walkingNow = true;
+        outerGroupRef.current.position.x = THREE.MathUtils.lerp(curX, targetPosition[0], delta * 7.5);
+        outerGroupRef.current.position.z = THREE.MathUtils.lerp(curZ, targetPosition[2], delta * 7.5);
+      }
+      outerGroupRef.current.rotation.y = THREE.MathUtils.lerp(outerGroupRef.current.rotation.y, rotationY, delta * 8.0);
+    } else if (patrolZ && outerGroupRef.current) {
       const st = patrolState.current;
       if (st.pauseTimer > 0) {
         st.pauseTimer -= delta;
@@ -790,6 +1114,12 @@ function SmoothChibiAvatar6F({
         rightLegRef.current.rotation.x = -Math.PI / 2.05;
         leftLegRef.current.position.set(-0.085, 0.24, 0.11);
         rightLegRef.current.position.set(0.085, 0.24, 0.11);
+      } else if (emote === 'dance') {
+        const kick = Math.sin(t * 14.0) * 0.65;
+        leftLegRef.current.rotation.x = kick;
+        rightLegRef.current.rotation.x = -kick;
+        leftLegRef.current.position.set(-0.085, 0.22, 0);
+        rightLegRef.current.position.set(0.085, 0.22, 0);
       } else if (walkingNow) {
         const sw = Math.sin(t * 9.5) * 0.56;
         leftLegRef.current.rotation.x = sw;
@@ -805,7 +1135,27 @@ function SmoothChibiAvatar6F({
     }
 
     if (leftArmRef.current && rightArmRef.current) {
-      if (emote === 'wave' || autoWave || (patrolZ && !walkingNow)) {
+      if (emote === 'bless') {
+        leftArmRef.current.rotation.x = -2.1;
+        rightArmRef.current.rotation.x = -2.1;
+        leftArmRef.current.rotation.z = 0.35;
+        rightArmRef.current.rotation.z = -0.35;
+      } else if (emote === 'raise_hand') {
+        // ✋ 주일학교 손 번쩍 들고 발표하기 모션!
+        rightArmRef.current.rotation.x = -2.85 + Math.sin(t * 8) * 0.12;
+        rightArmRef.current.rotation.z = -0.15;
+        leftArmRef.current.rotation.x = isSeated ? -0.35 : 0;
+      } else if (emote === 'pray') {
+        leftArmRef.current.rotation.x = -1.15;
+        rightArmRef.current.rotation.x = -1.15;
+        leftArmRef.current.rotation.z = -0.42;
+        rightArmRef.current.rotation.z = 0.42;
+      } else if (emote === 'dance') {
+        leftArmRef.current.rotation.z = 2.4 + Math.sin(t * 12) * 0.45;
+        rightArmRef.current.rotation.z = -2.4 + Math.cos(t * 12) * 0.45;
+        leftArmRef.current.rotation.x = 0.2;
+        rightArmRef.current.rotation.x = 0.2;
+      } else if (emote === 'wave' || autoWave || (patrolZ && !walkingNow)) {
         rightArmRef.current.rotation.z = -2.35 + Math.sin(t * 10) * 0.32;
         rightArmRef.current.rotation.x = 0.3;
         leftArmRef.current.rotation.x = Math.sin(t * 2) * 0.08;
@@ -832,8 +1182,9 @@ function SmoothChibiAvatar6F({
       headGroupRef.current.rotation.y = Math.cos(t * 1.4) * 0.07;
     }
     if (rootRef.current) {
+      const jump = emote === 'dance' ? Math.abs(Math.sin(t * 12)) * 0.15 : 0;
       const bounce = walkingNow && !isSeated ? Math.abs(Math.sin(t * 9.5)) * 0.045 : Math.sin(t * 2.6) * 0.008;
-      rootRef.current.position.y = (isSeated ? 0.16 : 0) + bounce;
+      rootRef.current.position.y = (isSeated ? 0.16 : 0) + bounce + jump;
       rootRef.current.position.z = isSeated ? 0.04 : 0;
     }
   });
@@ -843,6 +1194,7 @@ function SmoothChibiAvatar6F({
       ref={outerGroupRef}
       position={position}
       rotation={[0, rotationY, 0]}
+      scale={[scaleVal, scaleVal, scaleVal]}
       onClick={onClick}
     >
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.015, 0]}>
@@ -974,7 +1326,7 @@ function SmoothChibiAvatar6F({
         {nameTagTexture && (
           <Billboard position={[0, 1.25, 0]}>
             <mesh renderOrder={12}>
-              <planeGeometry args={[1.45, 0.32]} />
+              <planeGeometry args={[1.52, 0.34]} />
               <meshBasicMaterial map={nameTagTexture} transparent depthTest={false} />
             </mesh>
           </Billboard>
@@ -993,31 +1345,84 @@ function SmoothChibiAvatar6F({
   );
 }
 
+function RemoteMultiplayerAvatar6F({ peer, onClickPeer }) {
+  const nameTagTex = useMemo(() => {
+    const isPastor = isAuthorizedPastor(peer.name, peer.office);
+    return makeCanvasTexture((ctx, w, h) => {
+      ctx.fillStyle = isPastor ? 'rgba(88, 28, 135, 0.96)' : 'rgba(15, 23, 42, 0.94)';
+      ctx.beginPath();
+      ctx.roundRect(6, 6, w - 12, h - 12, 48);
+      ctx.fill();
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = isPastor ? '#FACC15' : '#34D399';
+      ctx.stroke();
+
+      ctx.fillStyle = isPastor ? '#FACC15' : '#34D399';
+      ctx.beginPath();
+      ctx.arc(48, h / 2, 14, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = '900 34px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`${isPastor ? '✝️ ' : ''}${peer.name || '성도'}`, w / 2 + 16, h / 2 + 2);
+    }, 520, 110);
+  }, [peer.name, peer.office]);
+
+  return (
+    <SmoothChibiAvatar6F
+      position={[peer.x || 0, 0, peer.z || 3.6]}
+      targetPosition={[peer.x || 0, 0, peer.z || 3.6]}
+      rotationY={peer.rotY || Math.PI}
+      gender={peer.avatar?.gender || 'male'}
+      hairStyle={peer.avatar?.hairStyle || 'parted'}
+      isSkirt={Boolean(peer.avatar?.isSkirt)}
+      hasSunglasses={Boolean(peer.avatar?.hasSunglasses)}
+      isSeated={Boolean(peer.seated)}
+      emote={peer.emote || null}
+      shirtColor={peer.avatar?.shirtColor || '#38BDF8'}
+      pantsColor={peer.avatar?.pantsColor || '#1E293B'}
+      hairColor={peer.avatar?.hairColor || '#27272A'}
+      nameTagTexture={nameTagTex}
+      speechBubbleText={peer.chatMsg ? `${peer.name}: ${peer.chatMsg}` : null}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (onClickPeer) onClickPeer(peer);
+      }}
+    />
+  );
+}
+
 // =====================================================================
-// 🪑 초디테일 의자 · 양변기 · 키즈 미끄럼틀 · 흔들목마 컴포넌트
+// 🧸 [박스 탈피! 유기적 곡면 3D 교구 컬렉션]
+// 1) 유선형 원형 쿠션 의자 (`DetailedChair`)
+// 2) 유아부 구름 미끄럼틀 (`KidsIndoorSlideSet`) & 흔들목마 (`KidsRockingHorse`)
+// 3) 유아부 자이언트 테디베어 인형 (`PlushTeddyBear6F`) & 프뢰벨 고리 끼우기 교구 (`MontessoriRingStacker6F`)
+// 4) 유치부 노아의 방주 입체 모형 (`NoahArkToyModel6F`) & 초등부 지구본 (`ClassroomGlobe6F`)
+// 5) 스테인리스 자동 개폐 엘리베이터 (`AnimatedStainlessElevator6F`)
 // =====================================================================
 function DetailedChair({ position, rotationY = 0, seatColor = '#38BDF8', legColor = '#CBD5E1', onClick }) {
   return (
     <group position={position} rotation={[0, rotationY, 0]} onClick={onClick}>
-      {/* 푹신한 라운드 시트 쿠션 */}
-      <RoundedBox args={[0.38, 0.065, 0.38]} position={[0, 0.32, 0]} radius={0.025} castShadow receiveShadow>
-        <meshStandardMaterial color={seatColor} roughness={0.42} />
+      {/* 사각 박스 대신 둥근 원통형 패브릭 쿠션 좌판 */}
+      <mesh position={[0, 0.32, 0]} castShadow receiveShadow>
+        <cylinderGeometry args={[0.20, 0.20, 0.06, 24]} />
+        <meshStandardMaterial color={seatColor} roughness={0.38} />
+      </mesh>
+      {/* 부드러운 곡면 등받이 쿠션 */}
+      <RoundedBox args={[0.38, 0.26, 0.055]} position={[0, 0.52, 0.16]} rotation={[0.12, 0, 0]} radius={0.08} castShadow>
+        <meshStandardMaterial color={seatColor} roughness={0.38} />
       </RoundedBox>
-      {/* 인체공학 곡면 등받이 (+Z 뒤쪽에 배치하여 정방향 착석 지원!) */}
-      <RoundedBox args={[0.38, 0.32, 0.06]} position={[0, 0.50, 0.16]} rotation={[0.12, 0, 0]} radius={0.025} castShadow>
-        <meshStandardMaterial color={seatColor} roughness={0.42} />
-      </RoundedBox>
-      {/* 등받이 연결 크롬 프레임 */}
       {[-0.10, 0.10].map((bx, i) => (
         <mesh key={i} position={[bx, 0.38, 0.16]}>
           <cylinderGeometry args={[0.012, 0.012, 0.14, 8]} />
           <meshStandardMaterial color={legColor} metalness={0.8} />
         </mesh>
       ))}
-      {/* 스틸 다리 4개 */}
       {[[-0.14, -0.14], [0.14, -0.14], [-0.14, 0.14], [0.14, 0.14]].map(([lx, lz], i) => (
         <mesh key={i} position={[lx, 0.16, lz]} castShadow>
-          <cylinderGeometry args={[0.018, 0.014, 0.32, 8]} />
+          <cylinderGeometry args={[0.016, 0.012, 0.32, 10]} />
           <meshStandardMaterial color={legColor} metalness={0.75} roughness={0.2} />
         </mesh>
       ))}
@@ -1025,29 +1430,159 @@ function DetailedChair({ position, rotationY = 0, seatColor = '#38BDF8', legColo
   );
 }
 
+// 🧸 유아부실 자이언트 테디베어 봉제인형 (100% 구체 & 캡슐 조합 — 사각 박스 제로!)
+function PlushTeddyBear6F({ position, rotationY = 0, scale = 1.0 }) {
+  return (
+    <group position={position} rotation={[0, rotationY, 0]} scale={[scale, scale, scale]}>
+      {/* 통통한 몸통 & 하얀 배 */}
+      <mesh position={[0, 0.22, 0]} scale={[1.0, 1.1, 0.9]} castShadow>
+        <sphereGeometry args={[0.18, 20, 20]} />
+        <meshStandardMaterial color="#B45309" roughness={0.75} />
+      </mesh>
+      <mesh position={[0, 0.21, 0.13]} scale={[0.85, 0.95, 0.4]}>
+        <sphereGeometry args={[0.12, 16, 16]} />
+        <meshStandardMaterial color="#FEF3C7" roughness={0.8} />
+      </mesh>
+      {/* 머리 & 동그란 양쪽 귀 & 주둥이 & 까만 코 */}
+      <group position={[0, 0.46, 0]}>
+        <mesh castShadow>
+          <sphereGeometry args={[0.15, 20, 20]} />
+          <meshStandardMaterial color="#B45309" roughness={0.75} />
+        </mesh>
+        {[-0.12, 0.12].map((ex, ei) => (
+          <mesh key={ei} position={[ex, 0.12, -0.02]} castShadow>
+            <sphereGeometry args={[0.055, 14, 14]} />
+            <meshStandardMaterial color="#92400E" roughness={0.8} />
+          </mesh>
+        ))}
+        <mesh position={[0, -0.03, 0.13]} scale={[1.1, 0.85, 0.7]}>
+          <sphereGeometry args={[0.055, 14, 14]} />
+          <meshStandardMaterial color="#FEF3C7" />
+        </mesh>
+        <mesh position={[0, -0.01, 0.17]}>
+          <sphereGeometry args={[0.018, 10, 10]} />
+          <meshBasicMaterial color="#18181B" />
+        </mesh>
+        {[-0.05, 0.05].map((eyeX, i) => (
+          <mesh key={i} position={[eyeX, 0.03, 0.14]}>
+            <sphereGeometry args={[0.016, 10, 10]} />
+            <meshBasicMaterial color="#18181B" />
+          </mesh>
+        ))}
+      </group>
+      {/* 빨간 리본 나비넥타이 */}
+      <mesh position={[0, 0.34, 0.14]}>
+        <sphereGeometry args={[0.03, 10, 10]} />
+        <meshStandardMaterial color="#EF4444" />
+      </mesh>
+      {/* 양팔 & 벌리고 앉은 두 다리 */}
+      {[-0.18, 0.18].map((ax, ai) => (
+        <mesh key={ai} position={[ax, 0.25, 0.04]} rotation={[0.4, 0, ai === 0 ? 0.5 : -0.5]} castShadow>
+          <capsuleGeometry args={[0.045, 0.10, 10, 12]} />
+          <meshStandardMaterial color="#B45309" roughness={0.75} />
+        </mesh>
+      ))}
+      {[-0.11, 0.11].map((lx, li) => (
+        <mesh key={li} position={[lx, 0.08, 0.14]} rotation={[Math.PI / 2, 0, li === 0 ? 0.25 : -0.25]} castShadow>
+          <capsuleGeometry args={[0.052, 0.12, 10, 12]} />
+          <meshStandardMaterial color="#B45309" roughness={0.75} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+// 🗼 몬테소리 무지개 원형 고리 끼우기(Ring Stacker) 교구
+function MontessoriRingStacker6F({ position }) {
+  return (
+    <group position={position}>
+      <mesh position={[0, 0.02, 0]} castShadow>
+        <cylinderGeometry args={[0.14, 0.15, 0.04, 20]} />
+        <meshStandardMaterial color="#FDE68A" />
+      </mesh>
+      <mesh position={[0, 0.18, 0]}>
+        <cylinderGeometry args={[0.02, 0.02, 0.32, 12]} />
+        <meshStandardMaterial color="#D97706" />
+      </mesh>
+      {[
+        [0.06, 0.11, '#EF4444'],
+        [0.11, 0.095, '#F97316'],
+        [0.16, 0.08, '#FACC15'],
+        [0.21, 0.065, '#22C55E'],
+        [0.26, 0.05, '#38BDF8']
+      ].map(([ry, rad, col], idx) => (
+        <mesh key={idx} position={[0, ry, 0]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+          <torusGeometry args={[rad, 0.026, 12, 24]} />
+          <meshStandardMaterial color={col} roughness={0.25} />
+        </mesh>
+      ))}
+      <mesh position={[0, 0.33, 0]} castShadow>
+        <sphereGeometry args={[0.04, 14, 14]} />
+        <meshStandardMaterial color="#A855F7" />
+      </mesh>
+    </group>
+  );
+}
+
+// 🚢 유치부실 성경 교구: 노아의 방주(Noah's Ark) 입체 원목 모형 & 무지개
+function NoahArkToyModel6F({ position, rotationY = 0 }) {
+  return (
+    <group position={position} rotation={[0, rotationY, 0]}>
+      {/* 곡선형 방주 선체 (반구를 늘린 유선형 배 모양!) */}
+      <mesh position={[0, 0.14, 0]} scale={[1.35, 0.55, 0.65]} castShadow>
+        <sphereGeometry args={[0.28, 20, 14, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2]} />
+        <meshStandardMaterial color="#92400E" roughness={0.5} side={THREE.DoubleSide} />
+      </mesh>
+      {/* 갑판 & 방주 선실 하우스 & 빨간 박공지붕 */}
+      <RoundedBox args={[0.42, 0.18, 0.24]} position={[0, 0.22, 0]} radius={0.02} castShadow>
+        <meshStandardMaterial color="#FDE68A" />
+      </RoundedBox>
+      <mesh position={[0, 0.36, 0]} rotation={[0, Math.PI / 4, 0]} scale={[1.4, 0.7, 0.85]} castShadow>
+        <coneGeometry args={[0.24, 0.18, 4]} />
+        <meshStandardMaterial color="#DC2626" />
+      </mesh>
+    </group>
+  );
+}
+
+// 🌍 초등부 분반실 교구: 회전하는 교실용 지구본(Classroom Globe)
+function ClassroomGlobe6F({ position }) {
+  return (
+    <group position={position}>
+      <mesh position={[0, 0.015, 0]}>
+        <cylinderGeometry args={[0.07, 0.09, 0.03, 16]} />
+        <meshStandardMaterial color="#475569" metalness={0.7} />
+      </mesh>
+      <mesh position={[0, 0.14, 0]} rotation={[0, 0, 0.35]}>
+        <torusGeometry args={[0.115, 0.008, 8, 24, Math.PI]} />
+        <meshStandardMaterial color="#CBD5E1" metalness={0.8} />
+      </mesh>
+      <mesh position={[0, 0.14, 0]} rotation={[0.2, 0.5, -0.2]} castShadow>
+        <sphereGeometry args={[0.095, 20, 20]} />
+        <meshStandardMaterial color="#0284C7" roughness={0.3} />
+      </mesh>
+    </group>
+  );
+}
+
 function DetailedMiniatureToilet({ position, rotationY = 0 }) {
   return (
     <group position={position} rotation={[0, rotationY, 0]}>
-      {/* 도자기 하부 배수 베이스 */}
       <mesh position={[0, 0.15, 0.05]} castShadow>
         <cylinderGeometry args={[0.16, 0.12, 0.30, 24]} />
         <meshStandardMaterial color="#FFFFFF" roughness={0.1} />
       </mesh>
-      {/* 양변기 보울 내부 깨끗한 물 */}
       <mesh position={[0, 0.28, 0.06]} rotation={[-Math.PI / 2, 0, 0]}>
         <circleGeometry args={[0.11, 20]} />
         <meshBasicMaterial color="#BAE6FD" />
       </mesh>
-      {/* 둥근 변기 시트 링 */}
       <mesh position={[0, 0.32, 0.06]} rotation={[Math.PI / 2, 0, 0]} castShadow>
         <torusGeometry args={[0.135, 0.035, 14, 24]} />
         <meshStandardMaterial color="#F8FAFC" roughness={0.18} />
       </mesh>
-      {/* 세워진 변기 커버 뚜껑 */}
       <RoundedBox args={[0.28, 0.30, 0.03]} position={[0, 0.48, -0.04]} rotation={[-0.15, 0, 0]} radius={0.02} castShadow>
         <meshStandardMaterial color="#FFFFFF" roughness={0.12} />
       </RoundedBox>
-      {/* 도자기 물탱크 수조 & 크롬 플러시 버튼 */}
       <RoundedBox args={[0.34, 0.36, 0.16]} position={[0, 0.48, -0.15]} radius={0.03} castShadow>
         <meshStandardMaterial color="#FFFFFF" roughness={0.1} />
       </RoundedBox>
@@ -1062,39 +1597,42 @@ function DetailedMiniatureToilet({ position, rotationY = 0 }) {
   );
 }
 
-// 🛝 유아부 전용 실내 미끄럼틀 & 계단 플레이하우스
+// 🛝 유아부 전용 구름 사이드 패널 실내 미끄럼틀 & 계단 플레이하우스
 function KidsIndoorSlideSet({ position, rotationY = 0 }) {
   return (
     <group position={position} rotation={[0, rotationY, 0]}>
-      {/* 양옆 안전 측벽 패널 (파스텔 민트) */}
+      {/* 양옆 둥근 구름 모양 안전 측벽 패널 */}
       {[-0.24, 0.24].map((sx, i) => (
-        <RoundedBox key={i} args={[0.05, 0.68, 0.56]} position={[sx, 0.34, -0.25]} radius={0.02} castShadow>
-          <meshStandardMaterial color="#34D399" roughness={0.35} />
-        </RoundedBox>
+        <group key={i} position={[sx, 0.34, -0.25]}>
+          <RoundedBox args={[0.05, 0.62, 0.56]} radius={0.025} castShadow>
+            <meshStandardMaterial color="#34D399" roughness={0.35} />
+          </RoundedBox>
+          <mesh position={[0, 0.28, 0]} scale={[0.3, 1.0, 1.2]}>
+            <sphereGeometry args={[0.16, 14, 14]} />
+            <meshStandardMaterial color="#6EE7B7" />
+          </mesh>
+        </group>
       ))}
-      {/* 상단 출발 플랫폼 */}
-      <RoundedBox args={[0.46, 0.06, 0.44]} position={[0, 0.52, -0.25]} radius={0.015} castShadow>
+      <RoundedBox args={[0.46, 0.06, 0.44]} position={[0, 0.52, -0.25]} radius={0.02} castShadow>
         <meshStandardMaterial color="#FEF08A" />
       </RoundedBox>
-      {/* 뒤쪽 3단 안전 계단 */}
       {[0, 1, 2].map((st) => (
         <RoundedBox
           key={st}
           args={[0.42, 0.06, 0.14]}
           position={[0, 0.14 + st * 0.14, -0.68 + st * 0.14]}
-          radius={0.01}
+          radius={0.015}
           castShadow
         >
           <meshStandardMaterial color={st % 2 === 0 ? '#38BDF8' : '#F472B6'} />
         </RoundedBox>
       ))}
-      {/* 앞쪽으로 매끄럽게 내려오는 노란색 슬라이드 경사로 & 양옆 가드레일 */}
       <group position={[0, 0.27, 0.32]} rotation={[0.58, 0, 0]}>
-        <RoundedBox args={[0.42, 0.05, 0.96]} radius={0.015} castShadow receiveShadow>
+        <RoundedBox args={[0.42, 0.05, 0.96]} radius={0.02} castShadow receiveShadow>
           <meshStandardMaterial color="#FACC15" roughness={0.25} />
         </RoundedBox>
         {[-0.21, 0.21].map((rx, ri) => (
-          <RoundedBox key={ri} args={[0.04, 0.12, 0.96]} position={[rx, 0.05, 0]} radius={0.015} castShadow>
+          <RoundedBox key={ri} args={[0.045, 0.12, 0.96]} position={[rx, 0.05, 0]} radius={0.02} castShadow>
             <meshStandardMaterial color="#FB7185" roughness={0.3} />
           </RoundedBox>
         ))}
@@ -1103,37 +1641,160 @@ function KidsIndoorSlideSet({ position, rotationY = 0 }) {
   );
 }
 
-// 🐎 유아부 흔들목마(Rocking Horse) 장난감
+// 🐎 실시간으로 앞뒤로 흔들리는 유아부 흔들목마(Animated Rocking Horse)
 function KidsRockingHorse({ position, rotationY = 0 }) {
+  const horseRef = useRef();
+  useFrame(({ clock }) => {
+    if (horseRef.current) {
+      horseRef.current.rotation.x = Math.sin(clock.elapsedTime * 3.0) * 0.10;
+    }
+  });
+
   return (
     <group position={position} rotation={[0, rotationY, 0]}>
-      {/* 하단 곡선 썰매 러너 2개 */}
-      {[-0.12, 0.12].map((rx, i) => (
-        <RoundedBox key={i} args={[0.04, 0.05, 0.68]} position={[rx, 0.04, 0]} radius={0.02} castShadow>
-          <meshStandardMaterial color="#F59E0B" />
+      <group ref={horseRef}>
+        {[-0.12, 0.12].map((rx, i) => (
+          <RoundedBox key={i} args={[0.04, 0.05, 0.68]} position={[rx, 0.04, 0]} radius={0.02} castShadow>
+            <meshStandardMaterial color="#F59E0B" />
+          </RoundedBox>
+        ))}
+        <mesh position={[0, 0.24, 0]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+          <capsuleGeometry args={[0.09, 0.22, 12, 16]} />
+          <meshStandardMaterial color="#38BDF8" roughness={0.35} />
+        </mesh>
+        <RoundedBox args={[0.16, 0.04, 0.16]} position={[0, 0.33, -0.02]} radius={0.015}>
+          <meshStandardMaterial color="#F43F5E" />
         </RoundedBox>
-      ))}
-      {/* 목마 몸통 & 안장 */}
-      <mesh position={[0, 0.24, 0]} rotation={[Math.PI / 2, 0, 0]} castShadow>
-        <capsuleGeometry args={[0.09, 0.22, 12, 16]} />
-        <meshStandardMaterial color="#38BDF8" roughness={0.35} />
-      </mesh>
-      <RoundedBox args={[0.16, 0.04, 0.16]} position={[0, 0.33, -0.02]} radius={0.01}>
-        <meshStandardMaterial color="#F43F5E" />
+        <mesh position={[0, 0.38, 0.16]} rotation={[-0.35, 0, 0]} castShadow>
+          <capsuleGeometry args={[0.065, 0.16, 12, 16]} />
+          <meshStandardMaterial color="#38BDF8" />
+        </mesh>
+        <mesh position={[0, 0.48, 0.24]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+          <capsuleGeometry args={[0.06, 0.10, 12, 16]} />
+          <meshStandardMaterial color="#BAE6FD" />
+        </mesh>
+        <mesh position={[0, 0.42, 0.12]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.012, 0.012, 0.24, 8]} />
+          <meshStandardMaterial color="#FEF08A" />
+        </mesh>
+      </group>
+    </group>
+  );
+}
+
+// 🛗 하단 중앙(`[0, 0, 5.9]`) 브러시드 스테인리스 자동 개폐 엘리베이터
+function AnimatedStainlessElevator6F({ position, playerIdxRef, forceOpen, onClickElevator, signTex, showRoomSigns }) {
+  const leftDoorRef = useRef();
+  const rightDoorRef = useRef();
+  const wasOpenRef = useRef(false);
+
+  const steelTex = useMemo(() => makeBrushedSteelTexture(), []);
+  const mirrorTex = useMemo(() => makeBrightMirrorTexture(), []);
+  const oakTex = useMemo(() => makeWoodGrainTexture('#D49552', '#AD6E2F'), []);
+
+  useFrame((_, delta) => {
+    if (!leftDoorRef.current || !rightDoorRef.current) return;
+    const [px, , pz] = playerIdxRef.current || [0, 0, 0];
+    const dist = Math.hypot(px - position[0], pz - (position[2] - 0.8));
+    const isOpen = forceOpen || dist < 2.0;
+
+    if (isOpen && !wasOpenRef.current) {
+      wasOpenRef.current = true;
+      playElevatorDingSound();
+    } else if (!isOpen && wasOpenRef.current) {
+      wasOpenRef.current = false;
+    }
+
+    const targetLeftX = isOpen ? -0.92 : -0.34;
+    const targetRightX = isOpen ? 0.92 : 0.34;
+
+    leftDoorRef.current.position.x = THREE.MathUtils.lerp(leftDoorRef.current.position.x, targetLeftX, delta * 6.5);
+    rightDoorRef.current.position.x = THREE.MathUtils.lerp(rightDoorRef.current.position.x, targetRightX, delta * 6.5);
+  });
+
+  return (
+    <group
+      position={position}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (onClickElevator) onClickElevator();
+      }}
+    >
+      <group position={[0, 0, 0.38]}>
+        <RoundedBox args={[1.65, 0.06, 0.72]} position={[0, 0.03, 0]} radius={0.01}>
+          <meshStandardMaterial color="#F8FAFC" roughness={0.2} />
+        </RoundedBox>
+        <RoundedBox args={[1.65, 0.06, 0.72]} position={[0, 2.08, 0]} radius={0.01}>
+          <meshBasicMaterial color="#FFFBEB" />
+        </RoundedBox>
+        <RoundedBox args={[1.65, 2.12, 0.06]} position={[0, 1.06, 0.32]} radius={0.01}>
+          <meshStandardMaterial map={oakTex} roughness={0.35} />
+        </RoundedBox>
+        <mesh position={[0, 1.38, 0.28]} rotation={[0, Math.PI, 0]}>
+          <planeGeometry args={[1.25, 0.95]} />
+          <meshBasicMaterial map={mirrorTex} />
+        </mesh>
+        <pointLight position={[0, 1.85, 0]} intensity={1.4} distance={3.2} color="#FFFBEB" />
+      </group>
+
+      <group position={[0, 1.02, 0.04]}>
+        <RoundedBox
+          ref={leftDoorRef}
+          args={[0.67, 2.02, 0.05]}
+          position={[-0.34, 0, 0]}
+          radius={0.008}
+          castShadow
+          receiveShadow
+          userData={{ keepOpaque: true }}
+        >
+          <meshStandardMaterial map={steelTex} color="#E2E8F0" metalness={0.85} roughness={0.2} />
+        </RoundedBox>
+        <RoundedBox
+          ref={rightDoorRef}
+          args={[0.67, 2.02, 0.05]}
+          position={[0.34, 0, 0]}
+          radius={0.008}
+          castShadow
+          receiveShadow
+          userData={{ keepOpaque: true }}
+        >
+          <meshStandardMaterial map={steelTex} color="#E2E8F0" metalness={0.85} roughness={0.2} />
+        </RoundedBox>
+      </group>
+
+      <RoundedBox args={[0.28, 2.28, 0.24]} position={[-0.82, 1.14, 0]} radius={0.015} castShadow userData={{ keepOpaque: true }}>
+        <meshStandardMaterial map={steelTex} color="#F1F5F9" metalness={0.88} roughness={0.18} />
       </RoundedBox>
-      {/* 목마 목 & 얼굴 & 손잡이 */}
-      <mesh position={[0, 0.38, 0.16]} rotation={[-0.35, 0, 0]} castShadow>
-        <capsuleGeometry args={[0.065, 0.16, 12, 16]} />
-        <meshStandardMaterial color="#38BDF8" />
+      <RoundedBox args={[0.28, 2.28, 0.24]} position={[0.82, 1.14, 0]} radius={0.015} castShadow userData={{ keepOpaque: true }}>
+        <meshStandardMaterial map={steelTex} color="#F1F5F9" metalness={0.88} roughness={0.18} />
+      </RoundedBox>
+      <RoundedBox args={[1.92, 0.26, 0.25]} position={[0, 2.15, 0]} radius={0.015} castShadow userData={{ keepOpaque: true }}>
+        <meshStandardMaterial map={steelTex} color="#F1F5F9" metalness={0.88} roughness={0.18} />
+      </RoundedBox>
+
+      <RoundedBox args={[0.75, 2.28, 0.20]} position={[-1.32, 1.14, 0.02]} radius={0.015} receiveShadow>
+        <meshStandardMaterial color="#F8FAFC" roughness={0.3} />
+      </RoundedBox>
+      <RoundedBox args={[0.75, 2.28, 0.20]} position={[1.32, 1.14, 0.02]} radius={0.015} receiveShadow>
+        <meshStandardMaterial color="#F8FAFC" roughness={0.3} />
+      </RoundedBox>
+
+      <RoundedBox args={[0.38, 0.12, 0.04]} position={[0, 2.15, -0.12]} radius={0.01} userData={{ keepOpaque: true }}>
+        <meshStandardMaterial color="#090A0F" />
+      </RoundedBox>
+      <mesh position={[0, 2.15, -0.145]} rotation={[0, Math.PI, 0]} userData={{ keepOpaque: true }}>
+        <planeGeometry args={[0.32, 0.08]} />
+        <meshBasicMaterial color="#10B981" />
       </mesh>
-      <mesh position={[0, 0.48, 0.24]} rotation={[Math.PI / 2, 0, 0]} castShadow>
-        <capsuleGeometry args={[0.06, 0.10, 12, 16]} />
-        <meshStandardMaterial color="#BAE6FD" />
-      </mesh>
-      <mesh position={[0, 0.42, 0.12]} rotation={[0, 0, Math.PI / 2]}>
-        <cylinderGeometry args={[0.012, 0.012, 0.24, 8]} />
-        <meshStandardMaterial color="#FEF08A" />
-      </mesh>
+
+      {showRoomSigns && (
+        <Billboard position={[0, 2.55, 0]}>
+          <mesh>
+            <planeGeometry args={[1.15, 0.52]} />
+            <meshBasicMaterial map={signTex} transparent />
+          </mesh>
+        </Billboard>
+      )}
     </group>
   );
 }
@@ -1184,7 +1845,6 @@ function CompactUStairwell6F({ position, onClickStairs, onClickExtinguisher }) {
         </RoundedBox>
       ))}
 
-      {/* 계단 중앙 안전 난간 기둥 및 원목 핸드레일 */}
       <RoundedBox args={[1.95, 0.06, 0.06]} position={[-0.1, 0.78, 0]} radius={0.02} castShadow>
         <meshStandardMaterial color="#78350F" roughness={0.35} />
       </RoundedBox>
@@ -1195,7 +1855,6 @@ function CompactUStairwell6F({ position, onClickStairs, onClickExtinguisher }) {
         </mesh>
       ))}
 
-      {/* 디테일한 빨간 소화기 (노즐·손잡이·게이지 포함) */}
       <group
         position={[1.45, 0, -1.1]}
         onClick={(e) => {
@@ -1220,20 +1879,28 @@ function CompactUStairwell6F({ position, onClickStairs, onClickExtinguisher }) {
 }
 
 // =====================================================================
-// 🏛️ 6층 전체 초디테일 건축 & 인테리어 디오라마
+// 🏛️ 6층 전체 초디테일 건축 & 인테리어 디오라마 (기존 방 배치 100% 보존!)
 // =====================================================================
 function SixFloorMasterpieceDiorama({
   activeZoneId,
   onSelectZone,
   onSitOnSeat,
+  onOpenWorshipTv,
   onSelectNpcForChat,
+  worshipVideoTitle,
   activeNpcChatIdx,
-  showRoomSigns
+  showRoomSigns,
+  playerIdxRef,
+  isElevatorModalOpen,
+  remotePeers,
+  onSelectRemotePeer,
+  holyLightEvent
 }) {
   const oakWoodTex = useMemo(() => makeWoodGrainTexture('#D49552', '#A86B2D'), []);
   const lightWoodFloorTex = useMemo(() => makeWoodGrainTexture('#E6CBA8', '#C8A273'), []);
+  const steelTex = useMemo(() => makeBrushedSteelTexture(), []);
   const puzzleMatTex = useMemo(() => makePuzzleMatTexture(), []);
-  const restroomTileTex = useMemo(() => makeTileGridTexture('#F8FAFC', '#CBD5E1', 10), []);
+  const greyRestroomTileTex = useMemo(() => makeTileGridTexture('#8E939B', '#6C717A', 8), []);
   const mirrorTex = useMemo(() => makeBrightMirrorTexture(), []);
 
   const elemScreenTex = useMemo(() => {
@@ -1248,28 +1915,28 @@ function SixFloorMasterpieceDiorama({
       ctx.strokeRect(10, 10, w - 20, h - 20);
 
       ctx.fillStyle = '#FEF08A';
-      ctx.font = '900 28px sans-serif';
+      ctx.font = '900 26px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('GOOD TREE SUNDAY SCHOOL', w / 2, 68);
+      ctx.fillText('GOOD TREE SUNDAY SCHOOL · LIVE', w / 2, 62);
 
       ctx.fillStyle = '#FFFFFF';
-      ctx.font = '900 44px sans-serif';
-      ctx.fillText('다윗처럼 믿음으로 승리해요!', w / 2, 138);
+      ctx.font = '900 38px sans-serif';
+      ctx.fillText(worshipVideoTitle || '다윗처럼 믿음으로 승리해요!', w / 2, 134);
 
       ctx.fillStyle = '#BAE6FD';
-      ctx.font = 'bold 24px sans-serif';
-      ctx.fillText('사무엘상 17장 45절 · 초등부 예배', w / 2, 198);
-    }, 512, 256);
-  }, []);
+      ctx.font = 'bold 22px sans-serif';
+      ctx.fillText('▶ 스크린 클릭 시 다음세대·매일예배 유튜브 영상 재생', w / 2, 198);
+    }, 560, 256);
+  }, [worshipVideoTitle]);
 
   const signs = useMemo(() => ({
-    newFamily: makeRoomSignTexture('새가족반 라운지', '주일 오후 1시 · 영접실', '#8B5CF6'),
-    elemRight: makeRoomSignTexture('초등부 본관 🏫', '4~6학년 Sunday School', '#0284C7'),
-    elemLeft: makeRoomSignTexture('초등부 분반실', '말씀 양육 · 모둠학습', '#2563EB'),
-    kinder: makeRoomSignTexture('유치부 🎨', '4~7세 무지개 찬양실', '#EC4899'),
-    infant: makeRoomSignTexture('유아부 👶', '0~3세 키즈 놀이방', '#F59E0B'),
-    restroom: makeRoomSignTexture('화장실 🚻', '남·여 화장실 / 세면대', '#64748B'),
-    elevator: makeRoomSignTexture('6F 엘리베이터', '1F · 3F · 4F · 5F 이동', '#10B981')
+    newFamily: makeRoomSignTexture('새가족반 라운지', '스페셜티 카페 · 최수경 목사 축도', '#8B5CF6'),
+    elemRight: makeRoomSignTexture('초등부 본관 🏫', '클릭 시 말씀 유튜브 영상 재생', '#0284C7'),
+    elemLeft: makeRoomSignTexture('초등부 분반실', '모둠 원탁 · 이젤 · 지구본 교구', '#2563EB'),
+    kinder: makeRoomSignTexture('유치부 🎨', '무지개 무대 · 꽃잎 원탁 · 방주모형', '#EC4899'),
+    infant: makeRoomSignTexture('유아부 👶', '구름 미끄럼틀 · 볼풀 · 테디베어', '#F59E0B'),
+    restroom: makeRoomSignTexture('화장실 🚻', '큐비클 부스 · 핸드드라이어 · 세면대', '#64748B'),
+    elevator: makeRoomSignTexture('6F 엘리베이터 🛗', '자동문 개폐 · 전 층(1F~6F) 이동', '#10B981')
   }), []);
 
   return (
@@ -1284,7 +1951,7 @@ function SixFloorMasterpieceDiorama({
       </mesh>
 
       {/* ================================================================= */}
-      {/* 🤝 [방 1: 상단 정면 새가족반 카페 라운지] (원목 테이블·다과 커피바·화분·환영보드) */}
+      {/* 🤝 [방 1: 상단 정면 새가족반 스페셜티 카페 라운지] */}
       {/* ================================================================= */}
       <group>
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-2.0, 0.008, -5.65]} receiveShadow>
@@ -1292,32 +1959,42 @@ function SixFloorMasterpieceDiorama({
           <meshStandardMaterial map={lightWoodFloorTex} roughness={0.4} />
         </mesh>
 
-        {/* 새가족 영접 테이블 2세트 + 다과 접시 & 찻잔 + 마주 보는 정방향 의자 */}
+        {/* 새가족 영접 라운드 원목 테이블 2세트 + 유리 돔 디저트 스탠드 + 찻잔 + 정방향 의자 */}
         {[-3.8, -1.1].map((tx, idx) => (
           <group key={`nf_set_${idx}`} position={[tx, 0, -5.65]}>
-            <RoundedBox args={[1.60, 0.06, 0.82]} position={[0, 0.58, 0]} radius={0.025} castShadow receiveShadow>
-              <meshStandardMaterial map={oakWoodTex} roughness={0.32} />
+            <RoundedBox args={[1.60, 0.055, 0.82]} position={[0, 0.58, 0]} radius={0.08} castShadow receiveShadow>
+              <meshStandardMaterial map={oakWoodTex} roughness={0.28} />
             </RoundedBox>
             {[-0.55, 0.55].map((lx, li) => (
               <mesh key={li} position={[lx, 0.29, 0]} castShadow>
-                <cylinderGeometry args={[0.04, 0.04, 0.56, 12]} />
-                <meshStandardMaterial color="#64748B" metalness={0.7} />
+                <cylinderGeometry args={[0.035, 0.035, 0.56, 14]} />
+                <meshStandardMaterial color="#CBD5E1" metalness={0.8} />
               </mesh>
             ))}
-            {/* 테이블 위 다과 트레이 & 커피잔 2개 & 미니 꽃병 */}
-            <RoundedBox args={[0.28, 0.02, 0.20]} position={[0, 0.62, 0]} radius={0.01}>
-              <meshStandardMaterial color="#FEF08A" />
-            </RoundedBox>
-            <mesh position={[-0.35, 0.64, 0.15]}>
+            {/* 유리 돔 케이크 스탠드 & 커피잔 */}
+            <group position={[0, 0.61, 0]}>
+              <mesh position={[0, 0.02, 0]}>
+                <cylinderGeometry args={[0.14, 0.12, 0.02, 20]} />
+                <meshStandardMaterial color="#FFFFFF" />
+              </mesh>
+              <mesh position={[0, 0.06, 0]} castShadow>
+                <cylinderGeometry args={[0.09, 0.09, 0.07, 16]} />
+                <meshStandardMaterial color="#F43F5E" />
+              </mesh>
+              <mesh position={[0, 0.07, 0]}>
+                <sphereGeometry args={[0.12, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2]} />
+                <meshStandardMaterial color="#E0F2FE" transparent opacity={0.45} />
+              </mesh>
+            </group>
+            <mesh position={[-0.38, 0.64, 0.15]}>
               <cylinderGeometry args={[0.035, 0.03, 0.07, 12]} />
               <meshStandardMaterial color="#FFFFFF" />
             </mesh>
-            <mesh position={[0.35, 0.64, -0.15]}>
+            <mesh position={[0.38, 0.64, -0.15]}>
               <cylinderGeometry args={[0.035, 0.03, 0.07, 12]} />
               <meshStandardMaterial color="#F472B6" />
             </mesh>
 
-            {/* 위쪽 의자(남쪽 테이블 응시: rotationY = Math.PI) & 아래쪽 의자(북쪽 테이블 응시: rotationY = 0) */}
             <DetailedChair
               position={[-0.44, 0, -0.54]}
               rotationY={Math.PI}
@@ -1345,21 +2022,20 @@ function SixFloorMasterpieceDiorama({
           </group>
         ))}
 
-        {/* 우측 코너: 에스프레소 커피머신 & 다과 바 카운터 + 환영 화분 */}
+        {/* 우측 코너: 스테인리스 스틸 상판 바 카운터 & 하이엔드 크롬 에스프레소 머신 */}
         <group position={[1.65, 0, -5.85]}>
-          <RoundedBox args={[1.35, 0.78, 0.56]} position={[0, 0.39, 0]} radius={0.02} castShadow receiveShadow>
-            <meshStandardMaterial color="#FFFFFF" roughness={0.3} />
+          <RoundedBox args={[1.38, 0.78, 0.56]} position={[0, 0.39, 0]} radius={0.02} castShadow receiveShadow>
+            <meshStandardMaterial color="#FFFFFF" roughness={0.2} />
           </RoundedBox>
-          <RoundedBox args={[1.42, 0.06, 0.62]} position={[0, 0.80, 0]} radius={0.015} castShadow>
-            <meshStandardMaterial map={oakWoodTex} />
+          <RoundedBox args={[1.44, 0.05, 0.62]} position={[0, 0.80, 0]} radius={0.015} castShadow>
+            <meshStandardMaterial map={steelTex} metalness={0.9} roughness={0.16} />
           </RoundedBox>
-          {/* 커피머신 & 보온병 */}
-          <RoundedBox args={[0.36, 0.38, 0.32]} position={[-0.32, 1.01, 0]} radius={0.02} castShadow>
-            <meshStandardMaterial color="#1E293B" metalness={0.6} />
+          <RoundedBox args={[0.46, 0.38, 0.34]} position={[-0.32, 1.01, 0]} radius={0.05} castShadow>
+            <meshStandardMaterial color="#18181B" metalness={0.5} roughness={0.2} />
           </RoundedBox>
-          <mesh position={[0.25, 0.96, 0]} castShadow>
-            <cylinderGeometry args={[0.09, 0.11, 0.28, 16]} />
-            <meshStandardMaterial color="#DC2626" roughness={0.3} />
+          <mesh position={[0.28, 0.96, 0]} castShadow>
+            <cylinderGeometry args={[0.08, 0.10, 0.26, 16]} />
+            <meshStandardMaterial color="#EAB308" roughness={0.2} />
           </mesh>
         </group>
 
@@ -1380,7 +2056,7 @@ function SixFloorMasterpieceDiorama({
       </group>
 
       {/* ================================================================= */}
-      {/* 📘 [방 2: 좌측 상단 초등부 분반실] (모둠 원탁·등받이 의자·이젤 화이트보드·도서 책장) */}
+      {/* 📘 [방 2: 좌측 상단 초등부 분반실] (모둠 원탁·교실용 지구본·이젤 화이트보드·도서 책장) */}
       {/* ================================================================= */}
       <group>
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-4.9, 0.008, -2.0]} receiveShadow>
@@ -1388,17 +2064,17 @@ function SixFloorMasterpieceDiorama({
           <meshStandardMaterial color="#DBEAFE" roughness={0.5} />
         </mesh>
 
-        {/* 서쪽 벽면: 알록달록 성경 동화책이 꽂힌 원목 교구 책장 & 이젤 칠판 */}
+        {/* 서쪽 벽면: 성경 동화책이 꽂힌 3단 원목 교구 책장 */}
         <group position={[-6.48, 0, -2.2]}>
-          <RoundedBox args={[0.42, 1.45, 2.2]} position={[0, 0.72, 0]} radius={0.02} castShadow receiveShadow>
-            <meshStandardMaterial map={oakWoodTex} roughness={0.38} />
+          <RoundedBox args={[0.42, 1.45, 2.2]} position={[0, 0.72, 0]} radius={0.025} castShadow receiveShadow>
+            <meshStandardMaterial map={oakWoodTex} roughness={0.35} />
           </RoundedBox>
           {[-0.75, -0.35, 0.05, 0.45, 0.82].map((bz, bi) => (
             <RoundedBox
               key={bi}
               args={[0.28, 0.28, 0.22]}
               position={[0.06, 0.96, bz]}
-              radius={0.01}
+              radius={0.015}
               castShadow
             >
               <meshStandardMaterial color={['#EF4444', '#FACC15', '#10B981', '#38BDF8', '#A855F7'][bi]} />
@@ -1406,12 +2082,12 @@ function SixFloorMasterpieceDiorama({
           ))}
         </group>
 
-        {/* 북쪽 코너: 원목 삼각 이젤 화이트보드 */}
+        {/* 북쪽 코너: 원목 삼각 이젤 화이트보드 & 마커 트레이 */}
         <group position={[-5.95, 0, -4.15]} rotation={[0, 0.45, 0]}>
-          <RoundedBox args={[0.82, 0.64, 0.04]} position={[0, 0.92, 0]} rotation={[-0.12, 0, 0]} radius={0.015} castShadow>
+          <RoundedBox args={[0.82, 0.64, 0.04]} position={[0, 0.92, 0]} rotation={[-0.12, 0, 0]} radius={0.02} castShadow>
             <meshStandardMaterial color="#FFFFFF" />
           </RoundedBox>
-          <RoundedBox args={[0.88, 0.70, 0.03]} position={[0, 0.92, -0.01]} rotation={[-0.12, 0, 0]} radius={0.015}>
+          <RoundedBox args={[0.88, 0.70, 0.03]} position={[0, 0.92, -0.01]} rotation={[-0.12, 0, 0]} radius={0.02}>
             <meshStandardMaterial map={oakWoodTex} />
           </RoundedBox>
           {[-0.28, 0.28].map((lx, li) => (
@@ -1422,7 +2098,7 @@ function SixFloorMasterpieceDiorama({
           ))}
         </group>
 
-        {/* 원형 모둠 테이블 2세트 + 테이블 위 성경 공과책 + 정방향 등받이 의자 4개씩 */}
+        {/* 원형 모둠 테이블 2세트 + 교실용 지구본 + 펼쳐진 성경 공과책 + 정방향 원형 쿠션 의자 4개씩 */}
         {[-3.2, -0.85].map((tz, i) => (
           <group key={`round_grp_${i}`} position={[-4.85, 0, tz]}>
             <mesh position={[0, 0.56, 0]} castShadow receiveShadow>
@@ -1433,19 +2109,19 @@ function SixFloorMasterpieceDiorama({
               <cylinderGeometry args={[0.10, 0.28, 0.54, 16]} />
               <meshStandardMaterial color="#CBD5E1" metalness={0.6} />
             </mesh>
-            {/* 테이블 위 펼쳐진 성경 공과 워크북 3권 */}
+            {/* 첫 번째 원탁 중앙에는 교실용 지구본 배치! */}
+            {i === 0 && <ClassroomGlobe6F position={[0, 0.59, 0]} />}
             {[0, 2.1, 4.2].map((ang, bi) => (
               <RoundedBox
                 key={bi}
                 args={[0.24, 0.02, 0.18]}
-                position={[Math.cos(ang) * 0.36, 0.60, Math.sin(ang) * 0.36]}
+                position={[Math.cos(ang) * 0.38, 0.60, Math.sin(ang) * 0.38]}
                 rotation={[0, -ang, 0]}
                 radius={0.005}
               >
                 <meshStandardMaterial color={bi === 0 ? '#FFFFFF' : bi === 1 ? '#BAE6FD' : '#FBCFE8'} />
               </RoundedBox>
             ))}
-            {/* 원탁을 향해 정면으로 배치된 등받이 의자 4개 */}
             {[0, Math.PI / 2, Math.PI, (Math.PI * 3) / 2].map((ang, si) => {
               const cx = Math.cos(ang) * 0.98;
               const cz = Math.sin(ang) * 0.98;
@@ -1477,28 +2153,30 @@ function SixFloorMasterpieceDiorama({
       </group>
 
       {/* ================================================================= */}
-      {/* 👶 [방 3: 좌측 중단 유아부 키즈 놀이방] (퍼즐매트·실내 미끄럼틀·볼풀장·흔들목마·장난감 교구장!) */}
+      {/* 👶 [방 3: 좌측 중단 유아부 키즈 놀이방] (퍼즐매트·구름 미끄럼틀·볼풀장·흔들목마·자이언트 테디베어·고리끼우기 교구!) */}
       {/* ================================================================= */}
       <group>
-        {/* 알록달록 푹신한 EVA 유아 퍼즐매트 바닥 */}
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-4.9, 0.01, 1.85]} receiveShadow>
           <planeGeometry args={[3.7, 2.4]} />
           <meshStandardMaterial map={puzzleMatTex} roughness={0.65} />
         </mesh>
 
-        {/* 1) 우측 안쪽: 실내 유아용 미끄럼틀 & 계단 플레이하우스 (`KidsIndoorSlideSet`) */}
+        {/* 1) 구름 사이드 패널 실내 미끄럼틀 */}
         <KidsIndoorSlideSet position={[-4.05, 0, 1.65]} rotationY={-Math.PI / 2} />
 
-        {/* 2) 중앙: 귀여운 하늘색 흔들목마 (`KidsRockingHorse`) */}
+        {/* 2) 앞뒤로 흔들리는 하늘색 흔들목마 */}
         <KidsRockingHorse position={[-4.75, 0, 2.45]} rotationY={0.4} />
 
-        {/* 3) 좌측 안쪽: 22개의 파스텔 볼이 가득 담긴 폭신폭신 쿠션 볼풀장 */}
+        {/* 3) 자이언트 테디베어 인형 & 몬테소리 무지개 고리 끼우기 교구 */}
+        <PlushTeddyBear6F position={[-3.65, 0, 2.55]} rotationY={-0.6} scale={0.95} />
+        <MontessoriRingStacker6F position={[-5.15, 0, 1.15]} />
+
+        {/* 4) 22개 파스텔 공이 담긴 도넛 쿠션 볼풀장 */}
         <group position={[-5.85, 0, 1.55]}>
           <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
             <circleGeometry args={[0.64, 32]} />
             <meshStandardMaterial color="#E0F2FE" />
           </mesh>
-          {/* 2단 도넛 쿠션 튜브 벽 */}
           <mesh position={[0, 0.14, 0]} rotation={[Math.PI / 2, 0, 0]} castShadow>
             <torusGeometry args={[0.62, 0.13, 18, 36]} />
             <meshStandardMaterial color="#38BDF8" roughness={0.35} />
@@ -1507,8 +2185,7 @@ function SixFloorMasterpieceDiorama({
             <torusGeometry args={[0.62, 0.11, 18, 36]} />
             <meshStandardMaterial color="#FDE047" roughness={0.35} />
           </mesh>
-          {/* 풍성한 20개 컬러풀 볼풀 공 */}
-          {Array.from({ length: 20 }).map((_, bi) => {
+          {Array.from({ length: 22 }).map((_, bi) => {
             const r = ((bi * 37) % 45) / 100;
             const ang = bi * 1.9;
             const bx = Math.cos(ang) * r;
@@ -1524,13 +2201,13 @@ function SixFloorMasterpieceDiorama({
           })}
         </group>
 
-        {/* 4) 남쪽 벽면: 유아용 그림책 & 블록 수납 교구장 + 아기 곰돌이 인형 */}
+        {/* 5) 남쪽 벽면: 유아용 그림책 교구장 */}
         <group position={[-5.65, 0, 2.78]}>
-          <RoundedBox args={[1.45, 0.56, 0.34]} position={[0, 0.28, 0]} radius={0.02} castShadow>
+          <RoundedBox args={[1.45, 0.56, 0.34]} position={[0, 0.28, 0]} radius={0.025} castShadow>
             <meshStandardMaterial color="#FEF9C3" />
           </RoundedBox>
           {[-0.45, 0, 0.45].map((bx, i) => (
-            <RoundedBox key={i} args={[0.36, 0.22, 0.30]} position={[bx, 0.22, -0.04]} radius={0.015}>
+            <RoundedBox key={i} args={[0.36, 0.22, 0.30]} position={[bx, 0.22, -0.04]} radius={0.02}>
               <meshStandardMaterial color={['#F472B6', '#38BDF8', '#34D399'][i]} />
             </RoundedBox>
           ))}
@@ -1565,7 +2242,7 @@ function SixFloorMasterpieceDiorama({
       />
 
       {/* ================================================================= */}
-      {/* 🏫 [방 5: 우측 상단 초등부 본관] (십자가 원목 강대상·대형 스크린·성경책과 필통이 놓인 책상 6세트!) */}
+      {/* 🏫 [방 5: 우측 상단 초등부 본관] (구스넥 마이크 강대상·유튜브 말씀 스크린·성경책과 연필꽂이 책상 6세트!) */}
       {/* ================================================================= */}
       <group>
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[4.8, 0.008, -3.3]} receiveShadow>
@@ -1573,18 +2250,24 @@ function SixFloorMasterpieceDiorama({
           <meshStandardMaterial color="#E0F2FE" roughness={0.5} />
         </mesh>
 
-        {/* 초등부 전면 북쪽 벽: 대형 말씀 스크린 & 초록 칠판 & 십자가 원목 강대상 + 2단 발판 */}
+        {/* 초등부 전면 북쪽 벽: 실시간 예배 유튜브 스크린(클릭 시 영상 재생!) & 십자가 원목 강대상 */}
         <group position={[4.8, 0, -5.65]}>
-          {/* 벽걸이 말씀 스크린 */}
-          <RoundedBox args={[2.2, 1.05, 0.06]} position={[0, 1.52, -0.82]} radius={0.02} castShadow>
-            <meshStandardMaterial color="#0F172A" />
-          </RoundedBox>
-          <mesh position={[0, 1.52, -0.78]}>
-            <planeGeometry args={[2.08, 0.94]} />
-            <meshBasicMaterial map={elemScreenTex} />
-          </mesh>
+          <group
+            position={[0, 1.52, -0.82]}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onOpenWorshipTv) onOpenWorshipTv();
+            }}
+          >
+            <RoundedBox args={[2.25, 1.08, 0.06]} radius={0.02} castShadow userData={{ keepOpaque: true }}>
+              <meshStandardMaterial color="#0F172A" />
+            </RoundedBox>
+            <mesh position={[0, 0, 0.035]} userData={{ keepOpaque: true }}>
+              <planeGeometry args={[2.12, 0.96]} />
+              <meshBasicMaterial map={elemScreenTex} />
+            </mesh>
+          </group>
 
-          {/* 원목 강단 데크 & 전도사님 발판 */}
           <RoundedBox args={[2.6, 0.10, 1.1]} position={[0, 0.05, 0]} radius={0.02} receiveShadow>
             <meshStandardMaterial map={oakWoodTex} />
           </RoundedBox>
@@ -1592,13 +2275,19 @@ function SixFloorMasterpieceDiorama({
             <meshStandardMaterial color="#991B1B" />
           </RoundedBox>
 
-          {/* 십자가 원목 강대상 (주황 박스 완전 탈피!) */}
-          <RoundedBox args={[0.86, 0.72, 0.46]} position={[0, 0.44, 0.15]} radius={0.02} castShadow receiveShadow>
-            <meshStandardMaterial map={oakWoodTex} roughness={0.35} />
+          <RoundedBox args={[0.86, 0.72, 0.46]} position={[0, 0.44, 0.15]} radius={0.025} castShadow receiveShadow>
+            <meshStandardMaterial map={oakWoodTex} roughness={0.32} />
           </RoundedBox>
           <RoundedBox args={[0.98, 0.08, 0.54]} position={[0, 0.82, 0.15]} radius={0.02} castShadow>
             <meshStandardMaterial map={oakWoodTex} />
           </RoundedBox>
+          {/* 구스넥 마이크 2대 */}
+          {[-0.14, 0.14].map((mx, mi) => (
+            <mesh key={mi} position={[mx, 0.94, 0.12]} rotation={[0.3, 0, 0]}>
+              <cylinderGeometry args={[0.008, 0.008, 0.20, 8]} />
+              <meshStandardMaterial color="#18181B" />
+            </mesh>
+          ))}
           <mesh position={[0, 0.48, 0.39]}>
             <boxGeometry args={[0.04, 0.26, 0.015]} />
             <meshStandardMaterial color="#FDE047" metalness={0.8} />
@@ -1609,37 +2298,35 @@ function SixFloorMasterpieceDiorama({
           </mesh>
         </group>
 
-        {/* 초등부 2인용 학습 책상 6세트 (원목 상판 + 스틸 다리 4개 + 펼쳐진 성경책·필통 + 정방향 의자 12석) */}
+        {/* 초등부 2인용 학습 책상 6세트 (원목 라운드 상판 + 스틸 다리 + 성경책·원통 연필꽂이 + 정방향 원형 쿠션 의자 12석) */}
         {[-4.3, -3.0, -1.7].map((dz, rIdx) =>
           [3.95, 5.65].map((dx, cIdx) => (
             <group key={`el_desk_${rIdx}_${cIdx}`} position={[dx, 0, dz]}>
-              {/* 책상 상판 & 하부 서랍 선반 */}
-              <RoundedBox args={[1.26, 0.05, 0.54]} position={[0, 0.58, 0]} radius={0.015} castShadow receiveShadow>
+              <RoundedBox args={[1.26, 0.05, 0.54]} position={[0, 0.58, 0]} radius={0.025} castShadow receiveShadow>
                 <meshStandardMaterial map={lightWoodFloorTex} roughness={0.3} />
               </RoundedBox>
               <RoundedBox args={[1.16, 0.03, 0.42]} position={[0, 0.46, 0]} radius={0.01}>
                 <meshStandardMaterial color="#CBD5E1" />
               </RoundedBox>
-              {/* 책상 스틸 다리 4개 */}
               {[[-0.56, -0.22], [0.56, -0.22], [-0.56, 0.22], [0.56, 0.22]].map(([lx, lz], li) => (
                 <mesh key={li} position={[lx, 0.29, lz]} castShadow>
-                  <cylinderGeometry args={[0.022, 0.018, 0.58, 8]} />
+                  <cylinderGeometry args={[0.022, 0.018, 0.58, 10]} />
                   <meshStandardMaterial color="#64748B" metalness={0.7} />
                 </mesh>
               ))}
-              {/* 책상 위 펼쳐진 성경책 2권 & 노란 필통 */}
               {[-0.30, 0.30].map((bx, bi) => (
                 <group key={bi} position={[bx, 0.615, 0]}>
                   <RoundedBox args={[0.26, 0.02, 0.19]} radius={0.005}>
                     <meshStandardMaterial color="#FFFFFF" />
                   </RoundedBox>
-                  <RoundedBox args={[0.08, 0.025, 0.04]} position={[0.16, 0.005, -0.12]} radius={0.005}>
+                  {/* 원통형 연필꽂이 컵 */}
+                  <mesh position={[0.17, 0.025, -0.10]} castShadow>
+                    <cylinderGeometry args={[0.024, 0.022, 0.06, 12]} />
                     <meshStandardMaterial color={bi === 0 ? '#FACC15' : '#38BDF8'} />
-                  </RoundedBox>
+                  </mesh>
                 </group>
               ))}
 
-              {/* 강대상을 정면으로 바라보는 정방향 의자 (`rotationY = 0` 이어야 등받이가 뒤쪽 +Z에 위치!) */}
               <DetailedChair
                 position={[-0.30, 0, 0.42]}
                 rotationY={0}
@@ -1663,7 +2350,12 @@ function SixFloorMasterpieceDiorama({
         )}
         {showRoomSigns && (
           <Billboard position={[2.8, 1.65, -2.0]}>
-            <mesh>
+            <mesh
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onOpenWorshipTv) onOpenWorshipTv();
+              }}
+            >
               <planeGeometry args={[1.15, 0.52]} />
               <meshBasicMaterial map={signs.elemRight} transparent />
             </mesh>
@@ -1672,7 +2364,7 @@ function SixFloorMasterpieceDiorama({
       </group>
 
       {/* ================================================================= */}
-      {/* 🎨 [방 6: 우측 중단 유치부] (파스텔 무지개 아치 무대·미니 건반·꽃모양 원탁·유아 등받이 의자!) */}
+      {/* 🎨 [방 6: 우측 중단 유치부] (파스텔 무지개 무대·디지털 피아노·노아의 방주 모형·6잎 꽃모양 원탁!) */}
       {/* ================================================================= */}
       <group>
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[4.8, 0.008, 1.4]} receiveShadow>
@@ -1680,26 +2372,23 @@ function SixFloorMasterpieceDiorama({
           <meshStandardMaterial color="#FCE7F3" roughness={0.5} />
         </mesh>
 
-        {/* 동쪽 벽면: 유치부 파스텔 무지개 아치 찬양 무대 & 미니 신디사이저 건반 */}
+        {/* 동쪽 벽면: 유치부 파스텔 무지개 아치 찬양 무대 & 88건반 디지털 피아노 */}
         <group position={[6.55, 0, 1.4]} rotation={[0, -Math.PI / 2, 0]}>
-          {/* 반원형 율동 무대 데크 */}
           <mesh position={[0, 0.05, 0.35]} receiveShadow>
             <cylinderGeometry args={[1.05, 1.05, 0.10, 32]} />
             <meshStandardMaterial color="#FDE047" />
           </mesh>
-          {/* 4겹 파스텔 무지개 아치 링 */}
           {[
             [0.95, '#F43F5E'],
             [0.80, '#FACC15'],
             [0.65, '#4ADE80'],
             [0.50, '#38BDF8']
           ].map(([rad, col], ri) => (
-            <mesh key={ri} position={[0, 0.65, 0]} rotation={[0, 0, 0]}>
+            <mesh key={ri} position={[0, 0.65, 0]}>
               <torusGeometry args={[rad, 0.075, 12, 32, Math.PI]} />
               <meshStandardMaterial color={col} roughness={0.3} />
             </mesh>
           ))}
-          {/* 양끝 뭉게구름 장식 */}
           {[-0.85, 0.85].map((cx, ci) => (
             <group key={ci} position={[cx, 0.65, 0.08]}>
               <mesh position={[0, 0, 0]}><sphereGeometry args={[0.16, 14, 14]} /><meshStandardMaterial color="#FFFFFF" /></mesh>
@@ -1707,26 +2396,58 @@ function SixFloorMasterpieceDiorama({
               <mesh position={[0.12, -0.04, 0]}><sphereGeometry args={[0.12, 12, 12]} /><meshStandardMaterial color="#FFFFFF" /></mesh>
             </group>
           ))}
+          {/* 무대 옆 화이트 디지털 피아노 & 건반 */}
+          <group position={[-0.95, 0, 0.55]} rotation={[0, 0.4, 0]}>
+            <RoundedBox args={[0.78, 0.08, 0.28]} position={[0, 0.58, 0]} radius={0.015} castShadow>
+              <meshStandardMaterial color="#FFFFFF" />
+            </RoundedBox>
+            <RoundedBox args={[0.68, 0.02, 0.12]} position={[0, 0.625, 0.06]} radius={0.005}>
+              <meshStandardMaterial color="#18181B" />
+            </RoundedBox>
+            {[-0.32, 0.32].map((px, pi) => (
+              <mesh key={pi} position={[px, 0.29, 0]}>
+                <cylinderGeometry args={[0.02, 0.02, 0.58, 8]} />
+                <meshStandardMaterial color="#CBD5E1" />
+              </mesh>
+            ))}
+          </group>
         </group>
 
-        {/* 중앙 유치부 원탁 + 스케치북·크레파스 통 + 등받이 달린 컬러 키즈 체어 6개 */}
+        {/* 북쪽 선반 위 노아의 방주(Noah's Ark) 입체 원목 성경 교구 모형 */}
+        <NoahArkToyModel6F position={[5.65, 0.02, 0.35]} rotationY={-0.3} />
+
+        {/* 중앙 유치부 6잎 꽃모양(Scalloped Flower) 원탁 + 크레파스 꽃병 + 유아 등받이 의자 6개 */}
         <group position={[4.35, 0, 1.4]}>
           <mesh position={[0, 0.46, 0]} castShadow receiveShadow>
-            <cylinderGeometry args={[0.72, 0.72, 0.06, 36]} />
+            <cylinderGeometry args={[0.58, 0.58, 0.06, 32]} />
             <meshStandardMaterial color="#F472B6" roughness={0.32} />
           </mesh>
+          {/* 6개의 둥근 꽃잎 로브(Petals)로 진짜 꽃모양 테이블 구현! */}
+          {[0, 1, 2, 3, 4, 5].map((pi) => {
+            const ang = (pi * Math.PI * 2) / 6;
+            return (
+              <mesh
+                key={pi}
+                position={[Math.cos(ang) * 0.42, 0.46, Math.sin(ang) * 0.42]}
+                castShadow
+                receiveShadow
+              >
+                <cylinderGeometry args={[0.34, 0.34, 0.06, 24]} />
+                <meshStandardMaterial color="#F472B6" roughness={0.32} />
+              </mesh>
+            );
+          })}
           <mesh position={[0, 0.23, 0]} castShadow>
             <cylinderGeometry args={[0.12, 0.28, 0.45, 16]} />
             <meshStandardMaterial color="#FFFFFF" />
           </mesh>
-          {/* 중앙 크레파스 꽃병 통 & 스케치북 */}
           <mesh position={[0, 0.54, 0]} castShadow>
             <cylinderGeometry args={[0.09, 0.07, 0.12, 16]} />
             <meshStandardMaterial color="#FEF08A" />
           </mesh>
           {[0, 1.05, 2.1, 3.14, 4.2, 5.25].map((ang, ki) => {
-            const kx = Math.cos(ang) * 0.96;
-            const kz = Math.sin(ang) * 0.96;
+            const kx = Math.cos(ang) * 0.98;
+            const kz = Math.sin(ang) * 0.98;
             const kRot = Math.atan2(kx, kz);
             const kCol = ['#FACC15', '#38BDF8', '#4ADE80', '#FB7185', '#A78BFA', '#FB923C'][ki];
             return (
@@ -1737,7 +2458,7 @@ function SixFloorMasterpieceDiorama({
                 seatColor={kCol}
                 onClick={(e) => {
                   e.stopPropagation();
-                  onSitOnSeat({ x: 4.35 + kx, z: 1.4 + kz, rotY: kRot + Math.PI, rowLabel: '유치부 원탁석' });
+                  onSitOnSeat({ x: 4.35 + kx, z: 1.4 + kz, rotY: kRot + Math.PI, rowLabel: '유치부 꽃모양 원탁석' });
                 }}
               />
             );
@@ -1755,20 +2476,22 @@ function SixFloorMasterpieceDiorama({
       </group>
 
       {/* ================================================================= */}
-      {/* 🚻 [방 7: 우측 하단 호텔급 화장실] (대형 거울·도자기 세면대·수전·도어 큐비클·양변기!) */}
+      {/* 🚻 [방 7: 우측 하단 2층급 고품격 화장실 (`[4.8, 0, 4.6]` 원본 위치 그대로!)] */}
       {/* ================================================================= */}
       <group>
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[4.8, 0.008, 4.6]} receiveShadow>
           <planeGeometry args={[3.9, 3.5]} />
-          <meshStandardMaterial map={restroomTileTex} roughness={0.28} />
+          <meshStandardMaterial map={greyRestroomTileTex} roughness={0.32} />
         </mesh>
 
-        {/* 서쪽 벽면: 대리석 세면대 카운터 + 밝은 대형 거울 + 도자기 세면볼 3기 + 은색 수전 + 물비누 */}
+        {/* 서쪽 벽면: 화이트 세면대 카운터 + 2층형 옐로우 포인트 보울 + 밝은 대형 거울 + 벽걸이 곡면 핸드드라이어 */}
         <group position={[3.35, 0, 4.75]}>
           <RoundedBox args={[0.56, 0.72, 2.25]} position={[0, 0.36, 0]} radius={0.02} castShadow receiveShadow>
-            <meshStandardMaterial color="#FFFFFF" roughness={0.2} />
+            <meshStandardMaterial color="#FFFFFF" roughness={0.18} />
           </RoundedBox>
-          {/* 밝게 빛나는 전면 거울 & 상단 간접조명 바 */}
+          <RoundedBox args={[0.38, 0.02, 2.05]} position={[0.02, 0.725, 0]} radius={0.01}>
+            <meshBasicMaterial color="#FACC15" />
+          </RoundedBox>
           <mesh position={[-0.25, 1.18, 0]} rotation={[0, Math.PI / 2, 0]}>
             <planeGeometry args={[2.12, 0.78]} />
             <meshBasicMaterial map={mirrorTex} />
@@ -1780,48 +2503,58 @@ function SixFloorMasterpieceDiorama({
           {[-0.68, 0.0, 0.68].map((sz, si) => (
             <group key={`sink_${si}`} position={[0.04, 0.74, sz]}>
               <mesh castShadow>
-                <cylinderGeometry args={[0.18, 0.14, 0.09, 24]} />
+                <cylinderGeometry args={[0.17, 0.13, 0.08, 24]} />
                 <meshStandardMaterial color="#FFFFFF" roughness={0.1} />
               </mesh>
               <mesh position={[0, 0.04, 0]}>
-                <cylinderGeometry args={[0.14, 0.12, 0.02, 20]} />
+                <cylinderGeometry args={[0.13, 0.11, 0.02, 20]} />
                 <meshBasicMaterial color="#38BDF8" />
               </mesh>
-              {/* 크롬 수도꼭지 수전 & 물비누 디스펜서 */}
               <mesh position={[-0.16, 0.09, 0]}>
                 <cylinderGeometry args={[0.016, 0.016, 0.15, 8]} />
                 <meshStandardMaterial color="#64748B" metalness={0.9} />
               </mesh>
-              <mesh position={[-0.14, 0.06, 0.22]}>
-                <cylinderGeometry args={[0.025, 0.028, 0.09, 10]} />
-                <meshStandardMaterial color="#10B981" />
-              </mesh>
             </group>
           ))}
+
+          {/* 벽걸이 곡면 자동 핸드드라이어(에어타월) */}
+          <RoundedBox args={[0.16, 0.34, 0.28]} position={[-0.18, 1.05, -1.32]} radius={0.06} castShadow>
+            <meshStandardMaterial color="#FFFFFF" roughness={0.15} />
+          </RoundedBox>
         </group>
 
-        {/* 북측 남성용 큐비클 2칸 (반열린 도어 + 손잡이 + 양변기) */}
+        {/* 북측 남성용 큐비클 2칸 (그레이 필라 & 아이보리 도어 & 실버 가로 띠 잠금쇠) */}
         {[-0.55, 0.55].map((bx, bi) => (
           <group key={`m_stall_${bi}`} position={[5.25 + bx, 0, 3.55]}>
-            <RoundedBox args={[0.05, 1.18, 1.1]} position={[-0.52, 0.59, 0]} radius={0.01} castShadow>
-              <meshStandardMaterial color="#93C5FD" roughness={0.35} />
+            <RoundedBox args={[0.05, 1.52, 1.1]} position={[-0.52, 0.76, 0]} radius={0.01} castShadow>
+              <meshStandardMaterial color="#C8BFA8" roughness={0.4} />
             </RoundedBox>
-            <RoundedBox args={[0.82, 1.08, 0.05]} position={[0, 0.56, 0.52]} rotation={[0, 0.35, 0]} radius={0.01} castShadow>
-              <meshStandardMaterial color="#60A5FA" roughness={0.35} />
-            </RoundedBox>
+            <group position={[0, 0.75, 0.52]} rotation={[0, 0.32, 0]}>
+              <RoundedBox args={[0.82, 1.46, 0.04]} radius={0.01} castShadow>
+                <meshStandardMaterial color="#FAF8F5" roughness={0.25} />
+              </RoundedBox>
+              <RoundedBox args={[0.825, 0.10, 0.045]} position={[0, -0.05, 0]} radius={0.004}>
+                <meshStandardMaterial color="#CBD5E1" metalness={0.75} />
+              </RoundedBox>
+            </group>
             <DetailedMiniatureToilet position={[0, 0, -0.12]} rotationY={0} />
           </group>
         ))}
 
-        {/* 남측 여성용 큐비클 2칸 (반열린 도어 + 손잡이 + 양변기) */}
+        {/* 남측 여성용 큐비클 2칸 (그레이 필라 & 아이보리 도어 & 실버 가로 띠 잠금쇠) */}
         {[-0.55, 0.55].map((bx, bi) => (
           <group key={`f_stall_${bi}`} position={[5.25 + bx, 0, 5.65]}>
-            <RoundedBox args={[0.05, 1.18, 1.1]} position={[-0.52, 0.59, 0]} radius={0.01} castShadow>
-              <meshStandardMaterial color="#FBCFE8" roughness={0.35} />
+            <RoundedBox args={[0.05, 1.52, 1.1]} position={[-0.52, 0.76, 0]} radius={0.01} castShadow>
+              <meshStandardMaterial color="#C8BFA8" roughness={0.4} />
             </RoundedBox>
-            <RoundedBox args={[0.82, 1.08, 0.05]} position={[0, 0.56, -0.52]} rotation={[0, -0.35, 0]} radius={0.01} castShadow>
-              <meshStandardMaterial color="#F472B6" roughness={0.35} />
-            </RoundedBox>
+            <group position={[0, 0.75, -0.52]} rotation={[0, -0.32, 0]}>
+              <RoundedBox args={[0.82, 1.46, 0.04]} radius={0.01} castShadow>
+                <meshStandardMaterial color="#FAF8F5" roughness={0.25} />
+              </RoundedBox>
+              <RoundedBox args={[0.825, 0.10, 0.045]} position={[0, -0.05, 0]} radius={0.004}>
+                <meshStandardMaterial color="#CBD5E1" metalness={0.75} />
+              </RoundedBox>
+            </group>
             <DetailedMiniatureToilet position={[0, 0, 0.12]} rotationY={Math.PI} />
           </group>
         ))}
@@ -1837,29 +2570,18 @@ function SixFloorMasterpieceDiorama({
       </group>
 
       {/* ================================================================= */}
-      {/* 🛗 [구역 8: 하단 정중앙 엘리베이터 홀] */}
+      {/* 🛗 [구역 8: 하단 정중앙 스테인리스 자동 개폐 엘리베이터 홀 (`[0, 0, 5.9]`)] */}
       {/* ================================================================= */}
-      <group position={[0, 0, 5.9]}>
-        <RoundedBox args={[3.4, 2.4, 0.35]} position={[0, 1.2, 0.3]} radius={0.02} castShadow receiveShadow>
-          <meshStandardMaterial color="#C8B9A6" roughness={0.35} />
-        </RoundedBox>
-        <RoundedBox args={[1.5, 2.05, 0.08]} position={[0, 1.02, 0.1]} radius={0.01}>
-          <meshStandardMaterial color="#3E2723" metalness={0.5} roughness={0.3} />
-        </RoundedBox>
-        <RoundedBox args={[0.72, 0.22, 0.06]} position={[0, 2.18, 0.11]} radius={0.01}>
-          <meshStandardMaterial color="#10B981" emissive="#10B981" emissiveIntensity={0.8} />
-        </RoundedBox>
-        {showRoomSigns && (
-          <Billboard position={[0, 2.35, 0]}>
-            <mesh>
-              <planeGeometry args={[1.15, 0.52]} />
-              <meshBasicMaterial map={signs.elevator} transparent />
-            </mesh>
-          </Billboard>
-        )}
-      </group>
+      <AnimatedStainlessElevator6F
+        position={[0, 0, 5.9]}
+        playerIdxRef={playerIdxRef}
+        forceOpen={isElevatorModalOpen}
+        onClickElevator={() => onSelectZone(ZONES_6F[0])}
+        signTex={signs.elevator}
+        showRoomSigns={showRoomSigns}
+      />
 
-      {/* 내벽 구조물 */}
+      {/* 내벽 구조물 (원본 100% 보존!) */}
       <RoundedBox args={[0.16, 1.20, 2.3]} position={[-3.0, 0.60, -3.6]} radius={0.01} castShadow receiveShadow>
         <meshStandardMaterial color="#F1F5F9" />
       </RoundedBox>
@@ -1905,11 +2627,12 @@ function SixFloorMasterpieceDiorama({
         </RoundedBox>
       </SmartCutawayWall6F>
 
-      {/* 6층 NPC 렌더링 (한 번에 1명만 조용히 말풍선 표시, 클릭 시 1:1 대화창 오픈) */}
+      {/* 6층 NPC 렌더링 */}
       {NPCS_6F.map((npc, idx) => {
         const isTalking = idx === activeNpcChatIdx % NPCS_6F.length;
         const msgList = npc.dialogues || [];
         const msg = isTalking && msgList.length > 0 ? `${npc.name}: ${msgList[activeNpcChatIdx % msgList.length]}` : null;
+        const isBlessingNow = holyLightEvent && holyLightEvent.pastorName === npc.name;
 
         return (
           <SmoothChibiAvatar6F
@@ -1918,6 +2641,8 @@ function SixFloorMasterpieceDiorama({
             patrolZ={npc.patrolZ || null}
             rotationY={npc.rotY || 0}
             isSeated={Boolean(npc.seated)}
+            isChild={Boolean(npc.isChild)}
+            emote={isBlessingNow ? 'bless' : null}
             gender={npc.gender}
             hairStyle={npc.hairStyle}
             isSkirt={Boolean(npc.isSkirt)}
@@ -1935,12 +2660,36 @@ function SixFloorMasterpieceDiorama({
         );
       })}
 
+      {/* 실시간 멀티플레이어로 6층에 접속한 다른 성도들 */}
+      {(remotePeers || []).map((peer) => (
+        <RemoteMultiplayerAvatar6F
+          key={peer.clientId}
+          peer={peer}
+          onClickPeer={onSelectRemotePeer}
+        />
+      ))}
+
+      {/* 축도 홀리라이트 강림 이펙트 */}
+      {holyLightEvent && (
+        <HolyLightBeamEffect6F
+          targetPos={holyLightEvent.targetPos}
+          pastorName={holyLightEvent.pastorName}
+          targetName={holyLightEvent.targetName}
+        />
+      )}
+
       {ZONES_6F.map((z) => (
         <HologramMarker6F
           key={z.id}
           zone={z}
           isSelected={activeZoneId === z.id}
-          onSelect={onSelectZone}
+          onSelect={(sel) => {
+            if (sel.isTvZone && onOpenWorshipTv) {
+              onOpenWorshipTv();
+            } else {
+              onSelectZone(sel);
+            }
+          }}
         />
       ))}
     </group>
@@ -1948,9 +2697,21 @@ function SixFloorMasterpieceDiorama({
 }
 
 // =====================================================================
-// 🚶‍♂️ 플레이어 아바타 컨트롤러
+// 🚶‍♂️ 플레이어 아바타 컨트롤러 (3인칭 추적 카메라 + 커스텀 아바타 연동)
 // =====================================================================
-function PlayerController6F({ waypoints, playerIdxRef, seatedInfo, playerName, emote, onPositionUpdate }) {
+function PlayerController6F({
+  waypoints,
+  playerIdxRef,
+  seatedInfo,
+  playerName,
+  playerOffice,
+  avatarConfig,
+  emote,
+  myChatBubble,
+  controlsRef,
+  followCamEnabled,
+  onPositionUpdate
+}) {
   const wpIndexRef = useRef(0);
   const [renderState, setRenderState] = useState({
     pos: [0.0, 0, 3.6],
@@ -1963,29 +2724,30 @@ function PlayerController6F({ waypoints, playerIdxRef, seatedInfo, playerName, e
   }, [waypoints]);
 
   const nameTagTex = useMemo(() => {
+    const isPastor = isAuthorizedPastor(playerName, playerOffice);
     return makeCanvasTexture((ctx, w, h) => {
-      ctx.fillStyle = 'rgba(30, 33, 40, 0.95)';
+      ctx.fillStyle = isPastor ? 'rgba(88, 28, 135, 0.96)' : 'rgba(30, 33, 40, 0.95)';
       ctx.beginPath();
       ctx.roundRect(6, 6, w - 12, h - 12, 48);
       ctx.fill();
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = isPastor ? '#FACC15' : 'rgba(56, 189, 248, 0.65)';
       ctx.stroke();
 
-      ctx.fillStyle = '#38BDF8';
+      ctx.fillStyle = isPastor ? '#FACC15' : '#38BDF8';
       ctx.beginPath();
-      ctx.arc(52, h / 2, 16, 0, Math.PI * 2);
+      ctx.arc(48, h / 2, 15, 0, Math.PI * 2);
       ctx.fill();
 
       ctx.fillStyle = '#FFFFFF';
-      ctx.font = '900 38px sans-serif';
+      ctx.font = '900 35px sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(`나 · ${playerName}`, w / 2 + 18, h / 2 + 2);
-    }, 520, 110);
-  }, [playerName]);
+      ctx.fillText(`나 · ${isPastor ? '✝️' : ''}${playerName}`, w / 2 + 18, h / 2 + 2);
+    }, 540, 110);
+  }, [playerName, playerOffice]);
 
-  useFrame((_, delta) => {
+  useFrame(({ camera }, delta) => {
     if (seatedInfo) {
       playerIdxRef.current = [seatedInfo.x, 0, seatedInfo.z];
       if (renderState.walking || renderState.pos[0] !== seatedInfo.x || renderState.rotY !== seatedInfo.rotY) {
@@ -1994,6 +2756,10 @@ function PlayerController6F({ waypoints, playerIdxRef, seatedInfo, playerName, e
           rotY: seatedInfo.rotY ?? Math.PI,
           walking: false
         });
+      }
+      if (followCamEnabled && controlsRef?.current) {
+        controlsRef.current.target.lerp(new THREE.Vector3(seatedInfo.x, 0.85, seatedInfo.z - 0.5), delta * 4.5);
+        controlsRef.current.update();
       }
       return;
     }
@@ -2020,7 +2786,14 @@ function PlayerController6F({ waypoints, playerIdxRef, seatedInfo, playerName, e
         rotY: angle,
         walking: true
       });
-      onPositionUpdate(nx, nz);
+      onPositionUpdate(nx, nz, angle);
+
+      if (followCamEnabled && controlsRef?.current) {
+        camera.position.x += (nx - cx) * 0.85;
+        camera.position.z += (nz - cz) * 0.85;
+        controlsRef.current.target.lerp(new THREE.Vector3(nx, 0.95, nz), delta * 6.0);
+        controlsRef.current.update();
+      }
     } else {
       if (wpIndexRef.current < waypoints.length - 1) {
         wpIndexRef.current += 1;
@@ -2034,16 +2807,18 @@ function PlayerController6F({ waypoints, playerIdxRef, seatedInfo, playerName, e
     <SmoothChibiAvatar6F
       position={renderState.pos}
       rotationY={renderState.rotY}
-      gender="male"
-      hairStyle="parted"
+      gender={avatarConfig.gender}
+      hairStyle={avatarConfig.hairStyle}
+      isSkirt={Boolean(avatarConfig.isSkirt)}
+      hasSunglasses={Boolean(avatarConfig.hasSunglasses)}
       isWalking={renderState.walking}
       isSeated={Boolean(seatedInfo)}
-      hasSunglasses={true}
       emote={emote}
-      shirtColor="#FACC15"
-      pantsColor="#0284C7"
-      hairColor="#EAB308"
+      shirtColor={avatarConfig.shirtColor}
+      pantsColor={avatarConfig.pantsColor}
+      hairColor={avatarConfig.hairColor}
       nameTagTexture={nameTagTex}
+      speechBubbleText={myChatBubble ? `${playerName}: ${myChatBubble}` : null}
     />
   );
 }
@@ -2074,21 +2849,53 @@ function InitialCameraSetup6F({ controlsRef }) {
 }
 
 export default function Education6F({ setActiveScreen, onChangeFloor, onExitHome }) {
-  const authUser = useAppStore(state => state.authUser);
+  const authUser = useAppStore((state) => state.authUser);
+  const dailyData = useAppStore((state) => state.dailyData);
   const playerName = authUser?.name || localStorage.getItem('login_user_name') || '정신동';
+  const playerOffice = authUser?.office || localStorage.getItem('login_user_office') || '성도';
+  const canPlayerBless = isAuthorizedPastor(playerName, playerOffice);
 
+  const clientIdRef = useRef(`peer6f_${playerName}_${Math.random().toString(36).slice(2, 8)}`);
   const controlsRef = useRef();
   const minimapRef = useRef(null);
   const playerIdxRef = useRef([0.0, 0, 3.6]);
+  const playerRotRef = useRef(Math.PI);
+  const channelRef = useRef(null);
+  const lastSyncTimeRef = useRef(0);
+
+  const [avatarConfig] = useState(() => {
+    try {
+      const saved = localStorage.getItem('gtc_metaverse_avatar_v1');
+      return saved ? { ...DEFAULT_AVATAR_CONFIG, ...JSON.parse(saved) } : DEFAULT_AVATAR_CONFIG;
+    } catch {
+      return DEFAULT_AVATAR_CONFIG;
+    }
+  });
+
+  const [worshipVideo, setWorshipVideo] = useState(() => getSyncedWorshipVideo6F(dailyData));
+  const [isTvPlaying, setIsTvPlaying] = useState(false);
+
+  useEffect(() => {
+    const syncVideo = () => setWorshipVideo(getSyncedWorshipVideo6F(dailyData));
+    syncVideo();
+    window.addEventListener('storage', syncVideo);
+    return () => window.removeEventListener('storage', syncVideo);
+  }, [dailyData]);
 
   const [waypoints, setWaypoints] = useState([[0.0, 3.6]]);
   const [seatedInfo, setSeatedInfo] = useState(null);
   const [activeZone, setActiveZone] = useState(ZONES_6F[0]);
   const [modalZone, setModalZone] = useState(null);
   const [emote, setEmote] = useState(null);
+  const [myChatBubble, setMyChatBubble] = useState('');
+  const [quickChatInput, setQuickChatInput] = useState('');
   const [isMusicOn, setIsMusicOn] = useState(false);
+  const [followCamEnabled, setFollowCamEnabled] = useState(true);
 
-  // 1:1 캐릭터 대화 모달 상태
+  const [remotePeers, setRemotePeers] = useState([]);
+  const [selectedRemotePeer, setSelectedRemotePeer] = useState(null);
+  const [holyLightEvent, setHolyLightEvent] = useState(null);
+
   const [selectedChatNpc, setSelectedChatNpc] = useState(null);
   const [chatReplyText, setChatReplyText] = useState('');
 
@@ -2107,35 +2914,167 @@ export default function Education6F({ setActiveScreen, onChangeFloor, onExitHome
     };
   }, []);
 
-  const triggerEmote = (type) => {
-    setEmote(type);
-    setTimeout(() => setEmote(null), 2200);
-  };
+  // 🌐 Supabase Realtime 6층 멀티플레이어 동기화
+  const broadcastMyState = useCallback(
+    (override = {}) => {
+      if (!channelRef.current) return;
+      const [px, , pz] = playerIdxRef.current;
+      const payload = {
+        clientId: clientIdRef.current,
+        name: playerName,
+        office: playerOffice,
+        x: Number(px.toFixed(2)),
+        z: Number(pz.toFixed(2)),
+        rotY: Number((playerRotRef.current || 0).toFixed(2)),
+        seated: Boolean(seatedInfo),
+        emote: override.emote !== undefined ? override.emote : emote,
+        chatMsg: override.chatMsg !== undefined ? override.chatMsg : myChatBubble,
+        avatar: avatarConfig,
+        ts: Date.now()
+      };
+      channelRef.current.track(payload).catch(() => {});
+    },
+    [playerName, playerOffice, seatedInfo, emote, myChatBubble, avatarConfig]
+  );
 
-  const handleSitOnSeat = useCallback((seatData) => {
-    setSeatedInfo(seatData);
-    setWaypoints([[seatData.x, seatData.z]]);
-  }, []);
+  useEffect(() => {
+    if (!supabase) return;
+    const channel = supabase.channel('metaverse_edu_6f', {
+      config: { presence: { key: clientIdRef.current } }
+    });
+    channelRef.current = channel;
+
+    channel
+      .on('presence', { event: 'sync' }, () => {
+        const state = channel.presenceState();
+        const peers = [];
+        Object.keys(state).forEach((key) => {
+          if (key === clientIdRef.current) return;
+          const items = state[key];
+          if (items && items.length > 0) {
+            peers.push(items[items.length - 1]);
+          }
+        });
+        setRemotePeers(peers);
+      })
+      .on('broadcast', { event: 'holy_blessing_6f' }, ({ payload }) => {
+        if (!payload) return;
+        playHolyBlessingSound();
+        setHolyLightEvent(payload);
+        setTimeout(() => setHolyLightEvent(null), 7000);
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          const [px, , pz] = playerIdxRef.current;
+          await channel.track({
+            clientId: clientIdRef.current,
+            name: playerName,
+            office: playerOffice,
+            x: px,
+            z: pz,
+            rotY: Math.PI,
+            seated: false,
+            emote: null,
+            chatMsg: '',
+            avatar: avatarConfig,
+            ts: Date.now()
+          });
+        }
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+      channelRef.current = null;
+    };
+  }, [playerName, playerOffice, avatarConfig]);
+
+  const triggerSocialAction = useCallback(
+    (emoteType, chatText = '') => {
+      setEmote(emoteType);
+      if (chatText) setMyChatBubble(chatText);
+      broadcastMyState({ emote: emoteType, chatMsg: chatText });
+
+      setTimeout(() => {
+        setEmote(null);
+        broadcastMyState({ emote: null, chatMsg: chatText });
+      }, 4000);
+
+      if (chatText) {
+        setTimeout(() => {
+          setMyChatBubble('');
+          broadcastMyState({ emote: null, chatMsg: '' });
+        }, 5500);
+      }
+    },
+    [broadcastMyState]
+  );
+
+  // ✨ 다음세대·새가족 축도(홀리라이트) 실행
+  const triggerHolyBenediction6F = useCallback(
+    (pastorDisplayName, targetDisplayName, targetCoords) => {
+      const eventPayload = {
+        pastorName: pastorDisplayName,
+        targetName: targetDisplayName,
+        targetPos: targetCoords || [playerIdxRef.current[0], 0, playerIdxRef.current[2]],
+        ts: Date.now()
+      };
+
+      playHolyBlessingSound();
+      setHolyLightEvent(eventPayload);
+      triggerSocialAction('pray', `아멘! ${pastorDisplayName}의 다음세대·새가족 축도를 감사히 받습니다 🙏`);
+
+      if (channelRef.current) {
+        channelRef.current
+          .send({
+            type: 'broadcast',
+            event: 'holy_blessing_6f',
+            payload: eventPayload
+          })
+          .catch(() => {});
+      }
+
+      setTimeout(() => {
+        setHolyLightEvent(null);
+      }, 7000);
+    },
+    [triggerSocialAction]
+  );
+
+  const handleSitOnSeat = useCallback(
+    (seatData) => {
+      setSeatedInfo(seatData);
+      setWaypoints([[seatData.x, seatData.z]]);
+      setTimeout(() => broadcastMyState(), 100);
+    },
+    [broadcastMyState]
+  );
 
   const handleStandUp = useCallback(() => {
     setSeatedInfo(null);
-  }, []);
+    setTimeout(() => broadcastMyState(), 100);
+  }, [broadcastMyState]);
 
-  const handleWalkTo = useCallback((tx, tz) => {
-    if (seatedInfo) setSeatedInfo(null);
-    const [sx, , sz] = playerIdxRef.current;
-    const nextPath = computePath6F(sx, sz, tx, tz);
-    setWaypoints(nextPath);
-  }, [seatedInfo]);
+  const handleWalkTo = useCallback(
+    (tx, tz) => {
+      if (seatedInfo) setSeatedInfo(null);
+      const [sx, , sz] = playerIdxRef.current;
+      const nextPath = computePath6F(sx, sz, tx, tz);
+      setWaypoints(nextPath);
+    },
+    [seatedInfo]
+  );
 
-  const handleSelectNpcForChat = useCallback((npc) => {
-    setChatReplyText(
-      (npc.dialogues && npc.dialogues[0]) ||
-      '할렐루야! 6층 다음세대 교육관에 오신 것을 환영합니다 😊'
-    );
-    setSelectedChatNpc(npc);
-    triggerEmote('wave');
-  }, []);
+  const handleSelectNpcForChat = useCallback(
+    (npc) => {
+      setChatReplyText(
+        (npc.dialogues && npc.dialogues[0]) ||
+          '할렐루야! 6층 다음세대 교육관에 오신 것을 환영합니다 😊'
+      );
+      setSelectedChatNpc(npc);
+      triggerSocialAction('wave');
+    },
+    [triggerSocialAction]
+  );
 
   useEffect(() => {
     if (!isMapDrawerOpen) return;
@@ -2166,6 +3105,15 @@ export default function Education6F({ setActiveScreen, onChangeFloor, onExitHome
     ctx.fillStyle = '#059669';
     ctx.fillRect(42, 76, 24, 14);
 
+    remotePeers.forEach((p) => {
+      const px = (((p.x || 0) + 7) / 14) * w;
+      const py = (((p.z || 0) + 6.8) / 13.6) * h;
+      ctx.beginPath();
+      ctx.arc(px, py, 3.2, 0, Math.PI * 2);
+      ctx.fillStyle = '#34D399';
+      ctx.fill();
+    });
+
     const [cx, , cz] = playerIdxRef.current;
     const mx = ((cx + 7) / 14) * w;
     const my = ((cz + 6.8) / 13.6) * h;
@@ -2173,12 +3121,19 @@ export default function Education6F({ setActiveScreen, onChangeFloor, onExitHome
     ctx.arc(mx, my, 4, 0, Math.PI * 2);
     ctx.fillStyle = '#FACC15';
     ctx.fill();
-  }, [waypoints, seatedInfo, isMapDrawerOpen]);
+  }, [waypoints, seatedInfo, isMapDrawerOpen, remotePeers]);
 
-  const handlePositionUpdate = (px, pz) => {
-    const found = ZONES_6F.find(z => Math.hypot(px - z.pos[0], pz - z.pos[2]) < 1.35) || null;
+  const handlePositionUpdate = (px, pz, rotAngle) => {
+    playerRotRef.current = rotAngle;
+    const found = ZONES_6F.find((z) => Math.hypot(px - z.pos[0], pz - z.pos[2]) < 1.35) || null;
     if (found?.id !== activeZone?.id) {
       setActiveZone(found);
+    }
+
+    const now = Date.now();
+    if (now - lastSyncTimeRef.current > 200) {
+      lastSyncTimeRef.current = now;
+      broadcastMyState();
     }
   };
 
@@ -2194,27 +3149,43 @@ export default function Education6F({ setActiveScreen, onChangeFloor, onExitHome
       style={{ backgroundColor: '#2B2C30' }}
       className="notranslate w-full h-full relative overflow-hidden select-none font-sans"
     >
-      {/* 1. 좌측 상단: 슬림 헤더 & 간판 표시 토글 */}
-      <div className="absolute top-3 left-3 z-20 flex flex-col gap-1.5 pointer-events-auto">
-        <div
-          onClick={onExitHome}
-          style={darkPillStyle}
-          className="px-3.5 py-2 rounded-2xl backdrop-blur-md shadow-xl border flex items-center gap-2 cursor-pointer w-max"
-        >
-          <span style={{ color: '#FFFFFF' }} className="text-xs sm:text-sm font-black tracking-tight">
-            ◀ 6F 다음세대 교육관
-          </span>
+      {/* 1. 좌측 상단: 슬림 헤더 & 실시간 접속자 & 말씀TV/축도/BGM/추적뷰 토글 */}
+      <div className="absolute top-3 left-3 z-20 flex flex-col gap-1.5 pointer-events-auto max-w-[76vw]">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <div
+            onClick={onExitHome}
+            style={darkPillStyle}
+            className="px-3.5 py-2 rounded-2xl backdrop-blur-md shadow-xl border flex items-center gap-2 cursor-pointer w-max"
+          >
+            <span style={{ color: '#FFFFFF' }} className="text-xs sm:text-sm font-black tracking-tight">
+              ◀ 6F 다음세대 교육관 · 새가족반
+            </span>
+          </div>
+
+          <div
+            style={darkPillStyle}
+            className="px-3 py-2 rounded-2xl border shadow-xl flex items-center gap-1.5 text-xs font-black"
+          >
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+            <span className="text-emerald-300">6F 접속 {remotePeers.length + 1}명</span>
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5">
           <button
-            onClick={() => setShowRoomSigns(prev => !prev)}
-            style={darkPillStyle}
-            className="px-2.5 py-1.5 rounded-full text-[11px] font-bold border shadow-lg cursor-pointer"
+            onClick={() => setIsTvPlaying((prev) => !prev)}
+            style={{ backgroundColor: '#0284C7', color: '#FFFFFF' }}
+            className="px-3 py-1.5 rounded-full text-[11px] font-black shadow-lg cursor-pointer"
           >
-            <span style={{ color: showRoomSigns ? '#34D399' : '#9CA3AF' }}>
-              {showRoomSigns ? '🏷️ 간판 켜짐' : '🏷️ 간판 숨김'}
-            </span>
+            📺 {isTvPlaying ? '예배영상 닫기' : '초등부·매일예배 영상 켜기'}
+          </button>
+
+          <button
+            onClick={() => triggerHolyBenediction6F('최수경 목사님', playerName, playerIdxRef.current)}
+            style={{ backgroundColor: '#8B5CF6', color: '#FFFFFF' }}
+            className="px-3 py-1.5 rounded-full text-[11px] font-black shadow-lg cursor-pointer"
+          >
+            ✨ 다음세대·새가족 축도(홀리라이트)
           </button>
 
           <button
@@ -2232,16 +3203,23 @@ export default function Education6F({ setActiveScreen, onChangeFloor, onExitHome
           </button>
 
           <button
-            onClick={() => {
-              if (!controlsRef.current) return;
-              controlsRef.current.object.position.set(0, 11.8, 11.2);
-              controlsRef.current.target.set(0, 0.4, 0.2);
-              controlsRef.current.update();
-            }}
+            onClick={() => setFollowCamEnabled((prev) => !prev)}
             style={darkPillStyle}
             className="px-2.5 py-1.5 rounded-full text-[11px] font-bold border shadow-lg cursor-pointer"
           >
-            <span style={{ color: '#93C5FD' }}>🎥 시점리셋</span>
+            <span style={{ color: followCamEnabled ? '#34D399' : '#9CA3AF' }}>
+              {followCamEnabled ? '🎥 캐릭터 추적뷰 ON' : '🎥 자유 시점'}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setShowRoomSigns((prev) => !prev)}
+            style={darkPillStyle}
+            className="px-2.5 py-1.5 rounded-full text-[11px] font-bold border shadow-lg cursor-pointer"
+          >
+            <span style={{ color: showRoomSigns ? '#34D399' : '#9CA3AF' }}>
+              {showRoomSigns ? '🏷️ 간판 켜짐' : '🏷️ 간판 숨김'}
+            </span>
           </button>
         </div>
       </div>
@@ -2249,7 +3227,7 @@ export default function Education6F({ setActiveScreen, onChangeFloor, onExitHome
       {/* 2. 우측 상단: 접이식 미니맵 & 부서 목록 드로어 */}
       <div className="absolute top-3 right-3 z-20 flex flex-col items-end gap-2 pointer-events-auto">
         <button
-          onClick={() => setIsMapDrawerOpen(prev => !prev)}
+          onClick={() => setIsMapDrawerOpen((prev) => !prev)}
           style={darkPillStyle}
           className="px-3.5 py-2 rounded-2xl border shadow-xl text-xs font-black flex items-center gap-1.5 cursor-pointer"
         >
@@ -2259,7 +3237,7 @@ export default function Education6F({ setActiveScreen, onChangeFloor, onExitHome
         {isMapDrawerOpen && (
           <div
             style={darkPillStyle}
-            className="p-2.5 rounded-2xl border shadow-2xl flex flex-col items-center gap-2 w-44 animate-fade-in"
+            className="p-2.5 rounded-2xl border shadow-2xl flex flex-col items-center gap-2 w-48 animate-fade-in"
           >
             <canvas ref={minimapRef} width={114} height={94} className="rounded-xl border border-white/10" />
             <div className="w-full flex flex-col gap-1 max-h-[38vh] overflow-y-auto hide-scrollbar pr-0.5">
@@ -2270,7 +3248,8 @@ export default function Education6F({ setActiveScreen, onChangeFloor, onExitHome
                     const dest = z.roomTarget || [z.pos[0], z.pos[2]];
                     handleWalkTo(dest[0], dest[1]);
                     setActiveZone(z);
-                    setModalZone(z);
+                    if (z.isTvZone) setIsTvPlaying(true);
+                    else setModalZone(z);
                     setIsMapDrawerOpen(false);
                   }}
                   className="px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-emerald-600/40 text-left text-[11px] font-bold flex items-center justify-between cursor-pointer"
@@ -2283,64 +3262,144 @@ export default function Education6F({ setActiveScreen, onChangeFloor, onExitHome
         )}
       </div>
 
-      {/* 3. 하단 좌측~중앙: 접고 펼 수 있는 부서 바로가기 캡슐 독 바 */}
-      <div className="absolute bottom-2.5 left-2.5 sm:bottom-4 sm:left-4 z-20 flex items-center gap-1.5 pointer-events-auto max-w-[68vw] sm:max-w-none">
-        {showBottomDock ? (
+      {/* 3. 초등부·매일예배 유튜브 영상 플레이어 모달 */}
+      {isTvPlaying && (
+        <div
+          style={{ backgroundColor: '#090D16', borderColor: '#38BDF8', color: '#FFFFFF' }}
+          className="absolute top-20 sm:top-24 left-1/2 -translate-x-1/2 z-30 w-[92vw] max-w-[460px] border-2 rounded-2xl overflow-hidden shadow-2xl pointer-events-auto animate-fade-in"
+        >
+          <div className="px-3.5 py-2 bg-slate-900 border-b border-white/10 flex items-center justify-between">
+            <span className="text-xs font-black text-sky-300 truncate">
+              📺 6F 교육관 말씀 스크린 · {worshipVideo.title}
+            </span>
+            <button onClick={() => setIsTvPlaying(false)} className="text-xs font-bold text-zinc-400 cursor-pointer px-1">
+              ✕
+            </button>
+          </div>
+          <div className="w-full aspect-video bg-black">
+            <iframe
+              width="100%"
+              height="100%"
+              src={`https://www.youtube.com/embed/${worshipVideo.id}?autoplay=1&rel=0&playsinline=1`}
+              title="6F Sunday School Video"
+              frameBorder="0"
+              allow="autoplay; encrypted-media; picture-in-picture"
+              allowFullScreen
+              className="w-full h-full"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* 4. 하단: 6층 주일학교 소셜 동작(✋ 손들고 발표 · 💃 찬양율동 · 🙏 다음세대 기도 · 👋 인사) & 부서 바로가기 바 */}
+      <div className="absolute bottom-2.5 left-2.5 right-2.5 sm:bottom-4 sm:left-4 sm:right-4 z-20 flex flex-col gap-1.5 pointer-events-none">
+        <div className="flex flex-wrap items-center justify-between gap-1.5 pointer-events-auto">
           <div
             style={darkPillStyle}
             className="p-1 rounded-2xl border shadow-2xl flex items-center gap-1 overflow-x-auto hide-scrollbar"
           >
-            {seatedInfo && (
-              <button
-                onClick={handleStandUp}
-                style={{ backgroundColor: '#F59E0B', color: '#030712' }}
-                className="px-2.5 py-1.5 rounded-xl text-[11px] font-black shrink-0 cursor-pointer"
-              >
-                🪑 자리에서 일어나기
-              </button>
-            )}
             {[
-              { icon: '👶', label: '유아부', zone: ZONES_6F[2] },
-              { icon: '🎨', label: '유치부', zone: ZONES_6F[6] },
-              { icon: '🏫', label: '초등부', zone: ZONES_6F[5] },
-              { icon: '🤝', label: '새가족반', zone: ZONES_6F[4] }
-            ].map((item, idx) => (
+              { label: '✋ 손들고발표', emote: 'raise_hand', msg: '전도사님 저요 저요! ✋ 다윗처럼 믿음으로 승리하겠습니다 아멘!' },
+              { label: '💃 찬양율동', emote: 'dance', msg: '유치부·초등부 친구들과 함께 신나게 주님을 찬양해요! 💃🎶' },
+              { label: '🙏 다음세대기도', emote: 'pray', msg: '주님, 우리 교회 다음세대 아이들에게 솔로몬의 지혜를 주소서 🙏' },
+              { label: '👋 새가족환영', emote: 'wave', msg: '할렐루야! 6층 새가족반과 교육관에 오신 것을 환영합니다 👋🥰' }
+            ].map((act, idx) => (
               <button
                 key={idx}
-                onClick={() => {
-                  const dest = item.zone.roomTarget || [item.zone.pos[0], item.zone.pos[2]];
-                  handleWalkTo(dest[0], dest[1]);
-                  setActiveZone(item.zone);
-                }}
-                className="px-2.5 py-1.5 rounded-xl hover:bg-white/10 flex items-center gap-1 shrink-0 cursor-pointer"
+                onClick={() => triggerSocialAction(act.emote, act.msg)}
+                className="px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-sky-500/30 text-[11px] font-black text-white whitespace-nowrap cursor-pointer transition-colors"
               >
-                <span className="text-sm">{item.icon}</span>
-                <span style={{ color: '#FFFFFF' }} className="text-[11px] font-extrabold whitespace-nowrap">
-                  {item.label}
-                </span>
+                {act.label}
               </button>
             ))}
-            <button
-              onClick={() => setShowBottomDock(false)}
-              style={{ color: '#9CA3AF' }}
-              className="px-2 py-1 text-xs font-bold cursor-pointer"
-              title="하단 바 접기"
-            >
-              ✕
-            </button>
           </div>
-        ) : (
-          <button
-            onClick={() => setShowBottomDock(true)}
+
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!quickChatInput.trim()) return;
+              triggerSocialAction('raise_hand', quickChatInput.trim());
+              setQuickChatInput('');
+            }}
             style={darkPillStyle}
-            className="px-3 py-2 rounded-full border shadow-xl text-xs font-black cursor-pointer"
+            className="flex items-center gap-1 px-2.5 py-1 rounded-2xl border shadow-2xl w-full sm:w-64"
           >
-            🏫 부서 메뉴 ▲
-          </button>
-        )}
+            <input
+              type="text"
+              value={quickChatInput}
+              onChange={(e) => setQuickChatInput(e.target.value)}
+              placeholder="교육관 말풍선 대화 입력..."
+              className="flex-1 bg-transparent text-xs font-bold text-white outline-none placeholder:text-zinc-400"
+            />
+            <button
+              type="submit"
+              className="px-2.5 py-1 rounded-xl bg-sky-500 text-stone-950 text-[11px] font-black cursor-pointer shrink-0"
+            >
+              전송
+            </button>
+          </form>
+        </div>
+
+        <div className="flex items-center gap-1.5 pointer-events-auto">
+          {showBottomDock ? (
+            <div
+              style={darkPillStyle}
+              className="p-1 rounded-2xl border shadow-2xl flex items-center gap-1 overflow-x-auto hide-scrollbar"
+            >
+              {seatedInfo && (
+                <button
+                  onClick={handleStandUp}
+                  style={{ backgroundColor: '#F59E0B', color: '#030712' }}
+                  className="px-2.5 py-1.5 rounded-xl text-[11px] font-black shrink-0 cursor-pointer"
+                >
+                  🪑 자리에서 일어나기
+                </button>
+              )}
+              {[
+                { icon: '👶', label: '유아부(놀이터)', zone: ZONES_6F[2] },
+                { icon: '🎨', label: '유치부(무지개)', zone: ZONES_6F[6] },
+                { icon: '🏫', label: '초등부본관', zone: ZONES_6F[5] },
+                { icon: '🤝', label: '새가족반', zone: ZONES_6F[4] },
+                { icon: '🛗', label: '엘리베이터', zone: ZONES_6F[0], openModal: true }
+              ].map((item, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => {
+                    const dest = item.zone.roomTarget || [item.zone.pos[0], item.zone.pos[2]];
+                    handleWalkTo(dest[0], dest[1]);
+                    setActiveZone(item.zone);
+                    if (item.openModal) setModalZone(item.zone);
+                  }}
+                  className="px-2.5 py-1.5 rounded-xl hover:bg-white/10 flex items-center gap-1 shrink-0 cursor-pointer"
+                >
+                  <span className="text-sm">{item.icon}</span>
+                  <span style={{ color: '#FFFFFF' }} className="text-[11px] font-extrabold whitespace-nowrap">
+                    {item.label}
+                  </span>
+                </button>
+              ))}
+              <button
+                onClick={() => setShowBottomDock(false)}
+                style={{ color: '#9CA3AF' }}
+                className="px-2 py-1 text-xs font-bold cursor-pointer"
+                title="하단 바 접기"
+              >
+                ✕
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowBottomDock(true)}
+              style={darkPillStyle}
+              className="px-3 py-2 rounded-full border shadow-xl text-xs font-black cursor-pointer"
+            >
+              🏫 부서 메뉴 ▲
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* 4. 메인 3D 캔버스 */}
+      {/* 5. 메인 3D 캔버스 */}
       <Canvas
         shadows
         gl={{ toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.18 }}
@@ -2379,9 +3438,16 @@ export default function Education6F({ setActiveScreen, onChangeFloor, onExitHome
             setModalZone(z);
           }}
           onSitOnSeat={handleSitOnSeat}
+          onOpenWorshipTv={() => setIsTvPlaying(true)}
           onSelectNpcForChat={handleSelectNpcForChat}
+          worshipVideoTitle={worshipVideo.title}
           activeNpcChatIdx={activeNpcChatIdx}
           showRoomSigns={showRoomSigns}
+          playerIdxRef={playerIdxRef}
+          isElevatorModalOpen={Boolean(modalZone?.isElevator)}
+          remotePeers={remotePeers}
+          onSelectRemotePeer={(peer) => setSelectedRemotePeer(peer)}
+          holyLightEvent={holyLightEvent}
         />
 
         <PlayerController6F
@@ -2389,7 +3455,12 @@ export default function Education6F({ setActiveScreen, onChangeFloor, onExitHome
           playerIdxRef={playerIdxRef}
           seatedInfo={seatedInfo}
           playerName={playerName}
+          playerOffice={playerOffice}
+          avatarConfig={avatarConfig}
           emote={emote}
+          myChatBubble={myChatBubble}
+          controlsRef={controlsRef}
+          followCamEnabled={followCamEnabled}
           onPositionUpdate={handlePositionUpdate}
         />
 
@@ -2408,7 +3479,89 @@ export default function Education6F({ setActiveScreen, onChangeFloor, onExitHome
         />
       </Canvas>
 
-      {/* 5. 교역자·교사·어린이 클릭 시 열리는 1:1 대화 모달 */}
+      {/* 6. 다른 실제 접속 성도(Remote Peer) 클릭 시 열리는 상호 호환 모달 */}
+      {selectedRemotePeer && (
+        <div
+          className="fixed inset-0 z-50 bg-black/65 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => setSelectedRemotePeer(null)}
+        >
+          <div
+            style={{ backgroundColor: '#111827', color: '#FFFFFF' }}
+            className="w-full max-w-sm border border-sky-500/40 rounded-3xl p-5 shadow-2xl space-y-3.5 text-left"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <div>
+                <span className="text-[10px] font-bold text-sky-400 block">6층 다음세대 교육관 성도 교제</span>
+                <h3 className="text-base font-black text-white">
+                  {selectedRemotePeer.name} ({selectedRemotePeer.office || '성도'})
+                </h3>
+              </div>
+              <button onClick={() => setSelectedRemotePeer(null)} className="text-xs font-bold text-zinc-400 cursor-pointer">
+                ✕ 닫기
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => {
+                  triggerSocialAction('raise_hand', `${selectedRemotePeer.name}님! 함께 손들고 아멘으로 화답해요 ✋✨`);
+                  setSelectedRemotePeer(null);
+                }}
+                className="p-2.5 rounded-xl bg-sky-500/20 hover:bg-sky-500/40 border border-sky-500/40 text-xs font-black text-sky-200 cursor-pointer"
+              >
+                ✋ 같이 손들고 발표
+              </button>
+              <button
+                onClick={() => {
+                  triggerSocialAction('wave', `${selectedRemotePeer.name}님 반갑습니다! 샬롬 👋`);
+                  setSelectedRemotePeer(null);
+                }}
+                className="p-2.5 rounded-xl bg-white/10 hover:bg-emerald-600/40 text-xs font-bold text-white cursor-pointer"
+              >
+                👋 반갑게 인사하기
+              </button>
+              <button
+                onClick={() => {
+                  triggerSocialAction('pray', `${selectedRemotePeer.name}님과 다음세대 부흥을 위해 함께 기도합니다 🙏`);
+                  setSelectedRemotePeer(null);
+                }}
+                className="p-2.5 rounded-xl bg-white/10 hover:bg-indigo-600/40 text-xs font-bold text-white cursor-pointer"
+              >
+                🙏 함께 중보기도
+              </button>
+              <button
+                onClick={() => {
+                  triggerSocialAction('dance', `${selectedRemotePeer.name}님과 함께 기쁨의 주일학교 찬양 율동! 💃🎶`);
+                  setSelectedRemotePeer(null);
+                }}
+                className="p-2.5 rounded-xl bg-white/10 hover:bg-pink-600/40 text-xs font-bold text-white cursor-pointer"
+              >
+                💃 함께 찬양율동
+              </button>
+            </div>
+
+            {canPlayerBless && (
+              <button
+                onClick={() => {
+                  triggerHolyBenediction6F(
+                    `${playerName} 목사님`,
+                    selectedRemotePeer.name,
+                    [selectedRemotePeer.x || 0, 0, selectedRemotePeer.z || 3.6]
+                  );
+                  setSelectedRemotePeer(null);
+                }}
+                style={{ backgroundColor: '#F59E0B', color: '#030712' }}
+                className="w-full py-3 rounded-2xl font-black text-xs cursor-pointer shadow-lg"
+              >
+                ✨ [{selectedRemotePeer.name}] 성도에게 축도(홀리라이트) 내리기
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 7. 교역자·목사님·교사·어린이 클릭 시 열리는 1:1 대화 & 축도 모달 */}
       {selectedChatNpc && (
         <div
           className="fixed inset-0 z-50 bg-black/65 backdrop-blur-xs flex items-end sm:items-center justify-center p-3 sm:p-4 animate-fade-in"
@@ -2452,6 +3605,33 @@ export default function Education6F({ setActiveScreen, onChangeFloor, onExitHome
               "{chatReplyText}"
             </div>
 
+            {selectedChatNpc.canBless && (
+              <button
+                onClick={() => {
+                  const pastorName = selectedChatNpc.name;
+                  setSelectedChatNpc(null);
+                  triggerHolyBenediction6F(pastorName, playerName, playerIdxRef.current);
+                }}
+                style={{ backgroundColor: '#F59E0B', color: '#030712' }}
+                className="w-full py-3 rounded-2xl font-black text-xs cursor-pointer shadow-lg animate-pulse"
+              >
+                ✨ [{selectedChatNpc.name}]께 다음세대·새가족 축도(홀리라이트) 받기 🙏
+              </button>
+            )}
+
+            {selectedChatNpc.isPraiseOrWord && (
+              <button
+                onClick={() => {
+                  setSelectedChatNpc(null);
+                  setIsTvPlaying(true);
+                }}
+                style={{ backgroundColor: '#0284C7', color: '#FFFFFF' }}
+                className="w-full py-2.5 rounded-xl font-black text-xs cursor-pointer shadow-md"
+              >
+                📺 초등부·매일예배 유튜브 말씀 영상 켜기
+              </button>
+            )}
+
             <div className="space-y-1.5">
               <span style={{ color: '#9CA3AF' }} className="text-[11px] font-bold block">
                 💬 인사 및 축복 나누기 (클릭 시 응답)
@@ -2471,7 +3651,7 @@ export default function Education6F({ setActiveScreen, onChangeFloor, onExitHome
                     key={idx}
                     onClick={() => {
                       setChatReplyText(item.a);
-                      triggerEmote('wave');
+                      triggerSocialAction('wave');
                     }}
                     style={{ backgroundColor: 'rgba(255,255,255,0.06)', color: '#E5E7EB' }}
                     className="w-full p-2.5 rounded-xl hover:bg-emerald-600/30 border border-white/10 text-left text-xs font-bold cursor-pointer transition-all"
@@ -2485,7 +3665,7 @@ export default function Education6F({ setActiveScreen, onChangeFloor, onExitHome
         </div>
       )}
 
-      {/* 6. 부서 상세 안내 & 층간 이동 모달 */}
+      {/* 8. 부서 상세 안내 & 전 층(1F~6F, 2F 북카페 포함!) 이동 모달 */}
       {modalZone && (
         <div
           className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4"
@@ -2517,13 +3697,15 @@ export default function Education6F({ setActiveScreen, onChangeFloor, onExitHome
 
             {modalZone.isElevator && onChangeFloor && (
               <div className="space-y-1.5 pt-1">
-                <span style={{ color: '#34D399' }} className="text-xs font-bold block">🛗 이동하실 층을 선택하세요:</span>
+                <span style={{ color: '#34D399' }} className="text-xs font-bold block">🛗 스테인리스 자동문이 열렸습니다. 이동하실 층을 선택하세요:</span>
                 {[
-                  { fl: '1F', label: '1F 메인 로비 & 야외 주차장' },
+                  { fl: '1F', label: '1F 메인 로비 & 필로티 주차장' },
+                  { fl: '2F', label: '2F 좋은나무 북카페 · 담임목사 목양실 · 사무실' },
                   { fl: '3F', label: '3F 대예배당 (본당)' },
                   { fl: '4F', label: '4F 영유아 예배실 (온돌 마루 자모실)' },
                   { fl: '5F', label: '5F 소예배·찬양홀 · 조리실 · 댄스실' },
-                  { fl: '6F', label: '6F 다음세대 교육관 · 새가족반 (현재 층)' }
+                  { fl: '6F', label: '6F 다음세대 교육관 · 새가족반 (현재 층)' },
+                  { fl: '7F', label: '7F 루프탑 하늘정원 · 한강신도시 전망대' }
                 ].map((item) => (
                   <button
                     key={item.fl}
@@ -2535,7 +3717,7 @@ export default function Education6F({ setActiveScreen, onChangeFloor, onExitHome
                     className="w-full p-3 rounded-xl hover:bg-emerald-600 text-left text-xs font-black flex justify-between cursor-pointer transition-colors"
                   >
                     <span>{item.label}</span>
-                    <span>이동 ➔</span>
+                    <span>탑승 이동 ➔</span>
                   </button>
                 ))}
               </div>
