@@ -27,7 +27,7 @@
     "html2canvas": "^1.4.1",
     "immer": "^11.1.18",
     "leaflet": "^1.9.4",
-    "lucide-react": "^1.55.0",
+    "lucide-react": "^1.74.0",
     "maplibre-gl": "^6.2.0",
     "mp4box": "^2.4.1",
     "pathfinding": "^0.4.18",

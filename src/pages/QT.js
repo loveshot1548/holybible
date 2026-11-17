@@ -1,18 +1,40 @@
 // src/components/QT.js
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
+import {
+  ArrowLeft,
+  BookOpen,
+  Calendar,
+  Check,
+  ChevronDown,
+  Compass,
+  CornerDownRight,
+  Globe,
+  HandHeart,
+  Heart,
+  Info,
+  Link2,
+  Menu,
+  MessageCircle,
+  PenTool,
+  Search,
+  Share2,
+  Sparkles,
+  Target,
+  Video,
+  Volume2,
+  VolumeX,
+  X
+} from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import CryptoJS from 'crypto-js';
-import {
-  BibleGalaxyArcModal,
-  extractAllBibleRefsFromText
-} from '../pages/BibleKnowledgeGalaxy';
+import { BibleGalaxyArcModal, extractAllBibleRefsFromText } from '../pages/BibleKnowledgeGalaxy';
 
 // =====================================================================
-// 🔐 [보안 표준화] 군사급 AES-256 종단간 암호화 (구버전 Base64 호환)
+// 보안 표준화: AES-256 종단간 암호화
 // =====================================================================
 const CHAT_SECRET_KEY = process.env.REACT_APP_CHAT_SECRET || 'tree-secret-key-2026';
-const ENC_PREFIX_V2 = "ENC_GTC_v2::";
-const ENC_PREFIX_V1 = "ENC_GTC_v1::";
+const ENC_PREFIX_V2 = 'ENC_GTC_v2::';
+const ENC_PREFIX_V1 = 'ENC_GTC_v1::';
 
 const encryptField = (plainText) => {
   if (!plainText || typeof plainText !== 'string') return plainText;
@@ -26,7 +48,7 @@ const encryptField = (plainText) => {
 
 const decryptField = (cipherText) => {
   if (!cipherText || typeof cipherText !== 'string') return cipherText || '';
-  
+
   if (cipherText.startsWith(ENC_PREFIX_V2)) {
     try {
       const rawCipher = cipherText.replace(ENC_PREFIX_V2, '');
@@ -50,76 +72,54 @@ const decryptField = (cipherText) => {
   return cipherText;
 };
 
-// 성경 구절 정밀 정규식 추출기 (기존 정규식 + 정경 66권 정밀 파서 통합)
+// 성경 구절 정밀 정규식 추출기
 const extractBibleReferences = (text) => {
   if (!text) return [];
-  const extracted = typeof extractAllBibleRefsFromText === 'function'
-    ? extractAllBibleRefsFromText(text).map(item => item.label)
-    : [];
+  const extracted =
+    typeof extractAllBibleRefsFromText === 'function' ? extractAllBibleRefsFromText(text).map((item) => item.label) : [];
   const regex = /([가-힣]+(?:서|기|상|하|전|후|일|이|삼)?)\s?(\d+)(?:장|:)\s?(?:(\d+)(?:절)?)?/g;
-  const matches = [...text.matchAll(regex)].map(m => m[0].trim());
+  const matches = [...text.matchAll(regex)].map((m) => m[0].trim());
   return Array.from(new Set([...extracted, ...matches]));
 };
 
-const StrokeWidth = "1.8";
-const IconArrowLeft = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><polyline points="15 18 9 12 15 6" /></svg>;
-const IconMenu = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="18" x2="21" y2="18" /></svg>;
-const IconVideo = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={StrokeWidth} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><rect x="2" y="6" width="20" height="12" rx="2" /><path d="M10 9l5 3-5 3V9z" /></svg>;
-const IconShare = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={StrokeWidth} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" /><polyline points="16 6 12 2 8 6" /><line x1="12" y1="2" x2="12" y2="15" /></svg>;
-const IconBook = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={StrokeWidth} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" /><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" /></svg>;
-const IconSearch = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={StrokeWidth} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>;
-const IconCalendar = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={StrokeWidth} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>;
-const IconTarget = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={StrokeWidth} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></svg>;
-const IconPray = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={StrokeWidth} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M12 20h9M16.5 14v4M7 10l3 3-2 2-3-3M3 14l3 3M14 6l3 3-2 2-3-3" /></svg>;
-const IconSparkles = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={StrokeWidth} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" /></svg>;
-const IconTool = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={StrokeWidth} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" /></svg>;
-const IconChevronDown = ({ className }) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" className={className || "w-4 h-4"}><polyline points="6 9 12 15 18 9" /></svg>;
-const IconCheck = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><polyline points="20 6 9 17 4 12" /></svg>;
-const IconInfo = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>;
-const IconHeart = ({ filled, className = "w-4 h-4" }) => <svg viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth={StrokeWidth} className={className}><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>;
-const IconCornerDownRight = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><polyline points="15 10 20 15 15 20"/><path d="M4 4v7a4 4 0 0 0 4 4h12"/></svg>;
-
-// 🌟 [최적화 1] 컴포넌트 외부로 분리 & memoization: remount 폭풍 및 모바일 락다운 방지
-const TrainingCard = React.memo(({ id, num, title, desc, tip, isChecked, onToggle, isDark }) => {
+// =====================================================================
+// 10단계 심층 훈련 아이템 (리스트 행 형태 · 중첩 박스 제거)
+// =====================================================================
+const TrainingRow = React.memo(({ id, num, title, desc, tip, isChecked, onToggle, isDark }) => {
   return (
-    <div 
+    <div
       onClick={() => onToggle(id)}
-      className={`ignore-draw flex flex-col rounded-xl border transition-all select-none overflow-hidden cursor-pointer active:scale-[0.99] ${
-        isChecked 
-          ? (isDark ? 'bg-white/[0.03] border-white/10' : 'bg-stone-50 border-stone-200/80') 
-          : (isDark ? 'bg-black/40 border-white/15 hover:border-white/30' : 'bg-white border-stone-200 shadow-xs hover:border-stone-300')
-      }`}
+      className="ignore-draw py-3 flex items-start gap-3 cursor-pointer select-none transition-colors"
     >
-      <div className="flex items-center gap-2.5 p-3 pb-1.5">
-        <div 
-          className={`w-4.5 h-4.5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all ${
-            isChecked 
-              ? 'bg-[#5B7065] border-[#5B7065] text-white shadow-xs' 
-              : (isDark ? 'border-slate-500 bg-transparent' : 'border-stone-300 bg-transparent')
-          }`}
-        >
-          {isChecked && <IconCheck />}
-        </div>
-
-        <div className="flex-1 min-w-0 pr-1">
-          <span className={`text-[13px] font-bold tracking-tight truncate block ${
-            isChecked ? 'text-slate-400 line-through' : (isDark ? 'text-white' : 'text-stone-800')
-          }`}>
-            <span className="text-stone-400 mr-1.5 font-mono">{num}.</span>{title}
-          </span>
-        </div>
+      <div
+        className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 mt-0.5 transition-colors ${
+          isChecked
+            ? isDark
+              ? 'bg-[#F9FAFB] border-[#F9FAFB] text-[#101216]'
+              : 'bg-[#191F28] border-[#191F28] text-white'
+            : isDark
+            ? 'border-[#4B5563] bg-transparent'
+            : 'border-[#CBD5E1] bg-white'
+        }`}
+      >
+        {isChecked && <Check className="w-3.5 h-3.5 stroke-[3]" />}
       </div>
 
-      <div className={`px-3 pb-2.5 pt-1 text-[12px] font-medium leading-relaxed border-t border-dashed ${
-        isDark ? 'border-white/10 text-slate-300' : 'border-stone-200/70 text-stone-600 bg-stone-50/50'
-      }`}>
-        <p className="break-keep">{desc}</p>
+      <div className="flex-1 min-w-0 space-y-1">
+        <p
+          className={`text-[15px] font-bold leading-snug ${
+            isChecked ? 'text-[#8B95A1] line-through' : isDark ? 'text-[#F9FAFB]' : 'text-[#191F28]'
+          }`}
+        >
+          <span className="text-[#8B95A1] mr-1.5">{num}.</span>
+          {title}
+        </p>
+        <p className={`text-[12px] leading-relaxed break-keep ${isDark ? 'text-[#9BA3B0]' : 'text-[#6B7684]'}`}>{desc}</p>
         {tip && (
-          <div className={`mt-1.5 p-1.5 rounded-lg text-[11px] leading-snug border ${
-            isDark ? 'bg-stone-900/50 border-stone-700/50 text-stone-300' : 'bg-[#F4F6F4] border-[#E2E8F0] text-[#42544A]'
-          }`}>
-            <span className="font-bold mr-1">TIP.</span>{tip}
-          </div>
+          <p className={`text-[12px] leading-relaxed break-keep ${isDark ? 'text-[#D1D5DB]' : 'text-[#4E5968]'}`}>
+            <span className="font-bold mr-1">안내</span>
+            {tip}
+          </p>
         )}
       </div>
     </div>
@@ -127,14 +127,44 @@ const TrainingCard = React.memo(({ id, num, title, desc, tip, isChecked, onToggl
 });
 
 export default function DailyQT({
-  t, isDarkMode, setActiveScreen, isSidebarOpen, setIsSidebarOpen, SubPageHeader, date, currDay = {}, dailyData = {}, globalSharedQt = {},
-  isWknd, ymdStr, qtEditorRef, renderToolbar, handleStickerAdd, handleMemoAdd, handleFileUpload, CanvasEngine, tool, setTool,
-  color, setColor, size, setSize, StickerLayer, onPtrDown, updateDay, extractVideoId, handleUpdateSharedQt, triggerConfetti,
-  findBibleText, handleAutoResize, authUser, logUserAction, bibles = [], openGlobalDrawer
+  t,
+  isDarkMode,
+  setActiveScreen,
+  isSidebarOpen,
+  setIsSidebarOpen,
+  SubPageHeader,
+  date,
+  currDay = {},
+  dailyData = {},
+  globalSharedQt = {},
+  ymdStr,
+  qtEditorRef,
+  renderToolbar,
+  handleStickerAdd,
+  handleMemoAdd,
+  handleFileUpload,
+  CanvasEngine,
+  tool,
+  setTool,
+  color,
+  setColor,
+  size,
+  setSize,
+  StickerLayer,
+  onPtrDown,
+  updateDay,
+  extractVideoId,
+  handleUpdateSharedQt,
+  triggerConfetti,
+  findBibleText,
+  authUser,
+  logUserAction,
+  bibles = [],
+  openGlobalDrawer
 }) {
   if (!SubPageHeader) return null;
 
-  const isDark = t?.appBg?.includes('dark') || t?.appBg?.includes('121212') || isDarkMode;
+  const isDark = t?.appBg?.includes('dark') || t?.appBg?.includes('101216') || t?.appBg?.includes('121212') || isDarkMode;
   const [qtSubView, setQtSubView] = useState('myQt');
 
   const [isTrainingMode, setIsTrainingMode] = useState(() => {
@@ -144,26 +174,25 @@ export default function DailyQT({
   const [showFullCalendar, setShowFullCalendar] = useState(false);
   const [actionToast, setActionToast] = useState(null);
 
-  // 🌈 [신규 고도화] 페이지 넘어감 없이 신·구약 아크 대조 및 은하계 연관을 띄우는 팝업 상태
+  // 성경 아크 & 은하계 인라인 팝업 상태
   const [galaxyModalConfig, setGalaxyModalConfig] = useState({
     isOpen: false,
-    mode: 'arc', // 'arc' | '2d' | '3d'
+    mode: 'arc',
     refQuery: ''
   });
 
-  const openGalaxyPopup = useCallback((mode = 'arc', refStr = '') => {
-    const fallbackRef =
-      refStr ||
-      currDay?.qtReference ||
-      globalSharedQt?.[date]?.reference ||
-      currDay?.qtGoldenVerse ||
-      '창세기 1:1';
-    setGalaxyModalConfig({
-      isOpen: true,
-      mode,
-      refQuery: fallbackRef
-    });
-  }, [currDay?.qtReference, currDay?.qtGoldenVerse, globalSharedQt, date]);
+  const openGalaxyPopup = useCallback(
+    (mode = 'arc', refStr = '') => {
+      const fallbackRef =
+        refStr || currDay?.qtReference || globalSharedQt?.[date]?.reference || currDay?.qtGoldenVerse || '창세기 1:1';
+      setGalaxyModalConfig({
+        isOpen: true,
+        mode,
+        refQuery: fallbackRef
+      });
+    },
+    [currDay?.qtReference, currDay?.qtGoldenVerse, globalSharedQt, date]
+  );
 
   const audioRef = useRef(null);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
@@ -173,7 +202,10 @@ export default function DailyQT({
     if (!audioRef.current) return;
     if (audioRef.current.paused) {
       audioRef.current.volume = 0.22;
-      audioRef.current.play().then(() => setIsAudioPlaying(true)).catch(() => {});
+      audioRef.current
+        .play()
+        .then(() => setIsAudioPlaying(true))
+        .catch(() => {});
     } else {
       audioRef.current.pause();
       setIsAudioPlaying(false);
@@ -183,7 +215,7 @@ export default function DailyQT({
   const [todayActionItems, setTodayActionItems] = useState(() => {
     try {
       const saved = JSON.parse(localStorage.getItem('apply_tracker_items') || '[]');
-      return saved.filter(item => item.date === date && item.source === 'qt');
+      return saved.filter((item) => item.date === date && item.source === 'qt');
     } catch {
       return [];
     }
@@ -192,7 +224,7 @@ export default function DailyQT({
   const [todayPrayers, setTodayPrayers] = useState(() => {
     try {
       const saved = JSON.parse(localStorage.getItem('prayer_items') || '[]');
-      return saved.filter(item => item.date === date);
+      return saved.filter((item) => item.date === date);
     } catch {
       return [];
     }
@@ -232,7 +264,6 @@ export default function DailyQT({
   const [linkedRefs, setLinkedRefs] = useState([]);
   const [activeBacklink, setActiveBacklink] = useState(null);
 
-  // 본문 입력란(qtReference) + 황금구절 + 질문 + 묵상 + 적용 + 한줄은혜 전체에서 실시간 구절 감지
   useEffect(() => {
     const combinedText = `${currDay?.qtReference || globalSharedQt?.[date]?.reference || ''} ${currDay?.qtGoldenVerse || ''} ${currDay?.qtGraceLine || ''} ${currDay?.qtMeditation || ''} ${currDay?.qtApplication || ''} ${currDay?.qtAppQuestion || ''}`;
     const detected = extractBibleReferences(combinedText);
@@ -241,20 +272,25 @@ export default function DailyQT({
 
   const relatedEntries = useMemo(() => {
     if (!activeBacklink) return [];
-    return Object.entries(dailyData || {}).filter(([dKey, dVal]) => {
-      if (dKey === date) return false;
-      const fullText = `${dVal.qtReference || ''} ${dVal.qtGoldenVerse || ''} ${dVal.qtMeditation || ''} ${dVal.sermonNotes || ''} ${dVal.qtGraceLine || ''}`;
-      return fullText.includes(activeBacklink);
-    }).sort((a, b) => new Date(b[0]) - new Date(a[0]));
+    return Object.entries(dailyData || {})
+      .filter(([dKey, dVal]) => {
+        if (dKey === date) return false;
+        const fullText = `${dVal.qtReference || ''} ${dVal.qtGoldenVerse || ''} ${dVal.qtMeditation || ''} ${dVal.sermonNotes || ''} ${dVal.qtGraceLine || ''}`;
+        return fullText.includes(activeBacklink);
+      })
+      .sort((a, b) => new Date(b[0]) - new Date(a[0]));
   }, [activeBacklink, dailyData, date]);
 
-  const toggleTrainingCheck = useCallback((stepId) => {
-    setTrainingChecks(prev => {
-      const next = { ...prev, [stepId]: !prev[stepId] };
-      localStorage.setItem(`qt_training_chk_${date}`, JSON.stringify(next));
-      return next;
-    });
-  }, [date]);
+  const toggleTrainingCheck = useCallback(
+    (stepId) => {
+      setTrainingChecks((prev) => {
+        const next = { ...prev, [stepId]: !prev[stepId] };
+        localStorage.setItem(`qt_training_chk_${date}`, JSON.stringify(next));
+        return next;
+      });
+    },
+    [date]
+  );
 
   const handleToggleTrainingMode = () => {
     const next = !isTrainingMode;
@@ -264,22 +300,43 @@ export default function DailyQT({
 
   useEffect(() => {
     if (!isTrainingMode) return;
-    setTrainingChecks(prev => {
+    setTrainingChecks((prev) => {
       const next = { ...prev };
       let changed = false;
 
       if (currDay.qtAppQuestion && currDay.qtAppQuestion.trim().length > 3) {
-        if (!next['step4']) { next['step4'] = true; changed = true; }
-        if (!next['step5']) { next['step5'] = true; changed = true; }
-        if (!next['step6']) { next['step6'] = true; changed = true; }
+        if (!next['step4']) {
+          next['step4'] = true;
+          changed = true;
+        }
+        if (!next['step5']) {
+          next['step5'] = true;
+          changed = true;
+        }
+        if (!next['step6']) {
+          next['step6'] = true;
+          changed = true;
+        }
       }
       if (currDay.qtMeditation && currDay.qtMeditation.trim().length > 3) {
-        if (!next['step7']) { next['step7'] = true; changed = true; }
-        if (!next['step8']) { next['step8'] = true; changed = true; }
+        if (!next['step7']) {
+          next['step7'] = true;
+          changed = true;
+        }
+        if (!next['step8']) {
+          next['step8'] = true;
+          changed = true;
+        }
       }
       if (currDay.qtApplication && currDay.qtApplication.trim().length > 3) {
-        if (!next['step9']) { next['step9'] = true; changed = true; }
-        if (!next['step10']) { next['step10'] = true; changed = true; }
+        if (!next['step9']) {
+          next['step9'] = true;
+          changed = true;
+        }
+        if (!next['step10']) {
+          next['step10'] = true;
+          changed = true;
+        }
       }
 
       if (changed) {
@@ -307,19 +364,21 @@ export default function DailyQT({
 
   const handleShareVideo = () => {
     const targetUrl = currDay.qtVideoUrl || (currDay.qtVideoId ? `https://youtu.be/${currDay.qtVideoId}` : '');
-    if (!targetUrl) return alert("공유할 유튜브 링크를 먼저 입력해주세요.");
-    
+    if (!targetUrl) return alert('공유할 유튜브 링크를 먼저 입력해주세요.');
+
     if (handleUpdateSharedQt) {
       handleUpdateSharedQt(date, 'qt', targetUrl);
     }
-    
+
     if (navigator.share) {
-      navigator.share({
-        title: currDay.qtTitle || '오늘의 큐티 영상',
-        url: targetUrl
-      }).catch(() => {});
+      navigator
+        .share({
+          title: currDay.qtTitle || '오늘의 큐티 영상',
+          url: targetUrl
+        })
+        .catch(() => {});
     }
-    alert("공유되었습니다!");
+    alert('공유되었습니다.');
   };
 
   const handleActionItemSync = (val) => {
@@ -328,7 +387,7 @@ export default function DailyQT({
     }
     try {
       const saved = JSON.parse(localStorage.getItem('apply_tracker_items') || '[]');
-      const filtered = saved.filter(item => item.date !== date || item.source !== 'qt');
+      const filtered = saved.filter((item) => item.date !== date || item.source !== 'qt');
       if (val.trim()) {
         filtered.push({
           id: `qt_${date}_${Date.now()}`,
@@ -340,18 +399,24 @@ export default function DailyQT({
         });
       }
       localStorage.setItem('apply_tracker_items', JSON.stringify(filtered));
-      setTodayActionItems(filtered.filter(item => item.date === date && item.source === 'qt'));
+      setTodayActionItems(filtered.filter((item) => item.date === date && item.source === 'qt'));
 
       if (supabase && (authUser?.name || authUser)) {
         const uName = typeof authUser === 'object' ? authUser?.name : authUser;
         if (uName) {
-          supabase.from('attendance_records').upsert({
-            date: date,
-            user_name: uName,
-            cell_name: authUser?.cell_name || '내 목장',
-            type: 'QT',
-            status: '출석'
-          }, { onConflict: 'date,user_name,type' }).then();
+          supabase
+            .from('attendance_records')
+            .upsert(
+              {
+                date: date,
+                user_name: uName,
+                cell_name: authUser?.cell_name || '내 목장',
+                type: 'QT',
+                status: '출석'
+              },
+              { onConflict: 'date,user_name,type' }
+            )
+            .then();
         }
       }
     } catch (e) {}
@@ -363,14 +428,14 @@ export default function DailyQT({
     }
     try {
       const saved = JSON.parse(localStorage.getItem('apply_tracker_items') || '[]');
-      const updated = saved.map(item => {
+      const updated = saved.map((item) => {
         if (item.date === date && item.source === 'qt') {
           return { ...item, graceLine: val };
         }
         return item;
       });
       localStorage.setItem('apply_tracker_items', JSON.stringify(updated));
-      setTodayActionItems(updated.filter(item => item.date === date && item.source === 'qt'));
+      setTodayActionItems(updated.filter((item) => item.date === date && item.source === 'qt'));
     } catch (e) {}
   };
 
@@ -379,33 +444,35 @@ export default function DailyQT({
     setTimeout(() => setActionToast(null), 2500);
   }, []);
 
-  // ✍️ 아크 팝업에서 찾은 신·구약 대조 인사이트를 내 QT 묵상란에 원터치 삽입
-  const handleInsertArcInsightToQt = useCallback((insightText) => {
-    if (!updateDay) return;
-    const prevMed = currDay?.qtMeditation || '';
-    const nextMed = prevMed ? `${prevMed}\n${insightText}` : insightText.trim();
-    updateDay({
-      qtMeditation: nextMed,
-      checks: { ...(currDay?.checks || {}), QTin: true }
-    });
-    showToast("🌈 신·구약 구속사 대조 해설이 나의 묵상 노트에 기록되었습니다!");
-  }, [currDay, updateDay, showToast]);
+  const handleInsertArcInsightToQt = useCallback(
+    (insightText) => {
+      if (!updateDay) return;
+      const prevMed = currDay?.qtMeditation || '';
+      const nextMed = prevMed ? `${prevMed}\n${insightText}` : insightText.trim();
+      updateDay({
+        qtMeditation: nextMed,
+        checks: { ...(currDay?.checks || {}), QTin: true }
+      });
+      showToast('신·구약 구속사 대조 해설이 나의 묵상 노트에 기록되었습니다.');
+    },
+    [currDay, updateDay, showToast]
+  );
 
   const inlineActionSendToTracker = () => {
     const textToPush = currDay.qtActionItem || currDay.qtGraceLine || currDay.qtMeditation || 'QT 적용 실천';
     handleActionItemSync(textToPush);
-    showToast("🌿 오늘의 적용 트래커에 안전하게 심겼습니다!");
+    showToast('오늘의 적용 트래커에 등록되었습니다.');
   };
 
   const toggleInlineActionComplete = (itemId) => {
     try {
       const saved = JSON.parse(localStorage.getItem('apply_tracker_items') || '[]');
-      const updated = saved.map(item => {
+      const updated = saved.map((item) => {
         if (item.id === itemId) return { ...item, completed: !item.completed };
         return item;
       });
       localStorage.setItem('apply_tracker_items', JSON.stringify(updated));
-      setTodayActionItems(updated.filter(item => item.date === date && item.source === 'qt'));
+      setTodayActionItems(updated.filter((item) => item.date === date && item.source === 'qt'));
       if (triggerConfetti) triggerConfetti();
     } catch (e) {}
   };
@@ -422,10 +489,10 @@ export default function DailyQT({
       };
       const updated = [newPrayer, ...prayers];
       localStorage.setItem('prayer_items', JSON.stringify(updated));
-      setTodayPrayers(updated.filter(item => item.date === date));
-      showToast("🙏 나의 기도함에 은혜가 보관되었습니다!");
+      setTodayPrayers(updated.filter((item) => item.date === date));
+      showToast('나의 기도함에 저장되었습니다.');
     } catch (e) {
-      showToast("기도함 저장 중 오류가 발생했습니다.");
+      showToast('기도함 저장 중 오류가 발생했습니다.');
     }
   };
 
@@ -444,66 +511,80 @@ export default function DailyQT({
       }
       localStorage.setItem(`counseling_sent_${date}`, 'true');
       setCounselingStatus('pending');
-      showToast("💌 목자/사역자에게 1:1 비공개 상담이 접수되었습니다.");
+      showToast('목자/사역자에게 1:1 비공개 상담이 접수되었습니다.');
     } catch (e) {
-      showToast("심층 상담 전송 중 오류가 발생했습니다.");
+      showToast('심층 상담 전송 중 오류가 발생했습니다.');
     }
   };
 
+  // 차분한 에디토리얼 톤 컬러 토큰 (과도한 파란색 억제, 차콜 & 오프화이트 중심)
+  const pageBg = isDark ? 'bg-[#101216]' : 'bg-[#F4F6FA]';
+  const surfaceBg = isDark ? 'bg-[#181B20]' : 'bg-white';
+  const subSurfaceBg = isDark ? 'bg-[#22262E]' : 'bg-[#F2F4F6]';
+  const borderClass = isDark ? 'border-[#262A32]' : 'border-[#E5E8EB]';
+  const dividerClass = isDark ? 'divide-[#262A32]' : 'divide-[#F2F4F6]';
+  const textMain = isDark ? 'text-[#F9FAFB]' : 'text-[#191F28]';
+  const textSub = isDark ? 'text-[#9BA3B0]' : 'text-[#6B7684]';
+  const activeChipClass = isDark ? 'bg-[#F9FAFB] text-[#101216]' : 'bg-[#191F28] text-white';
+
   return (
-    <div className={`flex-1 flex flex-col h-full relative font-sans overflow-hidden select-none animate-fade-in ${isDark ? 'bg-[#0F1115]' : 'bg-[#FBFBF9]'}`}>
-      
-      {/* ===================================================================== */}
-      {/* 🌈 성경 아크(신·구약 대조) & 은하계(Galaxy) 인라인 팝업 모달 */}
-      {/* ===================================================================== */}
+    <div className={`flex-1 flex flex-col h-full relative font-sans overflow-hidden select-none ${pageBg}`}>
+      {/* 성경 아크 & 은하계 인라인 팝업 모달 */}
       <BibleGalaxyArcModal
         isOpen={galaxyModalConfig.isOpen}
-        onClose={() => setGalaxyModalConfig(prev => ({ ...prev, isOpen: false }))}
+        onClose={() => setGalaxyModalConfig((prev) => ({ ...prev, isOpen: false }))}
         initialMode={galaxyModalConfig.mode}
         initialRefQuery={galaxyModalConfig.refQuery}
         onInsertInsight={handleInsertArcInsightToQt}
         setActiveScreen={setActiveScreen}
       />
 
-      {/* 백링크 패널 */}
+      {/* 백링크 드로어 */}
       {activeBacklink && (
-        <div className={`absolute top-0 right-0 h-full w-full max-w-[340px] z-[200] shadow-[-10px_0_40px_rgba(0,0,0,0.2)] flex flex-col transition-transform animate-fade-in ${isDark ? 'bg-[#09090B]/95 backdrop-blur-3xl border-l border-white/10' : 'bg-white/95 backdrop-blur-3xl border-l border-slate-200'}`}>
-          <div className={`p-4 border-b flex justify-between items-center ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
+        <div
+          className={`absolute top-0 right-0 h-full w-full max-w-[340px] z-[200] flex flex-col border-l ${borderClass} ${surfaceBg}`}
+        >
+          <div className={`px-5 py-4 border-b ${borderClass} flex justify-between items-center`}>
             <div className="flex items-center gap-2">
-              <span className={`p-1.5 rounded-md ${isDark ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-50 text-indigo-600'}`}>🔗</span>
-              <h3 className={`text-[14px] font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{activeBacklink} 묵상 기록</h3>
+              <Link2 className="w-4 h-4 text-[#4E5968]" />
+              <h3 className={`text-[15px] font-bold ${textMain}`}>{activeBacklink} 묵상 기록</h3>
             </div>
-            <button onClick={() => setActiveBacklink(null)} className={`p-1.5 rounded-full hover:bg-slate-500/20 transition-colors cursor-pointer ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>✕</button>
+            <button
+              type="button"
+              onClick={() => setActiveBacklink(null)}
+              className={`w-8 h-8 rounded-xl flex items-center justify-center ${subSurfaceBg} ${textMain} cursor-pointer`}
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
 
-          {/* 백링크 드로어 안에서도 아크/은하계를 즉시 팝업으로 띄우는 버튼 */}
-          <div className={`px-4 py-2.5 border-b grid grid-cols-2 gap-1.5 ${isDark ? 'border-white/10 bg-white/[0.02]' : 'border-slate-100 bg-slate-50/70'}`}>
+          <div className={`px-5 py-3 border-b ${borderClass} grid grid-cols-2 gap-2`}>
             <button
               type="button"
               onClick={() => openGalaxyPopup('arc', activeBacklink)}
-              className="py-1.5 px-2 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-[11px] flex items-center justify-center gap-1 cursor-pointer shadow-2xs"
+              className={`py-2 px-2.5 rounded-xl font-bold text-[12px] flex items-center justify-center gap-1.5 cursor-pointer ${subSurfaceBg} ${textMain}`}
             >
-              🌈 신구약 아크 대조
+              <Compass className="w-3.5 h-3.5" />
+              <span>신구약 아크</span>
             </button>
             <button
               type="button"
               onClick={() => openGalaxyPopup('2d', activeBacklink)}
-              className="py-1.5 px-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-[11px] flex items-center justify-center gap-1 cursor-pointer shadow-2xs"
+              className={`py-2 px-2.5 rounded-xl font-bold text-[12px] flex items-center justify-center gap-1.5 cursor-pointer ${subSurfaceBg} ${textMain}`}
             >
-              🌌 은하계 연관 보기
+              <Globe className="w-3.5 h-3.5" />
+              <span>은하계 연관</span>
             </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-3.5 hide-scrollbar pointer-events-auto">
+          <div className={`flex-1 overflow-y-auto px-5 divide-y ${dividerClass} hide-scrollbar pointer-events-auto`}>
             {relatedEntries.length === 0 ? (
-              <div className={`py-10 flex flex-col items-center gap-2 text-[12px] font-medium ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-                이 구절을 묵상한 첫 기록입니다.
-              </div>
+              <div className={`py-12 text-center text-[15px] ${textSub}`}>이 구절을 묵상한 첫 기록입니다.</div>
             ) : (
               relatedEntries.map(([dKey, dVal]) => (
-                <div key={dKey} className={`p-3.5 rounded-xl border flex flex-col gap-1.5 ${isDark ? 'bg-white/5 border-white/10' : 'bg-slate-50 border-slate-200'}`}>
-                  <span className={`text-[10px] font-mono tracking-widest ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{dKey}</span>
-                  <p className={`text-[13px] font-serif leading-relaxed line-clamp-4 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                <div key={dKey} className="py-4 space-y-1.5">
+                  <span className={`text-[12px] font-medium ${textSub} block`}>{dKey}</span>
+                  <p className={`text-[15px] leading-relaxed line-clamp-4 ${textMain}`}>
                     {(dVal.qtGoldenVerse || dVal.qtMeditation || dVal.sermonNotes || dVal.qtGraceLine || '').replace(/<[^>]*>?/gm, '')}
                   </p>
                 </div>
@@ -513,290 +594,280 @@ export default function DailyQT({
         </div>
       )}
 
-      <audio 
-        ref={audioRef} 
+      <audio
+        ref={audioRef}
         src="https://upload.wikimedia.org/wikipedia/commons/c/c8/J.S._Bach_-_Well-Tempered_Clavier_1_-_Prelude_and_Fugue_No._1_in_C_major_%28BWV_846%29_-_Klaus_Schiff_%28piano%29.ogg"
-        loop 
-        preload="auto" 
-        playsInline 
+        loop
+        preload="auto"
+        playsInline
       />
-      
-      {/* 앰비언트 글로우 배경 */}
-      <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden opacity-45 dark:opacity-25" style={{ transform: 'translate3d(0,0,0)' }}>
-        <div 
-          className="absolute -top-[12%] -left-[10%] w-[90vw] max-w-[500px] h-[90vw] max-h-[500px] rounded-full blur-[90px]"
-          style={{ background: 'radial-gradient(circle, rgba(186, 215, 201, 0.45) 0%, transparent 70%)' }}
-        />
-        <div 
-          className="absolute top-[35%] -right-[15%] w-[85vw] max-w-[460px] h-[85vw] max-h-[460px] rounded-full blur-[95px]"
-          style={{ background: 'radial-gradient(circle, rgba(238, 214, 196, 0.35) 0%, transparent 70%)' }}
-        />
-        <div 
-          className="absolute -bottom-[10%] left-[15%] w-[80vw] max-w-[480px] h-[80vw] max-h-[480px] rounded-full blur-[90px]"
-          style={{ background: 'radial-gradient(circle, rgba(214, 218, 235, 0.35) 0%, transparent 70%)' }}
-        />
-      </div>
 
       {/* 상단 헤더 바 */}
-      <div className={`shrink-0 px-2 sm:px-4 py-2 flex items-center justify-between z-20 border-b relative backdrop-blur-xl ${isDark ? 'border-white/10 bg-slate-900/60' : 'border-stone-200/70 bg-white/75'}`}>
-        <div className="flex items-center gap-1 shrink-0">
-          <button onClick={() => setActiveScreen('home')} className={`p-1.5 rounded-full transition-colors cursor-pointer ${isDark ? 'text-white hover:bg-white/10' : 'text-slate-800 hover:bg-black/5'}`}>
-            <IconArrowLeft />
+      <header
+        className={`shrink-0 px-4 sm:px-6 h-14 flex items-center justify-between z-20 border-b relative ${borderClass} ${
+          isDark ? 'bg-[#101216]/95' : 'bg-[#F4F6FA]/95'
+        } backdrop-blur-md`}
+      >
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={() => setActiveScreen('home')}
+            className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors cursor-pointer ${
+              isDark ? 'hover:bg-white/10 text-white' : 'hover:bg-black/5 text-[#191F28]'
+            }`}
+          >
+            <ArrowLeft className="w-5 h-5" />
           </button>
-          <h1 className={`text-[15px] sm:text-[16px] font-bold tracking-tight ml-0.5 ${isDark ? 'text-white' : 'text-stone-800'} whitespace-nowrap`}>매일 QT</h1>
+          <h1 className={`text-[18px] font-bold tracking-tight ${textMain} whitespace-nowrap`}>매일 큐티</h1>
         </div>
 
-        <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto hide-scrollbar">
-          {/* 🌈 성경 아크 신·구약 대조 팝업 직행 버튼 */}
+        <div className="flex items-center gap-1.5 overflow-x-auto hide-scrollbar">
           <button
             type="button"
             onClick={() => openGalaxyPopup('arc')}
-            title="페이지 이동 없이 현재 QT 본문의 신·구약 아크 대조를 팝업으로 봅니다"
-            className="px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-full text-[10.5px] sm:text-[11px] font-black bg-amber-400 hover:bg-amber-300 text-slate-950 shadow-xs flex items-center gap-1 cursor-pointer whitespace-nowrap shrink-0 active:scale-95 transition-all"
+            className={`h-8 px-2.5 rounded-xl text-[12px] font-bold flex items-center gap-1 cursor-pointer whitespace-nowrap shrink-0 ${subSurfaceBg} ${textMain}`}
           >
-            <span>🌈</span>
+            <Compass className="w-3.5 h-3.5" />
             <span>아크 대조</span>
           </button>
 
-          {/* 🌌 성경 은하계 연관 팝업 직행 버튼 */}
           <button
             type="button"
             onClick={() => openGalaxyPopup('2d')}
-            title="페이지 이동 없이 현재 QT 본문의 은하계 연관도를 팝업으로 봅니다"
-            className="px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-full text-[10.5px] sm:text-[11px] font-black bg-cyan-500 hover:bg-cyan-400 text-slate-950 shadow-xs flex items-center gap-1 cursor-pointer whitespace-nowrap shrink-0 active:scale-95 transition-all"
+            className={`h-8 px-2.5 rounded-xl text-[12px] font-bold flex items-center gap-1 cursor-pointer whitespace-nowrap shrink-0 ${subSurfaceBg} ${textMain}`}
           >
-            <span>🌌</span>
+            <Globe className="w-3.5 h-3.5" />
             <span>은하계</span>
           </button>
 
-          <button 
+          <button
+            type="button"
             onClick={toggleBGM}
-            title="고요한 피아노 찬양 선율 듣기"
-            className={`px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-full text-[10.5px] sm:text-[11px] font-bold border transition-all flex items-center gap-1 cursor-pointer whitespace-nowrap shrink-0 ${
-              isAudioPlaying 
-                ? (isDark ? 'bg-indigo-950/60 border-indigo-700 text-indigo-300' : 'bg-indigo-50 border-indigo-200 text-indigo-700 shadow-xs')
-                : (isDark ? 'bg-white/5 border-white/10 text-stone-400 hover:text-stone-200' : 'bg-white/80 border-stone-200 text-stone-500 hover:text-stone-800')
+            className={`h-8 px-2.5 rounded-xl text-[12px] font-bold flex items-center gap-1 cursor-pointer whitespace-nowrap shrink-0 ${
+              isAudioPlaying ? activeChipClass : `${subSurfaceBg} ${textSub}`
             }`}
           >
-            <span className={`w-1.5 h-1.5 rounded-full ${isAudioPlaying ? 'bg-indigo-500 animate-ping' : 'bg-stone-400'}`}></span>
-            <span>{isAudioPlaying ? '찬양 ON' : '찬양 OFF'}</span>
+            {isAudioPlaying ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
+            <span>{isAudioPlaying ? '찬양 켜짐' : '찬양'}</span>
           </button>
 
-          <button 
+          <button
+            type="button"
             onClick={() => openGlobalDrawer && openGlobalDrawer('applyTracker')}
-            title="적용 트래커 서랍 열기"
-            className={`px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-full text-[11px] font-bold border transition-all flex items-center gap-1 cursor-pointer whitespace-nowrap shrink-0 ${
-              isDark ? 'bg-stone-800/60 border-white/10 text-stone-300 hover:bg-stone-700' : 'bg-white/90 border-stone-200 text-stone-700 hover:bg-stone-100 shadow-xs'
-            }`}
+            className={`h-8 px-2.5 rounded-xl text-[12px] font-bold flex items-center gap-1 cursor-pointer whitespace-nowrap shrink-0 ${subSurfaceBg} ${textMain}`}
           >
-            <span>🌿</span>
+            <Target className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">트래커</span>
           </button>
 
-          <button 
+          <button
+            type="button"
             onClick={() => openGlobalDrawer && openGlobalDrawer('prayerBox')}
-            title="나의 기도함 서랍 열기"
-            className={`px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-full text-[11px] font-bold border transition-all flex items-center gap-1 cursor-pointer whitespace-nowrap shrink-0 ${
-              isDark ? 'bg-stone-800/60 border-white/10 text-stone-300 hover:bg-stone-700' : 'bg-white/90 border-stone-200 text-stone-700 hover:bg-stone-100 shadow-xs'
-            }`}
+            className={`h-8 px-2.5 rounded-xl text-[12px] font-bold flex items-center gap-1 cursor-pointer whitespace-nowrap shrink-0 ${subSurfaceBg} ${textMain}`}
           >
-            <span>🙏</span>
+            <HandHeart className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">기도함</span>
           </button>
 
           {qtSubView === 'myQt' && (
             <>
-              <button 
-                onClick={() => setShowToolbar(!showToolbar)} 
-                title="그리기 도구 모음"
-                className={`p-1.5 sm:px-2.5 sm:py-1.5 rounded-full text-[11px] font-bold border transition-all flex items-center gap-1 cursor-pointer whitespace-nowrap shrink-0 ${showToolbar ? 'bg-stone-800 text-white dark:bg-stone-200 dark:text-stone-900 border-transparent shadow-xs' : (isDark ? 'bg-white/10 text-slate-300 border-white/10 hover:bg-white/20' : 'bg-white/90 text-stone-700 border-stone-200 hover:bg-stone-100 shadow-xs')}`}
-              >
-                <IconTool />
-                <span className="hidden sm:inline">{showToolbar ? '닫기' : '도구'}</span>
-              </button>
-              
-              <button 
-                onClick={handleToggleTrainingMode} 
-                className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-[10.5px] sm:text-[11px] font-bold border transition-all flex items-center gap-1 cursor-pointer whitespace-nowrap shrink-0 ${
-                  isTrainingMode 
-                    ? (isDark ? 'bg-stone-200 text-stone-900 border-transparent shadow-xs' : 'bg-stone-800 text-white border-transparent shadow-xs')
-                    : (isDark ? 'bg-white/10 text-slate-300 border-white/10 hover:bg-white/20' : 'bg-white/90 text-stone-700 border-stone-200 hover:bg-stone-100 shadow-xs')
+              <button
+                type="button"
+                onClick={() => setShowToolbar(!showToolbar)}
+                className={`h-8 px-2.5 rounded-xl text-[12px] font-bold flex items-center gap-1 cursor-pointer whitespace-nowrap shrink-0 ${
+                  showToolbar ? activeChipClass : `${subSurfaceBg} ${textMain}`
                 }`}
               >
-                <IconSparkles />
-                <span>10단계 {isTrainingMode ? 'ON' : 'OFF'}</span>
+                <PenTool className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">{showToolbar ? '닫기' : '필기'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleToggleTrainingMode}
+                className={`h-8 px-2.5 rounded-xl text-[12px] font-bold flex items-center gap-1 cursor-pointer whitespace-nowrap shrink-0 ${
+                  isTrainingMode ? activeChipClass : `${subSurfaceBg} ${textMain}`
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>10단계 {isTrainingMode ? '켜짐' : '꺼짐'}</span>
               </button>
             </>
           )}
 
-          <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className={`p-1.5 rounded-full transition-colors shrink-0 cursor-pointer ${isDark ? 'text-white hover:bg-white/10' : 'text-slate-800 hover:bg-black/5'}`}>
-            <IconMenu />
+          <button
+            type="button"
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors shrink-0 cursor-pointer ${
+              isDark ? 'hover:bg-white/10 text-white' : 'hover:bg-black/5 text-[#191F28]'
+            }`}
+          >
+            <Menu className="w-5 h-5" />
           </button>
         </div>
-      </div>
+      </header>
 
       {actionToast && (
-        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-50 bg-stone-900 text-white text-[12px] font-bold px-4 py-2.5 rounded-2xl shadow-xl border border-white/20 animate-bounce flex items-center gap-2">
-          <span>✨</span> {actionToast}
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-[#191F28] text-white text-[12px] font-bold px-4 py-2.5 rounded-2xl shadow-lg flex items-center gap-2">
+          <Check className="w-4 h-4 text-[#2563EB]" />
+          <span>{actionToast}</span>
         </div>
       )}
 
-      {/* 서브 탭 바 (원본 100% 유지) */}
-      <div className={`flex w-full px-2 sm:px-4 border-b ${isDark ? 'border-white/10 bg-black/20' : 'border-stone-200/70 bg-stone-100/60'} shrink-0 relative z-20 backdrop-blur-md gap-2`}>
+      {/* 서브 탭 바 */}
+      <div className={`flex w-full px-4 sm:px-6 border-b ${borderClass} ${surfaceBg} shrink-0 relative z-20 gap-4`}>
         <button
+          type="button"
           onClick={() => setQtSubView('myQt')}
-          className={`py-2 px-2.5 sm:px-3 text-[12.5px] sm:text-[13px] font-bold border-b-2 transition-all cursor-pointer ${
-            qtSubView === 'myQt' 
-              ? (isDark ? 'border-white text-white font-extrabold' : 'border-stone-800 text-stone-800 font-extrabold') 
-              : 'border-transparent text-stone-400 hover:text-stone-600'
+          className={`py-3 text-[15px] font-bold border-b-2 transition-colors cursor-pointer ${
+            qtSubView === 'myQt'
+              ? isDark
+                ? 'border-white text-white'
+                : 'border-[#191F28] text-[#191F28]'
+              : `border-transparent ${textSub}`
           }`}
         >
           나의 묵상 노트
         </button>
         <button
+          type="button"
           onClick={() => setQtSubView('community')}
-          className={`py-2 px-2.5 sm:px-3 text-[12.5px] sm:text-[13px] font-bold border-b-2 transition-all cursor-pointer ${
-            qtSubView === 'community' 
-              ? (isDark ? 'border-white text-white font-extrabold' : 'border-stone-800 text-stone-800 font-extrabold') 
-              : 'border-transparent text-stone-400 hover:text-stone-600'
+          className={`py-3 text-[15px] font-bold border-b-2 transition-colors cursor-pointer ${
+            qtSubView === 'community'
+              ? isDark
+                ? 'border-white text-white'
+                : 'border-[#191F28] text-[#191F28]'
+              : `border-transparent ${textSub}`
           }`}
         >
-          공동체 QT 나눔터 & 목사님 나눔
+          공동체 큐티 나눔터
         </button>
       </div>
 
       {qtSubView === 'myQt' && showToolbar && (
-        <div className={`relative z-20 w-full px-2 py-1.5 border-b backdrop-blur-xl shrink-0 overflow-x-auto hide-scrollbar animate-fade-in ${isDark ? 'border-white/10 bg-slate-900/80' : 'border-stone-200 bg-white/80'}`}>
+        <div className={`relative z-20 w-full px-3 py-1.5 border-b ${borderClass} ${surfaceBg} shrink-0 overflow-x-auto hide-scrollbar`}>
           {renderToolbar && renderToolbar(qtEditorRef, true, handleStickerAdd, handleMemoAdd, handleFileUpload)}
         </div>
       )}
-      
+
       {/* 묵상 뷰포트 영역 */}
       {qtSubView === 'myQt' && CanvasEngine && (
-        <CanvasEngine key={`qt_${date}`} saveKey={`qt_${date}`} tool={tool} setTool={setTool} color={color} setColor={setColor} size={size} setSize={setSize} t={t} renderStickers={() => StickerLayer ? <StickerLayer memos={currDay.memos} stickers={currDay.stickers} onUpdateMemos={(m)=>updateDay({memos:m})} onUpdateStickers={(s)=>updateDay({stickers:s})} onPtrDown={onPtrDown} /> : null}>
-          <div className="flex-1 overflow-y-auto w-full hide-scrollbar px-1.5 sm:px-3.5 py-2.5 pb-24 relative z-10 space-y-3 max-w-4xl mx-auto">
-            
+        <CanvasEngine
+          key={`qt_${date}`}
+          saveKey={`qt_${date}`}
+          tool={tool}
+          setTool={setTool}
+          color={color}
+          setColor={setColor}
+          size={size}
+          setSize={setSize}
+          t={t}
+          renderStickers={() =>
+            StickerLayer ? (
+              <StickerLayer
+                memos={currDay.memos}
+                stickers={currDay.stickers}
+                onUpdateMemos={(m) => updateDay({ memos: m })}
+                onUpdateStickers={(s) => updateDay({ stickers: s })}
+                onPtrDown={onPtrDown}
+              />
+            ) : null
+          }
+        >
+          <div className="flex-1 overflow-y-auto w-full hide-scrollbar px-4 sm:px-6 pt-4 pb-24 relative z-10 space-y-5 max-w-[760px] mx-auto">
             {isTrainingMode && (
-              <div className={`ignore-draw px-3.5 py-2.5 rounded-xl border backdrop-blur-xl flex items-start gap-2 animate-fade-in select-none ${isDark ? 'bg-stone-800/40 border-white/10' : 'bg-stone-100/70 border-stone-200/80 shadow-xs'}`}>
-                <IconInfo className="text-stone-500 shrink-0 mt-0.5" />
-                <div className="flex flex-col gap-0.5">
-                  <span className={`text-[12px] font-bold ${isDark ? 'text-stone-200' : 'text-stone-800'}`}>10단계 심층 훈련 가이드</span>
-                  <span className={`text-[11px] font-medium leading-relaxed break-keep ${isDark ? 'text-stone-400' : 'text-stone-600'}`}>
-                    각 카드를 <b>원터치</b>하여 체크하거나, <b>4~10단계는 아래 질문·묵상·적용란 작성 시 자동 완수 체크</b>됩니다.
+              <div className={`ignore-draw p-4 rounded-2xl ${surfaceBg} border ${borderClass} flex items-start gap-2.5 select-none`}>
+                <Info className="w-4 h-4 text-[#4E5968] shrink-0 mt-0.5" />
+                <div className="space-y-0.5">
+                  <span className={`text-[15px] font-bold ${textMain} block`}>10단계 심층 훈련 가이드</span>
+                  <span className={`text-[12px] leading-relaxed break-keep ${textSub}`}>
+                    각 단계를 터치해 체크하거나, 4~10단계는 아래 질문·묵상·적용란 작성 시 자동으로 완료 표시됩니다.
                   </span>
                 </div>
               </div>
             )}
 
-            {/* [Phase 1: 본문 정보 & 황금 구절] */}
-            <div className={`p-3 sm:p-4 rounded-xl border backdrop-blur-xl flex flex-col gap-2.5 ${isDark ? 'bg-[#181A20]/60 border-white/10' : 'bg-white/80 border-stone-200/80 shadow-xs'}`}>
-              
-              <input 
-                type="text" 
-                value={currDay.qtTitle || globalSharedQt?.[date]?.title || ''} 
-                onChange={e => updateDay && updateDay({qtTitle: e.target.value, checks: { ...(currDay.checks || {}), 'QTin': true }})} 
-                placeholder="오늘 나에게 주시는 큐티 제목..." 
-                className={`w-full px-3 py-2 rounded-lg text-[14px] font-bold outline-none border transition-all ${isDark ? 'bg-black/30 border-white/10 text-white focus:border-stone-400' : 'bg-stone-50 border-stone-200 text-stone-900 focus:border-stone-400'}`} 
-              />
-              
-              <div className="flex flex-wrap sm:flex-nowrap gap-1.5 ignore-draw items-center">
-                <input 
-                  type="text" 
-                  value={currDay.qtReference || globalSharedQt?.[date]?.reference || ''} 
-                  onChange={e => updateDay && updateDay({qtReference: e.target.value, checks: { ...(currDay.checks || {}), 'QTin': true }})} 
-                  placeholder="성경 본문 (예: 신명기 17:14-20)" 
-                  className={`flex-1 min-w-[160px] px-3 py-2 rounded-lg text-[13px] font-medium outline-none border transition-all ${isDark ? 'bg-black/30 border-white/10 text-white focus:border-stone-400' : 'bg-stone-50 border-stone-200 text-stone-900 focus:border-stone-400'}`} 
+            {/* 섹션 1: 본문 정보 & 황금 구절 (중첩 박스 제거 -> 단일 표면 + 구분선) */}
+            <section className={`${surfaceBg} rounded-3xl border ${borderClass} overflow-hidden`}>
+              <div className="p-5 space-y-3">
+                <input
+                  type="text"
+                  value={currDay.qtTitle || globalSharedQt?.[date]?.title || ''}
+                  onChange={(e) => updateDay && updateDay({ qtTitle: e.target.value, checks: { ...(currDay.checks || {}), QTin: true } })}
+                  placeholder="오늘의 큐티 제목을 입력하세요"
+                  className={`w-full px-4 py-3 rounded-2xl text-[15px] font-bold outline-none ${subSurfaceBg} ${textMain}`}
                 />
-                <button 
-                  onClick={() => findBibleText && findBibleText(currDay.qtReference || globalSharedQt?.[date]?.reference)} 
-                  className={`shrink-0 px-3 py-2 rounded-lg text-[12px] font-bold border transition-colors flex items-center gap-1 cursor-pointer ${
-                    isDark ? 'bg-white/10 border-white/15 text-white hover:bg-white/20' : 'bg-stone-100 border-stone-200 text-stone-700 hover:bg-stone-200 shadow-xs'
-                  }`}
-                >
-                  <IconSearch /> 찾기
-                </button>
-                <button 
-                  type="button"
-                  onClick={() => openGalaxyPopup('arc', currDay.qtReference || globalSharedQt?.[date]?.reference)} 
-                  className="shrink-0 px-2.5 py-2 rounded-lg text-[11.5px] font-black bg-amber-400 hover:bg-amber-300 text-slate-950 transition-all flex items-center gap-1 cursor-pointer shadow-xs active:scale-95"
-                  title="현재 본문의 신·구약 교차참조 아크 팝업 열기"
-                >
-                  🌈 아크 대조
-                </button>
-                <button 
-                  type="button"
-                  onClick={() => openGalaxyPopup('2d', currDay.qtReference || globalSharedQt?.[date]?.reference)} 
-                  className="shrink-0 px-2.5 py-2 rounded-lg text-[11.5px] font-black bg-cyan-500 hover:bg-cyan-400 text-slate-950 transition-all flex items-center gap-1 cursor-pointer shadow-xs active:scale-95"
-                  title="현재 본문의 성경 은하계 연관 팝업 열기"
-                >
-                  🌌 은하계
-                </button>
-              </div>
 
-              {/* 🌟 오늘의 황금 구절 */}
-              <div className="pt-1 ignore-draw">
-                <div className={`p-2.5 rounded-lg border flex flex-col gap-1 text-left ${isDark ? 'bg-black/25 border-white/10' : 'bg-stone-50/70 border-stone-200/80'}`}>
-                  <span className="text-[10.5px] font-bold opacity-80 flex items-center gap-1 font-serif text-amber-500 dark:text-amber-400">
-                    📖 오늘의 황금 구절 (가슴에 새길 한 절)
-                  </span>
-                  <input 
-                    type="text" 
-                    value={currDay.qtGoldenVerse || ''} 
-                    onChange={e => updateDay && updateDay({ qtGoldenVerse: e.target.value })} 
-                    placeholder="오늘 본문 중 내 마음에 깊이 꽂힌 한 구절을 기록하세요..." 
-                    className={`w-full bg-transparent outline-none text-[12.5px] font-serif font-medium leading-relaxed ${isDark ? 'text-stone-200 placeholder:text-stone-600' : 'text-stone-800 placeholder:text-stone-400'}`} 
+                <div className="flex flex-wrap sm:flex-nowrap gap-2 ignore-draw items-center">
+                  <input
+                    type="text"
+                    value={currDay.qtReference || globalSharedQt?.[date]?.reference || ''}
+                    onChange={(e) => updateDay && updateDay({ qtReference: e.target.value, checks: { ...(currDay.checks || {}), QTin: true } })}
+                    placeholder="성경 본문 (예: 신명기 17:14-20)"
+                    className={`flex-1 min-w-[160px] px-4 py-2.5 rounded-2xl text-[15px] font-medium outline-none ${subSurfaceBg} ${textMain}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => findBibleText && findBibleText(currDay.qtReference || globalSharedQt?.[date]?.reference)}
+                    className={`shrink-0 px-3.5 py-2.5 rounded-2xl text-[12px] font-bold flex items-center gap-1.5 cursor-pointer ${subSurfaceBg} ${textMain}`}
+                  >
+                    <Search className="w-3.5 h-3.5" />
+                    <span>본문 찾기</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openGalaxyPopup('arc', currDay.qtReference || globalSharedQt?.[date]?.reference)}
+                    className={`shrink-0 px-3 py-2.5 rounded-2xl text-[12px] font-bold flex items-center gap-1 cursor-pointer ${subSurfaceBg} ${textMain}`}
+                  >
+                    <Compass className="w-3.5 h-3.5" />
+                    <span>아크</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openGalaxyPopup('2d', currDay.qtReference || globalSharedQt?.[date]?.reference)}
+                    className={`shrink-0 px-3 py-2.5 rounded-2xl text-[12px] font-bold flex items-center gap-1 cursor-pointer ${subSurfaceBg} ${textMain}`}
+                  >
+                    <Globe className="w-3.5 h-3.5" />
+                    <span>은하계</span>
+                  </button>
+                </div>
+
+                {/* 오늘의 황금 구절 */}
+                <div className="pt-1 ignore-draw space-y-1">
+                  <span className={`text-[12px] font-bold ${textSub} block`}>오늘의 황금 구절</span>
+                  <input
+                    type="text"
+                    value={currDay.qtGoldenVerse || ''}
+                    onChange={(e) => updateDay && updateDay({ qtGoldenVerse: e.target.value })}
+                    placeholder="가슴에 새길 핵심 말씀 한 구절을 적어보세요"
+                    className={`w-full px-4 py-2.5 rounded-2xl outline-none text-[15px] leading-relaxed ${subSurfaceBg} ${textMain}`}
                   />
                 </div>
               </div>
 
-              {/* 🌈 [핵심 고도화] 타이핑으로 감지된 성경 구절마다 [신구약 아크 대조] + [은하계] + [과거 묵상 보기] 동시 지원 */}
+              {/* 감지된 성경 구절 연동 행 */}
               {linkedRefs.length > 0 && (
-                <div className={`ignore-draw p-2.5 rounded-xl border transition-all animate-fade-in ${
-                  isDark ? 'bg-slate-950/75 border-cyan-500/30 text-white' : 'bg-stone-100/90 border-stone-200 text-stone-800'
-                }`}>
-                  <div className="flex items-center justify-between gap-2 mb-1.5">
-                    <span className="text-[10.5px] font-black text-amber-600 dark:text-amber-300 flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
-                      감지된 성경 구절 즉석 팝업 연동 ({linkedRefs.length}건)
-                    </span>
-                    <span className="text-[9.5px] opacity-60">클릭 시 페이지 이동 없이 팝업 오픈</span>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {linkedRefs.map(ref => (
-                      <div 
-                        key={ref}
-                        className={`inline-flex items-center gap-1 p-1 pl-2 rounded-lg border text-[11px] font-bold ${
-                          isDark ? 'bg-black/50 border-white/15 text-slate-200' : 'bg-white border-stone-300/80 text-stone-800 shadow-2xs'
-                        }`}
-                      >
-                        <span className="mr-0.5">📖 {ref}</span>
+                <div className={`ignore-draw px-5 py-3.5 border-t ${borderClass} space-y-2`}>
+                  <span className={`text-[12px] font-bold ${textSub} block`}>감지된 성경 구절 ({linkedRefs.length}건)</span>
+                  <div className="flex flex-wrap gap-2">
+                    {linkedRefs.map((ref) => (
+                      <div key={ref} className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl ${subSurfaceBg} text-[12px] font-bold ${textMain}`}>
+                        <span>{ref}</span>
                         <button
                           type="button"
                           onClick={() => openGalaxyPopup('arc', ref)}
-                          className="px-1.5 py-0.5 rounded bg-amber-400 hover:bg-amber-300 text-slate-950 text-[10px] font-black cursor-pointer active:scale-95 transition-transform"
-                          title={`${ref} 신·구약 아크 대조 팝업 열기`}
+                          className="px-2 py-0.5 rounded-lg bg-white dark:bg-[#181B20] text-[12px] font-bold cursor-pointer"
                         >
-                          🌈 신구약 대조
+                          아크
                         </button>
                         <button
                           type="button"
-                          onClick={() => openGalaxyPopup('2d', ref)}
-                          className="px-1.5 py-0.5 rounded bg-cyan-400 hover:bg-cyan-300 text-slate-950 text-[10px] font-black cursor-pointer active:scale-95 transition-transform"
-                          title={`${ref} 성경 은하계 연관 팝업 열기`}
-                        >
-                          🌌 은하계
-                        </button>
-                        <button 
-                          type="button"
                           onClick={() => setActiveBacklink(ref)}
-                          className={`px-1.5 py-0.5 rounded text-[10px] font-bold cursor-pointer transition-colors ${
-                            activeBacklink === ref 
-                              ? 'bg-indigo-600 text-white' 
-                              : (isDark ? 'bg-white/10 text-slate-300 hover:text-white' : 'bg-stone-100 text-stone-600 hover:text-stone-900')
+                          className={`px-2 py-0.5 rounded-lg text-[12px] font-bold cursor-pointer ${
+                            activeBacklink === ref ? activeChipClass : 'bg-white dark:bg-[#181B20]'
                           }`}
-                          title={`${ref} 과거 나의 묵상 기록 보기`}
                         >
-                          🔗 과거묵상
+                          과거묵상
                         </button>
                       </div>
                     ))}
@@ -804,365 +875,428 @@ export default function DailyQT({
                 </div>
               )}
 
-              <div className="flex gap-1.5 pt-0.5 ignore-draw">
-                <button 
+              {/* 하단 보조 도구 연결 행 */}
+              <div className={`grid grid-cols-2 border-t ${borderClass} divide-x ${borderClass} ignore-draw`}>
+                <button
+                  type="button"
                   onClick={() => setActiveScreen && setActiveScreen('qtArchiveDetail')}
-                  className={`flex-1 py-1.5 rounded-lg border text-[11.5px] font-bold transition-colors flex items-center justify-center gap-1 cursor-pointer ${isDark ? 'bg-white/5 border-white/10 text-stone-300 hover:bg-white/10' : 'bg-stone-50 border-stone-200 text-stone-700 hover:bg-stone-100'}`}
+                  className={`py-3.5 text-[12px] font-bold ${textMain} flex items-center justify-center gap-1.5 cursor-pointer hover:bg-black/[0.02] dark:hover:bg-white/[0.02]`}
                 >
-                  <IconBook /> QT 심층분석
+                  <BookOpen className="w-4 h-4 text-[#4E5968]" />
+                  <span>큐티 심층 분석</span>
                 </button>
-                <button 
+                <button
+                  type="button"
                   onClick={() => setActiveScreen && setActiveScreen('bibleWikiAdvanced')}
-                  className={`flex-1 py-1.5 rounded-lg border text-[11.5px] font-bold transition-colors flex items-center justify-center gap-1 cursor-pointer ${isDark ? 'bg-white/5 border-white/10 text-stone-300 hover:bg-white/10' : 'bg-stone-50 border-stone-200 text-stone-700 hover:bg-stone-100'}`}
+                  className={`py-3.5 text-[12px] font-bold ${textMain} flex items-center justify-center gap-1.5 cursor-pointer hover:bg-black/[0.02] dark:hover:bg-white/[0.02]`}
                 >
-                  <IconSearch /> 성경 지식 위키
+                  <Search className="w-4 h-4 text-[#4E5968]" />
+                  <span>성경 지식 위키</span>
                 </button>
               </div>
 
               {isTrainingMode && (
-                <div className="ignore-draw flex flex-col gap-1.5 pt-2 border-t border-dashed border-stone-200 dark:border-white/10 animate-fade-in">
-                  <span className="text-[10.5px] font-bold tracking-widest text-stone-400 dark:text-stone-500 mb-0.5">
-                    [1~3단계] 관찰과 기록 훈련
-                  </span>
-                  <TrainingCard id="step1" num="1" title="기도하기 (깨닫는 마음 구하기)" desc="조용한 시간과 장소를 마련하고 성경을 펼치기 전, 깨닫는 마음을 구하는 기도로 시작합니다." tip='"이해할 마음, 볼 눈, 들을 귀를 주십시오" 정도의 단순한 기도로 충분합니다.' isChecked={!!trainingChecks['step1']} onToggle={toggleTrainingCheck} isDark={isDark} />
-                  <TrainingCard id="step2" num="2" title="본문읽기 (소리 내어 반복 정독)" desc="성경 지식이 없어도 말씀은 깨달아지지만, 배경을 알고 여러 번 읽으면 묵상이 깊어집니다." tip="소리 내어 한 번, 눈으로 한 번, 마음으로 한 번—여러 번 읽으십시오." isChecked={!!trainingChecks['step2']} onToggle={toggleTrainingCheck} isDark={isDark} />
-                  <TrainingCard id="step3" num="3" title="큐티노트 (생각과 질문 메모)" desc="눈으로만 읽지 말고 떠오르는 생각·질문·느낌을 그 자리에서 반드시 적습니다." tip="기록하는 습관이 영적 성장의 핵심입니다. 적지 않으면 금세 휘발됩니다." isChecked={!!trainingChecks['step3']} onToggle={toggleTrainingCheck} isDark={isDark} />
+                <div className={`ignore-draw px-5 py-3 border-t ${borderClass} divide-y ${dividerClass}`}>
+                  <TrainingRow
+                    id="step1"
+                    num="1"
+                    title="기도하기 (깨닫는 마음 구하기)"
+                    desc="조용한 시간과 장소를 마련하고 성경을 펼치기 전, 깨닫는 마음을 구하는 기도로 시작합니다."
+                    tip="이해할 마음, 볼 눈, 들을 귀를 주십시오라는 단순한 기도로 시작해 보세요."
+                    isChecked={!!trainingChecks['step1']}
+                    onToggle={toggleTrainingCheck}
+                    isDark={isDark}
+                  />
+                  <TrainingRow
+                    id="step2"
+                    num="2"
+                    title="본문읽기 (소리 내어 반복 정독)"
+                    desc="성경 지식이 없어도 말씀은 깨달아지지만, 배경을 알고 여러 번 읽으면 묵상이 깊어집니다."
+                    tip="소리 내어 한 번, 눈으로 한 번, 마음으로 한 번 반복해 읽어보세요."
+                    isChecked={!!trainingChecks['step2']}
+                    onToggle={toggleTrainingCheck}
+                    isDark={isDark}
+                  />
+                  <TrainingRow
+                    id="step3"
+                    num="3"
+                    title="큐티노트 (생각과 질문 메모)"
+                    desc="눈으로만 읽지 말고 떠오르는 생각·질문·느낌을 그 자리에서 적습니다."
+                    tip="기록하는 습관이 영적 성장의 핵심입니다."
+                    isChecked={!!trainingChecks['step3']}
+                    onToggle={toggleTrainingCheck}
+                    isDark={isDark}
+                  />
                 </div>
               )}
-            </div>
+            </section>
 
-            {/* [Phase 2: 16:9 와이드 오늘의 큐티 영상] */}
-            <div className={`p-2.5 sm:p-3.5 rounded-xl border backdrop-blur-xl flex flex-col gap-2 ${isDark ? 'bg-[#181A20]/60 border-white/10' : 'bg-white/80 border-stone-200/80 shadow-xs'}`}>
-              <div className="flex justify-between items-center px-1">
-                <span className={`text-[13px] font-bold flex items-center gap-1.5 ${isDark ? 'text-white' : 'text-stone-800'}`}>
-                  <IconVideo /> 오늘의 큐티 영상
-                </span>
-                <a href={`https://www.youtube.com/results?search_query=김양재 목사 큐티노트+${ymdStr}`} target="_blank" rel="noreferrer" className="text-[11px] font-bold text-stone-500 hover:text-stone-800 transition-colors">
-                  유튜브 검색 ↗
+            {/* 섹션 2: 오늘의 큐티 영상 */}
+            <section className={`${surfaceBg} rounded-3xl border ${borderClass} p-5 space-y-3`}>
+              <div className="flex justify-between items-center">
+                <h2 className={`text-[18px] font-bold flex items-center gap-2 ${textMain}`}>
+                  <Video className="w-5 h-5 text-[#4E5968]" />
+                  <span>오늘의 큐티 영상</span>
+                </h2>
+                <a
+                  href={`https://www.youtube.com/results?search_query=김양재 목사 큐티노트+${ymdStr}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={`text-[12px] font-bold ${textSub} hover:underline`}
+                >
+                  유튜브 검색
                 </a>
               </div>
 
-              <div className="flex gap-1.5 ignore-draw items-center">
-                <input 
-                  type="text" 
-                  placeholder="유튜브 링크 붙여넣기..." 
-                  value={currDay.qtVideoUrl || ''} 
-                  onChange={(e) => { 
-                    const url = e.target.value; 
-                    const vId = extractVideoId ? extractVideoId(url) : null; 
-                    updateDay && updateDay({ qtVideoUrl: url, qtVideoId: vId !== null ? vId : '', checks: { ...(currDay.checks || {}), 'QTin': true } }); 
-                  }} 
-                  className={`flex-1 min-w-0 px-3 py-1.5 rounded-lg text-[12px] font-medium outline-none border ${isDark ? 'bg-black/30 border-white/10 text-white' : 'bg-stone-50 border-stone-200 text-stone-900'}`} 
+              <div className="flex gap-2 ignore-draw items-center">
+                <input
+                  type="text"
+                  placeholder="유튜브 영상 링크를 붙여넣으세요"
+                  value={currDay.qtVideoUrl || ''}
+                  onChange={(e) => {
+                    const url = e.target.value;
+                    const vId = extractVideoId ? extractVideoId(url) : null;
+                    updateDay && updateDay({ qtVideoUrl: url, qtVideoId: vId !== null ? vId : '', checks: { ...(currDay.checks || {}), QTin: true } });
+                  }}
+                  className={`flex-1 min-w-0 px-3.5 py-2.5 rounded-2xl text-[15px] outline-none ${subSurfaceBg} ${textMain}`}
                 />
-                <button 
-                  onClick={handleShareVideo} 
-                  className={`shrink-0 px-3 py-1.5 rounded-lg text-[11.5px] font-bold border transition-colors flex items-center gap-1 cursor-pointer ${
-                    isDark ? 'bg-white/10 border-white/15 text-white hover:bg-white/20' : 'bg-stone-100 border-stone-200 text-stone-700 hover:bg-stone-200'
-                  }`}
+                <button
+                  type="button"
+                  onClick={handleShareVideo}
+                  className={`shrink-0 px-3.5 py-2.5 rounded-2xl text-[12px] font-bold flex items-center gap-1.5 cursor-pointer ${subSurfaceBg} ${textMain}`}
                 >
-                  <IconShare /> 공유
+                  <Share2 className="w-3.5 h-3.5" />
+                  <span>공유</span>
                 </button>
               </div>
 
-              <div className="w-full aspect-video rounded-xl overflow-hidden bg-black relative shadow-sm">
+              <div className="w-full aspect-video rounded-2xl overflow-hidden bg-black relative">
                 {currentVideoId ? (
-                  <iframe width="100%" height="100%" src={`https://www.youtube.com/embed/${currentVideoId}?rel=0&enablejsapi=1`} title="QT Video" frameBorder="0" allowFullScreen className="absolute inset-0 w-full h-full"></iframe>
+                  <iframe
+                    width="100%"
+                    height="100%"
+                    src={`https://www.youtube.com/embed/${currentVideoId}?rel=0&enablejsapi=1`}
+                    title="QT Video"
+                    frameBorder="0"
+                    allowFullScreen
+                    className="absolute inset-0 w-full h-full"
+                  />
                 ) : (
-                  <div className="absolute inset-0 flex items-center justify-center text-[12px] font-medium text-white/40">
-                    영상을 검색해 링크를 붙여넣으면 재생됩니다.
+                  <div className="absolute inset-0 flex items-center justify-center text-[15px] text-white/50">
+                    유튜브 링크를 입력하면 이곳에서 재생됩니다.
                   </div>
                 )}
               </div>
 
-              <button 
-                onClick={() => { 
-                  updateDay && updateDay({ checks: { ...(currDay.checks || {}), 'QTin': true } }); 
-                  triggerConfetti && triggerConfetti(); 
+              <button
+                type="button"
+                onClick={() => {
+                  updateDay && updateDay({ checks: { ...(currDay.checks || {}), QTin: true } });
+                  triggerConfetti && triggerConfetti();
                   handleActionItemSync(currDay.qtActionItem || currDay.qtGraceLine || '영상 묵상 완수');
-                  alert("시청 완료 체크 및 출석 기록이 저장되었습니다!"); 
-                }} 
-                className={`w-full py-2 rounded-lg border border-dashed text-[12px] font-bold transition-all cursor-pointer ${isDark ? 'border-white/20 text-stone-300 hover:bg-white/5' : 'border-stone-300 text-stone-700 hover:bg-stone-50'}`}
+                  alert('시청 완료 및 출석 기록이 저장되었습니다.');
+                }}
+                className={`w-full py-3 rounded-2xl text-[15px] font-bold transition-colors cursor-pointer ${subSurfaceBg} ${textMain}`}
               >
-                ✨ 영상 시청 완료 체크
+                영상 시청 완료 체크
               </button>
-            </div>
+            </section>
 
-            {/* [Phase 3: 묵상과 적용 에디토리얼 패널] */}
-            <div className={`p-3 sm:p-4 rounded-xl border backdrop-blur-xl space-y-4 ${isDark ? 'bg-[#181A20]/60 border-white/10' : 'bg-white/80 border-stone-200/80 shadow-xs'}`}>
-              
-              <div className="flex flex-col gap-1.5">
+            {/* 섹션 3: 묵상과 적용 (구분선 중심의 정돈된 입력 폼) */}
+            <section className={`${surfaceBg} rounded-3xl border ${borderClass} overflow-hidden divide-y ${dividerClass}`}>
+              {/* 적용 질문 */}
+              <div className="p-5 space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <label className={`text-[13.5px] font-bold flex items-center gap-1.5 ${isDark ? 'text-white' : 'text-stone-800'}`}>
-                    <IconTarget className="text-stone-600 dark:text-stone-300" /> 적용 질문 (Question Time)
+                  <label className={`text-[18px] font-bold flex items-center gap-2 ${textMain}`}>
+                    <Target className="w-5 h-5 text-[#4E5968]" />
+                    <span>적용 질문</span>
                   </label>
                   <button
                     type="button"
                     onClick={() => openGalaxyPopup('arc')}
-                    className="ignore-draw px-2 py-0.5 rounded-md text-[10.5px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-300 border border-amber-500/30 cursor-pointer hover:bg-amber-500/25"
+                    className={`ignore-draw px-2.5 py-1 rounded-lg text-[12px] font-bold cursor-pointer ${subSurfaceBg} ${textMain}`}
                   >
-                    🌈 신·구약 아크 대조
+                    신구약 아크 대조
                   </button>
                 </div>
 
                 {isTrainingMode && (
-                  <div className="ignore-draw flex flex-col gap-1.5 pb-1 animate-fade-in">
-                    <span className="text-[10.5px] font-bold tracking-wider text-stone-400 dark:text-stone-500">
-                      [4~6단계] 의미 해석과 질문하기
-                    </span>
-                    <TrainingCard id="step4" num="4" title="본문요약 (핵심 3~4줄 압축)" desc="여러 번 읽은 뒤 전체의 핵심 내용을 3~4줄로 간단히 요약합니다." tip="설교나 간증을 정리해서 듣는 능력도 함께 길러 줍니다." isChecked={!!trainingChecks['step4']} onToggle={toggleTrainingCheck} isDark={isDark} />
-                    <TrainingCard id="step5" num="5" title="질문하기 (구속사적 질문 도출)" desc="마음에 걸리거나 더 깊이 생각해야 할 부분을 질문 형태로 뽑아냅니다." tip="좋은 질문이 좋은 큐티의 출발점입니다. 한 절마다 질문을 뽑아 보십시오." isChecked={!!trainingChecks['step5']} onToggle={toggleTrainingCheck} isDark={isDark} />
-                    <TrainingCard id="step6" num="6" title="묵상하기 (삶의 명령과 약속 마주하기)" desc="본문을 옛이야기가 아니라, 오늘 내 삶에 주시는 명령과 약속으로 대합니다." tip="풀리지 않는 문제와 반복되는 죄를 꺼내 놓고 말씀이 어떻게 말하는지 생각합니다." isChecked={!!trainingChecks['step6']} onToggle={toggleTrainingCheck} isDark={isDark} />
+                  <div className={`ignore-draw divide-y ${dividerClass} border-t border-b ${borderClass} my-1`}>
+                    <TrainingRow
+                      id="step4"
+                      num="4"
+                      title="본문요약 (핵심 3~4줄 압축)"
+                      desc="여러 번 읽은 뒤 전체의 핵심 내용을 3~4줄로 간단히 요약합니다."
+                      isChecked={!!trainingChecks['step4']}
+                      onToggle={toggleTrainingCheck}
+                      isDark={isDark}
+                    />
+                    <TrainingRow
+                      id="step5"
+                      num="5"
+                      title="질문하기 (구속사적 질문 도출)"
+                      desc="마음에 걸리거나 더 깊이 생각해야 할 부분을 질문 형태로 뽑아냅니다."
+                      isChecked={!!trainingChecks['step5']}
+                      onToggle={toggleTrainingCheck}
+                      isDark={isDark}
+                    />
+                    <TrainingRow
+                      id="step6"
+                      num="6"
+                      title="묵상하기 (삶의 명령과 약속 마주하기)"
+                      desc="본문을 오늘 내 삶에 주시는 명령과 약속으로 대합니다."
+                      isChecked={!!trainingChecks['step6']}
+                      onToggle={toggleTrainingCheck}
+                      isDark={isDark}
+                    />
                   </div>
                 )}
 
-                <textarea 
-                  value={currDay.qtAppQuestion || ''} 
-                  onChange={e => updateDay && updateDay({ qtAppQuestion: e.target.value })} 
-                  onInput={autoGrowTextarea} 
-                  className={`w-full p-2.5 bg-transparent resize-none outline-none text-[13.5px] font-medium leading-[1.7] border rounded-lg transition-all ${isDark ? 'border-white/15 text-white focus:border-stone-400 bg-black/20' : 'border-stone-200 text-stone-800 focus:border-stone-400 bg-stone-50/40'}`} 
-                  placeholder="본문을 읽으며 드는 솔직한 질문을 적어보세요..." 
+                <textarea
+                  value={currDay.qtAppQuestion || ''}
+                  onChange={(e) => updateDay && updateDay({ qtAppQuestion: e.target.value })}
+                  onInput={autoGrowTextarea}
+                  rows={3}
+                  className={`w-full p-4 rounded-2xl resize-none outline-none text-[15px] leading-relaxed ${subSurfaceBg} ${textMain}`}
+                  placeholder="본문을 읽으며 드는 솔직한 질문을 적어보세요"
                 />
               </div>
 
-              <div className="flex flex-col gap-1.5 pt-2 border-t border-stone-200 dark:border-white/10">
+              {/* 묵상하기 */}
+              <div className="p-5 space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <label className={`text-[13.5px] font-bold flex items-center gap-1.5 mt-0.5 ${isDark ? 'text-white' : 'text-stone-800'}`}>
-                    <IconBook className="text-stone-600 dark:text-stone-300" /> 묵상하기 (내 죄 보기)
+                  <label className={`text-[18px] font-bold flex items-center gap-2 ${textMain}`}>
+                    <BookOpen className="w-5 h-5 text-[#4E5968]" />
+                    <span>묵상하기 (내 죄 보기)</span>
                   </label>
                   <button
                     type="button"
                     onClick={() => openGalaxyPopup('2d')}
-                    className="ignore-draw px-2 py-0.5 rounded-md text-[10.5px] font-bold bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border border-cyan-500/30 cursor-pointer hover:bg-cyan-500/25"
+                    className={`ignore-draw px-2.5 py-1 rounded-lg text-[12px] font-bold cursor-pointer ${subSurfaceBg} ${textMain}`}
                   >
-                    🌌 은하계 연관 보기
+                    은하계 연관 보기
                   </button>
                 </div>
 
                 {isTrainingMode && (
-                  <div className="ignore-draw flex flex-col gap-1.5 pb-1 animate-fade-in">
-                    <span className="text-[10.5px] font-bold tracking-wider text-stone-400 dark:text-stone-500">
-                      [7~8단계] 나의 몫 직면과 적용
-                    </span>
-                    <TrainingCard id="step7" num="7" title="적용하기 (구체적인 행동 결단)" desc="묵상한 내용을 어떻게 실천할지 구체적으로 적고 행동으로 옮깁니다." tip="큐티의 '꽃'입니다. 적용이 없는 큐티는 지식으로 끝납니다." isChecked={!!trainingChecks['step7']} onToggle={toggleTrainingCheck} isDark={isDark} />
-                    <TrainingCard id="step8" num="8" title="말씀대로 기도하기 (말씀 언어로 간구)" desc="오늘 받은 말씀을 붙들고, 그 말씀의 언어로 하나님께 기도합니다." tip="연약함을 불쌍히 여겨 달라 고백하고, 말씀이 이루어질 것을 믿고 구합니다." isChecked={!!trainingChecks['step8']} onToggle={toggleTrainingCheck} isDark={isDark} />
+                  <div className={`ignore-draw divide-y ${dividerClass} border-t border-b ${borderClass} my-1`}>
+                    <TrainingRow
+                      id="step7"
+                      num="7"
+                      title="적용하기 (구체적인 행동 결단)"
+                      desc="묵상한 내용을 어떻게 실천할지 구체적으로 적고 행동으로 옮깁니다."
+                      isChecked={!!trainingChecks['step7']}
+                      onToggle={toggleTrainingCheck}
+                      isDark={isDark}
+                    />
+                    <TrainingRow
+                      id="step8"
+                      num="8"
+                      title="말씀대로 기도하기"
+                      desc="오늘 받은 말씀을 붙들고 그 말씀의 언어로 하나님께 기도합니다."
+                      isChecked={!!trainingChecks['step8']}
+                      onToggle={toggleTrainingCheck}
+                      isDark={isDark}
+                    />
                   </div>
                 )}
 
-                <textarea 
-                  value={currDay.qtMeditation || ''} 
-                  onChange={e => updateDay && updateDay({ qtMeditation: e.target.value })} 
-                  onInput={autoGrowTextarea} 
-                  className={`w-full p-2.5 bg-transparent resize-none outline-none text-[13.5px] font-medium leading-[1.7] border rounded-lg transition-all ${isDark ? 'border-white/15 text-white focus:border-stone-400 bg-black/20' : 'border-stone-200 text-stone-800 focus:border-stone-400 bg-stone-50/40'}`} 
-                  placeholder="말씀을 통해 깨달은 나의 죄와 은혜를 적어보세요..." 
+                <textarea
+                  value={currDay.qtMeditation || ''}
+                  onChange={(e) => updateDay && updateDay({ qtMeditation: e.target.value })}
+                  onInput={autoGrowTextarea}
+                  rows={4}
+                  className={`w-full p-4 rounded-2xl resize-none outline-none text-[15px] leading-relaxed ${subSurfaceBg} ${textMain}`}
+                  placeholder="말씀을 통해 깨달은 나의 죄와 은혜를 적어보세요"
                 />
               </div>
 
-              <div className="flex flex-col gap-1.5 pt-2 border-t border-stone-200 dark:border-white/10">
-                <label className={`text-[13.5px] font-bold flex items-center gap-1.5 mt-0.5 ${isDark ? 'text-white' : 'text-stone-800'}`}>
-                  <IconPray className="text-stone-600 dark:text-stone-300" /> 적용하기
+              {/* 적용하기 */}
+              <div className="p-5 space-y-2.5">
+                <label className={`text-[18px] font-bold flex items-center gap-2 ${textMain}`}>
+                  <HandHeart className="w-5 h-5 text-[#4E5968]" />
+                  <span>적용하기</span>
                 </label>
 
                 {isTrainingMode && (
-                  <div className="ignore-draw flex flex-col gap-1.5 pb-1 animate-fade-in">
-                    <span className="text-[10.5px] font-bold tracking-wider text-stone-400 dark:text-stone-500">
-                      [9~10단계] 본문 해설과 공동체 나눔
-                    </span>
-                    <TrainingCard id="step9" num="9" title="본문해설 (스스로 묵상 후 대조)" desc="스스로 충분히 묵상한 뒤에야 구속사적 본문해설을 참고합니다." tip="해설을 먼저 읽으면 '해설 읽기'가 되어 버립니다. 순서가 중요합니다." isChecked={!!trainingChecks['step9']} onToggle={toggleTrainingCheck} isDark={isDark} />
-                    <TrainingCard id="step10" num="10" title="은혜나누기 (목장 공동체와 연합)" desc="그날 받은 은혜를 목장·소그룹 등 공동체와 반드시 나눕니다." tip="나 혼자 간직한 은혜는 오래가지 못합니다. 나눌 때 삶으로 굳어집니다." isChecked={!!trainingChecks['step10']} onToggle={toggleTrainingCheck} isDark={isDark} />
+                  <div className={`ignore-draw divide-y ${dividerClass} border-t border-b ${borderClass} my-1`}>
+                    <TrainingRow
+                      id="step9"
+                      num="9"
+                      title="본문해설 (스스로 묵상 후 대조)"
+                      desc="스스로 충분히 묵상한 뒤에야 구속사적 본문해설을 참고합니다."
+                      isChecked={!!trainingChecks['step9']}
+                      onToggle={toggleTrainingCheck}
+                      isDark={isDark}
+                    />
+                    <TrainingRow
+                      id="step10"
+                      num="10"
+                      title="은혜나누기 (목장 공동체와 연합)"
+                      desc="그날 받은 은혜를 목장·소그룹 등 공동체와 나눕니다."
+                      isChecked={!!trainingChecks['step10']}
+                      onToggle={toggleTrainingCheck}
+                      isDark={isDark}
+                    />
                   </div>
                 )}
 
-                <textarea 
-                  value={currDay.qtApplication || ''} 
-                  onChange={e => updateDay && updateDay({ qtApplication: e.target.value })} 
-                  onInput={autoGrowTextarea} 
-                  className={`w-full p-2.5 bg-transparent resize-none outline-none text-[13.5px] font-medium leading-[1.7] border rounded-lg transition-all ${isDark ? 'border-white/15 text-white focus:border-stone-400 bg-black/20' : 'border-stone-200 text-stone-800 focus:border-stone-400 bg-stone-50/40'}`} 
-                  placeholder="오늘 하루 어떻게 실천할까요?" 
+                <textarea
+                  value={currDay.qtApplication || ''}
+                  onChange={(e) => updateDay && updateDay({ qtApplication: e.target.value })}
+                  onInput={autoGrowTextarea}
+                  rows={3}
+                  className={`w-full p-4 rounded-2xl resize-none outline-none text-[15px] leading-relaxed ${subSurfaceBg} ${textMain}`}
+                  placeholder="오늘 하루 어떻게 실천할까요?"
                 />
               </div>
 
               {/* 한줄 은혜 및 실천 목표 */}
-              <div className="pt-2.5 space-y-1.5 ignore-draw border-t border-stone-200 dark:border-white/15">
-                <span className={`font-bold text-[12px] flex items-center gap-1 ${isDark ? 'text-stone-300' : 'text-stone-600'}`}>
-                  <IconTarget /> 한줄 은혜 및 실천 목표 (트래커 자동 연동)
-                </span>
+              <div className="p-5 space-y-2.5 ignore-draw">
+                <span className={`font-bold text-[15px] ${textMain} block`}>한줄 은혜 및 실천 목표</span>
 
-                <input 
-                  type="text" 
-                  value={currDay.qtGraceLine || ''} 
-                  onChange={(e) => handleGraceLineSync(e.target.value)} 
-                  placeholder="오늘의 핵심 은혜를 한 줄로 요약하세요." 
-                  className={`w-full px-3 py-2 rounded-lg border text-[13px] font-medium outline-none transition-all ${isDark ? 'bg-black/30 border-white/15 text-white focus:border-stone-400' : 'bg-stone-50 border-stone-200 text-stone-800 focus:border-stone-400'}`} 
+                <input
+                  type="text"
+                  value={currDay.qtGraceLine || ''}
+                  onChange={(e) => handleGraceLineSync(e.target.value)}
+                  placeholder="오늘의 핵심 은혜를 한 줄로 요약하세요"
+                  className={`w-full px-4 py-3 rounded-2xl text-[15px] outline-none ${subSurfaceBg} ${textMain}`}
                 />
-                <input 
-                  type="text" 
-                  value={currDay.qtActionItem || ''} 
-                  onChange={(e) => handleActionItemSync(e.target.value)} 
-                  onBlur={(e) => { 
+                <input
+                  type="text"
+                  value={currDay.qtActionItem || ''}
+                  onChange={(e) => handleActionItemSync(e.target.value)}
+                  onBlur={(e) => {
                     if (logUserAction && authUser?.name && e.target.value) {
                       logUserAction(authUser.name, '매일QT', 'write', `[실천목표] ${e.target.value}`);
                     }
-                  }} 
-                  placeholder="오늘의 실천 목표 (예: 먼저 사과하고 따뜻하게 인사하기)" 
-                  className={`w-full px-3 py-2 rounded-lg border text-[13px] font-medium outline-none transition-all ${isDark ? 'bg-black/30 border-white/15 text-white focus:border-stone-400' : 'bg-stone-50 border-stone-200 text-stone-800 focus:border-stone-400'}`} 
+                  }}
+                  placeholder="오늘의 실천 목표 (예: 먼저 사과하고 따뜻하게 인사하기)"
+                  className={`w-full px-4 py-3 rounded-2xl text-[15px] outline-none ${subSurfaceBg} ${textMain}`}
                 />
-              </div>
 
-              {/* [Phase 4: 원스트림 인라인 연동 허브 (원본 3버튼 100% 유지)] */}
-              <div className={`ignore-draw p-3 rounded-xl border flex flex-col gap-2.5 mt-2 ${isDark ? 'bg-stone-900/60 border-white/10' : 'bg-stone-50/70 border-stone-200'}`}>
-                <div className="flex justify-between items-center border-b pb-1.5 border-stone-200 dark:border-white/10">
-                  <span className={`text-[11.5px] font-bold tracking-wider flex items-center gap-1.5 ${isDark ? 'text-stone-300' : 'text-stone-700'}`}>
-                    🌱 원스트림 신앙 연동
-                  </span>
-                  <span className="text-[10.5px] text-stone-400">
-                    페이지 이동 없이 즉시 저장
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
-                  <button 
+                {/* 원스트림 연동 버튼 행 (단일 블루 강조 1개 + 차분한 그레이 2개) */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2">
+                  <button
+                    type="button"
                     onClick={inlineActionSendToTracker}
-                    className="py-2 px-2.5 rounded-lg bg-[#526359] hover:bg-[#435249] text-white text-[11.5px] font-bold shadow-xs flex items-center justify-center gap-1 cursor-pointer active:scale-98 transition-all"
+                    className="py-3 px-3 rounded-2xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-[12px] font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
                   >
-                    🌿 트래커에 실천 심기
+                    <Target className="w-3.5 h-3.5" />
+                    <span>트래커에 실천 등록</span>
                   </button>
-                  <button 
+                  <button
+                    type="button"
                     onClick={inlineActionSendToPrayer}
-                    className="py-2 px-2.5 rounded-lg bg-[#6B6177] hover:bg-[#594F64] text-white text-[11.5px] font-bold shadow-xs flex items-center justify-center gap-1 cursor-pointer active:scale-98 transition-all"
+                    className={`py-3 px-3 rounded-2xl text-[12px] font-bold flex items-center justify-center gap-1.5 cursor-pointer ${subSurfaceBg} ${textMain}`}
                   >
-                    🙏 나의 기도함에 저장
+                    <HandHeart className="w-3.5 h-3.5" />
+                    <span>나의 기도함에 저장</span>
                   </button>
-                  <button 
+                  <button
+                    type="button"
                     onClick={inlineActionSendToCounseling}
-                    className="py-2 px-2.5 rounded-lg bg-[#506375] hover:bg-[#415160] text-white text-[11.5px] font-bold shadow-xs flex items-center justify-center gap-1 cursor-pointer active:scale-98 transition-all"
+                    className={`py-3 px-3 rounded-2xl text-[12px] font-bold flex items-center justify-center gap-1.5 cursor-pointer ${subSurfaceBg} ${textMain}`}
                   >
-                    💌 1:1 심층상담 요청
+                    <MessageCircle className="w-3.5 h-3.5" />
+                    <span>1:1 심층상담 요청</span>
                   </button>
                 </div>
 
+                {/* 연동된 오늘의 현황 리스트 */}
                 {(todayActionItems.length > 0 || todayPrayers.length > 0 || counselingStatus) && (
-                  <div className="flex flex-col gap-1.5 pt-2 border-t border-dashed border-stone-200 dark:border-white/10 mt-0.5 animate-fade-in">
-                    {todayActionItems.length > 0 && (
-                      <div className="p-2.5 rounded-lg bg-white dark:bg-black/30 border border-stone-200/80 dark:border-white/5 flex flex-col gap-1.5">
-                        <div className="flex justify-between items-center">
-                          <span className="text-[11px] font-bold text-stone-700 dark:text-stone-300 flex items-center gap-1">
-                            🌿 오늘 QT 실천 과제
-                          </span>
-                          <span className="text-[9.5px] text-stone-400">터치하여 완료 체크</span>
+                  <div className={`pt-3 mt-2 border-t ${borderClass} space-y-2`}>
+                    {todayActionItems.map((item) => (
+                      <div
+                        key={item.id}
+                        onClick={() => toggleInlineActionComplete(item.id)}
+                        className={`flex items-center gap-2.5 p-3 rounded-2xl ${subSurfaceBg} cursor-pointer`}
+                      >
+                        <div
+                          className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
+                            item.completed ? activeChipClass : 'border-[#8B95A1]'
+                          }`}
+                        >
+                          {item.completed && <Check className="w-3 h-3 stroke-[3]" />}
                         </div>
-                        {todayActionItems.map(item => (
-                          <div 
-                            key={item.id} 
-                            onClick={() => toggleInlineActionComplete(item.id)}
-                            className="flex items-center gap-2 p-1.5 rounded-md bg-stone-50 dark:bg-black/20 border border-stone-200/60 dark:border-white/5 cursor-pointer active:scale-[0.99] transition-all"
-                          >
-                            <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 ${item.completed ? 'bg-[#526359] border-[#526359] text-white' : 'border-stone-300 bg-transparent'}`}>
-                              {item.completed && <IconCheck />}
-                            </div>
-                            <span className={`text-[12px] font-medium ${item.completed ? 'line-through text-slate-400' : (isDark ? 'text-slate-200' : 'text-stone-800')}`}>
-                              {item.text}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {todayPrayers.length > 0 && (
-                      <div className="p-2.5 rounded-lg bg-white dark:bg-black/30 border border-stone-200/80 dark:border-white/5 flex flex-col gap-1">
-                        <span className="text-[11px] font-bold text-stone-700 dark:text-stone-300">
-                          🙏 오늘 등록된 묵상 기도 ({todayPrayers.length}건)
+                        <span className={`text-[15px] ${item.completed ? 'line-through text-[#8B95A1]' : textMain}`}>
+                          {item.text}
                         </span>
-                        <div className="space-y-0.5">
-                          {todayPrayers.map(p => (
-                            <p key={p.id} className="text-[11.5px] font-medium text-stone-600 dark:text-stone-300 truncate pl-1">
-                              • {p.title}
-                            </p>
-                          ))}
-                        </div>
                       </div>
-                    )}
+                    ))}
+
+                    {todayPrayers.map((p) => (
+                      <div key={p.id} className={`p-3 rounded-2xl ${subSurfaceBg} text-[12px] ${textSub}`}>
+                        기도함 저장됨: <strong className={textMain}>{p.title}</strong>
+                      </div>
+                    ))}
 
                     {counselingStatus && (
-                      <div className="p-2.5 rounded-lg bg-white dark:bg-black/30 border border-stone-200/80 dark:border-white/5 flex flex-col gap-1">
+                      <div className={`p-3 rounded-2xl ${subSurfaceBg} text-[12px] ${textSub} space-y-1`}>
                         <div className="flex items-center justify-between">
-                          <span className="text-[11px] font-bold text-stone-700 dark:text-stone-300">
-                            💌 1:1 심층 상담 현황
-                          </span>
-                          <span className="px-1.5 py-0.5 rounded-md bg-stone-800 text-white text-[9.5px] font-bold">
-                            {counselingReplyData ? '답변 도착' : '목자 접수 대기 중'}
-                          </span>
+                          <span className={`font-bold ${textMain}`}>1:1 심층 상담 현황</span>
+                          <span>{counselingReplyData ? '답변 도착' : '접수 대기 중'}</span>
                         </div>
-                        {counselingReplyData && (
-                          <div className="p-1.5 rounded-md bg-stone-50 dark:bg-black/20 text-[11.5px] text-stone-700 dark:text-stone-300 font-medium">
-                            <span className="font-bold block mb-0.5 text-stone-800 dark:text-white">목자님의 답변:</span>
-                            {counselingReplyData}
-                          </div>
-                        )}
+                        {counselingReplyData && <p className={`text-[15px] ${textMain} pt-1`}>{counselingReplyData}</p>}
                       </div>
                     )}
                   </div>
                 )}
               </div>
+            </section>
 
-            </div>
-
-            {/* 출석 달력 스탬프 */}
-            <div className={`p-3 rounded-xl border backdrop-blur-xl ignore-draw ${isDark ? 'bg-[#181A20]/60 border-white/10' : 'bg-white/80 border-stone-200/80 shadow-xs'}`}>
+            {/* 섹션 4: 출석 달력 스탬프 */}
+            <section className={`${surfaceBg} rounded-3xl border ${borderClass} p-5 ignore-draw`}>
               <div onClick={() => setShowFullCalendar(!showFullCalendar)} className="flex justify-between items-center cursor-pointer select-none">
-                <span className={`font-bold text-[13px] flex items-center gap-1.5 ${isDark ? 'text-white' : 'text-stone-800'}`}>
-                  <IconCalendar /> {currMonth}월 출석 스탬프
+                <span className={`font-bold text-[15px] flex items-center gap-2 ${textMain}`}>
+                  <Calendar className="w-4 h-4 text-[#4E5968]" />
+                  <span>{currMonth}월 출석 스탬프</span>
                 </span>
-                <IconChevronDown className={`w-4 h-4 text-stone-400 transition-transform duration-300 ${showFullCalendar ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`w-4 h-4 text-[#8B95A1] transition-transform ${showFullCalendar ? 'rotate-180' : ''}`} />
               </div>
 
               {showFullCalendar && (
-                <div className="mt-2.5 pt-2.5 border-t border-stone-200 dark:border-white/10 animate-fade-in">
-                  <div className="grid grid-cols-7 gap-1 text-center mb-1.5">
+                <div className={`mt-4 pt-4 border-t ${borderClass}`}>
+                  <div className="grid grid-cols-7 gap-1 text-center mb-2">
                     {['일', '월', '화', '수', '목', '금', '토'].map((w, i) => (
-                      <div key={w} className={`text-[10.5px] font-bold ${i === 0 ? 'text-rose-500' : i === 6 ? 'text-blue-500' : 'text-stone-400'}`}>{w}</div>
+                      <div key={w} className={`text-[12px] font-bold ${i === 0 ? 'text-[#2563EB]' : textSub}`}>
+                        {w}
+                      </div>
                     ))}
                   </div>
-                  <div className="grid grid-cols-7 gap-1">
-                    {Array.from({ length: firstDayOfWeek }, (_, i) => i).map(e => (
+                  <div className="grid grid-cols-7 gap-1.5">
+                    {Array.from({ length: firstDayOfWeek }, (_, i) => i).map((e) => (
                       <div key={`empty-${e}`} className="w-full aspect-square" />
                     ))}
-                    {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => {
+                    {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => {
                       const dStr = `${currYear}-${String(currMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                       const isS = dailyData[dStr]?.checks?.['QTin'] === true;
                       const isT = dStr === date;
-                      const dOw = (firstDayOfWeek + day - 1) % 7;
                       return (
-                        <div 
-                          key={day} 
-                          onClick={() => { 
+                        <div
+                          key={day}
+                          onClick={() => {
                             const nS = !isS;
-                            updateDay && updateDay({ checks: { ...(currDay.checks || {}), 'QTin': nS } });
+                            updateDay && updateDay({ checks: { ...(currDay.checks || {}), QTin: nS } });
                             if (nS && triggerConfetti) triggerConfetti();
-                          }} 
-                          className={`relative flex items-center justify-center aspect-square rounded-[6px] cursor-pointer select-none transition-all ${
-                            isT ? 'ring-2 ring-stone-400' : ''
-                          } ${
-                            isS 
-                              ? (isDark ? 'bg-stone-200 text-stone-900 font-bold shadow-xs' : 'bg-stone-800 text-white font-bold shadow-xs') 
-                              : (isDark ? 'border border-white/5 hover:bg-white/10 text-stone-200' : 'border border-stone-200 hover:bg-black/5 text-stone-700')
-                          }`}
+                          }}
+                          className={`relative flex items-center justify-center aspect-square rounded-xl cursor-pointer select-none transition-colors ${
+                            isT ? 'ring-1 ring-[#191F28] dark:ring-white' : ''
+                          } ${isS ? activeChipClass : `${subSurfaceBg} ${textMain}`}`}
                         >
-                          <span className={`text-[11.5px] font-medium ${isS ? '' : (dOw === 0 ? 'text-rose-500' : dOw === 6 ? 'text-blue-500' : '')}`}>
-                            {day}
-                          </span>
+                          <span className="text-[12px] font-bold">{day}</span>
                         </div>
                       );
                     })}
                   </div>
                 </div>
               )}
-            </div>
-
+            </section>
           </div>
         </CanvasEngine>
       )}
 
-      {/* 서브 뷰 2: 공동체 QT 나눔 광장 (원본 100% 유지 + 아크/은하계 팝업 연동) */}
+      {/* 서브 뷰 2: 공동체 큐티 나눔터 */}
       {qtSubView === 'community' && (
         <CommunityQtSquareInner
           authUser={authUser}
@@ -1172,49 +1306,150 @@ export default function DailyQT({
           onOpenGalaxyPopup={openGalaxyPopup}
         />
       )}
-
     </div>
   );
 }
 
 // =====================================================================
-// 💡 공동체 QT 나눔 광장 (기존 코드 100% 보존)
+// 공동체 큐티 나눔 광장 (토스 스타일 · 차콜 & 오프화이트 중심 · 이모지 0%)
 // =====================================================================
 const FULL_BIBLE_MAP_QT = {
-  "창": "Genesis", "창세기": "Genesis", "출": "Exodus", "출애굽기": "Exodus",
-  "레": "Leviticus", "레위기": "Leviticus", "민": "Numbers", "민수기": "Numbers",
-  "신": "Deuteronomy", "신명기": "Deuteronomy", "수": "Joshua", "여호수아": "Joshua",
-  "삿": "Judges", "사사기": "Judges", "룻": "Ruth", "룻기": "Ruth",
-  "삼상": "1 Samuel", "사무엘상": "1 Samuel", "삼하": "2 Samuel", "사무엘하": "2 Samuel",
-  "왕상": "1 Kings", "열왕기상": "1 Kings", "왕하": "2 Kings", "열왕기하": "2 Kings",
-  "대상": "1 Chronicles", "역대상": "1 Chronicles", "대하": "2 Chronicles", "역대하": "2 Chronicles",
-  "스": "Ezra", "에스라": "Ezra", "느": "Nehemiah", "느헤미야": "Nehemiah",
-  "에": "Esther", "에스더": "Esther", "욥": "Job", "욥기": "Job",
-  "시": "Psalms", "시편": "Psalms", "잠": "Proverbs", "잠언": "Proverbs",
-  "전": "Ecclesiastes", "전도서": "Ecclesiastes", "아": "Song of Solomon", "아가": "Song of Solomon",
-  "사": "Isaiah", "이사야": "Isaiah", "렘": "Jeremiah", "예레미야": "Jeremiah",
-  "애": "Lamentations", "예레미야애가": "Lamentations", "겔": "Ezekiel", "에스겔": "Ezekiel",
-  "단": "Daniel", "다니엘": "Daniel", "호": "Hosea", "호세아": "Hosea",
-  "욜": "Joel", "요엘": "Joel", "암": "Amos", "아모스": "Amos",
-  "옵": "Obadiah", "오바댜": "Obadiah", "욘": "Jonah", "요나": "Jonah",
-  "미": "Micah", "미가": "Micah", "나": "Nahum", "나훔": "Nahum",
-  "합": "Habakkuk", "하박국": "Habakkuk", "습": "Zephaniah", "스바냐": "Zephaniah",
-  "학": "Haggai", "학개": "Haggai", "슥": "Zechariah", "스가랴": "Zechariah", "말": "Malachi", "말라기": "Malachi",
-  "마": "Matthew", "마태": "Matthew", "마태복음": "Matthew", 
-  "막": "Mark", "마가": "Mark", "마가복음": "Mark",
-  "눅": "Luke", "누가": "Luke", "누가복음": "Luke",
-  "요": "John", "요한": "John", "요한복음": "John",
-  "행": "Acts", "사도행전": "Acts", "롬": "Romans", "로마서": "Romans",
-  "고전": "1 Corinthians", "고린도전서": "1 Corinthians", "고후": "2 Corinthians", "고린도후서": "2 Corinthians",
-  "갈": "Galatians", "갈라디아서": "Galatians", "엡": "Ephesians", "에베소서": "Ephesians",
-  "빌": "Philippians", "빌립보서": "Philippians", "골": "Colossians", "골로새서": "Colossians",
-  "살전": "1 Thessalonians", "데살로니가전서": "1 Thessalonians", "살후": "2 Thessalonians", "데살로니가후서": "2 Thessalonians",
-  "딤전": "1 Timothy", "디모데전서": "1 Timothy", "딤후": "2 Timothy", "디모데후서": "2 Timothy",
-  "딛": "Titus", "디도서": "Titus", "몬": "Philemon", "빌레몬서": "Philemon",
-  "히": "Hebrews", "히브리서": "Hebrews", "약": "James", "야고보서": "James",
-  "벧전": "1 Peter", "베드로전서": "1 Peter", "벧후": "2 Peter", "베드로후서": "2 Peter",
-  "요일": "1 John", "요한일서": "1 John", "요이": "2 John", "요한이서": "2 John",
-  "요삼": "3 John", "요한삼서": "3 John", "유": "Jude", "유다서": "Jude", "계": "Revelation", "요한계시록": "Revelation"
+  창: 'Genesis',
+  창세기: 'Genesis',
+  출: 'Exodus',
+  출애굽기: 'Exodus',
+  레: 'Leviticus',
+  레위기: 'Leviticus',
+  민: 'Numbers',
+  민수기: 'Numbers',
+  신: 'Deuteronomy',
+  신명기: 'Deuteronomy',
+  수: 'Joshua',
+  여호수아: 'Joshua',
+  삿: 'Judges',
+  사사기: 'Judges',
+  룻: 'Ruth',
+  룻기: 'Ruth',
+  삼상: '1 Samuel',
+  사무엘상: '1 Samuel',
+  삼하: '2 Samuel',
+  사무엘하: '2 Samuel',
+  왕상: '1 Kings',
+  열왕기상: '1 Kings',
+  왕하: '2 Kings',
+  열왕기하: '2 Kings',
+  대상: '1 Chronicles',
+  역대상: '1 Chronicles',
+  대하: '2 Chronicles',
+  역대하: '2 Chronicles',
+  스: 'Ezra',
+  에스라: 'Ezra',
+  느: 'Nehemiah',
+  느헤미야: 'Nehemiah',
+  에: 'Esther',
+  에스더: 'Esther',
+  욥: 'Job',
+  욥기: 'Job',
+  시: 'Psalms',
+  시편: 'Psalms',
+  잠: 'Proverbs',
+  잠언: 'Proverbs',
+  전: 'Ecclesiastes',
+  전도서: 'Ecclesiastes',
+  아: 'Song of Solomon',
+  아가: 'Song of Solomon',
+  사: 'Isaiah',
+  이사야: 'Isaiah',
+  렘: 'Jeremiah',
+  예레미야: 'Jeremiah',
+  애: 'Lamentations',
+  예레미야애가: 'Lamentations',
+  겔: 'Ezekiel',
+  에스겔: 'Ezekiel',
+  단: 'Daniel',
+  다니엘: 'Daniel',
+  호: 'Hosea',
+  호세아: 'Hosea',
+  욜: 'Joel',
+  요엘: 'Joel',
+  암: 'Amos',
+  아모스: 'Amos',
+  옵: 'Obadiah',
+  오바댜: 'Obadiah',
+  욘: 'Jonah',
+  요나: 'Jonah',
+  미: 'Micah',
+  미가: 'Micah',
+  나: 'Nahum',
+  나훔: 'Nahum',
+  합: 'Habakkuk',
+  하박국: 'Habakkuk',
+  습: 'Zephaniah',
+  스바냐: 'Zephaniah',
+  학: 'Haggai',
+  학개: 'Haggai',
+  슥: 'Zechariah',
+  스가랴: 'Zechariah',
+  말: 'Malachi',
+  말라기: 'Malachi',
+  마: 'Matthew',
+  마태: 'Matthew',
+  마태복음: 'Matthew',
+  막: 'Mark',
+  마가: 'Mark',
+  마가복음: 'Mark',
+  눅: 'Luke',
+  누가: 'Luke',
+  누가복음: 'Luke',
+  요: 'John',
+  요한: 'John',
+  요한복음: 'John',
+  행: 'Acts',
+  사도행전: 'Acts',
+  롬: 'Romans',
+  로마서: 'Romans',
+  고전: '1 Corinthians',
+  고린도전서: '1 Corinthians',
+  고후: '2 Corinthians',
+  고린도후서: '2 Corinthians',
+  갈: 'Galatians',
+  갈라디아서: 'Galatians',
+  엡: 'Ephesians',
+  에베소서: 'Ephesians',
+  빌: 'Philippians',
+  빌립보서: 'Philippians',
+  골: 'Colossians',
+  골로새서: 'Colossians',
+  살전: '1 Thessalonians',
+  데살로니가전서: '1 Thessalonians',
+  살후: '2 Thessalonians',
+  데살로니가후서: '2 Thessalonians',
+  딤전: '1 Timothy',
+  디모데전서: '1 Timothy',
+  딤후: '2 Timothy',
+  디모데후서: '2 Timothy',
+  딛: 'Titus',
+  디도서: 'Titus',
+  몬: 'Philemon',
+  빌레몬서: 'Philemon',
+  히: 'Hebrews',
+  히브리서: 'Hebrews',
+  약: 'James',
+  야고보서: 'James',
+  벧전: '1 Peter',
+  베드로전서: '1 Peter',
+  벧후: '2 Peter',
+  베드로후서: '2 Peter',
+  요일: '1 John',
+  요한일서: '1 John',
+  요이: '2 John',
+  요한이서: '2 John',
+  요삼: '3 John',
+  요한삼서: '3 John',
+  유: 'Jude',
+  유다서: 'Jude',
+  계: 'Revelation',
+  요한계시록: 'Revelation'
 };
 
 function CommunityQtSquareInner({ authUser, isDarkMode, date, bibles = [], onOpenGalaxyPopup }) {
@@ -1223,7 +1458,7 @@ function CommunityQtSquareInner({ authUser, isDarkMode, date, bibles = [], onOpe
   const [commentInputs, setCommentInputs] = useState({});
   const [replyTarget, setReplyTarget] = useState(null);
   const [activeTab, setActiveTab] = useState('all');
-  
+
   const [showWriteModal, setShowWriteModal] = useState(false);
   const [editingPostId, setEditingPostId] = useState(null);
 
@@ -1236,9 +1471,17 @@ function CommunityQtSquareInner({ authUser, isDarkMode, date, bibles = [], onOpe
 
   const userName = authUser?.name || '성도';
   const userRole = authUser?.role || '목원';
-  
+
   const isPastor = userRole === '목사' || userRole === '운영자' || userName === '정신동';
   const isDark = isDarkMode;
+
+  const surfaceBg = isDark ? 'bg-[#181B20]' : 'bg-white';
+  const subSurfaceBg = isDark ? 'bg-[#22262E]' : 'bg-[#F2F4F6]';
+  const borderClass = isDark ? 'border-[#262A32]' : 'border-[#E5E8EB]';
+  const dividerClass = isDark ? 'divide-[#262A32]' : 'divide-[#F2F4F6]';
+  const textMain = isDark ? 'text-[#F9FAFB]' : 'text-[#191F28]';
+  const textSub = isDark ? 'text-[#9BA3B0]' : 'text-[#6B7684]';
+  const activeChipClass = isDark ? 'bg-[#F9FAFB] text-[#101216]' : 'bg-[#191F28] text-white';
 
   const todayQtData = useMemo(() => {
     try {
@@ -1259,7 +1502,7 @@ function CommunityQtSquareInner({ authUser, isDarkMode, date, bibles = [], onOpe
       .order('created_at', { ascending: false });
 
     if (pData) {
-      const decryptedPosts = pData.map(p => ({
+      const decryptedPosts = pData.map((p) => ({
         ...p,
         hard_part: decryptField(p.hard_part),
         meditation_share: decryptField(p.meditation_share),
@@ -1267,17 +1510,17 @@ function CommunityQtSquareInner({ authUser, isDarkMode, date, bibles = [], onOpe
       }));
       setPosts(decryptedPosts);
 
-      const postIds = pData.map(p => p.id);
+      const postIds = pData.map((p) => p.id);
       if (postIds.length > 0) {
         const { data: cData } = await supabase
           .from('community_qt_comments')
           .select('*')
           .in('post_id', postIds)
           .order('created_at', { ascending: true });
-        
+
         if (cData) {
           const map = {};
-          cData.forEach(c => {
+          cData.forEach((c) => {
             if (!map[c.post_id]) map[c.post_id] = [];
             map[c.post_id].push({
               ...c,
@@ -1295,7 +1538,8 @@ function CommunityQtSquareInner({ authUser, isDarkMode, date, bibles = [], onOpe
 
     if (!supabase) return;
     let isMounted = true;
-    const sub = supabase.channel(`community_qt_channel_${date}`)
+    const sub = supabase
+      .channel(`community_qt_channel_${date}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'community_qt_posts' }, () => {
         if (isMounted) fetchPostsAndComments();
       })
@@ -1325,7 +1569,7 @@ function CommunityQtSquareInner({ authUser, isDarkMode, date, bibles = [], onOpe
 
         const engBook = FULL_BIBLE_MAP_QT[bookRaw];
         if (engBook) {
-          const foundBook = bibles.find(b => b.name === engBook);
+          const foundBook = bibles.find((b) => b.name === engBook);
           if (foundBook && foundBook.chapters && foundBook.chapters[chapNum - 1]) {
             const verseText = foundBook.chapters[chapNum - 1][verseNum - 1];
             if (verseText) {
@@ -1334,8 +1578,8 @@ function CommunityQtSquareInner({ authUser, isDarkMode, date, bibles = [], onOpe
               const replacement = `\n[${bookRaw} ${chapNum}:${verseNum}] "${cleanVerse}"\n`;
               const startIdx = beforeText.length - match[0].length;
               const nextVal = val.substring(0, startIdx) + replacement + val.substring(cursorPos);
-              
-              setForm(prev => ({ ...prev, [field]: nextVal }));
+
+              setForm((prev) => ({ ...prev, [field]: nextVal }));
               setTimeout(() => {
                 target.selectionStart = target.selectionEnd = startIdx + replacement.length;
               }, 0);
@@ -1351,7 +1595,7 @@ function CommunityQtSquareInner({ authUser, isDarkMode, date, bibles = [], onOpe
 
     if (isWritingAsPastor) {
       if (!form.hardPart.trim() && !form.meditationShare.trim()) {
-        return alert('오늘의 QT 해석 또는 묵상 이야기를 입력해주세요.');
+        return alert('오늘의 큐티 해석 또는 묵상 이야기를 입력해주세요.');
       }
     } else {
       if (!form.meditationShare.trim() && !form.hardPart.trim()) {
@@ -1432,37 +1676,35 @@ function CommunityQtSquareInner({ authUser, isDarkMode, date, bibles = [], onOpe
       fetchPostsAndComments();
     }
 
-    setCommentInputs(prev => ({ ...prev, [postId]: '' }));
+    setCommentInputs((prev) => ({ ...prev, [postId]: '' }));
     setReplyTarget(null);
   };
 
   const filteredPosts = useMemo(() => {
     if (activeTab === 'pastor') {
-      return posts.filter(p => p.is_pastor_notice);
+      return posts.filter((p) => p.is_pastor_notice);
     }
     return posts;
   }, [posts, activeTab]);
 
   return (
     <div className="flex-1 flex flex-col h-full w-full relative overflow-hidden select-none">
-      <div className={`flex px-2 sm:px-4 py-2 border-b backdrop-blur-xl shrink-0 relative z-20 gap-2 items-center justify-between ${isDark ? 'border-white/10 bg-slate-900/60' : 'border-stone-200/70 bg-white/75'}`}>
-        <div className="flex gap-1 p-1 rounded-xl bg-stone-100 dark:bg-white/5 border border-stone-200/60 dark:border-white/10">
-          <button 
-            onClick={() => setActiveTab('all')} 
-            className={`px-2.5 py-1 rounded-lg text-[11.5px] font-bold transition-all cursor-pointer ${
-              activeTab === 'all' 
-                ? 'bg-white text-stone-800 dark:bg-stone-200 dark:text-stone-900 shadow-xs' 
-                : 'text-stone-500 hover:text-stone-800 dark:hover:text-stone-200'
+      <div className={`flex px-4 sm:px-6 py-2.5 border-b ${borderClass} ${surfaceBg} shrink-0 relative z-20 gap-2 items-center justify-between`}>
+        <div className={`flex gap-1 p-0.5 rounded-xl ${subSurfaceBg}`}>
+          <button
+            type="button"
+            onClick={() => setActiveTab('all')}
+            className={`px-3 py-1 rounded-lg text-[12px] font-bold transition-colors cursor-pointer ${
+              activeTab === 'all' ? activeChipClass : textSub
             }`}
           >
             전체 나눔 ({posts.length})
           </button>
-          <button 
-            onClick={() => setActiveTab('pastor')} 
-            className={`px-2.5 py-1 rounded-lg text-[11.5px] font-bold transition-all cursor-pointer ${
-              activeTab === 'pastor' 
-                ? 'bg-white text-stone-800 dark:bg-stone-200 dark:text-stone-900 shadow-xs' 
-                : 'text-stone-500 hover:text-stone-800 dark:hover:text-stone-200'
+          <button
+            type="button"
+            onClick={() => setActiveTab('pastor')}
+            className={`px-3 py-1 rounded-lg text-[12px] font-bold transition-colors cursor-pointer ${
+              activeTab === 'pastor' ? activeChipClass : textSub
             }`}
           >
             목사님 나눔
@@ -1471,89 +1713,69 @@ function CommunityQtSquareInner({ authUser, isDarkMode, date, bibles = [], onOpe
 
         {activeTab === 'pastor' ? (
           isPastor && (
-            <button 
+            <button
+              type="button"
               onClick={() => {
                 setEditingPostId(null);
                 setForm({ hardPart: '', meditationShare: '', pastorGuide: '', isPastorNotice: true });
                 setShowWriteModal(true);
               }}
-              className="px-3 py-1.5 rounded-xl bg-stone-800 hover:bg-stone-900 dark:bg-stone-200 dark:hover:bg-white text-white dark:text-stone-900 text-[11.5px] font-bold shadow-xs active:scale-95 transition-all cursor-pointer"
+              className="px-3.5 py-2 rounded-xl bg-[#2563EB] text-white text-[12px] font-bold cursor-pointer"
             >
-              ✍️ 목사님 나눔 쓰기
+              목사님 나눔 작성
             </button>
           )
         ) : (
-          <button 
+          <button
+            type="button"
             onClick={() => {
               setEditingPostId(null);
               setForm({ hardPart: '', meditationShare: '', pastorGuide: '', isPastorNotice: false });
               setShowWriteModal(true);
             }}
-            className="px-3 py-1.5 rounded-xl bg-stone-800 hover:bg-stone-900 dark:bg-stone-200 dark:hover:bg-white text-white dark:text-stone-900 text-[11.5px] font-bold shadow-xs active:scale-95 transition-all cursor-pointer"
+            className="px-3.5 py-2 rounded-xl bg-[#2563EB] text-white text-[12px] font-bold cursor-pointer"
           >
             나의 묵상 올리기
           </button>
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-2 sm:p-4 space-y-3 relative z-10 hide-scrollbar pb-24 w-full max-w-3xl mx-auto">
+      <div className="flex-1 overflow-y-auto px-4 sm:px-6 pt-4 space-y-4 relative z-10 hide-scrollbar pb-24 w-full max-w-[760px] mx-auto">
         {filteredPosts.length === 0 ? (
-          <div className="p-10 rounded-2xl border border-stone-200/70 dark:border-white/10 bg-white/70 dark:bg-[#181A20]/70 backdrop-blur-xl text-center flex flex-col items-center justify-center gap-2">
-            <span className="text-2xl">🌱</span>
-            <p className="text-[13px] font-bold text-stone-700 dark:text-stone-300">등록된 묵상 나눔이 없습니다.</p>
-            <p className="text-[11px] text-stone-400">
-              {activeTab === 'pastor' ? '목사님의 말씀 나눔을 기다리고 있습니다.' : '오늘 주신 은혜를 가장 먼저 나눠보세요.'}
+          <div className={`p-10 rounded-3xl border ${borderClass} ${surfaceBg} text-center space-y-1.5`}>
+            <p className={`text-[15px] font-bold ${textMain}`}>등록된 묵상 나눔이 없습니다.</p>
+            <p className={`text-[12px] ${textSub}`}>
+              {activeTab === 'pastor' ? '목사님의 말씀 나눔이 등록되면 이곳에 표시됩니다.' : '오늘 주신 은혜를 가장 먼저 나눠보세요.'}
             </p>
           </div>
         ) : (
-          filteredPosts.map(post => {
+          filteredPosts.map((post) => {
             const allComments = comments[post.id] || [];
-            const rootComments = allComments.filter(child => !child.parent_id);
+            const rootComments = allComments.filter((child) => !child.parent_id);
             const isMyPost = post.author_name === userName;
 
             return (
-              <div 
-                key={post.id} 
-                className={`p-3.5 rounded-xl border backdrop-blur-xl flex flex-col gap-2 transition-all ${
-                  post.is_pastor_notice 
-                    ? 'bg-[#FDFCF9] dark:bg-[#1C1A16] border-amber-200/80 dark:border-amber-900/30' 
-                    : 'bg-white/85 dark:bg-[#181A20]/80 border-stone-200/80 dark:border-white/10 shadow-xs'
-                }`}
-              >
-                <div className="flex justify-between items-center border-b border-stone-200/50 dark:border-white/10 pb-1.5">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-[13.5px] text-stone-800 dark:text-white">
-                      {post.author_name}
+              <div key={post.id} className={`${surfaceBg} rounded-3xl border ${borderClass} overflow-hidden divide-y ${dividerClass}`}>
+                {/* 작성자 헤더 */}
+                <div className="px-5 py-4 flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                    <span className={`font-bold text-[15px] ${textMain}`}>{post.author_name}</span>
+                    <span className={`text-[12px] font-bold px-2 py-0.5 rounded-lg ${subSurfaceBg} ${textSub}`}>
+                      {post.is_pastor_notice ? '목사님 나눔' : post.author_role || '성도'}
                     </span>
-                    {post.is_pastor_notice ? (
-                      <span className="text-[9.5px] font-bold px-1.5 py-0.5 rounded bg-amber-100/80 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
-                        목사님 나눔
-                      </span>
-                    ) : (
-                      <span className="text-[9.5px] font-medium px-1.5 py-0.5 rounded bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300">
-                        {post.author_role || '성도'}
-                      </span>
-                    )}
                   </div>
-                  
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] text-stone-400 font-mono">
+
+                  <div className="flex items-center gap-2">
+                    <span className={`text-[12px] ${textSub}`}>
                       {new Date(post.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
                     </span>
 
                     {isMyPost && (
-                      <div className="flex items-center gap-1 ml-1 border-l pl-2 border-stone-200 dark:border-white/10">
-                        <button 
-                          onClick={() => handleOpenEdit(post)}
-                          className="text-stone-500 hover:text-stone-800 text-[10.5px] font-medium cursor-pointer"
-                        >
+                      <div className="flex items-center gap-1.5 ml-1">
+                        <button type="button" onClick={() => handleOpenEdit(post)} className={`text-[12px] font-bold ${textSub} cursor-pointer`}>
                           수정
                         </button>
-                        <span className="text-stone-300 dark:text-stone-600">|</span>
-                        <button 
-                          onClick={() => handleDeletePost(post.id)}
-                          className="text-rose-500 hover:underline text-[10.5px] font-medium cursor-pointer"
-                        >
+                        <button type="button" onClick={() => handleDeletePost(post.id)} className={`text-[12px] font-bold ${textSub} cursor-pointer`}>
                           삭제
                         </button>
                       </div>
@@ -1561,140 +1783,143 @@ function CommunityQtSquareInner({ authUser, isDarkMode, date, bibles = [], onOpe
                   </div>
                 </div>
 
-                <div className="px-2 py-1 rounded bg-stone-50 dark:bg-black/30 border border-stone-200/50 dark:border-white/5 text-[11px] font-medium text-stone-600 dark:text-stone-300 flex items-center justify-between gap-2">
-                  <span className="truncate">📖 {post.qt_reference} — {post.qt_title}</span>
-                  {onOpenGalaxyPopup && (
-                    <div className="flex items-center gap-1 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => onOpenGalaxyPopup('arc', post.qt_reference)}
-                        className="px-1.5 py-0.5 rounded bg-amber-400 text-slate-950 text-[9.5px] font-black cursor-pointer"
-                      >
-                        🌈 아크
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onOpenGalaxyPopup('2d', post.qt_reference)}
-                        className="px-1.5 py-0.5 rounded bg-cyan-400 text-slate-950 text-[9.5px] font-black cursor-pointer"
-                      >
-                        🌌 은하계
-                      </button>
+                {/* 본문 참조 및 내용 */}
+                <div className="p-5 space-y-3">
+                  <div className={`px-3.5 py-2 rounded-xl ${subSurfaceBg} text-[12px] font-bold ${textSub} flex items-center justify-between gap-2`}>
+                    <span className="truncate">
+                      {post.qt_reference} — {post.qt_title}
+                    </span>
+                    {onOpenGalaxyPopup && (
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => onOpenGalaxyPopup('arc', post.qt_reference)}
+                          className={`px-2 py-0.5 rounded-md ${surfaceBg} ${textMain} text-[12px] font-bold cursor-pointer`}
+                        >
+                          아크
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onOpenGalaxyPopup('2d', post.qt_reference)}
+                          className={`px-2 py-0.5 rounded-md ${surfaceBg} ${textMain} text-[12px] font-bold cursor-pointer`}
+                        >
+                          은하계
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {post.hard_part && (
+                    <div className="space-y-1">
+                      <span className={`font-bold text-[12px] ${textSub} block`}>
+                        {post.is_pastor_notice ? '구속사적 해석' : '궁금한 구절 및 질문'}
+                      </span>
+                      <p className={`text-[15px] leading-relaxed whitespace-pre-wrap ${textMain}`}>{post.hard_part}</p>
+                    </div>
+                  )}
+
+                  {post.meditation_share && (
+                    <div className="space-y-1">
+                      <span className={`font-bold text-[12px] ${textSub} block`}>
+                        {post.is_pastor_notice ? '목양 권면' : '묵상 나눔 및 적용'}
+                      </span>
+                      <p className={`text-[15px] leading-relaxed whitespace-pre-wrap ${textMain}`}>{post.meditation_share}</p>
                     </div>
                   )}
                 </div>
 
-                {post.is_pastor_notice ? (
-                  <div className="flex flex-col gap-1.5">
-                    {post.hard_part && (
-                      <div className="p-2.5 rounded-lg bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-900/30 flex flex-col gap-1">
-                        <span className="font-bold text-amber-900 dark:text-amber-300 text-[11px]">구속사적 해석</span>
-                        <p className="text-[12.5px] leading-relaxed whitespace-pre-wrap font-medium text-stone-800 dark:text-stone-200">{post.hard_part}</p>
-                      </div>
-                    )}
-                    {post.meditation_share && (
-                      <div className="p-2.5 rounded-lg bg-white/70 dark:bg-black/20 border border-stone-200/60 dark:border-white/5 flex flex-col gap-1">
-                        <span className="font-bold text-stone-700 dark:text-stone-300 text-[11px]">목양 권면 이야기</span>
-                        <p className="text-[12.5px] leading-relaxed whitespace-pre-wrap font-medium text-stone-800 dark:text-stone-200">{post.meditation_share}</p>
-                      </div>
-                    )}
+                {/* 공감 & 댓글 영역 */}
+                <div className="px-5 py-3.5 space-y-3">
+                  <div className="flex justify-between items-center">
+                    <button
+                      type="button"
+                      onClick={() => handleLike(post.id, post.likes_count)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl ${subSurfaceBg} ${textMain} cursor-pointer text-[12px] font-bold`}
+                    >
+                      <Heart className={`w-3.5 h-3.5 ${post.likes_count > 0 ? 'fill-current text-[#2563EB]' : ''}`} />
+                      <span>은혜와 공감</span>
+                      <span>{post.likes_count || 0}</span>
+                    </button>
+                    <span className={`text-[12px] ${textSub}`}>댓글 {allComments.length}개</span>
                   </div>
-                ) : (
-                  <div className="flex flex-col gap-1.5">
-                    {post.hard_part && (
-                      <div className="p-2.5 rounded-lg bg-stone-50 dark:bg-white/5 border border-stone-200/60 dark:border-white/5 text-[12px] leading-relaxed">
-                        <span className="font-bold text-stone-600 dark:text-stone-400 block mb-0.5 text-[10.5px]">이 부분이 어려워요 / 궁금해요</span>
-                        <p className="font-medium whitespace-pre-wrap text-stone-800 dark:text-stone-200">{post.hard_part}</p>
-                      </div>
-                    )}
 
-                    {post.meditation_share && (
-                      <div className="p-2.5 rounded-lg bg-stone-50/60 dark:bg-black/20 border border-stone-200/60 dark:border-white/5 flex flex-col gap-0.5">
-                        <span className="font-bold text-stone-600 dark:text-stone-400 text-[10.5px]">묵상 나눔 및 적용</span>
-                        <p className="text-[12.5px] leading-relaxed whitespace-pre-wrap font-medium text-stone-800 dark:text-stone-200">{post.meditation_share}</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                <div className="flex justify-between items-center pt-1 border-t border-stone-200/50 dark:border-white/10">
-                  <button 
-                    onClick={() => handleLike(post.id, post.likes_count)}
-                    className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-stone-100 dark:bg-white/10 text-stone-600 dark:text-stone-300 hover:text-rose-500 transition-colors cursor-pointer text-[11px] font-bold"
-                  >
-                    <IconHeart filled={post.likes_count > 0} className="w-3.5 h-3.5 text-rose-500" />
-                    <span>은혜와 공감</span>
-                    <span className="font-mono">{post.likes_count || 0}</span>
-                  </button>
-                  <span className="text-[10.5px] text-stone-400">댓글 {allComments.length}개</span>
-                </div>
-
-                <div className="flex flex-col gap-1 pt-1 border-t border-dashed border-stone-200/50 dark:border-white/10">
-                  {rootComments.map(c => {
-                    const childComments = allComments.filter(child => child.parent_id === c.id);
-
-                    return (
-                      <div key={c.id} className="flex flex-col gap-1">
-                        <div className="p-2 rounded-lg bg-stone-50 dark:bg-black/20 text-[11.5px] flex flex-col gap-0.5">
-                          <div className="flex justify-between items-center">
-                            <span className="font-bold text-stone-800 dark:text-stone-200">{c.author_name}</span>
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-[9.5px] text-stone-400 font-mono">{new Date(c.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</span>
-                              <button 
-                                onClick={() => setReplyTarget({ commentId: c.id, authorName: c.author_name, postId: post.id })}
-                                className="text-[10px] font-bold text-stone-500 hover:text-stone-800 cursor-pointer"
-                              >
-                                답글
-                              </button>
+                  {rootComments.length > 0 && (
+                    <div className="space-y-2">
+                      {rootComments.map((c) => {
+                        const childComments = allComments.filter((child) => child.parent_id === c.id);
+                        return (
+                          <div key={c.id} className="space-y-1.5">
+                            <div className={`p-3 rounded-2xl ${subSurfaceBg} space-y-1`}>
+                              <div className="flex justify-between items-center">
+                                <span className={`font-bold text-[12px] ${textMain}`}>{c.author_name}</span>
+                                <div className="flex items-center gap-2">
+                                  <span className={`text-[12px] ${textSub}`}>
+                                    {new Date(c.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => setReplyTarget({ commentId: c.id, authorName: c.author_name, postId: post.id })}
+                                    className={`text-[12px] font-bold ${textSub} cursor-pointer`}
+                                  >
+                                    답글
+                                  </button>
+                                </div>
+                              </div>
+                              <p className={`text-[15px] leading-relaxed whitespace-pre-wrap ${textMain}`}>{c.content}</p>
                             </div>
-                          </div>
-                          <p className="text-stone-700 dark:text-stone-300 whitespace-pre-wrap font-medium">{c.content}</p>
-                        </div>
 
-                        {childComments.map(child => (
-                          <div key={child.id} className="ml-3 p-1.5 rounded-lg bg-stone-100/60 dark:bg-black/30 border-l-2 border-stone-300 dark:border-stone-700 text-[11px] flex flex-col gap-0.5">
-                            <div className="flex justify-between items-center">
-                              <span className="font-bold text-stone-800 dark:text-stone-200 flex items-center gap-1">
-                                <IconCornerDownRight /> {child.author_name}
-                              </span>
-                              <span className="text-[9.5px] text-stone-400 font-mono">{new Date(child.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</span>
-                            </div>
-                            <p className="text-stone-700 dark:text-stone-300 whitespace-pre-wrap font-medium pl-2.5">{child.content}</p>
+                            {childComments.map((child) => (
+                              <div key={child.id} className={`ml-4 p-3 rounded-2xl ${subSurfaceBg} space-y-1`}>
+                                <div className="flex justify-between items-center">
+                                  <span className={`font-bold text-[12px] ${textMain} flex items-center gap-1`}>
+                                    <CornerDownRight className="w-3.5 h-3.5" />
+                                    <span>{child.author_name}</span>
+                                  </span>
+                                  <span className={`text-[12px] ${textSub}`}>
+                                    {new Date(child.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                                  </span>
+                                </div>
+                                <p className={`text-[15px] leading-relaxed whitespace-pre-wrap pl-4 ${textMain}`}>{child.content}</p>
+                              </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
-                    );
-                  })}
+                        );
+                      })}
+                    </div>
+                  )}
 
-                  <div className="flex flex-col gap-1 mt-0.5">
+                  <div className="space-y-1.5">
                     {replyTarget && replyTarget.postId === post.id && (
-                      <div className="flex justify-between items-center px-2 py-0.5 bg-stone-100 dark:bg-stone-800 rounded text-[10px] text-stone-600 dark:text-stone-300 font-medium">
-                        <span>{replyTarget.authorName} 님에게 답글 작성 중...</span>
-                        <button onClick={() => setReplyTarget(null)} className="hover:underline cursor-pointer text-stone-400">취소</button>
+                      <div className={`flex justify-between items-center px-3 py-1.5 ${subSurfaceBg} rounded-xl text-[12px] ${textSub}`}>
+                        <span>{replyTarget.authorName}님에게 답글 작성 중</span>
+                        <button type="button" onClick={() => setReplyTarget(null)} className="cursor-pointer font-bold">
+                          취소
+                        </button>
                       </div>
                     )}
-                    <div className="flex gap-1">
-                      <input 
+                    <div className="flex gap-2">
+                      <input
                         type="text"
-                        placeholder={replyTarget && replyTarget.postId === post.id ? "답글을 입력하세요..." : "따뜻한 은혜의 댓글을 남겨보세요..."}
+                        placeholder={replyTarget && replyTarget.postId === post.id ? '답글을 입력하세요' : '따뜻한 은혜의 댓글을 남겨보세요'}
                         value={commentInputs[post.id] || ''}
-                        onChange={e => setCommentInputs({ ...commentInputs, [post.id]: e.target.value })}
-                        onKeyDown={e => {
+                        onChange={(e) => setCommentInputs({ ...commentInputs, [post.id]: e.target.value })}
+                        onKeyDown={(e) => {
                           if (e.key === 'Enter') {
-                            handleAddComment(post.id, (replyTarget && replyTarget.postId === post.id) ? replyTarget.commentId : null);
+                            handleAddComment(post.id, replyTarget && replyTarget.postId === post.id ? replyTarget.commentId : null);
                           }
                         }}
-                        className="flex-1 px-2.5 py-1.5 rounded-lg text-[11.5px] outline-none bg-stone-50 dark:bg-black/30 border border-stone-200 dark:border-white/10 text-stone-900 dark:text-white placeholder-stone-400 focus:border-stone-400"
+                        className={`flex-1 px-3.5 py-2 rounded-xl text-[15px] outline-none ${subSurfaceBg} ${textMain}`}
                       />
-                      <button 
-                        onClick={() => handleAddComment(post.id, (replyTarget && replyTarget.postId === post.id) ? replyTarget.commentId : null)}
-                        className="px-3 py-1.5 rounded-lg bg-stone-800 hover:bg-stone-900 text-white font-bold text-[11px] cursor-pointer active:scale-95 transition-all"
+                      <button
+                        type="button"
+                        onClick={() => handleAddComment(post.id, replyTarget && replyTarget.postId === post.id ? replyTarget.commentId : null)}
+                        className={`px-4 py-2 rounded-xl ${activeChipClass} font-bold text-[12px] cursor-pointer shrink-0`}
                       >
                         등록
                       </button>
                     </div>
                   </div>
                 </div>
-
               </div>
             );
           })
@@ -1702,106 +1927,96 @@ function CommunityQtSquareInner({ authUser, isDarkMode, date, bibles = [], onOpe
       </div>
 
       {showWriteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/50 backdrop-blur-xs animate-fade-in select-none">
-          <div className="w-full max-w-lg rounded-2xl border border-stone-200 dark:border-white/10 bg-[#FAF9F6] dark:bg-[#16181D] text-stone-800 dark:text-stone-200 shadow-xl flex flex-col max-h-[90vh] overflow-hidden">
-            
-            <div className="px-4 py-3 border-b border-stone-200 dark:border-white/10 flex justify-between items-center bg-white/70 dark:bg-black/20">
-              <span className="font-bold text-[14px] text-stone-900 dark:text-white">
-                {editingPostId 
-                  ? '묵상 나눔 수정하기' 
-                  : (isPastor && form.isPastorNotice ? '목사님 말씀 나눔 작성' : '오늘의 묵상 나눔 작성')}
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/55 select-none">
+          <div className={`w-full max-w-lg rounded-t-3xl sm:rounded-3xl border ${borderClass} ${surfaceBg} ${textMain} flex flex-col max-h-[88vh] overflow-hidden`}>
+            <div className={`px-5 py-4 border-b ${borderClass} flex justify-between items-center`}>
+              <span className="font-bold text-[18px]">
+                {editingPostId ? '묵상 나눔 수정' : isPastor && form.isPastorNotice ? '목사님 말씀 나눔 작성' : '오늘의 묵상 나눔 작성'}
               </span>
-              <button 
-                onClick={() => { setShowWriteModal(false); setEditingPostId(null); }} 
-                className="text-stone-400 hover:text-stone-700 dark:hover:text-white text-xs font-bold p-1 cursor-pointer"
+              <button
+                type="button"
+                onClick={() => {
+                  setShowWriteModal(false);
+                  setEditingPostId(null);
+                }}
+                className={`w-8 h-8 rounded-xl flex items-center justify-center ${subSurfaceBg} cursor-pointer`}
               >
-                닫기 ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="p-3.5 sm:p-4 overflow-y-auto flex-1 space-y-3 hide-scrollbar text-[12.5px]">
-              
-              <div className="p-2.5 rounded-lg bg-white dark:bg-black/30 border border-stone-200/80 dark:border-white/5 flex items-center justify-between">
+            <div className="p-5 overflow-y-auto flex-1 space-y-4 hide-scrollbar">
+              <div className={`p-3.5 rounded-2xl ${subSurfaceBg} flex items-center justify-between`}>
                 <div>
-                  <span className="text-[10px] font-bold text-stone-400 block">연동된 오늘의 본문</span>
-                  <span className="font-bold text-[13px] text-stone-800 dark:text-stone-200 mt-0.5 block">{todayQtData.qtReference || date}</span>
+                  <span className={`text-[12px] font-medium ${textSub} block`}>연동된 오늘의 본문</span>
+                  <span className="font-bold text-[15px] mt-0.5 block">{todayQtData.qtReference || date}</span>
                 </div>
-                <span className="text-[11px] text-stone-500 dark:text-stone-400 truncate max-w-[45%] text-right">{todayQtData.qtTitle || '오늘의 묵상'}</span>
+                <span className={`text-[12px] ${textSub} truncate max-w-[45%] text-right`}>{todayQtData.qtTitle || '오늘의 묵상'}</span>
               </div>
 
               {isPastor && form.isPastorNotice ? (
                 <>
-                  <div className="flex flex-col gap-1">
-                    <div className="flex justify-between items-center">
-                      <span className="font-bold text-stone-800 dark:text-stone-200 text-[12px]">구속사적 본문 해석</span>
-                      <span className="text-[9.5px] text-stone-400">구절 + 스페이스 자동완성</span>
-                    </div>
-                    <textarea 
+                  <div className="space-y-1.5">
+                    <span className="font-bold text-[12px] block">구속사적 본문 해석</span>
+                    <textarea
                       rows={4}
-                      placeholder="오늘 본문 말씀의 구속사적 의미와 성경 해석을 알기 쉽게 기록해주세요..."
+                      placeholder="오늘 본문 말씀의 구속사적 의미와 해석을 기록해주세요"
                       value={form.hardPart}
-                      onChange={e => setForm({ ...form, hardPart: e.target.value })}
-                      onKeyDown={e => handleBibleAutoComplete(e, 'hardPart')}
-                      className="w-full p-2.5 rounded-lg text-[12.5px] leading-relaxed bg-white dark:bg-black/30 border border-stone-200 dark:border-white/10 text-stone-900 dark:text-white placeholder:text-stone-400 outline-none resize-none focus:border-stone-400 font-medium"
+                      onChange={(e) => setForm({ ...form, hardPart: e.target.value })}
+                      onKeyDown={(e) => handleBibleAutoComplete(e, 'hardPart')}
+                      className={`w-full p-4 rounded-2xl text-[15px] leading-relaxed ${subSurfaceBg} ${textMain} outline-none resize-none`}
                     />
                   </div>
 
-                  <div className="flex flex-col gap-1">
-                    <span className="font-bold text-stone-800 dark:text-stone-200 text-[12px]">성도들에게 들려주는 목양 이야기</span>
-                    <textarea 
+                  <div className="space-y-1.5">
+                    <span className="font-bold text-[12px] block">성도들에게 들려주는 목양 이야기</span>
+                    <textarea
                       rows={5}
-                      placeholder="성도들이 오늘 하루를 살아갈 수 있도록 따뜻한 권면과 은혜의 이야기를 들려주세요..."
+                      placeholder="성도들이 오늘 하루를 살아갈 수 있도록 권면과 은혜의 이야기를 남겨주세요"
                       value={form.meditationShare}
-                      onChange={e => setForm({ ...form, meditationShare: e.target.value })}
-                      className="w-full p-2.5 rounded-lg text-[12.5px] leading-relaxed bg-white dark:bg-black/30 border border-stone-200 dark:border-white/10 text-stone-900 dark:text-white placeholder:text-stone-400 outline-none resize-none focus:border-stone-400 font-medium"
+                      onChange={(e) => setForm({ ...form, meditationShare: e.target.value })}
+                      className={`w-full p-4 rounded-2xl text-[15px] leading-relaxed ${subSurfaceBg} ${textMain} outline-none resize-none`}
                     />
                   </div>
                 </>
               ) : (
                 <>
-                  <div className="flex flex-col gap-1">
-                    <div className="flex justify-between items-center">
-                      <span className="font-bold text-stone-800 dark:text-stone-200 text-[12px]">이 부분이 어려워요 / 궁금해요 (선택)</span>
-                      <span className="text-[9.5px] text-stone-400">구절 + 스페이스 자동완성</span>
-                    </div>
-                    <textarea 
+                  <div className="space-y-1.5">
+                    <span className="font-bold text-[12px] block">궁금한 구절 및 질문 (선택)</span>
+                    <textarea
                       rows={3}
-                      placeholder="본문을 읽으며 이해가 잘 안 가거나 목자님께 묻고 싶은 구절을 적어보세요..."
+                      placeholder="본문을 읽으며 이해가 잘 안 가거나 묻고 싶은 구절을 적어보세요"
                       value={form.hardPart}
-                      onChange={e => setForm({ ...form, hardPart: e.target.value })}
-                      onKeyDown={e => handleBibleAutoComplete(e, 'hardPart')}
-                      className="w-full p-2.5 rounded-lg text-[12.5px] leading-relaxed bg-white dark:bg-black/30 border border-stone-200 dark:border-white/10 text-stone-900 dark:text-white placeholder:text-stone-400 outline-none resize-none focus:border-stone-400 font-medium"
+                      onChange={(e) => setForm({ ...form, hardPart: e.target.value })}
+                      onKeyDown={(e) => handleBibleAutoComplete(e, 'hardPart')}
+                      className={`w-full p-4 rounded-2xl text-[15px] leading-relaxed ${subSurfaceBg} ${textMain} outline-none resize-none`}
                     />
                   </div>
 
-                  <div className="flex flex-col gap-1">
-                    <span className="font-bold text-stone-800 dark:text-stone-200 text-[12px]">나의 묵상 나눔 및 삶의 적용</span>
-                    <textarea 
+                  <div className="space-y-1.5">
+                    <span className="font-bold text-[12px] block">나의 묵상 나눔 및 삶의 적용</span>
+                    <textarea
                       rows={5}
-                      placeholder="오늘 말씀을 통해 깨달은 나의 죄와 은혜, 그리고 구체적인 적용을 기록해주세요..."
+                      placeholder="오늘 말씀을 통해 깨달은 은혜와 구체적인 적용을 기록해주세요"
                       value={form.meditationShare}
-                      onChange={e => setForm({ ...form, meditationShare: e.target.value })}
-                      className="w-full p-2.5 rounded-lg text-[12.5px] leading-relaxed bg-white dark:bg-black/30 border border-stone-200 dark:border-white/10 text-stone-900 dark:text-white placeholder:text-stone-400 outline-none resize-none focus:border-stone-400 font-medium"
+                      onChange={(e) => setForm({ ...form, meditationShare: e.target.value })}
+                      className={`w-full p-4 rounded-2xl text-[15px] leading-relaxed ${subSurfaceBg} ${textMain} outline-none resize-none`}
                     />
                   </div>
                 </>
               )}
 
-              <button 
+              <button
+                type="button"
                 onClick={handlePublishPost}
-                className="w-full py-2.5 rounded-xl font-bold text-[13px] bg-stone-800 hover:bg-stone-900 dark:bg-stone-200 dark:hover:bg-white text-white dark:text-stone-900 shadow-xs cursor-pointer active:scale-98 transition-all mt-1"
+                className="w-full py-3.5 rounded-2xl font-bold text-[15px] bg-[#2563EB] hover:bg-[#1D4ED8] text-white cursor-pointer transition-colors"
               >
-                {editingPostId 
-                  ? '수정 완료하기' 
-                  : (isPastor && form.isPastorNotice ? '목사님 말씀 나눔 등록하기' : '공동체 나눔에 등록하기')}
+                {editingPostId ? '수정 완료하기' : isPastor && form.isPastorNotice ? '목사님 말씀 나눔 등록' : '공동체 나눔에 등록'}
               </button>
-
             </div>
-
           </div>
         </div>
       )}
-
     </div>
   );
 }
