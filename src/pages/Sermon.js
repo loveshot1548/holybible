@@ -12,13 +12,45 @@ import {
   splitPericopeAndVerse
 } from '../pages/Bible';
 import bibleData from '../ko_ko.json';
+import {
+  ArrowLeft,
+  BookOpen,
+  Calendar,
+  Camera,
+  Check,
+  ChevronDown,
+  ClipboardPaste,
+  Compass,
+  ExternalLink,
+  FileText,
+  Globe,
+  HandHeart,
+  Image as ImageIcon,
+  Link2,
+  List,
+  Maximize2,
+  Menu,
+  MessageCircle,
+  Mic,
+  Minimize2,
+  PenTool,
+  Pin,
+  Save,
+  Search,
+  Share2,
+  Target,
+  Trash2,
+  Video,
+  Volume2,
+  X
+} from 'lucide-react';
 
 // =====================================================================
 // 암호화 유틸리티 (AES-256 표준 및 구버전 호환)
 // =====================================================================
 const CHAT_SECRET_KEY = process.env.REACT_APP_CHAT_SECRET || 'tree-secret-key-2026';
-const ENC_PREFIX_V2 = "ENC_GTC_v2::";
-const ENC_PREFIX_V1 = "ENC_GTC_v1::";
+const ENC_PREFIX_V2 = 'ENC_GTC_v2::';
+const ENC_PREFIX_V1 = 'ENC_GTC_v1::';
 
 const encryptField = (plainText) => {
   if (!plainText || typeof plainText !== 'string') return plainText;
@@ -57,97 +89,97 @@ const extractBibleReferences = (text) => {
   if (!text) return [];
   const regex = /([가-힣]+(?:서|기|상|하|전|후|일|이|삼)?)\s?(\d+)(?:장|:)\s?(?:(\d+)(?:절)?)?/g;
   const matches = [...text.matchAll(regex)];
-  return Array.from(new Set(matches.map(m => m[0].trim())));
+  return Array.from(new Set(matches.map((m) => m[0].trim())));
 };
 
 // =====================================================================
-// 성경 66권 메타데이터 및 약어 매핑 (스페이스바 자동완성 & 정밀 구절 파서용)
+// 성경 66권 메타데이터 및 약어 매핑
 // =====================================================================
 const BIBLE_ABBR_TO_KO = {
-  "창": "창세기", "출": "출애굽기", "레": "레위기", "민": "민수기", "신": "신명기",
-  "수": "여호수아", "삿": "사사기", "룻": "룻기", "삼상": "사무엘상", "삼하": "사무엘하",
-  "왕상": "열왕기상", "왕하": "열왕기하", "대상": "역대상", "대하": "역대하",
-  "스": "에스라", "느": "느헤미야", "에": "에스더", "욥": "욥기", "시": "시편",
-  "잠": "잠언", "전": "전도서", "아": "아가", "사": "이사야", "렘": "예레미야",
-  "애": "예레미야애가", "겔": "에스겔", "단": "다니엘", "호": "호세아", "욜": "요엘",
-  "암": "아모스", "옵": "오바댜", "욘": "요나", "미": "미가", "나": "나훔",
-  "합": "하박국", "습": "스바냐", "학": "학개", "슥": "스가랴", "말": "말라기",
-  "마": "마태복음", "막": "마가복음", "눅": "누가복음", "요": "요한복음", "행": "사도행전",
-  "롬": "로마서", "고전": "고린도전서", "고후": "고린도후서", "갈": "갈라디아서",
-  "엡": "에베소서", "빌": "빌립보서", "골": "골로새서", "살전": "데살로니가전서",
-  "살후": "데살로니가후서", "딤전": "디모데전서", "딤후": "디모데후서", "딛": "디도서",
-  "몬": "빌레몬서", "히": "히브리서", "약": "야고보서", "벧전": "베드로전서",
-  "벧후": "베드로후서", "요일": "요한일서", "요이": "요한이서", "요삼": "요한삼서",
-  "유": "유다서", "계": "요한계시록"
+  창: '창세기', 출: '출애굽기', 레: '레위기', 민: '민수기', 신: '신명기',
+  수: '여호수아', 삿: '사사기', 룻: '룻기', 삼상: '사무엘상', 삼하: '사무엘하',
+  왕상: '열왕기상', 왕하: '열왕기하', 대상: '역대상', 대하: '역대하',
+  스: '에스라', 느: '느헤미야', 에: '에스더', 욥: '욥기', 시: '시편',
+  잠: '잠언', 전: '전도서', 아: '아가', 사: '이사야', 렘: '예레미야',
+  애: '예레미야애가', 겔: '에스겔', 단: '다니엘', 호: '호세아', 욜: '요엘',
+  암: '아모스', 옵: '오바댜', 욘: '요나', 미: '미가', 나: '나훔',
+  합: '하박국', 습: '스바냐', 학: '학개', 슥: '스가랴', 말: '말라기',
+  마: '마태복음', 막: '마가복음', 눅: '누가복음', 요: '요한복음', 행: '사도행전',
+  롬: '로마서', 고전: '고린도전서', 고후: '고린도후서', 갈: '갈라디아서',
+  엡: '에베소서', 빌: '빌립보서', 골: '골로새서', 살전: '데살로니가전서',
+  살후: '데살로니가후서', 딤전: '디모데전서', 딤후: '디모데후서', 딛: '디도서',
+  몬: '빌레몬서', 히: '히브리서', 약: '야고보서', 벧전: '베드로전서',
+  벧후: '베드로후서', 요일: '요한일서', 요이: '요한이서', 요삼: '요한삼서',
+  유: '유다서', 계: '요한계시록'
 };
 
 const BIBLE_66_MAP = {
-  "Genesis": { ko: "창세기", isOT: true }, "창세기": { ko: "창세기", isOT: true },
-  "Exodus": { ko: "출애굽기", isOT: true }, "출애굽기": { ko: "출애굽기", isOT: true },
-  "Leviticus": { ko: "레위기", isOT: true }, "레위기": { ko: "레위기", isOT: true },
-  "Numbers": { ko: "민수기", isOT: true }, "민수기": { ko: "민수기", isOT: true },
-  "Deuteronomy": { ko: "신명기", isOT: true }, "신명기": { ko: "신명기", isOT: true },
-  "Joshua": { ko: "여호수아", isOT: true }, "여호수아": { ko: "여호수아", isOT: true },
-  "Judges": { ko: "사사기", isOT: true }, "사사기": { ko: "사사기", isOT: true },
-  "Ruth": { ko: "룻기", isOT: true }, "룻기": { ko: "룻기", isOT: true },
-  "1 Samuel": { ko: "사무엘상", isOT: true }, "사무엘상": { ko: "사무엘상", isOT: true },
-  "2 Samuel": { ko: "사무엘하", isOT: true }, "사무엘하": { ko: "사무엘하", isOT: true },
-  "1 Kings": { ko: "열왕기상", isOT: true }, "열왕기상": { ko: "열왕기상", isOT: true },
-  "2 Kings": { ko: "열왕기하", isOT: true }, "열왕기하": { ko: "열왕기하", isOT: true },
-  "1 Chronicles": { ko: "역대상", isOT: true }, "역대상": { ko: "역대상", isOT: true },
-  "2 Chronicles": { ko: "역대하", isOT: true }, "역대하": { ko: "역대하", isOT: true },
-  "Ezra": { ko: "에스라", isOT: true }, "에스라": { ko: "에스라", isOT: true },
-  "Nehemiah": { ko: "느헤미야", isOT: true }, "느헤미야": { ko: "느헤미야", isOT: true },
-  "Esther": { ko: "에스더", isOT: true }, "에스더": { ko: "에스더", isOT: true },
-  "Job": { ko: "욥기", isOT: true }, "욥기": { ko: "욥기", isOT: true },
-  "Psalms": { ko: "시편", isOT: true }, "시편": { ko: "시편", isOT: true },
-  "Proverbs": { ko: "잠언", isOT: true }, "잠언": { ko: "잠언", isOT: true },
-  "Ecclesiastes": { ko: "전도서", isOT: true }, "전도서": { ko: "전도서", isOT: true },
-  "Song of Solomon": { ko: "아가", isOT: true }, "아가": { ko: "아가", isOT: true },
-  "Isaiah": { ko: "이사야", isOT: true }, "이사야": { ko: "이사야", isOT: true },
-  "Jeremiah": { ko: "예레미야", isOT: true }, "예레미야": { ko: "예레미야", isOT: true },
-  "Lamentations": { ko: "예레미야애가", isOT: true }, "예레미야애가": { ko: "예레미야애가", isOT: true },
-  "Ezekiel": { ko: "에스겔", isOT: true }, "에스겔": { ko: "에스겔", isOT: true },
-  "Daniel": { ko: "다니엘", isOT: true }, "다니엘": { ko: "다니엘", isOT: true },
-  "Hosea": { ko: "호세아", isOT: true }, "호세아": { ko: "호세아", isOT: true },
-  "Joel": { ko: "요엘", isOT: true }, "요엘": { ko: "요엘", isOT: true },
-  "Amos": { ko: "아모스", isOT: true }, "아모스": { ko: "아모스", isOT: true },
-  "Obadiah": { ko: "오바댜", isOT: true }, "오바댜": { ko: "오바댜", isOT: true },
-  "Jonah": { ko: "요나", isOT: true }, "요나": { ko: "요나", isOT: true },
-  "Micah": { ko: "미가", isOT: true }, "미가": { ko: "미가", isOT: true },
-  "Nahum": { ko: "나훔", isOT: true }, "나훔": { ko: "나훔", isOT: true },
-  "Habakkuk": { ko: "하박국", isOT: true }, "하박국": { ko: "하박국", isOT: true },
-  "Zephaniah": { ko: "스바냐", isOT: true }, "스바냐": { ko: "스바냐", isOT: true },
-  "Haggai": { ko: "학개", isOT: true }, "학개": { ko: "학개", isOT: true },
-  "Zechariah": { ko: "스가랴", isOT: true }, "스가랴": { ko: "스가랴", isOT: true },
-  "Malachi": { ko: "말라기", isOT: true }, "말라기": { ko: "말라기", isOT: true },
-  "Matthew": { ko: "마태복음", isOT: false }, "마태복음": { ko: "마태복음", isOT: false },
-  "Mark": { ko: "마가복음", isOT: false }, "마가복음": { ko: "마가복음", isOT: false },
-  "Luke": { ko: "누가복음", isOT: false }, "누가복음": { ko: "누가복음", isOT: false },
-  "John": { ko: "요한복음", isOT: false }, "요한복음": { ko: "요한복음", isOT: false },
-  "Acts": { ko: "사도행전", isOT: false }, "사도행전": { ko: "사도행전", isOT: false },
-  "Romans": { ko: "로마서", isOT: false }, "로마서": { ko: "로마서", isOT: false },
-  "1 Corinthians": { ko: "고린도전서", isOT: false }, "고린도전서": { ko: "고린도전서", isOT: false },
-  "2 Corinthians": { ko: "고린도후서", isOT: false }, "고린도후서": { ko: "고린도후서", isOT: false },
-  "Galatians": { ko: "갈라디아서", isOT: false }, "갈라디아서": { ko: "갈라디아서", isOT: false },
-  "Ephesians": { ko: "에베소서", isOT: false }, "에베소서": { ko: "에베소서", isOT: false },
-  "Philippians": { ko: "빌립보서", isOT: false }, "빌립보서": { ko: "빌립보서", isOT: false },
-  "Colossians": { ko: "골로새서", isOT: false }, "골로새서": { ko: "골로새서", isOT: false },
-  "1 Thessalonians": { ko: "데살로니가전서", isOT: false }, "데살로니가전서": { ko: "데살로니가전서", isOT: false },
-  "2 Thessalonians": { ko: "데살로니가후서", isOT: false }, "데살로니가후서": { ko: "데살로니가후서", isOT: false },
-  "1 Timothy": { ko: "디모데전서", isOT: false }, "디모데전서": { ko: "디모데전서", isOT: false },
-  "2 Timothy": { ko: "디모데후서", isOT: false }, "디모데후서": { ko: "디모데후서", isOT: false },
-  "Titus": { ko: "디도서", isOT: false }, "디도서": { ko: "디도서", isOT: false },
-  "Philemon": { ko: "빌레몬서", isOT: false }, "빌레몬서": { ko: "빌레몬서", isOT: false },
-  "Hebrews": { ko: "히브리서", isOT: false }, "히브리서": { ko: "히브리서", isOT: false },
-  "James": { ko: "야고보서", isOT: false }, "야고보서": { ko: "야고보서", isOT: false },
-  "1 Peter": { ko: "베드로전서", isOT: false }, "베드로전서": { ko: "베드로전서", isOT: false },
-  "2 Peter": { ko: "베드로후서", isOT: false }, "베드로후서": { ko: "베드로후서", isOT: false },
-  "1 John": { ko: "요한일서", isOT: false }, "요한일서": { ko: "요한일서", isOT: false },
-  "2 John": { ko: "요한이서", isOT: false }, "요한이서": { ko: "요한이서", isOT: false },
-  "3 John": { ko: "요한삼서", isOT: false }, "요한삼서": { ko: "요한삼서", isOT: false },
-  "Jude": { ko: "유다서", isOT: false }, "유다서": { ko: "유다서", isOT: false },
-  "Revelation": { ko: "요한계시록", isOT: false }, "요한계시록": { ko: "요한계시록", isOT: false }
+  Genesis: { ko: '창세기', isOT: true }, 창세기: { ko: '창세기', isOT: true },
+  Exodus: { ko: '출애굽기', isOT: true }, 출애굽기: { ko: '출애굽기', isOT: true },
+  Leviticus: { ko: '레위기', isOT: true }, 레위기: { ko: '레위기', isOT: true },
+  Numbers: { ko: '민수기', isOT: true }, 민수기: { ko: '민수기', isOT: true },
+  Deuteronomy: { ko: '신명기', isOT: true }, 신명기: { ko: '신명기', isOT: true },
+  Joshua: { ko: '여호수아', isOT: true }, 여호수아: { ko: '여호수아', isOT: true },
+  Judges: { ko: '사사기', isOT: true }, 사사기: { ko: '사사기', isOT: true },
+  Ruth: { ko: '룻기', isOT: true }, 룻기: { ko: '룻기', isOT: true },
+  '1 Samuel': { ko: '사무엘상', isOT: true }, 사무엘상: { ko: '사무엘상', isOT: true },
+  '2 Samuel': { ko: '사무엘하', isOT: true }, 사무엘하: { ko: '사무엘하', isOT: true },
+  '1 Kings': { ko: '열왕기상', isOT: true }, 열왕기상: { ko: '열왕기상', isOT: true },
+  '2 Kings': { ko: '열왕기하', isOT: true }, 열왕기하: { ko: '열왕기하', isOT: true },
+  '1 Chronicles': { ko: '역대상', isOT: true }, 역대상: { ko: '역대상', isOT: true },
+  '2 Chronicles': { ko: '역대하', isOT: true }, 역대하: { ko: '역대하', isOT: true },
+  Ezra: { ko: '에스라', isOT: true }, 에스라: { ko: '에스라', isOT: true },
+  Nehemiah: { ko: '느헤미야', isOT: true }, 느헤미야: { ko: '느헤미야', isOT: true },
+  Esther: { ko: '에스더', isOT: true }, 에스더: { ko: '에스더', isOT: true },
+  Job: { ko: '욥기', isOT: true }, 욥기: { ko: '욥기', isOT: true },
+  Psalms: { ko: '시편', isOT: true }, 시편: { ko: '시편', isOT: true },
+  Proverbs: { ko: '잠언', isOT: true }, 잠언: { ko: '잠언', isOT: true },
+  Ecclesiastes: { ko: '전도서', isOT: true }, 전도서: { ko: '전도서', isOT: true },
+  'Song of Solomon': { ko: '아가', isOT: true }, 아가: { ko: '아가', isOT: true },
+  Isaiah: { ko: '이사야', isOT: true }, 이사야: { ko: '이사야', isOT: true },
+  Jeremiah: { ko: '예레미야', isOT: true }, 예레미야: { ko: '예레미야', isOT: true },
+  Lamentations: { ko: '예레미야애가', isOT: true }, 예레미야애가: { ko: '예레미야애가', isOT: true },
+  Ezekiel: { ko: '에스겔', isOT: true }, 에스겔: { ko: '에스겔', isOT: true },
+  Daniel: { ko: '다니엘', isOT: true }, 다니엘: { ko: '다니엘', isOT: true },
+  Hosea: { ko: '호세아', isOT: true }, 호세아: { ko: '호세아', isOT: true },
+  Joel: { ko: '요엘', isOT: true }, 요엘: { ko: '요엘', isOT: true },
+  Amos: { ko: '아모스', isOT: true }, 아모스: { ko: '아모스', isOT: true },
+  Obadiah: { ko: '오바댜', isOT: true }, 오바댜: { ko: '오바댜', isOT: true },
+  Jonah: { ko: '요나', isOT: true }, 요나: { ko: '요나', isOT: true },
+  Micah: { ko: '미가', isOT: true }, 미가: { ko: '미가', isOT: true },
+  Nahum: { ko: '나훔', isOT: true }, 나훔: { ko: '나훔', isOT: true },
+  Habakkuk: { ko: '하박국', isOT: true }, 하박국: { ko: '하박국', isOT: true },
+  Zephaniah: { ko: '스바냐', isOT: true }, 스바냐: { ko: '스바냐', isOT: true },
+  Haggai: { ko: '학개', isOT: true }, 학개: { ko: '학개', isOT: true },
+  Zechariah: { ko: '스가랴', isOT: true }, 스가랴: { ko: '스가랴', isOT: true },
+  Malachi: { ko: '말라기', isOT: true }, 말라기: { ko: '말라기', isOT: true },
+  Matthew: { ko: '마태복음', isOT: false }, 마태복음: { ko: '마태복음', isOT: false },
+  Mark: { ko: '마가복음', isOT: false }, 마가복음: { ko: '마가복음', isOT: false },
+  Luke: { ko: '누가복음', isOT: false }, 누가복음: { ko: '누가복음', isOT: false },
+  John: { ko: '요한복음', isOT: false }, 요한복음: { ko: '요한복음', isOT: false },
+  Acts: { ko: '사도행전', isOT: false }, 사도행전: { ko: '사도행전', isOT: false },
+  Romans: { ko: '로마서', isOT: false }, 로마서: { ko: '로마서', isOT: false },
+  '1 Corinthians': { ko: '고린도전서', isOT: false }, 고린도전서: { ko: '고린도전서', isOT: false },
+  '2 Corinthians': { ko: '고린도후서', isOT: false }, 고린도후서: { ko: '고린도후서', isOT: false },
+  Galatians: { ko: '갈라디아서', isOT: false }, 갈라디아서: { ko: '갈라디아서', isOT: false },
+  Ephesians: { ko: '에베소서', isOT: false }, 에베소서: { ko: '에베소서', isOT: false },
+  Philippians: { ko: '빌립보서', isOT: false }, 빌립보서: { ko: '빌립보서', isOT: false },
+  Colossians: { ko: '골로새서', isOT: false }, 골로새서: { ko: '골로새서', isOT: false },
+  '1 Thessalonians': { ko: '데살로니가전서', isOT: false }, 데살로니가전서: { ko: '데살로니가전서', isOT: false },
+  '2 Thessalonians': { ko: '데살로니가후서', isOT: false }, 데살로니가후서: { ko: '데살로니가후서', isOT: false },
+  '1 Timothy': { ko: '디모데전서', isOT: false }, 디모데전서: { ko: '디모데전서', isOT: false },
+  '2 Timothy': { ko: '디모데후서', isOT: false }, 디모데후서: { ko: '디모데후서', isOT: false },
+  Titus: { ko: '디도서', isOT: false }, 디도서: { ko: '디도서', isOT: false },
+  Philemon: { ko: '빌레몬서', isOT: false }, 빌레몬서: { ko: '빌레몬서', isOT: false },
+  Hebrews: { ko: '히브리서', isOT: false }, 히브리서: { ko: '히브리서', isOT: false },
+  James: { ko: '야고보서', isOT: false }, 야고보서: { ko: '야고보서', isOT: false },
+  '1 Peter': { ko: '베드로전서', isOT: false }, 베드로전서: { ko: '베드로전서', isOT: false },
+  '2 Peter': { ko: '베드로후서', isOT: false }, 베드로후서: { ko: '베드로후서', isOT: false },
+  '1 John': { ko: '요한일서', isOT: false }, 요한일서: { ko: '요한일서', isOT: false },
+  '2 John': { ko: '요한이서', isOT: false }, 요한이서: { ko: '요한이서', isOT: false },
+  '3 John': { ko: '요한삼서', isOT: false }, 요한삼서: { ko: '요한삼서', isOT: false },
+  Jude: { ko: '유다서', isOT: false }, 유다서: { ko: '유다서', isOT: false },
+  Revelation: { ko: '요한계시록', isOT: false }, 요한계시록: { ko: '요한계시록', isOT: false }
 };
 
 let cachedMasterStrongs = null;
@@ -173,8 +205,8 @@ const ensureMasterStrongs = async () => {
   if (masterStrongsLoadingPromise) return masterStrongsLoadingPromise;
 
   masterStrongsLoadingPromise = fetch('/data/strongs_korean_master.json')
-    .then(res => res.ok ? res.json() : fetch('/data/strongs_korean.json').then(r => r.json()))
-    .then(data => {
+    .then((res) => (res.ok ? res.json() : fetch('/data/strongs_korean.json').then((r) => r.json())))
+    .then((data) => {
       cachedMasterStrongs = data || {};
       return cachedMasterStrongs;
     })
@@ -267,7 +299,7 @@ const speakOriginalAudio = (text, isOT) => {
   try {
     if (!('speechSynthesis' in window)) return;
     window.speechSynthesis.cancel();
-    const clean = isOT ? (text || '').replace(/[\u0591-\u05AF]/g, '') : (text || '');
+    const clean = isOT ? (text || '').replace(/[\u0591-\u05AF]/g, '') : text || '';
     const utterance = new SpeechSynthesisUtterance(clean);
     utterance.lang = isOT ? 'he-IL' : 'el-GR';
     utterance.rate = 0.85;
@@ -276,16 +308,13 @@ const speakOriginalAudio = (text, isOT) => {
 };
 
 // =====================================================================
-// 🌟 [핵심 해결 1 & 2]
-// - 내가 적은 구절(예: 창 1:1, 롬 8:28-30)만 정확히 추출하는 파서!
-// - 에디터나 입력창에서 '창1:1 ' 치고 스페이스바 누르면 즉시 본문으로 변환하는 엔진!
+// 성경 구절 정밀 파서 및 스페이스바 자동완성 엔진
 // =====================================================================
 const parseFlexibleBibleRef = (refString) => {
   if (!refString || typeof refString !== 'string') return null;
   const trimmed = refString.trim();
   if (!trimmed) return null;
 
-  // 예: "창 1:1-3", "창세기1:1", "요 3장 16절", "고전 13:4~7", "창 1장"
   const regex = /^([가-힣a-zA-Z0-9\s]+?)\s*(\d+)\s*(?:장|:)\s*(?:(\d+)\s*(?:[-~]\s*(\d+))?\s*절?)?$/;
   const match = trimmed.match(regex);
 
@@ -318,7 +347,7 @@ const parseFlexibleBibleRef = (refString) => {
 
   const bookKo = BIBLE_ABBR_TO_KO[rawBook] || rawBook;
   const canonMeta = BIBLE_66_CANON.find(
-    b => b.ko === bookKo || b.en.toLowerCase() === rawBook.toLowerCase() || b.ko.startsWith(rawBook)
+    (b) => b.ko === bookKo || b.en.toLowerCase() === rawBook.toLowerCase() || b.ko.startsWith(rawBook)
   );
   if (!canonMeta) return null;
 
@@ -337,8 +366,6 @@ const getLocalScriptureVerses = (refString, krv4Db = null) => {
   if (!parsed) return { parsed: null, verses: [], allChapterVerses: [], isKrv4: false };
 
   const chIdx = Math.max(0, (parsed.chapter || 1) - 1);
-
-  // 1순위: 개역개정 4판(public/개역개정4판(구약+신약).txt)에서 조회
   const activeKrv4 = krv4Db || (typeof window !== 'undefined' ? window.__GTC_KRV4_DB__ : null);
   let chapArr =
     activeKrv4?.[parsed.bookEn]?.[chIdx] ||
@@ -347,11 +374,8 @@ const getLocalScriptureVerses = (refString, krv4Db = null) => {
 
   let isKrv4 = Array.isArray(chapArr) && chapArr.length > 0;
 
-  // 2순위 폴백: ko_ko.json
   if (!isKrv4) {
-    const rawBook = (Array.isArray(bibleData) ? bibleData : []).find(
-      b => b.name === parsed.bookEn || b.name === parsed.bookKo
-    );
+    const rawBook = (Array.isArray(bibleData) ? bibleData : []).find((b) => b.name === parsed.bookEn || b.name === parsed.bookKo);
     chapArr = rawBook?.chapters?.[chIdx] || [];
   }
 
@@ -371,9 +395,8 @@ const getLocalScriptureVerses = (refString, krv4Db = null) => {
     };
   });
 
-  // 🌟 사용자가 절을 지정했으면(예: 창 1:1 또는 롬 8:28-30) 장 전체가 아니라 '내가 적은 그 절만' 정확히 반환!
   const filteredVerses = parsed.hasSpecificVerse
-    ? allChapterVerses.filter(v => v.vNum >= startV && v.vNum <= endV)
+    ? allChapterVerses.filter((v) => v.vNum >= startV && v.vNum <= endV)
     : allChapterVerses;
 
   return {
@@ -391,10 +414,8 @@ const getLocalScriptureVerses = (refString, krv4Db = null) => {
   };
 };
 
-// ⌨️ [스페이스바 성경구절 자동완성 엔진] 텍스트 끝에 '창1:1' 또는 '요3:16-18' 입력 후 스페이스바 누르면 개역개정 4판 구절로 즉시 변환!
 const resolveInlineVerseAutoComplete = (rawTextBeforeCursor, krv4Db = null) => {
   if (!rawTextBeforeCursor) return null;
-  // 문장 맨 끝에 위치한 성경 구절 패턴 감지 (예: "창1:1", "창 1:1-3", "요한복음3:16")
   const match = rawTextBeforeCursor.match(/(?:^|[\s\n(>])([가-힣]{1,6})\s*(\d+):(\d+)(?:[-~](\d+))?$/);
   if (!match) return null;
 
@@ -406,7 +427,7 @@ const resolveInlineVerseAutoComplete = (rawTextBeforeCursor, krv4Db = null) => {
   if (!scriptData.parsed || scriptData.verses.length === 0) return null;
 
   const combinedVerseText = scriptData.verses
-    .map(v => (scriptData.verses.length > 1 ? `(${v.vNum}) ${v.text}` : v.text))
+    .map((v) => (scriptData.verses.length > 1 ? `(${v.vNum}) ${v.text}` : v.text))
     .join(' ');
 
   return {
@@ -418,7 +439,6 @@ const resolveInlineVerseAutoComplete = (rawTextBeforeCursor, krv4Db = null) => {
   };
 };
 
-// 단어·키워드 검색 시에도 개역개정 4판 66권 전체를 최우선 검색!
 const searchBibleByKeyword = (keyword, maxResults = 45, krv4Db = null) => {
   const kw = (keyword || '').trim();
   if (!kw || kw.length < 2) return [];
@@ -456,7 +476,7 @@ const searchBibleByKeyword = (keyword, maxResults = 45, krv4Db = null) => {
   const books = Array.isArray(bibleData) ? bibleData : [];
   for (let bIdx = 0; bIdx < books.length; bIdx++) {
     const bookObj = books[bIdx];
-    const canon = BIBLE_66_CANON.find(c => c.en === bookObj.name || c.ko === bookObj.name);
+    const canon = BIBLE_66_CANON.find((c) => c.en === bookObj.name || c.ko === bookObj.name);
     const koBook = canon ? canon.ko : bookObj.name;
     const chaps = bookObj.chapters || [];
 
@@ -506,28 +526,35 @@ const ensureTesseractLoaded = () => {
 
 const OCR_CROP_REGIONS = {
   question_box: {
-    label: '하단 적용질문·설교자막 박스',
-    desc: '유튜브 영상 중하단에 뜨는 파란색/어두운 자막 박스(2~4줄)를 정밀 추출합니다.',
-    xRatio: 0.04, yRatio: 0.54, wRatio: 0.86, hRatio: 0.36
+    label: '하단 적용질문·설교자막',
+    xRatio: 0.04,
+    yRatio: 0.54,
+    wRatio: 0.86,
+    hRatio: 0.36
   },
   subtitle_bottom: {
-    label: '하단 1~2줄 자막 바',
-    desc: '영상 맨 아래쪽에 나오는 한 줄 또는 두 줄 설교 자막만 집중 추출합니다.',
-    xRatio: 0.08, yRatio: 0.66, wRatio: 0.82, hRatio: 0.24
+    label: '하단 1~2줄 자막',
+    xRatio: 0.08,
+    yRatio: 0.66,
+    wRatio: 0.82,
+    hRatio: 0.24
   },
   center_banner: {
-    label: '중앙 타이틀·성경구절 배너',
-    desc: '화면 중앙에 크게 표시되는 설교 제목, 대지 타이틀, 성경 본문 구절을 추출합니다.',
-    xRatio: 0.06, yRatio: 0.22, wRatio: 0.88, hRatio: 0.50
+    label: '중앙 타이틀·구절',
+    xRatio: 0.06,
+    yRatio: 0.22,
+    wRatio: 0.88,
+    hRatio: 0.50
   },
   full: {
-    label: '유튜브 영상 전체 영역',
-    desc: '상하단 컨트롤 바를 제외한 유튜브 영상 전체의 모든 글자를 추출합니다.',
-    xRatio: 0.03, yRatio: 0.10, wRatio: 0.94, hRatio: 0.80
+    label: '영상 전체 영역',
+    xRatio: 0.03,
+    yRatio: 0.10,
+    wRatio: 0.94,
+    hRatio: 0.80
   }
 };
 
-// 모바일 세로형 전체 스크린샷 속에서 '유튜브 영상 박스'의 상하좌우 위치를 자동 감지하는 비전 알고리즘
 const detectYoutubePlayerBoundsInScreenshot = (sourceCanvas) => {
   const sw = sourceCanvas.width;
   const sh = sourceCanvas.height;
@@ -547,7 +574,9 @@ const detectYoutubePlayerBoundsInScreenshot = (sourceCanvas) => {
     let totalSampled = 0;
     for (let x = Math.floor(sw * 0.08); x < Math.floor(sw * 0.92); x += stepX) {
       const idx = (y * sw + x) * 4;
-      const r = imgData[idx], g = imgData[idx + 1], b = imgData[idx + 2];
+      const r = imgData[idx],
+        g = imgData[idx + 1],
+        b = imgData[idx + 2];
       const lum = 0.299 * r + 0.587 * g + 0.114 * b;
       if (lum < 95) darkCount++;
       totalSampled++;
@@ -590,7 +619,10 @@ const createHighAccuracyOcrImage = (sourceCanvas, cropMode = 'question_box', pla
   const sw = sourceCanvas.width;
   const sh = sourceCanvas.height;
 
-  let cropX = 0, cropY = 0, cropW = sw, cropH = sh;
+  let cropX = 0,
+    cropY = 0,
+    cropW = sw,
+    cropH = sh;
 
   if (customBox && customBox.w > 0.05 && customBox.h > 0.03) {
     cropX = Math.max(0, Math.floor(sw * customBox.x));
@@ -598,7 +630,10 @@ const createHighAccuracyOcrImage = (sourceCanvas, cropMode = 'question_box', pla
     cropW = Math.min(sw - cropX, Math.max(60, Math.floor(sw * customBox.w)));
     cropH = Math.min(sh - cropY, Math.max(30, Math.floor(sh * customBox.h)));
   } else {
-    let baseX = 0, baseY = 0, baseW = sw, baseH = sh;
+    let baseX = 0,
+      baseY = 0,
+      baseW = sw,
+      baseH = sh;
     if (playerRect && playerRect.width > 120 && window.innerWidth > 0 && window.innerHeight > 0) {
       const scaleX = sw / window.innerWidth;
       const scaleY = sh / window.innerHeight;
@@ -652,7 +687,9 @@ const createHighAccuracyOcrImage = (sourceCanvas, cropMode = 'question_box', pla
   const isDarkSubtitleBox = avgLum < 170;
 
   for (let i = 0; i < data.length; i += 4) {
-    const r = data[i], g = data[i + 1], b = data[i + 2];
+    const r = data[i],
+      g = data[i + 1],
+      b = data[i + 2];
     const lum = 0.299 * r + 0.587 * g + 0.114 * b;
 
     if (isDarkSubtitleBox) {
@@ -688,14 +725,14 @@ const cleanKoreanOcrText = (rawText) => {
   if (!rawText) return '';
   return rawText
     .split('\n')
-    .map(line =>
+    .map((line) =>
       line
         .replace(/[|¦_~`^\\/<>{}[\]§¶©®™£¥€$@#%&*+=]/g, ' ')
         .replace(/\b[a-zA-Z]{1,3}\b/g, ' ')
         .replace(/\s+/g, ' ')
         .trim()
     )
-    .filter(line => {
+    .filter((line) => {
       if (line.length < 2) return false;
       const koreanChars = (line.match(/[가-힣]/g) || []).length;
       return koreanChars >= 2;
@@ -703,32 +740,46 @@ const cleanKoreanOcrText = (rawText) => {
     .join('\n');
 };
 
-// =====================================================================
-// 모던 SaaS 라인 아이콘 세트
-// =====================================================================
-const StrokeWidth = "1.8";
-const IconArrowLeft = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><polyline points="15 18 9 12 15 6" /></svg>;
-const IconMenu = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="18" x2="21" y2="18" /></svg>;
-const IconVideo = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={StrokeWidth} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><rect x="2" y="6" width="20" height="12" rx="2" /><path d="M10 9l5 3-5 3V9z" /></svg>;
-const IconShare = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={StrokeWidth} strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" /><polyline points="16 6 12 2 8 6" /><line x1="12" y1="2" x2="12" y2="15" /></svg>;
-const IconSearch = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={StrokeWidth} strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>;
-const IconList = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={StrokeWidth} strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" /></svg>;
-const IconSave = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={StrokeWidth} strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" /></svg>;
-const IconMic = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={StrokeWidth} strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" /><path d="M19 10v2a7 7 0 0 1-14 0v-2" /><line x1="12" y1="19" x2="12" y2="23" /><line x1="8" y1="23" x2="16" y2="23" /></svg>;
-const IconDocument = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={StrokeWidth} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" /></svg>;
-const IconTool = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={StrokeWidth} strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" /></svg>;
-const IconChevronDown = ({ className }) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={className || "w-4 h-4"}><polyline points="6 9 12 15 18 9" /></svg>;
-const IconMaximize = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" /></svg>;
-const IconCamera = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" /></svg>;
-const IconBookOpen = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={StrokeWidth} strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>;
-const IconExternal = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>;
-
 export default function Sermon({
-  t, isDarkMode, setActiveScreen, isSidebarOpen, setIsSidebarOpen, SubPageHeader, date, isGisangogi, authUser,
-  renderToolbar, sermonEditorRef, handleStickerAdd, handleMemoAdd, handleFileUpload, CanvasEngine, tool, setTool,
-  color, setColor, size, setSize, StickerLayer, currDay = {}, updateDay, onPtrDown, openModal, downloadSermonWord,
-  gisangogiUrl, setGisangogiUrl, getArr, toggleAiDetect, isAiDetecting, ymdStr, extractVideoId, handleUpdateSharedQt, handleUpdateSharedSermon,
-  globalSharedQt = {}, setDailyData, bibles, findBibleText, logUserAction, dailyData = {}
+  t,
+  isDarkMode,
+  setActiveScreen,
+  isSidebarOpen,
+  setIsSidebarOpen,
+  SubPageHeader,
+  date,
+  isGisangogi,
+  authUser,
+  renderToolbar,
+  sermonEditorRef,
+  handleStickerAdd,
+  handleMemoAdd,
+  handleFileUpload,
+  CanvasEngine,
+  tool,
+  setTool,
+  color,
+  setColor,
+  size,
+  setSize,
+  StickerLayer,
+  currDay = {},
+  updateDay,
+  onPtrDown,
+  openModal,
+  downloadSermonWord,
+  gisangogiUrl,
+  setGisangogiUrl,
+  getArr,
+  ymdStr,
+  extractVideoId,
+  handleUpdateSharedQt,
+  handleUpdateSharedSermon,
+  globalSharedQt = {},
+  setDailyData,
+  findBibleText,
+  logUserAction,
+  dailyData = {}
 }) {
   if (!SubPageHeader) return null;
 
@@ -740,6 +791,7 @@ export default function Sermon({
   const ytPlayerBoxRef = useRef(null);
   const cinemaPlayerBoxRef = useRef(null);
   const captureInputRef = useRef(null);
+  const pasteZoneRef = useRef(null);
 
   const [isSanctuaryMode, setIsSanctuaryMode] = useState(() => {
     return localStorage.getItem('sermon_sanctuary_mode') === 'true';
@@ -763,7 +815,9 @@ export default function Sermon({
   const [sttInterimText, setSttInterimText] = useState('');
   const sermonRecRef = useRef(null);
   const sttTargetRef = useRef('notes');
-  useEffect(() => { sttTargetRef.current = sttTargetField; }, [sttTargetField]);
+  useEffect(() => {
+    sttTargetRef.current = sttTargetField;
+  }, [sttTargetField]);
 
   // 전체화면 시네마 워크스테이션 & 원어·아크·말씀찾기 상태
   const [isLiveCinemaMode, setIsLiveCinemaMode] = useState(false);
@@ -774,13 +828,13 @@ export default function Sermon({
   const [selectedWordVerse, setSelectedWordVerse] = useState(1);
   const [customRefQuery, setCustomRefQuery] = useState('');
 
-  // 📖 개역개정 4판 DB 로드 상태 & 말씀·예시구절 멀티 검색 팝업 상태 (로마서 8장 하드코딩 완전 제거!)
+  // 개역개정 4판 DB 로드 상태 & 말씀·예시구절 멀티 검색 팝업 상태
   const [krv4TxtDb, setKrv4TxtDb] = useState(() => (typeof window !== 'undefined' ? window.__GTC_KRV4_DB__ : null));
   const [isBibleFinderOpen, setIsBibleFinderOpen] = useState(false);
   const [finderMode, setFinderMode] = useState('ref');
   const [finderRefInput, setFinderRefInput] = useState('');
   const [showFullChapterInFinder, setShowFullChapterInFinder] = useState(false);
-  const [finderVersionMode, setFinderVersionMode] = useState('krv4'); // 'krv4' | 'parallel'
+  const [finderVersionMode, setFinderVersionMode] = useState('krv4');
   const [finderKeyword, setFinderKeyword] = useState('');
   const [finderKeywordResults, setFinderKeywordResults] = useState([]);
 
@@ -831,27 +885,30 @@ export default function Sermon({
     }
   }, [date, safeDay.sermonCaptures]);
 
-  const syncCapturesToDay = useCallback((nextCaptures) => {
-    setSermonCaptures(nextCaptures);
-    try {
-      localStorage.setItem(`sermon_captures_${date}`, JSON.stringify(nextCaptures));
-    } catch (_) {}
-    if (updateDay) {
-      updateDay({ sermonCaptures: nextCaptures });
-    }
-  }, [date, updateDay]);
+  const syncCapturesToDay = useCallback(
+    (nextCaptures) => {
+      setSermonCaptures(nextCaptures);
+      try {
+        localStorage.setItem(`sermon_captures_${date}`, JSON.stringify(nextCaptures));
+      } catch (_) {}
+      if (updateDay) {
+        updateDay({ sermonCaptures: nextCaptures });
+      }
+    },
+    [date, updateDay]
+  );
 
   useEffect(() => {
     ensureKrv4TxtLoaded().then((parsedMap) => {
       if (parsedMap) setKrv4TxtDb(parsedMap);
     });
     ensureMasterStrongs();
-    fetch('/data/easy_bible.json').then(r => r.ok ? r.json() : {}).then(d => setEasyBibleDb(d || {})).catch(() => {});
-    fetch('/data/web_bible.json').then(r => r.ok ? r.json() : {}).then(d => setWebBibleDb(d || {})).catch(() => {});
-    fetch('/data/commentaries.json').then(r => r.ok ? r.json() : {}).then(d => setCommentaryDb(d || {})).catch(() => {});
-    fetch('/data/matthew_henry.json').then(r => r.ok ? r.json() : {}).then(d => setMatthewHenryDb(d || {})).catch(() => {});
-    fetch('/data/net_notes.json').then(r => r.ok ? r.json() : {}).then(d => setNetNotesDb(d || {})).catch(() => {});
-    fetch('/data/targum_peshitta.json').then(r => r.ok ? r.json() : {}).then(d => setTargumPeshittaDb(d || {})).catch(() => {});
+    fetch('/data/easy_bible.json').then((r) => (r.ok ? r.json() : {})).then((d) => setEasyBibleDb(d || {})).catch(() => {});
+    fetch('/data/web_bible.json').then((r) => (r.ok ? r.json() : {})).then((d) => setWebBibleDb(d || {})).catch(() => {});
+    fetch('/data/commentaries.json').then((r) => (r.ok ? r.json() : {})).then((d) => setCommentaryDb(d || {})).catch(() => {});
+    fetch('/data/matthew_henry.json').then((r) => (r.ok ? r.json() : {})).then((d) => setMatthewHenryDb(d || {})).catch(() => {});
+    fetch('/data/net_notes.json').then((r) => (r.ok ? r.json() : {})).then((d) => setNetNotesDb(d || {})).catch(() => {});
+    fetch('/data/targum_peshitta.json').then((r) => (r.ok ? r.json() : {})).then((d) => setTargumPeshittaDb(d || {})).catch(() => {});
 
     try {
       const saved = localStorage.getItem('custom_lexicon_notes');
@@ -859,12 +916,13 @@ export default function Sermon({
     } catch (_) {}
   }, []);
 
-  // 🌟 로마서 8:28 하드코딩 완전 제거! 사용자가 적은 설교 본문 구절만 정확히 참조
   const activeReferenceStr = useMemo(() => {
-    return (customRefQuery && customRefQuery.trim()) ||
-           (safeDay.sermonReference && safeDay.sermonReference.trim()) ||
-           (globalSharedQt?.[date]?.sermonData?.reference && globalSharedQt[date].sermonData.reference.trim()) ||
-           '';
+    return (
+      (customRefQuery && customRefQuery.trim()) ||
+      (safeDay.sermonReference && safeDay.sermonReference.trim()) ||
+      (globalSharedQt?.[date]?.sermonData?.reference && globalSharedQt[date].sermonData.reference.trim()) ||
+      ''
+    );
   }, [customRefQuery, safeDay.sermonReference, globalSharedQt, date]);
 
   const localScriptureData = useMemo(() => {
@@ -881,217 +939,239 @@ export default function Sermon({
     }
   }, [localScriptureData.parsed?.bookKo, localScriptureData.parsed?.chapter, localScriptureData.parsed?.startV]);
 
+  // 능동형 UI: 예배 노트 작성 완성도 실시간 계산
+  const sermonCompletionPercent = useMemo(() => {
+    let score = 0;
+    if ((safeDay.sermonTitle || globalSharedQt?.[date]?.sermonData?.title || '').trim()) score += 20;
+    if ((safeDay.sermonReference || globalSharedQt?.[date]?.sermonData?.reference || '').trim()) score += 20;
+    if ((safeDay.sermonPoint1 || safeDay.sermonPoint2 || safeDay.sermonPoint3 || '').trim()) score += 20;
+    if ((safeDay.sermonNotes || '').replace(/<[^>]*>?/gm, '').trim()) score += 20;
+    if ((safeDay.sermonGraceLine || safeDay.sermonConviction || '').trim()) score += 20;
+    return score;
+  }, [safeDay, globalSharedQt, date]);
+
   const showToast = useCallback((msg) => {
     setActionToast(msg);
     setTimeout(() => setActionToast(null), 2600);
   }, []);
 
   // =====================================================================
-  // ⌨️ [핵심 복원] 성경구절 적고 스페이스바(Space) 누르면 즉시 개역개정 4판 구절이 자동으로 적히는 기능!
+  // 성경구절 적고 스페이스바(Space) 누르면 즉시 개역개정 4판 구절 자동완성
   // =====================================================================
-  const handleSpacebarVerseAutoCompleteOnInput = useCallback((e, fieldKey, currentVal, customSetter = null) => {
-    if (e.key !== ' ' && e.code !== 'Space') return;
-    const targetEl = e.target;
-    const cursorPos = targetEl.selectionStart ?? (currentVal || '').length;
-    const textBefore = (currentVal || '').slice(0, cursorPos);
-    const textAfter = (currentVal || '').slice(cursorPos);
+  const handleSpacebarVerseAutoCompleteOnInput = useCallback(
+    (e, fieldKey, currentVal, customSetter = null) => {
+      if (e.key !== ' ' && e.code !== 'Space') return;
+      const targetEl = e.target;
+      const cursorPos = targetEl.selectionStart ?? (currentVal || '').length;
+      const textBefore = (currentVal || '').slice(0, cursorPos);
+      const textAfter = (currentVal || '').slice(cursorPos);
 
-    const resolved = resolveInlineVerseAutoComplete(textBefore, krv4TxtDb);
-    if (!resolved) return;
+      const resolved = resolveInlineVerseAutoComplete(textBefore, krv4TxtDb);
+      if (!resolved) return;
 
-    e.preventDefault();
-    const replacedBefore = textBefore.slice(0, textBefore.length - resolved.matchedToken.length) + resolved.formattedPlain;
-    const nextValue = replacedBefore + textAfter;
+      e.preventDefault();
+      const replacedBefore = textBefore.slice(0, textBefore.length - resolved.matchedToken.length) + resolved.formattedPlain;
+      const nextValue = replacedBefore + textAfter;
 
-    if (customSetter) {
-      customSetter(nextValue);
-    } else if (updateDay) {
-      updateDay({ [fieldKey]: nextValue });
-    }
-    showToast(`✨ [${resolved.refLabel}] 개역개정 4판 본문이 자동 완성되었습니다!`);
-  }, [krv4TxtDb, updateDay, showToast]);
+      if (customSetter) {
+        customSetter(nextValue);
+      } else if (updateDay) {
+        updateDay({ [fieldKey]: nextValue });
+      }
+      showToast(`[${resolved.refLabel}] 개역개정 4판 본문이 자동 완성되었습니다.`);
+    },
+    [krv4TxtDb, updateDay, showToast]
+  );
 
-  // RichTextEditor(설교 본문 노트) 내부에서도 '창1:1' 치고 스페이스바 누르면 즉시 개역개정 4판 본문으로 자동 변환!
-  const handleEditorContainerKeyDown = useCallback((e) => {
-    if (e.key !== ' ' && e.code !== 'Space') return;
-    const sel = window.getSelection();
-    if (!sel || !sel.rangeCount) return;
-    const range = sel.getRangeAt(0);
-    const node = range.startContainer;
-    if (!node || node.nodeType !== Node.TEXT_NODE) return;
+  const handleEditorContainerKeyDown = useCallback(
+    (e) => {
+      if (e.key !== ' ' && e.code !== 'Space') return;
+      const sel = window.getSelection();
+      if (!sel || !sel.rangeCount) return;
+      const range = sel.getRangeAt(0);
+      const node = range.startContainer;
+      if (!node || node.nodeType !== Node.TEXT_NODE) return;
 
-    const textBefore = (node.textContent || '').slice(0, range.startOffset);
-    const resolved = resolveInlineVerseAutoComplete(textBefore, krv4TxtDb);
-    if (!resolved) return;
+      const textBefore = (node.textContent || '').slice(0, range.startOffset);
+      const resolved = resolveInlineVerseAutoComplete(textBefore, krv4TxtDb);
+      if (!resolved) return;
 
-    e.preventDefault();
-    const tokenLen = resolved.matchedToken.length;
-    const beforeToken = (node.textContent || '').slice(0, range.startOffset - tokenLen);
-    const afterCursor = (node.textContent || '').slice(range.startOffset);
+      e.preventDefault();
+      const tokenLen = resolved.matchedToken.length;
+      const beforeToken = (node.textContent || '').slice(0, range.startOffset - tokenLen);
+      const afterCursor = (node.textContent || '').slice(range.startOffset);
 
-    const replacementText = `[${resolved.refLabel}] ${resolved.verseText} `;
-    node.textContent = beforeToken + replacementText + afterCursor;
+      const replacementText = `[${resolved.refLabel}] ${resolved.verseText} `;
+      node.textContent = beforeToken + replacementText + afterCursor;
 
-    const newCursorOffset = beforeToken.length + replacementText.length;
-    const newRange = document.createRange();
-    newRange.setStart(node, Math.min(newCursorOffset, node.textContent.length));
-    newRange.collapse(true);
-    sel.removeAllRanges();
-    sel.addRange(newRange);
+      const newCursorOffset = beforeToken.length + replacementText.length;
+      const newRange = document.createRange();
+      newRange.setStart(node, Math.min(newCursorOffset, node.textContent.length));
+      newRange.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(newRange);
 
-    // RichTextEditor의 onChange 동기화 트리거
-    const editableRoot = node.parentElement?.closest('[contenteditable="true"]');
-    if (editableRoot && updateDay) {
-      updateDay({ sermonNotes: editableRoot.innerHTML });
-    }
-    showToast(`✨ [${resolved.refLabel}] 개역개정 4판 말씀이 노트에 자동 입력되었습니다!`);
-  }, [krv4TxtDb, updateDay, showToast]);
+      const editableRoot = node.parentElement?.closest('[contenteditable="true"]');
+      if (editableRoot && updateDay) {
+        updateDay({ sermonNotes: editableRoot.innerHTML });
+      }
+      showToast(`[${resolved.refLabel}] 개역개정 4판 말씀이 노트에 자동 입력되었습니다.`);
+    },
+    [krv4TxtDb, updateDay, showToast]
+  );
 
   // =====================================================================
   // 원어 어절 선택 및 10대 학술 원어 강해 로드
   // =====================================================================
-  const handleSelectInspectorWord = useCallback(async (word) => {
-    setSelectedWordDetail(word);
-    setConcordanceList([]);
-    setConcordanceTotalCount(0);
+  const handleSelectInspectorWord = useCallback(
+    async (word) => {
+      setSelectedWordDetail(word);
+      setConcordanceList([]);
+      setConcordanceTotalCount(0);
 
-    const note = customNotesMap[word.strongs];
-    setCustomInputTrans(note?.translation || '');
-    setCustomInputMemo(note?.memo || '');
+      const note = customNotesMap[word.strongs];
+      setCustomInputTrans(note?.translation || '');
+      setCustomInputMemo(note?.memo || '');
 
-    if (supabase && word.strongs && !word.strongs.endsWith('0000')) {
+      if (supabase && word.strongs && !word.strongs.endsWith('0000')) {
+        try {
+          const { data, count, error } = await supabase
+            .from('interlinear_bible')
+            .select('book, chapter, verse, original_word, korean_trans', { count: 'exact' })
+            .eq('strongs_id', word.strongs)
+            .order('id', { ascending: true })
+            .limit(40);
+
+          if (!error && data) {
+            setConcordanceTotalCount(count || data.length);
+            setConcordanceList(data);
+          }
+        } catch (_) {}
+      }
+    },
+    [customNotesMap]
+  );
+
+  const openMcheyneStyleVerseInspector = useCallback(
+    async (customRefStr, targetVerseNum) => {
+      setMinimizedModals((prev) => ({ ...prev, inspector: false }));
+      const queryStr = (customRefStr && customRefStr.trim()) || activeReferenceStr || '창세기 1:1';
+      const scriptData = getLocalScriptureVerses(queryStr, krv4TxtDb);
+      const parsed = scriptData.parsed || { bookKo: '창세기', bookEn: 'Genesis', chapter: 1, startV: 1 };
+
+      const koBook = parsed.bookKo || '창세기';
+      const chNum = parsed.chapter || 1;
+      const vNum = targetVerseNum || parsed.startV || 1;
+      const bookInfo = BIBLE_66_MAP[koBook] || BIBLE_66_MAP[parsed.bookEn] || { ko: koBook, isOT: true };
+      const isOT = bookInfo.isOT;
+
+      const foundVerseObj = scriptData.allChapterVerses?.find((v) => v.vNum === Number(vNum)) || scriptData.verses[0];
+      const verseText = foundVerseObj?.text || `${koBook} ${chNum}장 ${vNum}절 말씀`;
+
+      const easyKey = `${koBook}-${chNum}-${vNum}`;
+      const easyText = easyBibleDb[easyKey] || '';
+      const webText = webBibleDb[easyKey] || webBibleDb[`${parsed.bookEn}-${chNum}-${vNum}`] || '';
+
+      setInspectorTarget({
+        book: koBook,
+        bookEn: parsed.bookEn,
+        chapter: chNum,
+        verse: vNum,
+        pericope: foundVerseObj?.pericope || null,
+        text: decodeHtmlEntities(verseText),
+        easyText,
+        webText,
+        isOT,
+        allChapterVerses: scriptData.allChapterVerses || scriptData.verses
+      });
+      setInspectorWords([]);
+      setSelectedWordDetail(null);
+      setConcordanceList([]);
+      setConcordanceTotalCount(0);
+      setIsInspectorLoading(true);
+
+      getCrossReferences(koBook, parseInt(chNum, 10), parseInt(vNum, 10))
+        .then((refs) => setCrossRefs(refs || []))
+        .catch(() => setCrossRefs([]));
+
       try {
-        const { data, count, error } = await supabase
+        const masterDict = await ensureMasterStrongs();
+        if (!supabase) return;
+
+        const { data: wordsData } = await supabase
           .from('interlinear_bible')
-          .select('book, chapter, verse, original_word, korean_trans', { count: 'exact' })
-          .eq('strongs_id', word.strongs)
-          .order('id', { ascending: true })
-          .limit(40);
+          .select('*')
+          .eq('book', koBook)
+          .eq('chapter', parseInt(chNum, 10))
+          .eq('verse', parseInt(vNum, 10))
+          .order('word_order', { ascending: true });
 
-        if (!error && data) {
-          setConcordanceTotalCount(count || data.length);
-          setConcordanceList(data);
-        }
-      } catch (_) {}
-    }
-  }, [customNotesMap]);
+        if (wordsData && wordsData.length > 0) {
+          const strongIds = Array.from(new Set(wordsData.map((w) => w.strongs_id).filter(Boolean)));
+          let dictMap = new Map();
 
-  const openMcheyneStyleVerseInspector = useCallback(async (customRefStr, targetVerseNum) => {
-    setMinimizedModals(prev => ({ ...prev, inspector: false }));
-    const queryStr = (customRefStr && customRefStr.trim()) || activeReferenceStr || '창세기 1:1';
-    const scriptData = getLocalScriptureVerses(queryStr, krv4TxtDb);
-    const parsed = scriptData.parsed || { bookKo: '창세기', bookEn: 'Genesis', chapter: 1, startV: 1 };
+          if (strongIds.length > 0) {
+            const { data: dictRows } = await supabase
+              .from('strongs_dictionary')
+              .select('*')
+              .in('strongs_id', strongIds);
 
-    const koBook = parsed.bookKo || '창세기';
-    const chNum = parsed.chapter || 1;
-    const vNum = targetVerseNum || parsed.startV || 1;
-    const bookInfo = BIBLE_66_MAP[koBook] || BIBLE_66_MAP[parsed.bookEn] || { ko: koBook, isOT: true };
-    const isOT = bookInfo.isOT;
+            if (dictRows && dictRows.length > 0) {
+              dictRows.forEach((row) => dictMap.set(row.strongs_id, row));
+            }
+          }
 
-    const foundVerseObj = scriptData.allChapterVerses?.find(v => v.vNum === Number(vNum)) || scriptData.verses[0];
-    const verseText = foundVerseObj?.text || `${koBook} ${chNum}장 ${vNum}절 말씀`;
+          const enriched = wordsData.map((w) => {
+            const sId = (w.strongs_id || '').trim();
+            const master = masterDict?.[sId] || {};
+            const dbDict = dictMap.get(sId) || {};
+            const morph = decodeExhaustiveMorphology(w.grammar);
 
-    const easyKey = `${koBook}-${chNum}-${vNum}`;
-    const easyText = easyBibleDb[easyKey] || '';
-    const webText = webBibleDb[easyKey] || webBibleDb[`${parsed.bookEn}-${chNum}-${vNum}`] || '';
+            const inflectedWord = (w.original_word || '').trim();
+            const lemmaWord = (master.original || dbDict.original_word || inflectedWord).trim();
+            const isInflectedDifferent = lemmaWord && inflectedWord && lemmaWord !== inflectedWord;
 
-    setInspectorTarget({
-      book: koBook,
-      bookEn: parsed.bookEn,
-      chapter: chNum,
-      verse: vNum,
-      pericope: foundVerseObj?.pericope || null,
-      text: decodeHtmlEntities(verseText),
-      easyText,
-      webText,
-      isOT,
-      allChapterVerses: scriptData.allChapterVerses || scriptData.verses
-    });
-    setInspectorWords([]);
-    setSelectedWordDetail(null);
-    setConcordanceList([]);
-    setConcordanceTotalCount(0);
-    setIsInspectorLoading(true);
+            const lemmaMeaning = master.korean || dbDict.meaning || w.korean_trans || '원어 어휘';
+            const finalPron = master.pron || (w.pronunciation ? `[${w.pronunciation.replace(/[[\]]/g, '')}]` : '');
+            const cleanEng = (master.eng || w.gloss || w.korean_trans || 'n/a').toLowerCase();
+            const userCustom = customNotesMap[sId] || null;
 
-    getCrossReferences(koBook, parseInt(chNum, 10), parseInt(vNum, 10))
-      .then(refs => setCrossRefs(refs || []))
-      .catch(() => setCrossRefs([]));
+            return {
+              id: w.id || w.word_order,
+              order: w.word_order,
+              inflected: inflectedWord,
+              lemma: lemmaWord,
+              isInflectedDifferent,
+              pron: finalPron,
+              korContextual: decodeHtmlEntities(userCustom?.translation || lemmaMeaning),
+              korLemma: decodeHtmlEntities(lemmaMeaning),
+              eng: decodeHtmlEntities(cleanEng),
+              grammarDecoded: morph.label,
+              strongs: sId || (isOT ? 'H0000' : 'G0000'),
+              note: decodeHtmlEntities(master.note || ''),
+              userCustomNote: userCustom
+            };
+          });
 
-    try {
-      const masterDict = await ensureMasterStrongs();
-      if (!supabase) return;
-
-      const { data: wordsData } = await supabase
-        .from('interlinear_bible')
-        .select('*')
-        .eq('book', koBook)
-        .eq('chapter', parseInt(chNum, 10))
-        .eq('verse', parseInt(vNum, 10))
-        .order('word_order', { ascending: true });
-
-      if (wordsData && wordsData.length > 0) {
-        const strongIds = Array.from(new Set(wordsData.map(w => w.strongs_id).filter(Boolean)));
-        let dictMap = new Map();
-
-        if (strongIds.length > 0) {
-          const { data: dictRows } = await supabase
-            .from('strongs_dictionary')
-            .select('*')
-            .in('strongs_id', strongIds);
-
-          if (dictRows && dictRows.length > 0) {
-            dictRows.forEach(row => dictMap.set(row.strongs_id, row));
+          setInspectorWords(enriched);
+          if (enriched.length > 0) {
+            handleSelectInspectorWord(enriched[0]);
           }
         }
-
-        const enriched = wordsData.map(w => {
-          const sId = (w.strongs_id || '').trim();
-          const master = masterDict?.[sId] || {};
-          const dbDict = dictMap.get(sId) || {};
-          const morph = decodeExhaustiveMorphology(w.grammar);
-
-          const inflectedWord = (w.original_word || '').trim();
-          const lemmaWord = (master.original || dbDict.original_word || inflectedWord).trim();
-          const isInflectedDifferent = lemmaWord && inflectedWord && lemmaWord !== inflectedWord;
-
-          const lemmaMeaning = master.korean || dbDict.meaning || w.korean_trans || '원어 어휘';
-          const finalPron = master.pron || (w.pronunciation ? `[${w.pronunciation.replace(/[[\]]/g, '')}]` : '');
-          const cleanEng = (master.eng || w.gloss || w.korean_trans || 'n/a').toLowerCase();
-          const userCustom = customNotesMap[sId] || null;
-
-          return {
-            id: w.id || w.word_order,
-            order: w.word_order,
-            inflected: inflectedWord,
-            lemma: lemmaWord,
-            isInflectedDifferent,
-            pron: finalPron,
-            korContextual: decodeHtmlEntities(userCustom?.translation || lemmaMeaning),
-            korLemma: decodeHtmlEntities(lemmaMeaning),
-            eng: decodeHtmlEntities(cleanEng),
-            grammarDecoded: morph.label,
-            strongs: sId || (isOT ? 'H0000' : 'G0000'),
-            note: decodeHtmlEntities(master.note || ''),
-            userCustomNote: userCustom
-          };
-        });
-
-        setInspectorWords(enriched);
-        if (enriched.length > 0) {
-          handleSelectInspectorWord(enriched[0]);
-        }
+      } catch (err) {
+        console.error('원어 인스펙터 로드 오류:', err);
+      } finally {
+        setIsInspectorLoading(false);
       }
-    } catch (err) {
-      console.error("원어 인스펙터 로드 오류:", err);
-    } finally {
-      setIsInspectorLoading(false);
-    }
-  }, [activeReferenceStr, krv4TxtDb, easyBibleDb, webBibleDb, customNotesMap, handleSelectInspectorWord]);
+    },
+    [activeReferenceStr, krv4TxtDb, easyBibleDb, webBibleDb, customNotesMap, handleSelectInspectorWord]
+  );
 
   const handleInsertWordToSermonNote = (word) => {
     if (!word || !inspectorTarget) return;
     const lemmaNotice = word.isInflectedDifferent ? ` (원형: ${word.lemma})` : '';
-    const customMemoNotice = (customInputMemo || word.userCustomNote?.memo) ? `<br/>↳ 연구 메모: ${customInputMemo || word.userCustomNote?.memo}` : '';
+    const customMemoNotice =
+      customInputMemo || word.userCustomNote?.memo ? `<br/>↳ 연구 메모: ${customInputMemo || word.userCustomNote?.memo}` : '';
     const htmlSnippet = `<p><b>[${inspectorTarget.book} ${inspectorTarget.chapter}:${inspectorTarget.verse} 원어강해] ${word.inflected}${lemmaNotice} (${word.strongs})</b>: ${customInputTrans || word.korContextual} — <i>${word.grammarDecoded}</i>${customMemoNotice}</p>`;
 
     const prev = safeDay.sermonNotes || '';
@@ -1102,11 +1182,14 @@ export default function Sermon({
   const handleJumpToInterlinearStudio = () => {
     if (!inspectorTarget) return;
     try {
-      localStorage.setItem('interlinear_jump', JSON.stringify({
-        book: inspectorTarget.book,
-        chapter: Number(inspectorTarget.chapter),
-        verse: Number(inspectorTarget.verse)
-      }));
+      localStorage.setItem(
+        'interlinear_jump',
+        JSON.stringify({
+          book: inspectorTarget.book,
+          chapter: Number(inspectorTarget.chapter),
+          verse: Number(inspectorTarget.verse)
+        })
+      );
     } catch (_) {}
     setInspectorTarget(null);
     if (document.fullscreenElement && document.exitFullscreen) {
@@ -1117,109 +1200,161 @@ export default function Sermon({
   };
 
   // =====================================================================
-  // 팝업 가림 없이 유튜브 영상 자막만 도려내는 스마트 OCR 엔진
+  // 유튜브 자막·적용질문 스마트 OCR 엔진 (붙여넣기 & 사진 불러오기 완벽 복구)
   // =====================================================================
   const [touchCropBox, setTouchCropBox] = useState(null);
   const touchStartRef = useRef(null);
   const fullPreviewImgRef = useRef(null);
 
-  const runOcrOnCaptureItem = useCallback(async (captureItem, customPreset, customTouchBox = null) => {
-    if (!captureItem || !captureItem.imageUrl) return;
-    const activePreset = customPreset || ocrCropPreset;
-    setOcrLoadingId(captureItem.id);
-    showToast('유튜브 자막·적용질문 텍스트를 정밀 판독 중입니다...');
+  const runOcrOnCaptureItem = useCallback(
+    async (captureItem, customPreset, customTouchBox = null) => {
+      if (!captureItem || !captureItem.imageUrl) return;
+      const activePreset = customPreset || ocrCropPreset;
+      setOcrLoadingId(captureItem.id);
+      showToast('자막·적용질문 텍스트를 판독 중입니다...');
 
-    try {
-      const Tesseract = await ensureTesseractLoaded();
+      try {
+        const Tesseract = await ensureTesseractLoaded();
 
-      let targetImgUrl = captureItem.preprocessedUrl || captureItem.subtitleCropUrl || captureItem.imageUrl;
-      let nextSubCropUrl = captureItem.subtitleCropUrl;
+        let targetImgUrl = captureItem.preprocessedUrl || captureItem.subtitleCropUrl || captureItem.imageUrl;
+        let nextSubCropUrl = captureItem.subtitleCropUrl;
 
-      if ((customPreset || customTouchBox) && captureItem.imageUrl) {
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        await new Promise((res, rej) => {
-          img.onload = res;
-          img.onerror = rej;
-          img.src = captureItem.imageUrl;
+        if ((customPreset || customTouchBox) && captureItem.imageUrl) {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          await new Promise((res, rej) => {
+            img.onload = res;
+            img.onerror = rej;
+            img.src = captureItem.imageUrl;
+          });
+          const tempC = document.createElement('canvas');
+          tempC.width = img.width;
+          tempC.height = img.height;
+          tempC.getContext('2d').drawImage(img, 0, 0);
+          const reCropped = createHighAccuracyOcrImage(tempC, activePreset, captureItem.playerRect || null, customTouchBox);
+          targetImgUrl = reCropped.preprocessedDataUrl;
+          nextSubCropUrl = reCropped.croppedPreviewUrl;
+        }
+
+        const result = await Tesseract.recognize(targetImgUrl, 'kor+eng');
+        const cleaned = cleanKoreanOcrText(result?.data?.text || '');
+
+        const finalExtracted =
+          cleaned || '자막을 명확히 인식하지 못했습니다. 아래 원본 화면 위에서 글자 부분만 드래그하여 영역을 지정해 보세요.';
+
+        const updatedItem = {
+          ...captureItem,
+          subtitleCropUrl: nextSubCropUrl || captureItem.subtitleCropUrl,
+          ocrText: finalExtracted
+        };
+
+        setStudioDraftItem(updatedItem);
+
+        setSermonCaptures((prev) => {
+          const exists = prev.some((item) => item.id === updatedItem.id);
+          const updated = exists ? prev.map((item) => (item.id === updatedItem.id ? updatedItem : item)) : [updatedItem, ...prev];
+          try {
+            localStorage.setItem(`sermon_captures_${date}`, JSON.stringify(updated));
+          } catch (_) {}
+          if (updateDay) updateDay({ sermonCaptures: updated });
+          return updated;
         });
-        const tempC = document.createElement('canvas');
-        tempC.width = img.width;
-        tempC.height = img.height;
-        tempC.getContext('2d').drawImage(img, 0, 0);
-        const reCropped = createHighAccuracyOcrImage(
-          tempC,
-          activePreset,
-          captureItem.playerRect || null,
-          customTouchBox
-        );
-        targetImgUrl = reCropped.preprocessedDataUrl;
-        nextSubCropUrl = reCropped.croppedPreviewUrl;
+
+        showToast('자막·적용질문 텍스트 추출이 완료되었습니다.');
+      } catch (err) {
+        console.error('OCR Error:', err);
+        showToast('텍스트 판독 중 오류가 발생했습니다.');
+      } finally {
+        setOcrLoadingId(null);
       }
+    },
+    [ocrCropPreset, date, updateDay, showToast]
+  );
 
-      const result = await Tesseract.recognize(targetImgUrl, 'kor+eng');
-      const cleaned = cleanKoreanOcrText(result?.data?.text || '');
+  const processCapturedCanvasToItem = useCallback(
+    async (sourceCanvas, label = '자막 스캔', playerRect = null) => {
+      const fullDataUrl = sourceCanvas.toDataURL('image/jpeg', 0.9);
+      const { preprocessedDataUrl, croppedPreviewUrl } = createHighAccuracyOcrImage(sourceCanvas, ocrCropPreset, playerRect, null);
 
-      const finalExtracted = cleaned || '자막을 명확히 인식하지 못했습니다. 아래 원본 화면 위에서 자막 부분만 손가락으로 드래그하여 영역을 지정해 보세요!';
-
-      const updatedItem = {
-        ...captureItem,
-        subtitleCropUrl: nextSubCropUrl || captureItem.subtitleCropUrl,
-        ocrText: finalExtracted
+      const newItem = {
+        id: `cap_${Date.now()}`,
+        timestamp: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        label,
+        imageUrl: fullDataUrl,
+        subtitleCropUrl: croppedPreviewUrl,
+        preprocessedUrl: preprocessedDataUrl,
+        playerRect: playerRect ? { left: playerRect.left, top: playerRect.top, width: playerRect.width, height: playerRect.height } : null,
+        ocrText: '자막 박스에서 글자를 판독하고 있습니다...'
       };
 
-      setStudioDraftItem(updatedItem);
+      setTouchCropBox(null);
+      setStudioDraftItem(newItem);
+      setMinimizedModals((prev) => ({ ...prev, ocr: false }));
+      setIsOcrStudioOpen(true);
 
-      setSermonCaptures(prev => {
-        const exists = prev.some(item => item.id === updatedItem.id);
-        const updated = exists
-          ? prev.map(item => (item.id === updatedItem.id ? updatedItem : item))
-          : [updatedItem, ...prev];
-        try {
-          localStorage.setItem(`sermon_captures_${date}`, JSON.stringify(updated));
-        } catch (_) {}
-        if (updateDay) updateDay({ sermonCaptures: updated });
-        return updated;
-      });
+      const nextList = [newItem, ...sermonCaptures];
+      syncCapturesToDay(nextList);
 
-      showToast('자막·적용질문 텍스트 추출 완료!');
-    } catch (err) {
-      console.error('OCR Error:', err);
-      showToast('텍스트 판독 중 오류가 발생했습니다.');
-    } finally {
-      setOcrLoadingId(null);
-    }
-  }, [ocrCropPreset, date, updateDay, showToast]);
+      await runOcrOnCaptureItem(newItem);
+    },
+    [ocrCropPreset, sermonCaptures, syncCapturesToDay, runOcrOnCaptureItem]
+  );
 
-  const processCapturedCanvasToItem = useCallback(async (sourceCanvas, label = '유튜브 자막 스캔', playerRect = null) => {
-    const fullDataUrl = sourceCanvas.toDataURL('image/jpeg', 0.90);
-    const { preprocessedDataUrl, croppedPreviewUrl } = createHighAccuracyOcrImage(sourceCanvas, ocrCropPreset, playerRect, null);
+  // 이미지 파일/Blob 공통 디코더 (모바일·PC 모두 안정 동작)
+  const decodeBlobOrFileToOcr = useCallback(
+    (blobOrFile, label = '이미지 자막 스캔') => {
+      if (!blobOrFile) return;
+      const objectUrl = URL.createObjectURL(blobOrFile);
+      const img = new Image();
+      img.onload = async () => {
+        const maxDim = 2200;
+        let w = img.width;
+        let h = img.height;
+        if (w > maxDim || h > maxDim) {
+          const ratio = Math.min(maxDim / w, maxDim / h);
+          w = Math.round(w * ratio);
+          h = Math.round(h * ratio);
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        URL.revokeObjectURL(objectUrl);
+        await processCapturedCanvasToItem(canvas, label, null);
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        showToast('이미지를 불러올 수 없습니다.');
+      };
+      img.src = objectUrl;
+    },
+    [processCapturedCanvasToItem, showToast]
+  );
 
-    const newItem = {
-      id: `cap_${Date.now()}`,
-      timestamp: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-      label,
-      imageUrl: fullDataUrl,
-      subtitleCropUrl: croppedPreviewUrl,
-      preprocessedUrl: preprocessedDataUrl,
-      playerRect: playerRect ? { left: playerRect.left, top: playerRect.top, width: playerRect.width, height: playerRect.height } : null,
-      ocrText: '유튜브 자막 박스에서 글자를 정밀 판독 중입니다...'
+  // 전역 Ctrl+V 붙여넣기 이벤트 수신 (스캐너 모달 오픈 여부 무관하게 즉시 처리)
+  useEffect(() => {
+    const handleGlobalPaste = (e) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.startsWith('image/')) {
+          const blob = items[i].getAsFile();
+          if (blob) {
+            e.preventDefault();
+            decodeBlobOrFileToOcr(blob, '클립보드 붙여넣기 스캔');
+            return;
+          }
+        }
+      }
     };
-
-    setTouchCropBox(null);
-    setStudioDraftItem(newItem);
-    setMinimizedModals(prev => ({ ...prev, ocr: false }));
-    setIsOcrStudioOpen(true);
-
-    const nextList = [newItem, ...sermonCaptures];
-    syncCapturesToDay(nextList);
-
-    await runOcrOnCaptureItem(newItem);
-  }, [ocrCropPreset, sermonCaptures, syncCapturesToDay, runOcrOnCaptureItem]);
+    window.addEventListener('paste', handleGlobalPaste);
+    return () => window.removeEventListener('paste', handleGlobalPaste);
+  }, [decodeBlobOrFileToOcr]);
 
   const handleToggleOcrStudioModal = () => {
-    setMinimizedModals(prev => ({ ...prev, ocr: false }));
-    setIsOcrStudioOpen(prev => {
+    setMinimizedModals((prev) => ({ ...prev, ocr: false }));
+    setIsOcrStudioOpen((prev) => {
       const next = !prev;
       if (next && sermonCaptures.length > 0 && !studioDraftItem) {
         setStudioDraftItem(sermonCaptures[0]);
@@ -1228,36 +1363,30 @@ export default function Sermon({
     });
   };
 
+  // 클립보드 버튼 클릭 시 클립보드 읽기 + 권한 제한 시 붙여넣기 전용 영역 포커스
   const handleReadClipboardImageForOcr = async () => {
     try {
-      if (navigator.clipboard && navigator.clipboard.read) {
+      if (navigator.clipboard && typeof navigator.clipboard.read === 'function') {
         const items = await navigator.clipboard.read();
         for (const item of items) {
-          const imageType = item.types.find(tp => tp.startsWith('image/'));
+          const imageType = item.types.find((tp) => tp.startsWith('image/'));
           if (imageType) {
             const blob = await item.getType(imageType);
-            const url = URL.createObjectURL(blob);
-            const img = new Image();
-            img.onload = async () => {
-              const canvas = document.createElement('canvas');
-              canvas.width = img.width;
-              canvas.height = img.height;
-              canvas.getContext('2d').drawImage(img, 0, 0);
-              URL.revokeObjectURL(url);
-              await processCapturedCanvasToItem(canvas, '클립보드 자막 스캔', null);
-            };
-            img.src = url;
+            decodeBlobOrFileToOcr(blob, '클립보드 붙여넣기 스캔');
             return;
           }
         }
+        showToast('클립보드에 복사된 이미지가 없습니다. 화면 캡처 후 다시 시도하세요.');
+        return;
       }
-      if (captureInputRef.current) {
-        captureInputRef.current.click();
-      }
-    } catch (err) {
-      if (captureInputRef.current) {
-        captureInputRef.current.click();
-      }
+    } catch (_) {
+      // 모바일/사파리 등 브라우저 클립보드 읽기 권한 제한 시 전용 붙여넣기 영역 포커스
+    }
+    if (pasteZoneRef.current) {
+      pasteZoneRef.current.focus();
+      showToast('아래 점선 영역을 길게 눌러 [붙여넣기] 하거나 Ctrl+V를 누르세요.');
+    } else if (captureInputRef.current) {
+      captureInputRef.current.click();
     }
   };
 
@@ -1270,46 +1399,16 @@ export default function Sermon({
       !navigator.mediaDevices ||
       typeof navigator.mediaDevices.getDisplayMedia !== 'function';
 
-    // 📱 모바일 & 태블릿 환경: 카메라가 켜지는 현상을 원천 차단!
     if (isMobileOrTablet) {
-      // 1순위: 방금 기기에서 스크린샷을 찍어 클립보드에 이미지가 들어있는지 먼저 확인 후 즉시 자동 OCR 실행!
-      try {
-        if (navigator.clipboard && navigator.clipboard.read) {
-          const items = await navigator.clipboard.read();
-          for (const item of items) {
-            const imageType = item.types.find(tp => tp.startsWith('image/'));
-            if (imageType) {
-              const blob = await item.getType(imageType);
-              const url = URL.createObjectURL(blob);
-              const img = new Image();
-              img.onload = async () => {
-                const canvas = document.createElement('canvas');
-                canvas.width = img.width;
-                canvas.height = img.height;
-                canvas.getContext('2d').drawImage(img, 0, 0);
-                URL.revokeObjectURL(url);
-                await processCapturedCanvasToItem(canvas, '모바일 화면 캡처 스캔', null);
-              };
-              img.src = url;
-              return;
-            }
-          }
-        }
-      } catch (_) {
-        // 클립보드 권한이 없거나 비어있으면 아래 스캔 스튜디오 모달 오픈
-      }
-
-      // 2순위: 카메라를 강제로 켜지 않고, 스캔 스튜디오 창을 열어 클립보드 붙여넣기 또는 갤러리 스크린샷 선택 유도
-      setMinimizedModals(prev => ({ ...prev, ocr: false }));
+      setMinimizedModals((prev) => ({ ...prev, ocr: false }));
       setIsOcrStudioOpen(true);
-      showToast('📱 현재 화면을 스크린샷 찍은 뒤 [클립보드 붙여넣기] 또는 [갤러리 캡처 열기]를 눌러주세요!');
+      showToast('스캐너가 열렸습니다. [사진 불러오기] 또는 [붙여넣기]를 선택하세요.');
       return;
     }
 
-    // 💻 PC 환경: 기존처럼 브라우저 탭 화면을 즉시 다이렉트 캡처
     if (isOcrStudioOpen) {
       setIsOcrStudioOpen(false);
-      await new Promise(r => setTimeout(r, 320));
+      await new Promise((r) => setTimeout(r, 320));
     }
 
     setIsCapturingScreen(true);
@@ -1327,7 +1426,7 @@ export default function Sermon({
       video.srcObject = stream;
       video.muted = true;
       await video.play();
-      await new Promise(r => setTimeout(r, 300));
+      await new Promise((r) => setTimeout(r, 300));
 
       const canvas = document.createElement('canvas');
       canvas.width = video.videoWidth || 1920;
@@ -1335,8 +1434,8 @@ export default function Sermon({
       const ctx = canvas.getContext('2d');
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-      stream.getTracks().forEach(track => track.stop());
-      await processCapturedCanvasToItem(canvas, '유튜브 실시간 자막 캡처', playerRect);
+      stream.getTracks().forEach((track) => track.stop());
+      await processCapturedCanvasToItem(canvas, '실시간 자막 캡처', playerRect);
     } catch (err) {
       showToast('화면 캡처가 취소되었습니다.');
     } finally {
@@ -1347,108 +1446,58 @@ export default function Sermon({
   const handleUploadCaptureFile = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const objectUrl = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = async () => {
-      const maxDim = 2200;
-      let w = img.width;
-      let h = img.height;
-      if (w > maxDim || h > maxDim) {
-        const ratio = Math.min(maxDim / w, maxDim / h);
-        w = Math.round(w * ratio);
-        h = Math.round(h * ratio);
-      }
-      const canvas = document.createElement('canvas');
-      canvas.width = w;
-      canvas.height = h;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, w, h);
-      URL.revokeObjectURL(objectUrl);
-      await processCapturedCanvasToItem(canvas, '모바일 스크린샷 자막 스캔', null);
-    };
-    img.src = objectUrl;
+    decodeBlobOrFileToOcr(file, '불러온 사진 자막 스캔');
     e.target.value = '';
   };
-
-  useEffect(() => {
-    const handlePaste = (e) => {
-      const items = e.clipboardData?.items;
-      if (!items) return;
-      for (let i = 0; i < items.length; i++) {
-        if (items[i].type.indexOf('image') !== -1) {
-          const blob = items[i].getAsFile();
-          if (!blob) continue;
-          const reader = new FileReader();
-          reader.onload = (ev) => {
-            const img = new Image();
-            img.onload = async () => {
-              const canvas = document.createElement('canvas');
-              canvas.width = img.width;
-              canvas.height = img.height;
-              const ctx = canvas.getContext('2d');
-              ctx.drawImage(img, 0, 0);
-              await processCapturedCanvasToItem(canvas, '클립보드 붙여넣기 스캔', null);
-            };
-            img.src = ev.target.result;
-          };
-          reader.readAsDataURL(blob);
-          break;
-        }
-      }
-    };
-    window.addEventListener('paste', handlePaste);
-    return () => window.removeEventListener('paste', handlePaste);
-  }, [processCapturedCanvasToItem]);
 
   const handleDispatchOcrTextToField = (targetField, rawText, capItem) => {
     const text = (rawText || '').trim();
     if (!text) return alert('전송할 텍스트가 없습니다.');
 
     if (targetField === 'apply') {
-      const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+      const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
       const curQuestions = getArr ? [...getArr(safeDay.applyQuestions)] : [];
       const nextQuestions = [...curQuestions, ...lines];
       updateDay && updateDay({ applyQuestions: nextQuestions });
-      showToast(`추출된 문장 ${lines.length}건이 [설교 적용 질문]에 등록되었습니다.`);
+      showToast(`추출된 문장 ${lines.length}건이 적용 질문에 등록되었습니다.`);
     } else if (targetField === 'conviction') {
       updateDay && updateDay({ sermonConviction: text.replace(/\n/g, ' ') });
-      showToast('추출된 문장이 [핵심 한 문장 요약]에 등록되었습니다.');
+      showToast('추출된 문장이 핵심 한 문장 요약에 등록되었습니다.');
     } else if (targetField === 'point1' || targetField === 'point2' || targetField === 'point3') {
       const keyMap = { point1: 'sermonPoint1', point2: 'sermonPoint2', point3: 'sermonPoint3' };
       const labelMap = { point1: '제1대지', point2: '제2대지', point3: '제3대지' };
       const fieldKey = keyMap[targetField];
       const existing = safeDay[fieldKey] ? `${safeDay[fieldKey]} / ` : '';
       updateDay && updateDay({ [fieldKey]: existing + text.replace(/\n/g, ' ') });
-      showToast(`추출된 문장이 [${labelMap[targetField]}]에 입력되었습니다.`);
+      showToast(`추출된 문장이 ${labelMap[targetField]}에 입력되었습니다.`);
     } else {
       const prev = safeDay.sermonNotes || '';
       const timeStr = capItem?.timestamp || new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
-      const snippet = `<div style="margin:10px 0; padding:12px; border:1px solid #cbd5e1; border-radius:10px; background:rgba(15,23,42,0.03);"><p><b>[유튜브 자막·질문 스캔 (${timeStr})]</b></p><p>${text.replace(/\n/g, '<br/>')}</p></div><p><br/></p>`;
+      const snippet = `<div style="margin:10px 0; padding:12px; border:1px solid #cbd5e1; border-radius:10px; background:rgba(15,23,42,0.03);"><p><b>[자막·질문 스캔 (${timeStr})]</b></p><p>${text.replace(/\n/g, '<br/>')}</p></div><p><br/></p>`;
       updateDay && updateDay({ sermonNotes: prev + snippet });
-      showToast('추출된 텍스트가 [설교 필기장 본문]에 삽입되었습니다.');
+      showToast('추출된 텍스트가 설교 필기장 본문에 삽입되었습니다.');
     }
   };
 
   const handleInsertVerseToSermonNotes = (refLabel, verseText) => {
     const prev = safeDay.sermonNotes || '';
     const { pureText } = splitPericopeAndVerse(verseText);
-    const snippet = `<div style="margin:8px 0; padding:10px 14px; border-left:3px solid #d97706; background:rgba(245,158,11,0.06); border-radius:6px;"><p><b>[${refLabel} · 개역개정4판]</b> ${pureText}</p></div><p><br/></p>`;
+    const snippet = `<div style="margin:8px 0; padding:10px 14px; border-left:3px solid #D97706; background:rgba(217,119,6,0.06); border-radius:6px;"><p><b>[${refLabel} · 개역개정4판]</b> ${pureText}</p></div><p><br/></p>`;
     updateDay && updateDay({ sermonNotes: prev + snippet });
     showToast(`[${refLabel}] 개역개정 4판 말씀이 설교 필기장에 삽입되었습니다.`);
   };
 
-  // 🌟 [핵심 해결 1] 본문 보기 클릭 시:
-  // 1) 기존 findBibleText 프롭도 호출하여 기존 구조와 100% 호환 유지
-  // 2) 내가 적은 본문 구절(예: 창 1:1-3)만 정확히 필터링하여 개역개정 4판 모달 오픈!
   const handleOpenKrv4ScriptureView = (refStr) => {
     const targetRef = (refStr && refStr.trim()) || activeReferenceStr;
     if (findBibleText && targetRef) {
-      try { findBibleText(targetRef); } catch (_) {}
+      try {
+        findBibleText(targetRef);
+      } catch (_) {}
     }
     setFinderRefInput(targetRef || '');
-    setShowFullChapterInFinder(false); // 장 전체가 아니라 내가 적은 구절만 먼저 딱 뜨도록 설정!
+    setShowFullChapterInFinder(false);
     setFinderMode('ref');
-    setMinimizedModals(prev => ({ ...prev, finder: false }));
+    setMinimizedModals((prev) => ({ ...prev, finder: false }));
     setIsBibleFinderOpen(true);
   };
 
@@ -1517,7 +1566,7 @@ export default function Sermon({
 
   const handleApplyCurrentMonthGisanVideo = () => {
     const target = inputUrl.trim();
-    if (!target) return alert("유튜브 링크를 입력해주세요.");
+    if (!target) return alert('유튜브 링크를 입력해주세요.');
 
     const updatedMap = { ...monthlyGisanUrls, [currentMonthNum]: target };
     setMonthlyGisanUrls(updatedMap);
@@ -1535,7 +1584,7 @@ export default function Sermon({
   const rawTarget = globalSharedQt?.[date]?.sermon || globalSharedQt?.[date]?.sermonData?.sermon || safeDay?.sermonVideoId || safeDay?.sermonVideoUrl;
   const currentVideoId = extractVideoId ? extractVideoId(rawTarget) : rawTarget;
 
-  const activeYoutubeId = isSp ? (gisanVidId || currentVideoId) : currentVideoId;
+  const activeYoutubeId = isSp ? gisanVidId || currentVideoId : currentVideoId;
 
   const isDark = t?.appBg?.includes('dark') || t?.appBg?.includes('121212') || isDarkMode;
 
@@ -1547,21 +1596,23 @@ export default function Sermon({
 
   const handleShareVideo = () => {
     const targetUrl = safeDay.sermonVideoUrl || (safeDay.sermonVideoId ? `https://youtu.be/${safeDay.sermonVideoId}` : '');
-    if (!targetUrl) return alert("공유할 유튜브 링크를 먼저 입력해주세요.");
-    
+    if (!targetUrl) return alert('공유할 유튜브 링크를 먼저 입력해주세요.');
+
     if (handleUpdateSharedQt) {
       handleUpdateSharedQt(date, 'sermon', targetUrl);
     } else if (handleUpdateSharedSermon) {
       handleUpdateSharedSermon(date, targetUrl);
     }
-    
+
     if (navigator.share) {
-      navigator.share({
-        title: safeDay.sermonTitle || '예배 설교 영상',
-        url: targetUrl
-      }).catch(() => {});
+      navigator
+        .share({
+          title: safeDay.sermonTitle || '예배 설교 영상',
+          url: targetUrl
+        })
+        .catch(() => {});
     }
-    showToast("예배 영상 링크가 공유되었습니다.");
+    showToast('예배 영상 링크가 공유되었습니다.');
   };
 
   const handleActionItemSync = (val) => {
@@ -1570,7 +1621,7 @@ export default function Sermon({
     }
     try {
       const saved = JSON.parse(localStorage.getItem('apply_tracker_items') || '[]');
-      const filtered = saved.filter(item => item.date !== date || item.source !== 'sermon');
+      const filtered = saved.filter((item) => item.date !== date || item.source !== 'sermon');
       if (val.trim()) {
         filtered.push({
           id: `sermon_${date}_${Date.now()}`,
@@ -1591,7 +1642,7 @@ export default function Sermon({
     }
     try {
       const saved = JSON.parse(localStorage.getItem('apply_tracker_items') || '[]');
-      const updated = saved.map(item => {
+      const updated = saved.map((item) => {
         if (item.date === date && item.source === 'sermon') {
           return { ...item, graceLine: val };
         }
@@ -1602,7 +1653,7 @@ export default function Sermon({
   };
 
   const handleSendDeclarationToCell = (text) => {
-    if (!text || !text.trim()) return alert("전송할 감사 내용이 없습니다.");
+    if (!text || !text.trim()) return alert('전송할 감사 내용이 없습니다.');
     try {
       const existing = JSON.parse(localStorage.getItem('cell_shared_thanks') || '[]');
       existing.push({
@@ -1612,16 +1663,16 @@ export default function Sermon({
         text: encryptField(text.trim())
       });
       localStorage.setItem('cell_shared_thanks', JSON.stringify(existing));
-      showToast("목장 모임 [감사나눔]으로 전송되었습니다.");
+      showToast('목장 모임 감사나눔으로 전송되었습니다.');
     } catch (e) {
-      alert("전송 중 오류가 발생했습니다.");
+      alert('전송 중 오류가 발생했습니다.');
     }
   };
 
   const inlineActionSendToTracker = () => {
     const textToPush = safeDay.sermonActionItem || safeDay.sermonGraceLine || safeDay.sermonTitle || '설교 결단 및 적용';
     handleActionItemSync(textToPush);
-    showToast("적용 트래커에 반영되었습니다.");
+    showToast('적용 트래커에 반영되었습니다.');
   };
 
   const inlineActionSendToPrayer = () => {
@@ -1635,9 +1686,9 @@ export default function Sermon({
         answered: false
       };
       localStorage.setItem('prayer_items', JSON.stringify([newPrayer, ...prayers]));
-      showToast("나의 기도함에 보관되었습니다.");
+      showToast('나의 기도함에 보관되었습니다.');
     } catch (e) {
-      showToast("기도함 저장 중 오류가 발생했습니다.");
+      showToast('기도함 저장 중 오류가 발생했습니다.');
     }
   };
 
@@ -1654,24 +1705,26 @@ export default function Sermon({
       if (supabase) {
         await supabase.from('counseling_qna').insert([counselingPayload]);
       }
-      showToast("담당 교역자에게 1:1 상담이 요청되었습니다.");
+      showToast('담당 교역자에게 1:1 상담이 요청되었습니다.');
     } catch (e) {
-      showToast("상담 요청 전송 중 오류가 발생했습니다.");
+      showToast('상담 요청 전송 중 오류가 발생했습니다.');
     }
   };
 
   // =====================================================================
-  // 세밀화된 실시간 STT(음성 필기) 엔진
+  // 실시간 STT(음성 필기) 엔진
   // =====================================================================
   const toggleSpeechRecognition = useCallback(() => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) return alert("현재 브라우저에서 음성 인식을 지원하지 않습니다.");
+    if (!SR) return alert('현재 브라우저에서 음성 인식을 지원하지 않습니다.');
 
     if (isSpeechRecording) {
       setIsSpeechRecording(false);
       setSttInterimText('');
       if (sermonRecRef.current) {
-        try { sermonRecRef.current.stop(); } catch (e) {}
+        try {
+          sermonRecRef.current.stop();
+        } catch (e) {}
         sermonRecRef.current = null;
       }
       return;
@@ -1701,7 +1754,7 @@ export default function Sermon({
 
         if (finalChunk && setDailyData) {
           const target = sttTargetRef.current;
-          setDailyData(prev => {
+          setDailyData((prev) => {
             const d = prev[date] || {};
             if (target === 'conviction') {
               return { ...prev, [date]: { ...d, sermonConviction: ((d.sermonConviction || '') + ' ' + finalChunk).trim() } };
@@ -1741,14 +1794,38 @@ export default function Sermon({
   useEffect(() => {
     return () => {
       if (sermonRecRef.current) {
-        try { sermonRecRef.current.stop(); } catch (e) {}
+        try {
+          sermonRecRef.current.stop();
+        } catch (e) {}
       }
     };
   }, []);
 
-  const originalFontStyle = (isOT) => isOT
-    ? { fontFamily: "'SBL Hebrew', 'Taamey Frank CLM', 'Ezra SIL', serif", direction: 'rtl' }
-    : { fontFamily: "'SBL Greek', 'Cardo', 'Times New Roman', serif", direction: 'ltr' };
+  // =====================================================================
+  // 3색 조화 팔레트 (메인 블루 #2563EB + 세이지 그린 #0D9488 + 웜 앰버 #D97706)
+  // =====================================================================
+  const pageBg = isDark ? 'bg-[#0F1115]' : 'bg-[#F5F6F8]';
+  const surfaceBg = isDark ? 'bg-[#171A21]' : 'bg-white';
+  const subSurfaceBg = isDark ? 'bg-[#20242E]' : 'bg-[#F1F3F6]';
+  const borderClass = isDark ? 'border-[#262B36]' : 'border-[#E5E8EC]';
+  const dividerClass = isDark ? 'divide-[#262B36]' : 'divide-[#EEF0F3]';
+  const textMain = isDark ? 'text-[#F8FAFC]' : 'text-[#191F28]';
+  const textSub = isDark ? 'text-[#94A3B8]' : 'text-[#64748B]';
+
+  const sagePillClass = isDark
+    ? 'bg-[#0D9488]/15 text-[#5EEAD4] hover:bg-[#0D9488]/25'
+    : 'bg-[#0D9488]/10 text-[#0F766E] hover:bg-[#0D9488]/15';
+  const amberPillClass = isDark
+    ? 'bg-[#D97706]/15 text-[#FCD34D] hover:bg-[#D97706]/25'
+    : 'bg-[#D97706]/10 text-[#B45309] hover:bg-[#D97706]/15';
+  const bluePillClass = isDark
+    ? 'bg-[#2563EB]/15 text-[#93C5FD] hover:bg-[#2563EB]/25'
+    : 'bg-[#2563EB]/10 text-[#1D4ED8] hover:bg-[#2563EB]/15';
+
+  const originalFontStyle = (isOT) =>
+    isOT
+      ? { fontFamily: "'SBL Hebrew', 'Taamey Frank CLM', 'Ezra SIL', serif", direction: 'rtl' }
+      : { fontFamily: "'SBL Greek', 'Cardo', 'Times New Roman', serif", direction: 'ltr' };
 
   const currentInspectorKey = inspectorTarget ? `${inspectorTarget.book}-${inspectorTarget.chapter}-${inspectorTarget.verse}` : '';
   const currentCommentary = commentaryDb[currentInspectorKey] || null;
@@ -1761,49 +1838,67 @@ export default function Sermon({
     return null;
   }, [inspectorTarget, inspectorWords]);
 
-  const renderStickersCallback = useCallback(function () {
-    if (!StickerLayer) return null;
-    return (
-      <StickerLayer
-        stickers={safeDay.stickers}
-        memos={safeDay.memos}
-        onUpdateStickers={function (s) { if (updateDay) updateDay({ stickers: s }); }}
-        onUpdateMemos={function (m) { if (updateDay) updateDay({ memos: m }); }}
-        onPtrDown={onPtrDown}
-      />
-    );
-  }, [StickerLayer, safeDay.stickers, safeDay.memos, updateDay, onPtrDown]);
+  const renderStickersCallback = useCallback(
+    function () {
+      if (!StickerLayer) return null;
+      return (
+        <StickerLayer
+          stickers={safeDay.stickers}
+          memos={safeDay.memos}
+          onUpdateStickers={function (s) {
+            if (updateDay) updateDay({ stickers: s });
+          }}
+          onUpdateMemos={function (m) {
+            if (updateDay) updateDay({ memos: m });
+          }}
+          onPtrDown={onPtrDown}
+        />
+      );
+    },
+    [StickerLayer, safeDay.stickers, safeDay.memos, updateDay, onPtrDown]
+  );
 
-  const handleRichTextChange = useCallback(function (htmlVal) {
-    if (updateDay) updateDay({ sermonNotes: htmlVal });
-  }, [updateDay]);
+  const handleRichTextChange = useCallback(
+    function (htmlVal) {
+      if (updateDay) updateDay({ sermonNotes: htmlVal });
+    },
+    [updateDay]
+  );
 
   const BacklinkPanel = () => {
     if (!activeBacklink) return null;
-    const isDarkTheme = isDarkMode;
 
-    const relatedEntries = Object.entries(dailyData || {}).filter(([dKey, dVal]) => {
-      if (dKey === date) return false;
-      const fullText = `${dVal.sermonNotes || ''} ${dVal.qtMeditation || ''} ${dVal.qtGraceLine || ''}`;
-      return fullText.includes(activeBacklink);
-    }).sort((a, b) => new Date(b[0]) - new Date(a[0]));
+    const relatedEntries = Object.entries(dailyData || {})
+      .filter(([dKey, dVal]) => {
+        if (dKey === date) return false;
+        const fullText = `${dVal.sermonNotes || ''} ${dVal.qtMeditation || ''} ${dVal.qtGraceLine || ''}`;
+        return fullText.includes(activeBacklink);
+      })
+      .sort((a, b) => new Date(b[0]) - new Date(a[0]));
 
     return (
-      <div className={`absolute top-0 right-0 h-full w-full max-w-[340px] z-[200] shadow-2xl flex flex-col transition-transform animate-fade-in ${isDarkTheme ? 'bg-[#121418] border-l border-white/10' : 'bg-white border-l border-stone-200'}`}>
-        <div className={`p-4 border-b flex justify-between items-center ${isDarkTheme ? 'border-white/10' : 'border-stone-200'}`}>
-          <h3 className={`text-[14px] font-bold ${isDarkTheme ? 'text-white' : 'text-stone-900'}`}>{activeBacklink} 관련 기록</h3>
-          <button onClick={() => setActiveBacklink(null)} className={`p-1.5 rounded-full hover:bg-stone-500/20 transition-colors ${isDarkTheme ? 'text-stone-400' : 'text-stone-500'}`}>✕</button>
+      <div className={`absolute top-0 right-0 h-full w-full max-w-[360px] z-[200] shadow-xl flex flex-col border-l ${borderClass} ${surfaceBg}`}>
+        <div className={`px-5 py-4 border-b ${borderClass} flex justify-between items-center`}>
+          <div className="flex items-center gap-2">
+            <Link2 className="w-4 h-4 text-[#0D9488]" />
+            <h3 className={`text-[15px] font-bold ${textMain}`}>{activeBacklink} 관련 기록</h3>
+          </div>
+          <button
+            type="button"
+            onClick={() => setActiveBacklink(null)}
+            className={`w-8 h-8 rounded-lg flex items-center justify-center ${subSurfaceBg} ${textMain} cursor-pointer`}
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
-        <div className="flex-1 overflow-y-auto p-4 space-y-3 hide-scrollbar pointer-events-auto">
+        <div className={`flex-1 overflow-y-auto px-5 divide-y ${dividerClass} hide-scrollbar pointer-events-auto`}>
           {relatedEntries.length === 0 ? (
-            <div className={`py-10 text-center text-[12px] font-medium ${isDarkTheme ? 'text-stone-500' : 'text-stone-400'}`}>
-              과거 예배/묵상 기록이 없습니다.
-            </div>
+            <div className={`py-12 text-center text-[14px] ${textSub}`}>과거 예배·묵상 기록이 없습니다.</div>
           ) : (
             relatedEntries.map(([dKey, dVal]) => (
-              <div key={dKey} className={`p-3.5 rounded-xl border flex flex-col gap-1.5 ${isDarkTheme ? 'bg-white/5 border-white/10' : 'bg-stone-50 border-stone-200'}`}>
-                <span className={`text-[10px] font-mono ${isDarkTheme ? 'text-stone-400' : 'text-stone-500'}`}>{dKey}</span>
-                <p className={`text-[12.5px] font-serif leading-relaxed line-clamp-4 ${isDarkTheme ? 'text-stone-200' : 'text-stone-700'}`}>
+              <div key={dKey} className="py-4 space-y-1.5">
+                <span className={`text-[12px] font-medium ${textSub} block`}>{dKey}</span>
+                <p className={`text-[14px] leading-relaxed line-clamp-4 ${textMain}`}>
                   {(dVal.sermonNotes || dVal.qtMeditation || dVal.qtGraceLine || '').replace(/<[^>]*>?/gm, '')}
                 </p>
               </div>
@@ -1814,7 +1909,6 @@ export default function Sermon({
     );
   };
 
-  // 말씀 찾기 모달에서 보여줄 절 목록 (내가 적은 절만 표시 vs 장 전체 펼치기)
   const displayedFinderVerses = useMemo(() => {
     if (showFullChapterInFinder) {
       return finderScriptureData.allChapterVerses || finderScriptureData.verses;
@@ -1825,95 +1919,114 @@ export default function Sermon({
   return (
     <div
       ref={rootSermonFullscreenRef}
-      className={`flex-1 flex flex-col h-full relative font-sans overflow-hidden select-none animate-fade-in ${isDark ? 'bg-[#0C0E12]' : 'bg-[#F8F9FA]'}`}
+      className={`flex-1 flex flex-col h-full relative font-sans overflow-hidden select-none ${pageBg}`}
     >
-      <BacklinkPanel/>
+      <BacklinkPanel />
 
-     
+      {/* 숨겨진 사진 파일 업로드 인풋 (모바일 갤러리 / PC 파일 탐색기 호환) */}
+      <input
+        type="file"
+        ref={captureInputRef}
+        accept="image/*"
+        onChange={handleUploadCaptureFile}
+        className="hidden"
+      />
 
       {/* ===================================================================== */}
       {/* 1. 상단 글로벌 헤더 바 */}
       {/* ===================================================================== */}
-      <header className={`shrink-0 px-3 sm:px-5 py-2.5 flex items-center justify-between gap-2 z-20 border-b relative ${isDark ? 'border-white/10 bg-[#12141A]' : 'border-stone-200/90 bg-white'}`}>
-        <div className="flex items-center gap-1.5 shrink-0">
+      <header className={`shrink-0 px-3 sm:px-6 h-14 flex items-center justify-between gap-2 z-20 border-b relative ${borderClass} ${surfaceBg}`}>
+        <div className="flex items-center gap-2 shrink-0">
           <button
+            type="button"
             onClick={() => setActiveScreen('home')}
-            className={`p-1.5 rounded-lg transition-colors cursor-pointer shrink-0 ${isDark ? 'text-white hover:bg-white/10' : 'text-stone-800 hover:bg-stone-100'}`}
+            className={`w-9 h-9 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
+              isDark ? 'hover:bg-white/10 text-white' : 'hover:bg-black/5 text-[#191F28]'
+            }`}
           >
-            <IconArrowLeft/>
+            <ArrowLeft className="w-5 h-5" />
           </button>
-          <h1 className={`text-[15.5px] sm:text-[16.5px] font-bold tracking-tight whitespace-nowrap shrink-0 ${isDark ? 'text-white' : 'text-stone-900'}`}>
-            예배 노트
-          </h1>
-          {krv4TxtDb && (
-            <span className="px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300 text-[10px] font-bold border border-amber-500/30 shrink-0">
-              개역개정 4판
+          <div className="flex items-center gap-2">
+            <h1 className={`text-[17px] font-bold tracking-tight whitespace-nowrap ${textMain}`}>예배 노트</h1>
+            <span className={`hidden sm:inline-block text-[12px] font-bold px-2 py-0.5 rounded-md ${sagePillClass}`}>
+              완성도 {sermonCompletionPercent}%
             </span>
-          )}
-          {isSanctuaryMode && (
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border whitespace-nowrap shrink-0 ${isDark ? 'bg-white/10 text-stone-200 border-white/15' : 'bg-stone-100 text-stone-700 border-stone-300'}`}>
-              집중모드
+          </div>
+          {krv4TxtDb && (
+            <span className={`hidden md:inline-block px-2 py-0.5 rounded-md text-[12px] font-bold ${amberPillClass}`}>
+              개역개정 4판
             </span>
           )}
         </div>
 
         <div className="flex items-center gap-1.5 overflow-x-auto hide-scrollbar">
           <button
+            type="button"
             onClick={() => enterLiveCinemaFullscreen('outline')}
-            className={`px-2.5 py-1.5 rounded-lg text-[11.5px] font-bold flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0 transition-colors ${
-              isDark ? 'bg-white text-stone-950 hover:bg-stone-200' : 'bg-stone-900 text-white hover:bg-black'
-            }`}
+            className={`h-8 px-2.5 rounded-lg text-[12px] font-bold flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0 ${bluePillClass}`}
           >
-            <IconMaximize/> <span>전체화면 노트</span>
+            <Maximize2 className="w-3.5 h-3.5" />
+            <span>전체화면 노트</span>
           </button>
 
-          <button 
+          <button
+            type="button"
             onClick={toggleSanctuaryMode}
-            className={`px-2.5 py-1.5 rounded-lg text-[11.5px] font-bold border transition-all flex items-center gap-1 cursor-pointer whitespace-nowrap shrink-0 ${
-              isSanctuaryMode 
-                ? 'bg-stone-800 text-white dark:bg-stone-200 dark:text-stone-900 border-transparent' 
-                : (isDark ? 'bg-white/5 border-white/15 text-stone-300 hover:bg-white/10' : 'bg-white border-stone-200 text-stone-700 hover:bg-stone-50')
+            className={`h-8 px-2.5 rounded-lg text-[12px] font-bold transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
+              isSanctuaryMode ? 'bg-[#0D9488] text-white' : `${subSurfaceBg} ${textMain}`
             }`}
           >
-            <span>{isSanctuaryMode ? '본당 집중' : '일반 뷰'}</span>
+            {isSanctuaryMode ? '본당 집중' : '일반 뷰'}
           </button>
 
           <button
+            type="button"
             onClick={() => setShowToolbar(!showToolbar)}
-            className={`px-2.5 py-1.5 rounded-lg text-[11.5px] font-bold border transition-all flex items-center gap-1 cursor-pointer whitespace-nowrap shrink-0 ${
-              showToolbar
-                ? 'bg-stone-800 text-white dark:bg-stone-200 dark:text-stone-900 border-transparent'
-                : (isDark ? 'bg-white/5 text-stone-300 border-white/15' : 'bg-white text-stone-700 border-stone-200')
+            className={`h-8 px-2.5 rounded-lg text-[12px] font-bold flex items-center gap-1 cursor-pointer whitespace-nowrap shrink-0 ${
+              showToolbar ? 'bg-[#191F28] text-white dark:bg-white dark:text-[#101216]' : `${subSurfaceBg} ${textMain}`
             }`}
           >
-            <IconTool/> <span>{showToolbar ? '도구 닫기' : '서식'}</span>
+            <PenTool className="w-3.5 h-3.5" />
+            <span>{showToolbar ? '도구 닫기' : '서식'}</span>
           </button>
-          
+
           <button
+            type="button"
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className={`p-1.5 rounded-lg transition-colors shrink-0 ${isDark ? 'text-white hover:bg-white/10' : 'text-stone-800 hover:bg-stone-100'}`}
+            className={`w-9 h-9 rounded-lg flex items-center justify-center transition-colors shrink-0 cursor-pointer ${
+              isDark ? 'hover:bg-white/10 text-white' : 'hover:bg-black/5 text-[#191F28]'
+            }`}
           >
-            <IconMenu/>
+            <Menu className="w-5 h-5" />
           </button>
         </div>
       </header>
 
+      {/* 능동형 작성 완성도 헤어라인 인디케이터 */}
+      <div className={`w-full h-[2px] ${subSurfaceBg} shrink-0`}>
+        <div
+          className="h-full bg-gradient-to-r from-[#2563EB] to-[#0D9488] transition-all duration-500"
+          style={{ width: `${sermonCompletionPercent}%` }}
+        />
+      </div>
+
       {/* 토스트 알림 */}
       {actionToast && (
-        <div className="fixed top-14 left-1/2 -translate-x-1/2 z-[9999999] bg-stone-900 text-white text-[12px] font-bold px-4 py-2 rounded-lg shadow-2xl border border-white/15 flex items-center gap-2 whitespace-nowrap">
-          <span>✓</span> {actionToast}
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-[9999999] bg-[#191F28] text-white text-[13px] font-bold px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-2 whitespace-nowrap">
+          <Check className="w-4 h-4 text-[#0D9488]" />
+          <span>{actionToast}</span>
         </div>
       )}
 
       {/* 서식 툴바 */}
       {showToolbar && (
-        <div className={`relative z-20 w-full px-2 py-1.5 border-b shrink-0 overflow-x-auto hide-scrollbar ${isDark ? 'border-white/10 bg-[#12141A]' : 'border-stone-200 bg-white'}`}>
+        <div className={`relative z-20 w-full px-3 sm:px-6 py-2 border-b ${borderClass} ${surfaceBg} shrink-0 overflow-x-auto hide-scrollbar`}>
           {renderToolbar && renderToolbar(sermonEditorRef, true, handleStickerAdd, handleMemoAdd, handleFileUpload)}
         </div>
       )}
-      
+
       {/* ===================================================================== */}
-      {/* 2. 본문 뷰포트 레이아웃 */}
+      {/* 2. 본문 뷰포트 레이아웃 (모바일 풀폭 / PC·태블릿 12컬럼 2단 와이드) */}
       {/* ===================================================================== */}
       {CanvasEngine && (
         <CanvasEngine
@@ -1928,794 +2041,747 @@ export default function Sermon({
           t={t}
           renderStickers={renderStickersCallback}
         >
-          <div className="flex-1 overflow-y-auto w-full hide-scrollbar px-3 sm:px-5 py-3.5 pb-32 relative z-10 space-y-3.5 max-w-4xl mx-auto">
-            
-            {/* 일자 바 & 아카이브/저장 제어 */}
-            <div className={`px-4 py-2.5 rounded-xl border flex justify-between items-center gap-2 ${isDark ? 'bg-[#161922] border-white/10' : 'bg-white border-stone-200/90 shadow-2xs'}`}>
-              <div className="flex items-center gap-2 min-w-0">
-                <span className={`text-[14px] font-bold tracking-tight whitespace-nowrap ${isDark ? 'text-white' : 'text-stone-900'}`}>{date}</span>
-                <span className="text-[11px] text-stone-400 font-medium truncate">
-                  {isSp ? '특별집회 설교 노트' : '주일 예배 설교 노트'}
-                </span>
-              </div>
-
-              <div className="flex gap-1.5 shrink-0 ignore-draw">
-                <button
-                  onClick={() => openModal && openModal('sermonList')}
-                  className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11.5px] font-bold border transition-colors cursor-pointer whitespace-nowrap ${
-                    isDark ? 'bg-white/5 border-white/10 text-white hover:bg-white/15' : 'bg-stone-50 border-stone-200 text-stone-700 hover:bg-stone-100'
-                  }`}
-                >
-                  <IconList/> <span>노트 목록</span>
-                </button>
-                <button
-                  onClick={downloadSermonWord}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11.5px] font-bold text-white bg-stone-900 dark:bg-stone-100 dark:text-stone-900 cursor-pointer hover:opacity-90 whitespace-nowrap"
-                >
-                  <IconSave/> <span>Word 저장</span>
-                </button>
-              </div>
-            </div>
-
-            {/* 설교 메타데이터 & 성경 연구 툴바 */}
-            <div className={`p-4 rounded-xl border flex flex-col gap-3 ${isDark ? 'bg-[#161922] border-white/10' : 'bg-white border-stone-200/90 shadow-2xs'}`}>
-              <input 
-                type="text" 
-                value={safeDay.sermonTitle || globalSharedQt?.[date]?.sermonData?.title || ''} 
-                onChange={e => updateDay({ sermonTitle: e.target.value })} 
-                onPointerDown={e => e.stopPropagation()} 
-                className={`w-full px-3.5 py-2.5 rounded-lg text-[15px] font-bold outline-none border transition-all ${
-                  isDark ? 'bg-[#0E1015] border-white/10 text-white focus:border-stone-400' : 'bg-stone-50 border-stone-200 text-stone-900 focus:border-stone-400'
-                }`} 
-                placeholder="설교 제목을 입력하세요" 
-              />
-              
-              <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
-                <input 
-                  type="text" 
-                  value={safeDay.sermonPreacher || globalSharedQt?.[date]?.sermonData?.preacher || ''} 
-                  onChange={e => updateDay({ sermonPreacher: e.target.value })} 
-                  onPointerDown={e => e.stopPropagation()} 
-                  className={`sm:col-span-5 px-3.5 py-2 rounded-lg text-[13px] font-medium outline-none border transition-all ${
-                    isDark ? 'bg-[#0E1015] border-white/10 text-white focus:border-stone-400' : 'bg-stone-50 border-stone-200 text-stone-900 focus:border-stone-400'
-                  }`} 
-                  placeholder="설교자 (예: 담임목사)" 
-                />
-                <div className="sm:col-span-7 flex gap-1.5 ignore-draw items-center">
-                  <input 
-                    type="text" 
-                    value={safeDay.sermonReference || globalSharedQt?.[date]?.sermonData?.reference || ''} 
-                    onChange={e => {
-                      setCustomRefQuery(e.target.value);
-                      updateDay && updateDay({ sermonReference: e.target.value });
-                    }} 
-                    onKeyDown={e => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleOpenKrv4ScriptureView(safeDay.sermonReference || globalSharedQt?.[date]?.sermonData?.reference);
-                      }
-                    }}
-                    onPointerDown={e => e.stopPropagation()} 
-                    placeholder="설교 본문 구절 입력 (예: 창 1:1-5, 요 3:16)" 
-                    className={`flex-1 min-w-0 px-3.5 py-2 rounded-lg text-[13px] font-medium outline-none border transition-all ${
-                      isDark ? 'bg-[#0E1015] border-white/10 text-white focus:border-stone-400' : 'bg-stone-50 border-stone-200 text-stone-900 focus:border-stone-400'
-                    }`} 
-                  />
-                  <button 
-                    onClick={() => handleOpenKrv4ScriptureView(safeDay.sermonReference || globalSharedQt?.[date]?.sermonData?.reference)} 
-                    className={`shrink-0 px-3 py-2 rounded-lg text-[12px] font-bold border transition-colors flex items-center gap-1 cursor-pointer whitespace-nowrap ${
-                      isDark ? 'bg-amber-500/20 border-amber-400/40 text-amber-300 hover:bg-amber-500/30' : 'bg-amber-50 border-amber-300 text-amber-900 hover:bg-amber-100'
-                    }`}
-                  >
-                    <IconBookOpen/> <span>본문 보기</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* 4대 성경 연구 툴바 */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-0.5 ignore-draw" onPointerDown={e => e.stopPropagation()}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (isBibleFinderOpen) setIsBibleFinderOpen(false);
-                    else {
-                      setFinderRefInput(activeReferenceStr);
-                      setShowFullChapterInFinder(false);
-                      setMinimizedModals(prev => ({ ...prev, finder: false }));
-                      setIsBibleFinderOpen(true);
-                    }
-                  }}
-                  className={`py-2 px-2.5 rounded-lg border text-[12px] font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-colors whitespace-nowrap ${
-                    isBibleFinderOpen
-                      ? 'bg-amber-500 text-stone-950 border-amber-500'
-                      : isDark ? 'bg-[#0E1015] hover:bg-white/10 border-white/15 text-stone-100' : 'bg-stone-50 hover:bg-stone-100 border-stone-200 text-stone-800'
-                  }`}
-                >
-                  <IconSearch/> <span>{isBibleFinderOpen ? '말씀찾기 닫기' : '개역개정4판 찾기'}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (inspectorTarget) setInspectorTarget(null);
-                    else openMcheyneStyleVerseInspector(activeReferenceStr, selectedWordVerse);
-                  }}
-                  className={`py-2 px-2.5 rounded-lg border text-[12px] font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-colors whitespace-nowrap ${
-                    inspectorTarget
-                      ? 'bg-indigo-600 text-white border-indigo-500'
-                      : isDark ? 'bg-[#0E1015] hover:bg-white/10 border-white/15 text-stone-100' : 'bg-stone-50 hover:bg-stone-100 border-stone-200 text-stone-800'
-                  }`}
-                >
-                  <IconBookOpen/> <span>{inspectorTarget ? '원어강해 닫기' : '원어 강해'}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (isArcModalOpen && arcModalInitialMode === 'arc') setIsArcModalOpen(false);
-                    else {
-                      setArcModalInitialMode('arc');
-                      setIsArcModalOpen(true);
-                    }
-                  }}
-                  className={`py-2 px-2.5 rounded-lg border text-[12px] font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-colors whitespace-nowrap ${
-                    isArcModalOpen && arcModalInitialMode === 'arc'
-                      ? 'bg-emerald-500 text-stone-950 border-emerald-500'
-                      : isDark ? 'bg-[#0E1015] hover:bg-white/10 border-white/15 text-stone-100' : 'bg-stone-50 hover:bg-stone-100 border-stone-200 text-stone-800'
-                  }`}
-                >
-                  <span>신구약 아크</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (isArcModalOpen && arcModalInitialMode === '2d') setIsArcModalOpen(false);
-                    else {
-                      setArcModalInitialMode('2d');
-                      setIsArcModalOpen(true);
-                    }
-                  }}
-                  className={`py-2 px-2.5 rounded-lg border text-[12px] font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-colors whitespace-nowrap ${
-                    isArcModalOpen && arcModalInitialMode === '2d'
-                      ? 'bg-emerald-500 text-stone-950 border-emerald-500'
-                      : isDark ? 'bg-[#0E1015] hover:bg-white/10 border-white/15 text-stone-100' : 'bg-stone-50 hover:bg-stone-100 border-stone-200 text-stone-800'
-                  }`}
-                >
-                  <span>말씀 은하계</span>
-                </button>
-              </div>
-
-              {/* 핵심 요약 한 문장 (스페이스바 구절 자동완성 지원) */}
-              <div className="pt-0.5 ignore-draw" onPointerDown={e => e.stopPropagation()}>
-                <div className={`p-3 rounded-lg border flex flex-col gap-1 text-left ${isDark ? 'bg-[#0E1015] border-white/10' : 'bg-stone-50/80 border-stone-200/90'}`}>
-                  <span className={`text-[11px] font-bold ${isDark ? 'text-stone-400' : 'text-stone-500'}`}>
-                    핵심 요절 및 설교 한 문장 요약 <span className="text-[10px] text-amber-500 ml-1">(팁: '창1:1' 치고 스페이스바 누르면 구절 자동완성!)</span>
-                  </span>
-                  <input 
-                    type="text" 
-                    value={safeDay.sermonConviction || ''} 
-                    onChange={e => updateDay && updateDay({ sermonConviction: e.target.value })} 
-                    onKeyDown={e => handleSpacebarVerseAutoCompleteOnInput(e, 'sermonConviction', safeDay.sermonConviction || '')}
-                    placeholder="설교 중 가장 중심이 되는 핵심 문장을 기록하세요 (예: 요3:16 + 스페이스바)" 
-                    className={`w-full bg-transparent outline-none text-[13.5px] font-medium ${isDark ? 'text-white placeholder:text-stone-600' : 'text-stone-900 placeholder:text-stone-400'}`} 
-                  />
-                </div>
-              </div>
-
-              {linkedRefs.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 pt-0.5 ignore-draw">
-                  {linkedRefs.map(ref => (
-                    <button 
-                      key={ref}
-                      onClick={(e) => { e.stopPropagation(); setActiveBacklink(ref); }}
-                      className={`px-2.5 py-1 rounded-md text-[11px] font-bold border flex items-center gap-1 transition-all cursor-pointer ${
-                        activeBacklink === ref 
-                          ? (isDark ? 'bg-white text-stone-900 border-white' : 'bg-stone-900 text-white border-stone-900')
-                          : (isDark ? 'bg-black/40 border-white/10 text-stone-300 hover:text-white' : 'bg-white border-stone-200 text-stone-600 hover:text-stone-900')
-                      }`}
-                    >
-                      {ref} 과거 기록 대조
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* ===================================================================== */}
-            {/* 3. 유튜브 예배 영상 시청 섹션 */}
-            {/* ===================================================================== */}
-            {!isSanctuaryMode && (
-              <div
-                onPointerDown={e => e.stopPropagation()}
-                className={`p-4 rounded-xl border flex flex-col gap-3 ignore-draw transition-all ${
-                  isVideoPinned ? 'sticky top-2 z-30 shadow-2xl ring-1 ring-stone-400/30' : ''
-                } ${isDark ? 'bg-[#161922] border-white/10' : 'bg-white border-stone-200/90 shadow-2xs'}`}
-              >
-                <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <div className="flex items-center gap-2">
-                    <IconVideo/>
-                    <span className={`text-[13.5px] font-bold ${isDark ? 'text-white' : 'text-stone-900'}`}>
-                      {isSp ? `${currentMonthNum}월 특별집회 영상 시청` : '주일 예배 영상 시청'}
+          <div className="flex-1 overflow-y-auto w-full hide-scrollbar px-2 sm:px-5 lg:px-8 pt-3 sm:pt-5 pb-32 relative z-10 max-w-[1380px] mx-auto">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 items-start">
+              {/* =============================================================== */}
+              {/* [좌측 5컬럼] 일자·저장 + 대형 예배 영상 + 자막 스캔 보관함 */}
+              {/* =============================================================== */}
+              <div className="lg:col-span-5 space-y-4">
+                {/* 일자 바 & 아카이브/Word 저장 제어 */}
+                <div className={`${surfaceBg} px-4 py-3 rounded-2xl border ${borderClass} flex justify-between items-center gap-2`}>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className={`text-[15px] font-bold tracking-tight whitespace-nowrap ${textMain}`}>{date}</span>
+                    <span className={`text-[12px] font-medium ${textSub} truncate`}>
+                      {isSp ? '특별집회 설교 노트' : '주일 예배 설교 노트'}
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <a
-                      href={`https://www.youtube.com/results?search_query=${encodeURIComponent(`개역개정 4판 ${activeReferenceStr || '성경'} 낭독`)}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className={`px-2.5 py-1 rounded-md text-[11.5px] font-bold border flex items-center gap-1 transition-colors whitespace-nowrap ${
-                        isDark ? 'bg-amber-500/20 border-amber-400/40 text-amber-300 hover:bg-amber-500/30' : 'bg-amber-50 border-amber-300 text-amber-900 hover:bg-amber-100'
-                      }`}
-                    >
-                      <span>개역개정4판 본문유튜브</span> <IconExternal/>
-                    </a>
-
-                    <a
-                      href={`https://www.youtube.com/results?search_query=김포좋은나무교회+${ymdStr}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className={`px-2.5 py-1 rounded-md text-[11.5px] font-bold border flex items-center gap-1 transition-colors whitespace-nowrap ${
-                        isDark ? 'bg-white/5 border-white/15 text-stone-200 hover:bg-white/10' : 'bg-stone-50 border-stone-200 text-stone-700 hover:bg-stone-100'
-                      }`}
-                    >
-                      <span>설교 영상 검색</span> <IconExternal/>
-                    </a>
-
+                  <div className="flex gap-1.5 shrink-0 ignore-draw">
                     <button
                       type="button"
-                      onClick={handleShareVideo}
-                      className={`px-2.5 py-1 rounded-md text-[11.5px] font-bold border flex items-center gap-1 cursor-pointer transition-colors whitespace-nowrap ${
-                        isDark ? 'bg-white/5 border-white/15 text-stone-200 hover:bg-white/10' : 'bg-stone-50 border-stone-200 text-stone-700 hover:bg-stone-100'
-                      }`}
+                      onClick={() => openModal && openModal('sermonList')}
+                      className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-[12px] font-bold cursor-pointer whitespace-nowrap ${subSurfaceBg} ${textMain}`}
                     >
-                      <IconShare/> <span>공유</span>
+                      <List className="w-3.5 h-3.5 text-[#2563EB]" />
+                      <span>노트 목록</span>
                     </button>
-
                     <button
                       type="button"
-                      onClick={() => setIsVideoPinned(!isVideoPinned)}
-                      className={`px-2.5 py-1 rounded-md text-[11.5px] font-bold border cursor-pointer transition-colors whitespace-nowrap ${
-                        isVideoPinned
-                          ? 'bg-stone-900 text-white dark:bg-white dark:text-stone-900 border-transparent'
-                          : (isDark ? 'bg-white/5 border-white/15 text-stone-300' : 'bg-stone-50 border-stone-200 text-stone-600')
-                      }`}
+                      onClick={downloadSermonWord}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-[12px] font-bold text-white bg-[#2563EB] cursor-pointer whitespace-nowrap"
                     >
-                      {isVideoPinned ? '상단고정 해제' : '영상 상단고정'}
-                    </button>
-
-                    {isSp && (
-                      <button
-                        type="button"
-                        onClick={() => setShowMonthlyModal(true)}
-                        className="text-[11px] font-bold text-stone-500 hover:underline cursor-pointer whitespace-nowrap"
-                      >
-                        월별 링크 설정
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <div className="flex gap-1.5 flex-1">
-                    <input 
-                      type="text" 
-                      placeholder="유튜브 설교 또는 실시간 스트리밍 주소(URL) 붙여넣기" 
-                      value={isSp ? inputUrl : (safeDay.sermonVideoUrl || '')} 
-                      onChange={(e) => { 
-                        const url = e.target.value.trim();
-                        if (isSp) {
-                          setInputUrl(url);
-                        } else {
-                          let vId = extractVideoId ? extractVideoId(url) : null;
-                          if (!vId) {
-                            const fallbackMatch = url.match(/([a-zA-Z0-9_-]{11})/);
-                            if (fallbackMatch) vId = fallbackMatch[1];
-                          }
-                          updateDay({ sermonVideoUrl: url, sermonVideoId: vId || '' });
-                        }
-                      }} 
-                      className={`flex-1 min-w-0 px-3 py-1.5 rounded-lg text-[12.5px] font-medium outline-none border ${
-                        isDark ? 'bg-[#0E1015] border-white/10 text-white' : 'bg-stone-50 border-stone-200 text-stone-900'
-                      }`} 
-                    />
-                    {isSp && (
-                      <button
-                        onClick={handleApplyCurrentMonthGisanVideo}
-                        className="shrink-0 px-3 py-1.5 bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 text-[11.5px] font-bold rounded-lg cursor-pointer whitespace-nowrap"
-                      >
-                        저장
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="flex gap-1.5 shrink-0 flex-wrap">
-                    <button
-                      type="button"
-                      onClick={handleDirectTabCapture}
-                      className="flex-1 sm:flex-none px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-stone-950 text-[11.5px] font-black flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap shadow-xs"
-                    >
-                      <IconCamera/> <span>영상 자막 즉시캡처</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleToggleOcrStudioModal}
-                      className={`px-2.5 py-1.5 rounded-lg border text-[11.5px] font-bold cursor-pointer whitespace-nowrap ${
-                        isOcrStudioOpen
-                          ? 'bg-rose-600 text-white border-rose-500'
-                          : isDark ? 'bg-white/5 border-white/15 text-stone-200 hover:bg-white/10' : 'bg-stone-100 border-stone-200 text-stone-700 hover:bg-stone-200'
-                      }`}
-                    >
-                      {isOcrStudioOpen ? '스캔창 닫기 ✕' : '스캔창 열기'}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => enterLiveCinemaFullscreen('outline')}
-                      className="flex-1 sm:flex-none px-3 py-1.5 rounded-lg bg-stone-900 hover:bg-black dark:bg-white dark:hover:bg-stone-200 text-white dark:text-stone-900 text-[11.5px] font-bold flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
-                    >
-                      <IconMaximize/> <span>전체화면 워크스테이션</span>
+                      <Save className="w-3.5 h-3.5" />
+                      <span>Word 저장</span>
                     </button>
                   </div>
                 </div>
 
-                {!isLiveCinemaMode && (
-                  <div
-                    ref={ytPlayerBoxRef}
-                    className={`w-full ${isVideoPinned ? 'max-h-[210px] sm:max-h-[260px]' : ''} aspect-video rounded-xl overflow-hidden bg-[#0A0C10] relative border border-black/10 dark:border-white/10`}
-                  >
-                    {activeYoutubeId ? (
-                      <iframe
-                        width="100%"
-                        height="100%"
-                        src={`https://www.youtube.com/embed/${activeYoutubeId}?rel=0&enablejsapi=1&playsinline=1`}
-                        title="Sermon Video"
-                        frameBorder="0"
-                        allow="autoplay; encrypted-media; picture-in-picture"
-                        allowFullScreen
-                        className="absolute inset-0 w-full h-full"
-                      />
-                    ) : (
-                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2.5 p-4 text-center">
-                        <p className="text-[12.5px] font-medium text-stone-400">
-                          개역개정 4판 성경 본문 유튜브나 주일 예배 설교 영상을 검색하여 주소를 붙여넣으세요.
-                        </p>
-                        <div className="flex flex-wrap items-center justify-center gap-2">
-                          <a
-                            href={`https://www.youtube.com/results?search_query=${encodeURIComponent(`개역개정 4판 ${activeReferenceStr || '성경'} 낭독`)}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="px-3.5 py-1.5 rounded-lg bg-amber-500 text-stone-950 text-[11.5px] font-black flex items-center gap-1.5 shadow-sm"
-                          >
-                            <span>📖 개역개정 4판 {activeReferenceStr ? `(${activeReferenceStr})` : ''} 유튜브 찾기</span> <IconExternal/>
-                          </a>
-                          <a
-                            href={`https://www.youtube.com/results?search_query=김포좋은나무교회+${ymdStr}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="px-3.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-white text-[11.5px] font-bold border border-white/15 flex items-center gap-1.5"
-                          >
-                            <span>김포좋은나무교회 설교 검색</span> <IconExternal/>
-                          </a>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* ===================================================================== */}
-            {/* 4. 유튜브 자막·적용질문 OCR 스캔 보관함 */}
-            {/* ===================================================================== */}
-            <div
-              onPointerDown={e => e.stopPropagation()}
-              className={`p-4 rounded-xl border flex flex-col gap-3 ignore-draw ${isDark ? 'bg-[#161922] border-white/10' : 'bg-white border-stone-200/90 shadow-2xs'}`}
-            >
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <div className="flex items-center gap-2">
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${isDark ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-stone-900 text-white'}`}>
-                    OCR STUDIO
-                  </span>
-                  <span className={`text-[13.5px] font-bold ${isDark ? 'text-white' : 'text-stone-900'}`}>
-                    유튜브 자막 · 적용질문 스캔 보관함 ({sermonCaptures.length})
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={handleDirectTabCapture}
-                    className="px-3 py-1.5 rounded-lg text-[11.5px] font-black bg-amber-500 text-stone-950 hover:bg-amber-400 cursor-pointer flex items-center gap-1.5"
-                  >
-                    <IconCamera/> <span>영상 자막 바로캡처</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleToggleOcrStudioModal}
-                    className={`px-2.5 py-1.5 rounded-lg text-[11.5px] font-bold border cursor-pointer ${
-                      isDark ? 'bg-white/5 text-white border-white/15' : 'bg-stone-100 text-stone-800 border-stone-200'
+                {/* 유튜브 예배 영상 시청 섹션 */}
+                {!isSanctuaryMode && (
+                  <section
+                    onPointerDown={(e) => e.stopPropagation()}
+                    className={`${surfaceBg} rounded-2xl border ${borderClass} overflow-hidden ignore-draw transition-all ${
+                      isVideoPinned ? 'sticky top-2 z-30 shadow-xl' : ''
                     }`}
                   >
-                    {isOcrStudioOpen ? '스캔창 닫기' : '스캔창 열기'}
-                  </button>
-                </div>
-              </div>
-
-              {sermonCaptures.length === 0 ? (
-                <div
-                  onClick={handleDirectTabCapture}
-                  className={`p-4 rounded-xl border border-dashed text-center cursor-pointer transition-colors ${
-                    isDark ? 'border-white/15 bg-white/[0.02] hover:bg-white/[0.04] text-stone-400' : 'border-stone-300 bg-stone-50/70 hover:bg-stone-100 text-stone-500'
-                  }`}
-                >
-                  <p className="text-[12px] font-bold">PC 화면 직접 캡처 및 모바일/태블릿 스크린샷 자막 자동 인식 지원</p>
-                  <p className="text-[11px] opacity-80 mt-0.5">유튜브 영상에 자막이나 적용질문이 나올 때 클릭하면 자막만 정밀 추출합니다</p>
-                </div>
-              ) : (
-                <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1 hide-scrollbar">
-                  {sermonCaptures.map((cap) => (
-                    <div
-                      key={cap.id}
-                      className={`p-3 rounded-xl border space-y-2 ${isDark ? 'bg-[#0E1015] border-white/10' : 'bg-stone-50 border-stone-200'}`}
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          {cap.subtitleCropUrl && (
-                            <img src={cap.subtitleCropUrl} alt="crop" className="h-7 w-16 object-cover rounded border border-white/20 bg-black" />
-                          )}
-                          <span className="text-[11px] font-mono font-bold text-amber-500">{cap.label} ({cap.timestamp})</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setStudioDraftItem(cap);
-                              setMinimizedModals(prev => ({ ...prev, ocr: false }));
-                              setIsOcrStudioOpen(true);
-                            }}
-                            className="text-[11px] font-bold text-sky-400 hover:underline cursor-pointer"
-                          >
-                            영역 재조정
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const next = sermonCaptures.filter(item => item.id !== cap.id);
-                              syncCapturesToDay(next);
-                            }}
-                            className="text-[11px] font-bold text-rose-500 hover:underline cursor-pointer"
-                          >
-                            삭제
-                          </button>
-                        </div>
+                    <div className={`px-4 py-3 border-b ${borderClass} flex items-center justify-between gap-2 flex-wrap`}>
+                      <div className="flex items-center gap-2">
+                        <Video className="w-4 h-4 text-[#2563EB]" />
+                        <span className={`text-[15px] font-bold ${textMain}`}>
+                          {isSp ? `${currentMonthNum}월 특별집회 영상` : '주일 예배 영상'}
+                        </span>
                       </div>
 
-                      <textarea
-                        rows={2}
-                        value={cap.ocrText || ''}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          const next = sermonCaptures.map(item => item.id === cap.id ? { ...item, ocrText: val } : item);
-                          syncCapturesToDay(next);
-                        }}
-                        className={`w-full p-2 rounded-lg border text-[12.5px] font-medium outline-none resize-none ${
-                          isDark ? 'bg-[#161922] border-white/10 text-white' : 'bg-white border-stone-200 text-stone-900'
-                        }`}
-                      />
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <a
+                          href={`https://www.youtube.com/results?search_query=김포좋은나무교회+${ymdStr}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className={`px-2.5 py-1 rounded-lg text-[12px] font-bold flex items-center gap-1 whitespace-nowrap ${bluePillClass}`}
+                        >
+                          <span>설교 검색</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
 
-                      <div className="flex flex-wrap items-center gap-1 pt-0.5">
-                        <span className="text-[10px] font-bold text-stone-400 mr-1">원터치 넣기:</span>
-                        {[
-                          { label: '+ 적용질문', field: 'apply' },
-                          { label: '+ 핵심요약', field: 'conviction' },
-                          { label: '+ 제1대지', field: 'point1' },
-                          { label: '+ 제2대지', field: 'point2' },
-                          { label: '+ 제3대지', field: 'point3' },
-                          { label: '+ 필기장 본문', field: 'notes' }
-                        ].map((btn) => (
-                          <button
-                            key={btn.field}
-                            type="button"
-                            onClick={() => handleDispatchOcrTextToField(btn.field, cap.ocrText, cap)}
-                            className={`px-2 py-0.5 rounded text-[10.5px] font-bold border cursor-pointer transition-colors ${
-                              isDark ? 'bg-white/5 border-white/10 text-stone-200 hover:bg-white/15' : 'bg-white border-stone-200 text-stone-700 hover:bg-stone-900 hover:text-white'
-                            }`}
-                          >
-                            {btn.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* ===================================================================== */}
-            {/* 5. 설교 3대지 구조화 빌더 (스페이스바 구절 자동완성 지원) */}
-            {/* ===================================================================== */}
-            <div className={`p-4 rounded-xl border flex flex-col gap-2.5 ${isDark ? 'bg-[#161922] border-white/10' : 'bg-white border-stone-200/90 shadow-2xs'}`}>
-              <div 
-                onClick={() => setShowOutlineBuilder(!showOutlineBuilder)}
-                className="flex justify-between items-center cursor-pointer select-none"
-              >
-                <span className={`text-[13.5px] font-bold ${isDark ? 'text-white' : 'text-stone-900'}`}>
-                  설교 대지 구조화 (3-Point Outline)
-                </span>
-                <IconChevronDown className={showOutlineBuilder ? 'w-4 h-4 text-stone-400 transition-transform rotate-180' : 'w-4 h-4 text-stone-400 transition-transform'} />
-              </div>
-
-              {showOutlineBuilder && (
-                <div className="space-y-2.5 pt-2 border-t border-stone-200 dark:border-white/10 ignore-draw" onPointerDown={e => e.stopPropagation()}>
-                  {[
-                    { key: 'sermonPoint1', label: '제1대지: 본문 관찰 및 하나님의 성품', code: 'POINT 01', ph: '첫 번째 대지 핵심 내용을 입력하세요 (예: 창1:1 + 스페이스바)' },
-                    { key: 'sermonPoint2', label: '제2대지: 직면한 나의 모습과 회개', code: 'POINT 02', ph: '두 번째 대지 핵심 내용을 입력하세요' },
-                    { key: 'sermonPoint3', label: '제3대지: 구속사적 결단과 순종', code: 'POINT 03', ph: '세 번째 대지 핵심 내용을 입력하세요' }
-                  ].map((pt) => (
-                    <div key={pt.key} className="space-y-1">
-                      <div className="flex items-center justify-between text-[11.5px] font-bold text-stone-500">
-                        <span>{pt.label}</span>
-                        <span className="text-[10px] font-mono opacity-60">{pt.code}</span>
-                      </div>
-                      <input 
-                        type="text" 
-                        value={safeDay[pt.key] || ''} 
-                        onChange={e => updateDay && updateDay({ [pt.key]: e.target.value })} 
-                        onKeyDown={e => handleSpacebarVerseAutoCompleteOnInput(e, pt.key, safeDay[pt.key] || '')}
-                        placeholder={pt.ph} 
-                        className={`w-full px-3.5 py-2 rounded-lg border text-[13px] font-medium outline-none ${
-                          isDark ? 'bg-[#0E1015] border-white/10 text-white focus:border-stone-400' : 'bg-stone-50 border-stone-200 text-stone-900 focus:border-stone-400'
-                        }`} 
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* ===================================================================== */}
-            {/* 6. 설교 적용 질문 (목장 나눔 질문) & 나의 결단 */}
-            {/* ===================================================================== */}
-            <div
-              onPointerDown={e => e.stopPropagation()}
-              className={`p-4 rounded-xl border flex flex-col gap-3 ignore-draw ${isDark ? 'bg-[#161922] border-white/10' : 'bg-white border-stone-200/90 shadow-2xs'}`}
-            >
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <span className={`text-[13.5px] font-bold ${isDark ? 'text-white' : 'text-stone-900'}`}>
-                  설교 적용 질문 & 목장 나눔
-                </span>
-                <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={handleDirectTabCapture}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border cursor-pointer ${
-                      isDark ? 'bg-amber-500/15 border-amber-400/30 text-amber-300' : 'bg-amber-50 border-amber-300 text-amber-900'
-                    }`}
-                  >
-                    + 영상 적용질문 바로캡처
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const cur = getArr ? [...getArr(safeDay.applyQuestions)] : [];
-                      updateDay && updateDay({ applyQuestions: [...cur, ''] });
-                    }}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border cursor-pointer ${
-                      isDark ? 'bg-white/5 border-white/15 text-white' : 'bg-stone-100 border-stone-200 text-stone-800'
-                    }`}
-                  >
-                    + 질문 추가
-                  </button>
-                </div>
-              </div>
-
-              <div className="space-y-2.5">
-                {((getArr ? getArr(safeDay.applyQuestions) : safeDay.applyQuestions) || ['']).map((qText, qIdx) => (
-                  <div key={qIdx} className={`p-3 rounded-xl border space-y-2 ${isDark ? 'bg-[#0E1015] border-white/10' : 'bg-stone-50 border-stone-200'}`}>
-                    <div className="flex items-center gap-2">
-                      <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-500 text-[10px] font-mono font-bold shrink-0">
-                        Q{qIdx + 1}
-                      </span>
-                      <input
-                        type="text"
-                        value={qText || ''}
-                        onChange={(e) => {
-                          const nextQ = [...((getArr ? getArr(safeDay.applyQuestions) : safeDay.applyQuestions) || [''])];
-                          nextQ[qIdx] = e.target.value;
-                          updateDay && updateDay({ applyQuestions: nextQ });
-                        }}
-                        placeholder="유튜브 화면에서 스캔한 적용질문이나 나눔 질문을 입력하세요"
-                        className={`flex-1 bg-transparent text-[13px] font-bold outline-none ${isDark ? 'text-white' : 'text-stone-900'}`}
-                      />
-                      {qIdx > 0 && (
                         <button
                           type="button"
-                          onClick={() => {
-                            const nextQ = [...(getArr ? getArr(safeDay.applyQuestions) : safeDay.applyQuestions)].filter((_, i) => i !== qIdx);
-                            updateDay && updateDay({ applyQuestions: nextQ });
-                          }}
-                          className="text-xs text-rose-500 font-bold px-1 cursor-pointer"
+                          onClick={handleShareVideo}
+                          className={`px-2.5 py-1 rounded-lg text-[12px] font-bold flex items-center gap-1 cursor-pointer whitespace-nowrap ${subSurfaceBg} ${textMain}`}
                         >
-                          ✕
+                          <Share2 className="w-3.5 h-3.5" />
+                          <span>공유</span>
                         </button>
-                      )}
+
+                        <button
+                          type="button"
+                          onClick={() => setIsVideoPinned(!isVideoPinned)}
+                          className={`px-2.5 py-1 rounded-lg text-[12px] font-bold flex items-center gap-1 cursor-pointer whitespace-nowrap ${
+                            isVideoPinned ? 'bg-[#0D9488] text-white' : `${subSurfaceBg} ${textMain}`
+                          }`}
+                        >
+                          <Pin className="w-3.5 h-3.5" />
+                          <span>{isVideoPinned ? '고정 해제' : '상단고정'}</span>
+                        </button>
+
+                        {isSp && (
+                          <button
+                            type="button"
+                            onClick={() => setShowMonthlyModal(true)}
+                            className={`px-2.5 py-1 rounded-lg text-[12px] font-bold cursor-pointer whitespace-nowrap ${amberPillClass}`}
+                          >
+                            월별 링크
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    <textarea
-                      rows={2}
-                      value={(safeDay.applyAnswers && safeDay.applyAnswers[qIdx]) || ''}
-                      onChange={(e) => {
-                        const nextA = { ...(safeDay.applyAnswers || {}), [qIdx]: e.target.value };
-                        updateDay && updateDay({ applyAnswers: nextA });
-                      }}
-                      onKeyDown={(e) => {
-                        const curAns = (safeDay.applyAnswers && safeDay.applyAnswers[qIdx]) || '';
-                        handleSpacebarVerseAutoCompleteOnInput(e, null, curAns, (nextVal) => {
-                          const nextA = { ...(safeDay.applyAnswers || {}), [qIdx]: nextVal };
-                          updateDay && updateDay({ applyAnswers: nextA });
-                        });
-                      }}
-                      placeholder="질문에 대한 나의 묵상과 삶의 적용 답변을 기록하세요 ('창1:1' + 스페이스바 자동완성 지원)"
-                      className={`w-full p-2.5 rounded-lg border text-[12.5px] outline-none resize-none ${
-                        isDark ? 'bg-[#161922] border-white/10 text-stone-200' : 'bg-white border-stone-200 text-stone-800'
-                      }`}
+
+                    {!isLiveCinemaMode && (
+                      <div
+                        ref={ytPlayerBoxRef}
+                        className={`w-full ${isVideoPinned ? 'max-h-[220px]' : ''} aspect-video bg-black relative`}
+                      >
+                        {activeYoutubeId ? (
+                          <iframe
+                            width="100%"
+                            height="100%"
+                            src={`https://www.youtube.com/embed/${activeYoutubeId}?rel=0&enablejsapi=1&playsinline=1`}
+                            title="Sermon Video"
+                            frameBorder="0"
+                            allow="autoplay; encrypted-media; picture-in-picture"
+                            allowFullScreen
+                            className="absolute inset-0 w-full h-full"
+                          />
+                        ) : (
+                          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2.5 p-5 text-center">
+                            <Video className="w-8 h-8 text-white/30" />
+                            <p className="text-[13.5px] font-medium text-white/60">
+                              개역개정 4판 성경 본문 유튜브나 주일 예배 설교 영상을 검색해 주소를 붙여넣으세요.
+                            </p>
+                            <div className="flex flex-wrap items-center justify-center gap-2">
+                              <a
+                                href={`https://www.youtube.com/results?search_query=${encodeURIComponent(`개역개정 4판 ${activeReferenceStr || '성경'} 낭독`)}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="px-3 py-1.5 rounded-lg bg-[#D97706] text-white text-[12px] font-bold inline-flex items-center gap-1"
+                              >
+                                <span>본문 낭독 유튜브</span>
+                                <ExternalLink className="w-3 h-3" />
+                              </a>
+                              <a
+                                href={`https://www.youtube.com/results?search_query=김포좋은나무교회+${ymdStr}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="px-3 py-1.5 rounded-lg bg-[#2563EB] text-white text-[12px] font-bold inline-flex items-center gap-1"
+                              >
+                                <span>김포좋은나무교회 설교</span>
+                                <ExternalLink className="w-3 h-3" />
+                              </a>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="p-3.5 space-y-2.5">
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="유튜브 설교 주소(URL) 붙여넣기"
+                          value={isSp ? inputUrl : safeDay.sermonVideoUrl || ''}
+                          onChange={(e) => {
+                            const url = e.target.value.trim();
+                            if (isSp) {
+                              setInputUrl(url);
+                            } else {
+                              let vId = extractVideoId ? extractVideoId(url) : null;
+                              if (!vId) {
+                                const fallbackMatch = url.match(/([a-zA-Z0-9_-]{11})/);
+                                if (fallbackMatch) vId = fallbackMatch[1];
+                              }
+                              updateDay({ sermonVideoUrl: url, sermonVideoId: vId || '' });
+                            }
+                          }}
+                          className={`flex-1 min-w-0 px-3.5 py-2 rounded-xl text-[14px] outline-none ${subSurfaceBg} ${textMain}`}
+                        />
+                        {isSp && (
+                          <button
+                            type="button"
+                            onClick={handleApplyCurrentMonthGisanVideo}
+                            className="shrink-0 px-3.5 py-2 bg-[#2563EB] text-white text-[12px] font-bold rounded-xl cursor-pointer"
+                          >
+                            저장
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-1.5">
+                        <button
+                          type="button"
+                          onClick={handleDirectTabCapture}
+                          className={`py-2 px-2 rounded-xl text-[12px] font-bold flex items-center justify-center gap-1 cursor-pointer ${amberPillClass}`}
+                        >
+                          <Camera className="w-3.5 h-3.5" />
+                          <span>자막 즉시캡처</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleToggleOcrStudioModal}
+                          className={`py-2 px-2 rounded-xl text-[12px] font-bold flex items-center justify-center gap-1 cursor-pointer ${subSurfaceBg} ${textMain}`}
+                        >
+                          <span>{isOcrStudioOpen ? '스캔창 닫기' : '스캔창 열기'}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => enterLiveCinemaFullscreen('outline')}
+                          className={`py-2 px-2 rounded-xl text-[12px] font-bold flex items-center justify-center gap-1 cursor-pointer ${bluePillClass}`}
+                        >
+                          <Maximize2 className="w-3.5 h-3.5" />
+                          <span>워크스테이션</span>
+                        </button>
+                      </div>
+                    </div>
+                  </section>
+                )}
+
+                {/* 유튜브 자막·적용질문 OCR 스캔 보관함 (사진 불러오기 & 붙여넣기 지원) */}
+                <section
+                  onPointerDown={(e) => e.stopPropagation()}
+                  className={`${surfaceBg} rounded-2xl border ${borderClass} p-4 space-y-3 ignore-draw`}
+                >
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className={`px-2 py-0.5 rounded-md text-[12px] font-bold ${amberPillClass}`}>OCR</span>
+                      <span className={`text-[15px] font-bold ${textMain}`}>
+                        자막 · 적용질문 스캔 보관함 ({sermonCaptures.length})
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => captureInputRef.current?.click()}
+                        className={`px-2.5 py-1.5 rounded-lg text-[12px] font-bold flex items-center gap-1 cursor-pointer ${amberPillClass}`}
+                      >
+                        <ImageIcon className="w-3.5 h-3.5" />
+                        <span>사진 불러오기</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleToggleOcrStudioModal}
+                        className={`px-2.5 py-1.5 rounded-lg text-[12px] font-bold cursor-pointer ${subSurfaceBg} ${textMain}`}
+                      >
+                        {isOcrStudioOpen ? '닫기' : '스캔창'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 모바일·PC 공용 클립보드 붙여넣기 드롭존 */}
+                  <div
+                    ref={pasteZoneRef}
+                    tabIndex={0}
+                    onClick={handleReadClipboardImageForOcr}
+                    className={`p-3.5 rounded-xl border border-dashed text-center cursor-pointer transition-colors outline-none focus:border-[#D97706] ${
+                      isDark ? 'border-[#333B4A] bg-[#20242E]/60 text-[#94A3B8]' : 'border-[#CBD5E1] bg-[#F8FAFC] text-[#64748B]'
+                    }`}
+                  >
+                    <div className="flex items-center justify-center gap-1.5 text-[13px] font-bold text-[#D97706]">
+                      <ClipboardPaste className="w-4 h-4" />
+                      <span>캡처 이미지 붙여넣기 (Ctrl+V) 또는 터치하여 불러오기</span>
+                    </div>
+                    <p className="text-[12px] mt-0.5">화면 캡처 후 붙여넣거나 사진 파일을 선택하면 자막을 자동 판독합니다.</p>
+                  </div>
+
+                  {sermonCaptures.length > 0 && (
+                    <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1 hide-scrollbar">
+                      {sermonCaptures.map((cap) => (
+                        <div key={cap.id} className={`p-3 rounded-xl ${subSurfaceBg} space-y-2`}>
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              {cap.subtitleCropUrl && (
+                                <img src={cap.subtitleCropUrl} alt="crop" className="h-7 w-14 object-cover rounded bg-black" />
+                              )}
+                              <span className="text-[12px] font-bold text-[#D97706]">
+                                {cap.label} ({cap.timestamp})
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setStudioDraftItem(cap);
+                                  setMinimizedModals((prev) => ({ ...prev, ocr: false }));
+                                  setIsOcrStudioOpen(true);
+                                }}
+                                className="text-[12px] font-bold text-[#2563EB] cursor-pointer"
+                              >
+                                영역 재조정
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const next = sermonCaptures.filter((item) => item.id !== cap.id);
+                                  syncCapturesToDay(next);
+                                }}
+                                className={`text-[12px] font-bold ${textSub} cursor-pointer`}
+                              >
+                                삭제
+                              </button>
+                            </div>
+                          </div>
+
+                          <textarea
+                            rows={2}
+                            value={cap.ocrText || ''}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              const next = sermonCaptures.map((item) => (item.id === cap.id ? { ...item, ocrText: val } : item));
+                              syncCapturesToDay(next);
+                            }}
+                            className={`w-full p-2.5 rounded-lg border text-[13.5px] outline-none resize-none ${surfaceBg} ${textMain} ${borderClass}`}
+                          />
+
+                          <div className="flex flex-wrap items-center gap-1 pt-0.5">
+                            <span className={`text-[12px] font-medium ${textSub} mr-1`}>삽입:</span>
+                            {[
+                              { label: '적용질문', field: 'apply', cls: sagePillClass },
+                              { label: '핵심요약', field: 'conviction', cls: amberPillClass },
+                              { label: '제1대지', field: 'point1', cls: bluePillClass },
+                              { label: '제2대지', field: 'point2', cls: bluePillClass },
+                              { label: '제3대지', field: 'point3', cls: bluePillClass },
+                              { label: '필기장 본문', field: 'notes', cls: sagePillClass }
+                            ].map((btn) => (
+                              <button
+                                key={btn.field}
+                                type="button"
+                                onClick={() => handleDispatchOcrTextToField(btn.field, cap.ocrText, cap)}
+                                className={`px-2 py-0.5 rounded text-[11.5px] font-bold cursor-pointer ${btn.cls}`}
+                              >
+                                {btn.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </section>
+              </div>
+
+              {/* =============================================================== */}
+              {/* [우측 7컬럼] 설교 정보 + 3대지 구조화 + 적용 질문 + 본문 에디터 */}
+              {/* =============================================================== */}
+              <div className="lg:col-span-7 space-y-4">
+                {/* 1. 설교 메타데이터 & 성경 연구 툴바 */}
+                <section className={`${surfaceBg} rounded-2xl border ${borderClass} p-4 sm:p-5 space-y-3.5`}>
+                  <div>
+                    <label className={`text-[12px] font-bold ${textSub} block mb-1`}>설교 제목</label>
+                    <input
+                      type="text"
+                      value={safeDay.sermonTitle || globalSharedQt?.[date]?.sermonData?.title || ''}
+                      onChange={(e) => updateDay({ sermonTitle: e.target.value })}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      className={`w-full px-3.5 py-2.5 rounded-xl text-[15px] font-bold outline-none ${subSurfaceBg} ${textMain}`}
+                      placeholder="설교 제목을 입력하세요"
                     />
                   </div>
-                ))}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
+                    <div className="sm:col-span-5">
+                      <label className={`text-[12px] font-bold ${textSub} block mb-1`}>설교자</label>
+                      <input
+                        type="text"
+                        value={safeDay.sermonPreacher || globalSharedQt?.[date]?.sermonData?.preacher || ''}
+                        onChange={(e) => updateDay({ sermonPreacher: e.target.value })}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        className={`w-full px-3.5 py-2.5 rounded-xl text-[14px] font-medium outline-none ${subSurfaceBg} ${textMain}`}
+                        placeholder="예: 담임목사"
+                      />
+                    </div>
+                    <div className="sm:col-span-7 ignore-draw">
+                      <label className={`text-[12px] font-bold ${textSub} block mb-1`}>설교 본문 구절</label>
+                      <div className="flex gap-1.5 items-center">
+                        <input
+                          type="text"
+                          value={safeDay.sermonReference || globalSharedQt?.[date]?.sermonData?.reference || ''}
+                          onChange={(e) => {
+                            setCustomRefQuery(e.target.value);
+                            updateDay && updateDay({ sermonReference: e.target.value });
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleOpenKrv4ScriptureView(safeDay.sermonReference || globalSharedQt?.[date]?.sermonData?.reference);
+                            }
+                          }}
+                          onPointerDown={(e) => e.stopPropagation()}
+                          placeholder="예: 창 1:1-5, 요 3:16"
+                          className={`flex-1 min-w-0 px-3.5 py-2.5 rounded-xl text-[14px] font-medium outline-none ${subSurfaceBg} ${textMain}`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleOpenKrv4ScriptureView(safeDay.sermonReference || globalSharedQt?.[date]?.sermonData?.reference)}
+                          className={`shrink-0 px-3 py-2.5 rounded-xl text-[12px] font-bold flex items-center gap-1 cursor-pointer whitespace-nowrap ${amberPillClass}`}
+                        >
+                          <BookOpen className="w-3.5 h-3.5" />
+                          <span>본문 보기</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 4대 성경 연구 툴바 (3색 조화) */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-0.5 ignore-draw" onPointerDown={(e) => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (isBibleFinderOpen) setIsBibleFinderOpen(false);
+                        else {
+                          setFinderRefInput(activeReferenceStr);
+                          setShowFullChapterInFinder(false);
+                          setMinimizedModals((prev) => ({ ...prev, finder: false }));
+                          setIsBibleFinderOpen(true);
+                        }
+                      }}
+                      className={`py-2.5 px-2.5 rounded-xl text-[12px] font-bold flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                        isBibleFinderOpen ? 'bg-[#D97706] text-white' : amberPillClass
+                      }`}
+                    >
+                      <Search className="w-3.5 h-3.5" />
+                      <span>{isBibleFinderOpen ? '말씀찾기 닫기' : '개역개정4판 찾기'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (inspectorTarget) setInspectorTarget(null);
+                        else openMcheyneStyleVerseInspector(activeReferenceStr, selectedWordVerse);
+                      }}
+                      className={`py-2.5 px-2.5 rounded-xl text-[12px] font-bold flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                        inspectorTarget ? 'bg-[#2563EB] text-white' : bluePillClass
+                      }`}
+                    >
+                      <BookOpen className="w-3.5 h-3.5" />
+                      <span>{inspectorTarget ? '원어강해 닫기' : '원어 강해'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (isArcModalOpen && arcModalInitialMode === 'arc') setIsArcModalOpen(false);
+                        else {
+                          setArcModalInitialMode('arc');
+                          setIsArcModalOpen(true);
+                        }
+                      }}
+                      className={`py-2.5 px-2.5 rounded-xl text-[12px] font-bold flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                        isArcModalOpen && arcModalInitialMode === 'arc' ? 'bg-[#0D9488] text-white' : sagePillClass
+                      }`}
+                    >
+                      <Compass className="w-3.5 h-3.5" />
+                      <span>신구약 아크</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (isArcModalOpen && arcModalInitialMode === '2d') setIsArcModalOpen(false);
+                        else {
+                          setArcModalInitialMode('2d');
+                          setIsArcModalOpen(true);
+                        }
+                      }}
+                      className={`py-2.5 px-2.5 rounded-xl text-[12px] font-bold flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                        isArcModalOpen && arcModalInitialMode === '2d' ? 'bg-[#0D9488] text-white' : sagePillClass
+                      }`}
+                    >
+                      <Globe className="w-3.5 h-3.5" />
+                      <span>말씀 은하계</span>
+                    </button>
+                  </div>
+
+                  {/* 핵심 요약 한 문장 */}
+                  <div className="pt-0.5 ignore-draw" onPointerDown={(e) => e.stopPropagation()}>
+                    <label className="text-[12px] font-bold text-[#D97706] block mb-1">
+                      핵심 요절 및 설교 한 문장 요약 (구절 입력 후 스페이스바 자동완성)
+                    </label>
+                    <input
+                      type="text"
+                      value={safeDay.sermonConviction || ''}
+                      onChange={(e) => updateDay && updateDay({ sermonConviction: e.target.value })}
+                      onKeyDown={(e) => handleSpacebarVerseAutoCompleteOnInput(e, 'sermonConviction', safeDay.sermonConviction || '')}
+                      placeholder="설교 중 가장 중심이 되는 핵심 문장을 기록하세요 (예: 요3:16 + 스페이스바)"
+                      className={`w-full px-3.5 py-2.5 rounded-xl text-[14.5px] font-medium outline-none ${subSurfaceBg} ${textMain}`}
+                    />
+                  </div>
+
+                  {linkedRefs.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 pt-0.5 ignore-draw">
+                      {linkedRefs.map((ref) => (
+                        <button
+                          key={ref}
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveBacklink(ref);
+                          }}
+                          className={`px-2.5 py-1 rounded-lg text-[12px] font-bold flex items-center gap-1 cursor-pointer ${
+                            activeBacklink === ref ? 'bg-[#0D9488] text-white' : sagePillClass
+                          }`}
+                        >
+                          <Link2 className="w-3 h-3" />
+                          <span>{ref} 과거 기록 대조</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </section>
+
+                {/* 2. 설교 3대지 구조화 빌더 */}
+                <section className={`${surfaceBg} rounded-2xl border ${borderClass} p-4 sm:p-5 space-y-3`}>
+                  <div onClick={() => setShowOutlineBuilder(!showOutlineBuilder)} className="flex justify-between items-center cursor-pointer select-none">
+                    <span className={`text-[16px] font-bold ${textMain}`}>설교 대지 구조화 (3-Point Outline)</span>
+                    <ChevronDown className={`w-4 h-4 text-[#8B95A1] transition-transform ${showOutlineBuilder ? 'rotate-180' : ''}`} />
+                  </div>
+
+                  {showOutlineBuilder && (
+                    <div className={`space-y-3 pt-3 border-t ${borderClass} ignore-draw`} onPointerDown={(e) => e.stopPropagation()}>
+                      {[
+                        { key: 'sermonPoint1', label: '제1대지: 본문 관찰 및 하나님의 성품', ph: '첫 번째 대지 핵심 내용을 입력하세요 (예: 창1:1 + 스페이스바)' },
+                        { key: 'sermonPoint2', label: '제2대지: 직면한 나의 모습과 회개', ph: '두 번째 대지 핵심 내용을 입력하세요' },
+                        { key: 'sermonPoint3', label: '제3대지: 구속사적 결단과 순종', ph: '세 번째 대지 핵심 내용을 입력하세요' }
+                      ].map((pt) => (
+                        <div key={pt.key} className="space-y-1">
+                          <span className={`text-[12px] font-bold ${textSub} block`}>{pt.label}</span>
+                          <input
+                            type="text"
+                            value={safeDay[pt.key] || ''}
+                            onChange={(e) => updateDay && updateDay({ [pt.key]: e.target.value })}
+                            onKeyDown={(e) => handleSpacebarVerseAutoCompleteOnInput(e, pt.key, safeDay[pt.key] || '')}
+                            placeholder={pt.ph}
+                            className={`w-full px-3.5 py-2.5 rounded-xl text-[14.5px] font-medium outline-none ${subSurfaceBg} ${textMain}`}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </section>
+
+                {/* 3. 설교 적용 질문 (목장 나눔 질문) & 나의 결단 */}
+                <section
+                  onPointerDown={(e) => e.stopPropagation()}
+                  className={`${surfaceBg} rounded-2xl border ${borderClass} p-4 sm:p-5 space-y-3.5 ignore-draw`}
+                >
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <span className={`text-[16px] font-bold ${textMain}`}>설교 적용 질문 & 목장 나눔</span>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={handleDirectTabCapture}
+                        className={`px-2.5 py-1.5 rounded-lg text-[12px] font-bold cursor-pointer ${amberPillClass}`}
+                      >
+                        + 영상 적용질문 캡처
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const cur = getArr ? [...getArr(safeDay.applyQuestions)] : [];
+                          updateDay && updateDay({ applyQuestions: [...cur, ''] });
+                        }}
+                        className={`px-2.5 py-1.5 rounded-lg text-[12px] font-bold cursor-pointer ${sagePillClass}`}
+                      >
+                        + 질문 추가
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className={`divide-y ${dividerClass}`}>
+                    {((getArr ? getArr(safeDay.applyQuestions) : safeDay.applyQuestions) || ['']).map((qText, qIdx) => (
+                      <div key={qIdx} className="py-3 first:pt-0 last:pb-0 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2 py-0.5 rounded-md text-[12px] font-bold shrink-0 ${sagePillClass}`}>
+                            Q{qIdx + 1}
+                          </span>
+                          <input
+                            type="text"
+                            value={qText || ''}
+                            onChange={(e) => {
+                              const nextQ = [...((getArr ? getArr(safeDay.applyQuestions) : safeDay.applyQuestions) || [''])];
+                              nextQ[qIdx] = e.target.value;
+                              updateDay && updateDay({ applyQuestions: nextQ });
+                            }}
+                            placeholder="유튜브 화면에서 스캔한 적용질문이나 나눔 질문을 입력하세요"
+                            className={`flex-1 bg-transparent text-[15px] font-bold outline-none ${textMain}`}
+                          />
+                          {qIdx > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const nextQ = [...(getArr ? getArr(safeDay.applyQuestions) : safeDay.applyQuestions)].filter((_, i) => i !== qIdx);
+                                updateDay && updateDay({ applyQuestions: nextQ });
+                              }}
+                              className={`text-[12px] font-bold ${textSub} cursor-pointer`}
+                            >
+                              삭제
+                            </button>
+                          )}
+                        </div>
+                        <textarea
+                          rows={2}
+                          value={(safeDay.applyAnswers && safeDay.applyAnswers[qIdx]) || ''}
+                          onChange={(e) => {
+                            const nextA = { ...(safeDay.applyAnswers || {}), [qIdx]: e.target.value };
+                            updateDay && updateDay({ applyAnswers: nextA });
+                          }}
+                          onKeyDown={(e) => {
+                            const curAns = (safeDay.applyAnswers && safeDay.applyAnswers[qIdx]) || '';
+                            handleSpacebarVerseAutoCompleteOnInput(e, null, curAns, (nextVal) => {
+                              const nextA = { ...(safeDay.applyAnswers || {}), [qIdx]: nextVal };
+                              updateDay && updateDay({ applyAnswers: nextA });
+                            });
+                          }}
+                          placeholder="질문에 대한 나의 묵상과 삶의 적용 답변을 기록하세요 ('창1:1' + 스페이스바 자동완성 지원)"
+                          className={`w-full p-3 rounded-xl text-[14px] outline-none resize-none ${subSurfaceBg} ${textMain}`}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </section>
+
+                {/* 4. 설교 본문 리치 텍스트 에디터 (스페이스바 구절 자동완성 + STT) */}
+                <section
+                  onPointerDown={(e) => e.stopPropagation()}
+                  className={`${surfaceBg} rounded-2xl border ${borderClass} p-4 sm:p-5 space-y-3.5 ignore-draw`}
+                >
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <FileText className="w-4 h-4 text-[#2563EB]" />
+                      <span className={`text-[16px] font-bold ${textMain}`}>설교 본문 노트 & 실시간 음성 필기</span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <select
+                        value={sttTargetField}
+                        onChange={(e) => setSttTargetField(e.target.value)}
+                        className={`px-2.5 py-1.5 rounded-lg text-[12px] font-bold outline-none ${subSurfaceBg} ${textMain}`}
+                      >
+                        <option value="notes">음성입력: 본문 필기장</option>
+                        <option value="conviction">음성입력: 핵심 한문장</option>
+                        <option value="point1">음성입력: 제1대지</option>
+                        <option value="point2">음성입력: 제2대지</option>
+                        <option value="point3">음성입력: 제3대지</option>
+                        <option value="apply">음성입력: 적용질문</option>
+                      </select>
+
+                      <button
+                        type="button"
+                        onClick={toggleSpeechRecognition}
+                        className={`px-3 py-1.5 rounded-lg text-[12px] font-bold flex items-center gap-1.5 cursor-pointer ${
+                          isSpeechRecording ? 'bg-[#D97706] text-white' : 'bg-[#0D9488] text-white'
+                        }`}
+                      >
+                        <Mic className="w-3.5 h-3.5" />
+                        <span>{isSpeechRecording ? '음성 중지' : '음성 받아쓰기'}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {isSpeechRecording && sttInterimText && (
+                    <div className={`px-3.5 py-2 rounded-xl text-[13px] font-medium ${sagePillClass}`}>
+                      인식 중: {sttInterimText}
+                    </div>
+                  )}
+
+                  <div
+                    onKeyDownCapture={handleEditorContainerKeyDown}
+                    className={`min-h-[340px] rounded-xl overflow-hidden border ${borderClass}`}
+                  >
+                    <RichTextEditor
+                      ref={sermonEditorRef}
+                      value={safeDay.sermonNotes || ''}
+                      onChange={handleRichTextChange}
+                      placeholder="설교 말씀을 들으며 은혜받은 내용과 묵상을 기록하세요. ('창1:1' 입력 후 스페이스바를 누르면 개역개정 4판 구절이 자동으로 완성됩니다)"
+                      isDarkMode={isDark}
+                    />
+                  </div>
+
+                  {/* 하단 실천 결단 & 목장/기도함 연동 바 */}
+                  <div className={`pt-3 border-t ${borderClass} space-y-2.5`}>
+                    <input
+                      type="text"
+                      value={safeDay.sermonGraceLine || ''}
+                      onChange={(e) => handleGraceLineSync(e.target.value)}
+                      onKeyDown={(e) => handleSpacebarVerseAutoCompleteOnInput(e, 'sermonGraceLine', safeDay.sermonGraceLine || '', handleGraceLineSync)}
+                      placeholder="오늘 나에게 주신 한 줄 은혜 고백 및 감사 선포를 입력하세요"
+                      className={`w-full px-3.5 py-2.5 rounded-xl text-[14.5px] font-medium outline-none ${subSurfaceBg} ${textMain}`}
+                    />
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      <button
+                        type="button"
+                        onClick={inlineActionSendToTracker}
+                        className="py-2.5 px-3 rounded-xl bg-[#0D9488] text-white text-[12px] font-bold flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <Target className="w-3.5 h-3.5" />
+                        <span>적용 트래커</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={inlineActionSendToPrayer}
+                        className="py-2.5 px-3 rounded-xl bg-[#2563EB] text-white text-[12px] font-bold flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <HandHeart className="w-3.5 h-3.5" />
+                        <span>나의 기도함</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSendDeclarationToCell(safeDay.sermonGraceLine || safeDay.sermonConviction)}
+                        className={`py-2.5 px-3 rounded-xl text-[12px] font-bold flex items-center justify-center gap-1.5 cursor-pointer ${sagePillClass}`}
+                      >
+                        <span>목장 감사나눔</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={inlineActionSendToCounseling}
+                        className={`py-2.5 px-3 rounded-xl text-[12px] font-bold flex items-center justify-center gap-1.5 cursor-pointer ${amberPillClass}`}
+                      >
+                        <MessageCircle className="w-3.5 h-3.5" />
+                        <span>1:1 나눔 요청</span>
+                      </button>
+                    </div>
+                  </div>
+                </section>
               </div>
             </div>
-
-            {/* ===================================================================== */}
-            {/* 7. 설교 본문 리치 텍스트 에디터 (스페이스바 구절 자동완성 + STT 완벽 지원!) */}
-            {/* ===================================================================== */}
-            <div
-              onPointerDown={e => e.stopPropagation()}
-              className={`p-4 rounded-xl border flex flex-col gap-3 ignore-draw ${isDark ? 'bg-[#161922] border-white/10' : 'bg-white border-stone-200/90 shadow-2xs'}`}
-            >
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <IconDocument/>
-                  <span className={`text-[13.5px] font-bold ${isDark ? 'text-white' : 'text-stone-900'}`}>
-                    설교 본문 노트 & 실시간 음성 필기
-                  </span>
-                  <span className="text-[10.5px] font-bold text-amber-500">
-                    (⌨️ 본문에서 '창1:1', '롬8:28' 치고 스페이스바 누르면 구절 즉시 자동완성!)
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <select
-                    value={sttTargetField}
-                    onChange={(e) => setSttTargetField(e.target.value)}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border outline-none ${
-                      isDark ? 'bg-[#0E1015] border-white/15 text-stone-200' : 'bg-stone-50 border-stone-200 text-stone-700'
-                    }`}
-                  >
-                    <option value="notes">음성입력: 본문 필기장</option>
-                    <option value="conviction">음성입력: 핵심 한문장</option>
-                    <option value="point1">음성입력: 제1대지</option>
-                    <option value="point2">음성입력: 제2대지</option>
-                    <option value="point3">음성입력: 제3대지</option>
-                    <option value="apply">음성입력: 적용질문</option>
-                  </select>
-
-                  <button
-                    type="button"
-                    onClick={toggleSpeechRecognition}
-                    className={`px-3 py-1 rounded-lg text-[11.5px] font-bold flex items-center gap-1.5 cursor-pointer transition-all ${
-                      isSpeechRecording
-                        ? 'bg-rose-600 text-white animate-pulse'
-                        : isDark ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-stone-900 text-white hover:bg-black'
-                    }`}
-                  >
-                    <IconMic/>
-                    <span>{isSpeechRecording ? '음성 받아쓰기 중지' : '음성 받아쓰기 시작'}</span>
-                  </button>
-                </div>
-              </div>
-
-              {isSpeechRecording && sttInterimText && (
-                <div className="px-3 py-2 rounded-lg bg-rose-500/10 border border-rose-500/30 text-xs text-rose-400 font-medium">
-                  인식 중: {sttInterimText}
-                </div>
-              )}
-
-              {/* 스페이스바 자동완성 감지 래퍼 */}
-              <div
-                onKeyDownCapture={handleEditorContainerKeyDown}
-                className="min-h-[320px] rounded-xl overflow-hidden border border-stone-200 dark:border-white/10"
-              >
-                <RichTextEditor
-                  ref={sermonEditorRef}
-                  value={safeDay.sermonNotes || ''}
-                  onChange={handleRichTextChange}
-                  placeholder="설교 말씀을 들으며 은혜받은 내용과 묵상을 기록하세요. (예: '창1:1' 입력 후 스페이스바를 누르면 개역개정 4판 구절이 자동으로 완성됩니다!)"
-                  isDarkMode={isDark}
-                />
-              </div>
-
-              {/* 하단 실천 결단 & 목장/기도함 연동 바 */}
-              <div className={`p-3 rounded-xl border flex flex-col gap-2.5 ${isDark ? 'bg-[#0E1015] border-white/10' : 'bg-stone-50 border-stone-200'}`}>
-                <input
-                  type="text"
-                  value={safeDay.sermonGraceLine || ''}
-                  onChange={(e) => handleGraceLineSync(e.target.value)}
-                  onKeyDown={(e) => handleSpacebarVerseAutoCompleteOnInput(e, 'sermonGraceLine', safeDay.sermonGraceLine || '', handleGraceLineSync)}
-                  placeholder="오늘 나에게 주신 한 줄 은혜 고백 및 감사 선포를 입력하세요"
-                  className={`w-full px-3 py-2 rounded-lg border text-[13px] font-medium outline-none ${
-                    isDark ? 'bg-[#161922] border-white/10 text-white' : 'bg-white border-stone-200 text-stone-900'
-                  }`}
-                />
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={inlineActionSendToTracker}
-                    className={`px-3 py-1.5 rounded-lg text-[11px] font-bold border cursor-pointer ${
-                      isDark ? 'bg-white/5 border-white/15 text-stone-200 hover:bg-white/10' : 'bg-white border-stone-200 text-stone-700 hover:bg-stone-100'
-                    }`}
-                  >
-                    🎯 적용 트래커 등록
-                  </button>
-                  <button
-                    type="button"
-                    onClick={inlineActionSendToPrayer}
-                    className={`px-3 py-1.5 rounded-lg text-[11px] font-bold border cursor-pointer ${
-                      isDark ? 'bg-white/5 border-white/15 text-stone-200 hover:bg-white/10' : 'bg-white border-stone-200 text-stone-700 hover:bg-stone-100'
-                    }`}
-                  >
-                    🙏 나의 기도함 보관
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleSendDeclarationToCell(safeDay.sermonGraceLine || safeDay.sermonConviction)}
-                    className={`px-3 py-1.5 rounded-lg text-[11px] font-bold border cursor-pointer ${
-                      isDark ? 'bg-white/5 border-white/15 text-stone-200 hover:bg-white/10' : 'bg-white border-stone-200 text-stone-700 hover:bg-stone-100'
-                    }`}
-                  >
-                    🌿 목장 감사나눔 전송
-                  </button>
-                  <button
-                    type="button"
-                    onClick={inlineActionSendToCounseling}
-                    className={`px-3 py-1.5 rounded-lg text-[11px] font-bold border cursor-pointer ${
-                      isDark ? 'bg-white/5 border-white/15 text-stone-200 hover:bg-white/10' : 'bg-white border-stone-200 text-stone-700 hover:bg-stone-100'
-                    }`}
-                  >
-                    💬 교역자 1:1 나눔 요청
-                  </button>
-                </div>
-              </div>
-            </div>
-
           </div>
         </CanvasEngine>
       )}
 
-      {/* ===================================================================== */}
-      {/* 📌 최소화된 팝업들을 우측 하단 작은 캡슐로 모아 보여주는 독 바 */}
-      {/* ===================================================================== */}
+      {/* 최소화된 팝업들을 우측 하단 작은 캡슐로 모아 보여주는 독 바 */}
       <div className="fixed bottom-4 right-4 z-[9999999] flex flex-wrap items-center gap-2 pointer-events-auto">
         {isOcrStudioOpen && minimizedModals.ocr && (
-          <div className="px-3.5 py-2 rounded-full bg-amber-500 text-stone-950 font-black text-xs shadow-2xl flex items-center gap-2 border border-white/20">
-            <button onClick={() => setMinimizedModals(prev => ({ ...prev, ocr: false }))} className="cursor-pointer">
-              📷 자막 OCR 스캔창 펼치기 ▲
+          <div className="px-3.5 py-2 rounded-full bg-[#D97706] text-white font-bold text-[12px] shadow-lg flex items-center gap-2">
+            <button type="button" onClick={() => setMinimizedModals((prev) => ({ ...prev, ocr: false }))} className="cursor-pointer">
+              자막 OCR 스캔창 펼치기
             </button>
-            <button onClick={() => setIsOcrStudioOpen(false)} className="px-1 text-stone-900 font-bold cursor-pointer">✕</button>
+            <button type="button" onClick={() => setIsOcrStudioOpen(false)} className="px-1 cursor-pointer">
+              <X className="w-3.5 h-3.5" />
+            </button>
           </div>
         )}
         {isBibleFinderOpen && minimizedModals.finder && (
-          <div className="px-3.5 py-2 rounded-full bg-sky-500 text-stone-950 font-black text-xs shadow-2xl flex items-center gap-2 border border-white/20">
-            <button onClick={() => setMinimizedModals(prev => ({ ...prev, finder: false }))} className="cursor-pointer">
-              📖 개역개정4판 본문창 펼치기 ▲
+          <div className="px-3.5 py-2 rounded-full bg-[#0D9488] text-white font-bold text-[12px] shadow-lg flex items-center gap-2">
+            <button type="button" onClick={() => setMinimizedModals((prev) => ({ ...prev, finder: false }))} className="cursor-pointer">
+              개역개정4판 본문창 펼치기
             </button>
-            <button onClick={() => setIsBibleFinderOpen(false)} className="px-1 text-stone-900 font-bold cursor-pointer">✕</button>
+            <button type="button" onClick={() => setIsBibleFinderOpen(false)} className="px-1 cursor-pointer">
+              <X className="w-3.5 h-3.5" />
+            </button>
           </div>
         )}
         {inspectorTarget && minimizedModals.inspector && (
-          <div className="px-3.5 py-2 rounded-full bg-indigo-600 text-white font-black text-xs shadow-2xl flex items-center gap-2 border border-white/20">
-            <button onClick={() => setMinimizedModals(prev => ({ ...prev, inspector: false }))} className="cursor-pointer">
-              🔬 원어 강해 펼치기 ▲
+          <div className="px-3.5 py-2 rounded-full bg-[#2563EB] text-white font-bold text-[12px] shadow-lg flex items-center gap-2">
+            <button type="button" onClick={() => setMinimizedModals((prev) => ({ ...prev, inspector: false }))} className="cursor-pointer">
+              원어 강해 펼치기
             </button>
-            <button onClick={() => setInspectorTarget(null)} className="px-1 text-white font-bold cursor-pointer">✕</button>
+            <button type="button" onClick={() => setInspectorTarget(null)} className="px-1 cursor-pointer">
+              <X className="w-3.5 h-3.5" />
+            </button>
           </div>
         )}
       </div>
@@ -2725,90 +2791,104 @@ export default function Sermon({
       {/* ===================================================================== */}
       {isOcrStudioOpen && !minimizedModals.ocr && (
         <div
-          className="fixed inset-0 z-[999999] bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in"
+          className="fixed inset-0 z-[999999] bg-black/65 flex items-end sm:items-center justify-center p-0 sm:p-4"
           onClick={() => setIsOcrStudioOpen(false)}
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className={`w-full sm:max-w-xl rounded-t-3xl sm:rounded-3xl border p-4 sm:p-5 shadow-2xl flex flex-col max-h-[86vh] overflow-hidden ${
-              isDark ? 'bg-[#101522] border-white/15 text-white' : 'bg-white border-stone-300 text-stone-900'
-            }`}
+            className={`w-full sm:max-w-xl rounded-t-3xl sm:rounded-2xl border ${borderClass} ${surfaceBg} ${textMain} p-5 flex flex-col max-h-[88vh] overflow-hidden`}
           >
-            <div className="flex items-center justify-between border-b border-stone-200 dark:border-white/10 pb-3 shrink-0">
+            <div className={`flex items-center justify-between border-b ${borderClass} pb-3 shrink-0`}>
               <div>
-                <span className="text-[10px] font-mono font-bold text-amber-500 uppercase block">
-                  YOUTUBE SUBTITLE & QUESTION SCANNER
-                </span>
-                <h3 className="text-sm sm:text-base font-bold tracking-tight">
-                  유튜브 설교 자막 · 적용질문 스캐너
-                </h3>
+                <span className="text-[12px] font-bold text-[#D97706] block">유튜브 설교 자막 · 적용질문 스캐너</span>
+                <h3 className="text-[17px] font-bold tracking-tight">캡처 이미지 텍스트 추출</h3>
               </div>
               <div className="flex items-center gap-1.5">
                 <button
                   type="button"
-                  onClick={() => setMinimizedModals(prev => ({ ...prev, ocr: true }))}
-                  className="px-2.5 py-1 rounded-lg bg-stone-200 dark:bg-white/10 text-xs font-bold cursor-pointer"
+                  onClick={() => setMinimizedModals((prev) => ({ ...prev, ocr: true }))}
+                  className={`px-2.5 py-1.5 rounded-lg text-[12px] font-bold cursor-pointer ${subSurfaceBg} ${textMain}`}
                 >
-                  _ 화면 안 가리게 접기
+                  접기
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsOcrStudioOpen(false)}
-                  className="px-2.5 py-1 rounded-lg bg-rose-500/15 text-rose-500 text-xs font-bold cursor-pointer"
+                  className={`w-8 h-8 rounded-lg flex items-center justify-center ${subSurfaceBg} cursor-pointer`}
                 >
-                  닫기 ✕
+                  <X className="w-4 h-4" />
                 </button>
               </div>
             </div>
 
-            <div className="overflow-y-auto hide-scrollbar space-y-3.5 py-3.5 flex-1 text-left">
+            <div className="overflow-y-auto hide-scrollbar space-y-4 py-4 flex-1 text-left">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <button
                   type="button"
-                  onClick={handleReadClipboardImageForOcr}
-                  className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
-                    isDark ? 'bg-amber-500/20 hover:bg-amber-500/30 border-amber-400/50' : 'bg-amber-50 hover:bg-amber-100 border-amber-300'
-                  }`}
+                  onClick={() => captureInputRef.current?.click()}
+                  className={`p-3.5 rounded-xl text-left cursor-pointer transition-colors ${amberPillClass}`}
                 >
-                  <div className="text-xs font-black mb-0.5 text-amber-600 dark:text-amber-300">
-                    📋 1. 방금 찍은 화면캡처 바로 스캔
+                  <div className="text-[13px] font-bold flex items-center gap-1.5 mb-1">
+                    <ImageIcon className="w-4 h-4" />
+                    <span>1. 사진 불러오기</span>
                   </div>
-                  <div className="text-[10.5px] opacity-85">
-                    폰·태블릿 화면을 캡처(복사)한 직후 누르면 유튜브 자막만 즉시 추출합니다
-                  </div>
+                  <div className="text-[11.5px] opacity-85">갤러리 스크린샷이나 캡처 사진 파일을 선택합니다</div>
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => captureInputRef.current?.click()}
-                  className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
-                    isDark ? 'bg-sky-500/20 hover:bg-sky-500/30 border-sky-400/50' : 'bg-sky-50 hover:bg-sky-100 border-sky-300'
-                  }`}
+                  onClick={handleReadClipboardImageForOcr}
+                  className={`p-3.5 rounded-xl text-left cursor-pointer transition-colors ${bluePillClass}`}
                 >
-                  <div className="text-xs font-black mb-0.5 text-sky-600 dark:text-sky-300">
-                    🖼️ 2. 갤러리 최근 스크린샷 선택
+                  <div className="text-[13px] font-bold flex items-center gap-1.5 mb-1">
+                    <ClipboardPaste className="w-4 h-4" />
+                    <span>2. 클립보드 붙여넣기</span>
                   </div>
-                  <div className="text-[10.5px] opacity-85">
-                    전체화면이 아닌 일반 화면 캡처 사진도 유튜브 위치만 자동 감지해 읽습니다
-                  </div>
+                  <div className="text-[11.5px] opacity-85">방금 복사한 화면 캡처 이미지를 즉시 읽어옵니다</div>
                 </button>
 
                 <button
                   type="button"
                   onClick={handleDirectTabCapture}
-                  className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
-                    isDark ? 'bg-white/5 hover:bg-white/10 border-white/15' : 'bg-stone-50 hover:bg-stone-100 border-stone-200'
-                  }`}
+                  className={`p-3.5 rounded-xl text-left cursor-pointer transition-colors ${sagePillClass}`}
                 >
-                  <div className="text-xs font-bold mb-0.5">💻 3. PC 화면 원터치 자동캡처</div>
-                  <div className="text-[10.5px] opacity-75">
-                    PC 브라우저에서 별도 캡처 없이 재생 중인 유튜브 자막만 바로 찍습니다
+                  <div className="text-[13px] font-bold flex items-center gap-1.5 mb-1">
+                    <Camera className="w-4 h-4" />
+                    <span>3. PC 화면 자동캡처</span>
                   </div>
+                  <div className="text-[11.5px] opacity-85">재생 중인 유튜브 탭 화면을 바로 찍어 추출합니다</div>
                 </button>
               </div>
 
+              {/* 모바일·PC 공용 붙여넣기 입력 박스 (권한 제한 우회용) */}
+              <div
+                contentEditable
+                suppressContentEditableWarning
+                onPaste={(e) => {
+                  const items = e.clipboardData?.items;
+                  if (!items) return;
+                  for (let i = 0; i < items.length; i++) {
+                    if (items[i].type.startsWith('image/')) {
+                      const blob = items[i].getAsFile();
+                      if (blob) {
+                        e.preventDefault();
+                        e.currentTarget.innerHTML = '';
+                        decodeBlobOrFileToOcr(blob, '직접 붙여넣기 자막 스캔');
+                        return;
+                      }
+                    }
+                  }
+                }}
+                onInput={(e) => {
+                  e.currentTarget.innerHTML = '';
+                }}
+                className={`p-3.5 rounded-xl border border-dashed text-center text-[13px] outline-none focus:border-[#2563EB] ${borderClass} ${subSurfaceBg} ${textSub}`}
+              >
+                이곳을 터치(또는 길게 누르기)한 뒤 [붙여넣기]를 누르면 캡처 이미지가 즉시 인식됩니다.
+              </div>
+
               <div className="space-y-1.5">
-                <span className="text-xs font-bold block">스캔 영역 선택 (클릭 시 해당 위치만 다시 판독)</span>
+                <span className={`text-[12px] font-bold ${textSub} block`}>스캔 영역 선택</span>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                   {Object.entries(OCR_CROP_REGIONS).map(([key, reg]) => (
                     <button
@@ -2820,10 +2900,8 @@ export default function Sermon({
                           runOcrOnCaptureItem(studioDraftItem, key);
                         }
                       }}
-                      className={`px-2 py-1.5 rounded-xl text-[11px] font-bold border cursor-pointer transition-all ${
-                        ocrCropPreset === key
-                          ? 'bg-amber-500 text-stone-950 border-amber-500 shadow-xs'
-                          : isDark ? 'bg-white/5 border-white/10 text-stone-300' : 'bg-stone-100 border-stone-200 text-stone-700'
+                      className={`px-2.5 py-2 rounded-lg text-[12px] font-bold cursor-pointer ${
+                        ocrCropPreset === key ? 'bg-[#D97706] text-white' : `${subSurfaceBg} ${textMain}`
                       }`}
                     >
                       {reg.label}
@@ -2835,19 +2913,15 @@ export default function Sermon({
               {studioDraftItem?.imageUrl && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between flex-wrap gap-1">
-                    <span className="text-xs font-bold text-amber-500">
-                      👆 아래 원본 화면에서 추출할 자막 부분만 손가락(또는 마우스)으로 드래그하세요!
+                    <span className="text-[12px] font-bold text-[#D97706]">
+                      아래 원본 화면에서 추출할 자막 부분만 드래그하여 재인식할 수 있습니다.
                     </span>
-                    {ocrLoadingId && (
-                      <span className="text-xs font-mono font-bold text-emerald-400 animate-pulse">
-                        자막 글자 판독 중...
-                      </span>
-                    )}
+                    {ocrLoadingId && <span className="text-[12px] font-bold text-[#0D9488]">판독 중...</span>}
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     <div
-                      className="relative rounded-xl overflow-hidden border border-white/20 bg-black select-none touch-none flex items-center justify-center max-h-56"
+                      className="relative rounded-xl overflow-hidden border border-white/15 bg-black select-none touch-none flex items-center justify-center max-h-56"
                       onPointerDown={(e) => {
                         const rect = e.currentTarget.getBoundingClientRect();
                         const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
@@ -2891,50 +2965,48 @@ export default function Sermon({
                             width: `${touchCropBox.w * 100}%`,
                             height: `${touchCropBox.h * 100}%`
                           }}
-                          className="absolute border-2 border-amber-400 bg-amber-400/25 pointer-events-none rounded"
+                          className="absolute border-2 border-[#D97706] bg-[#D97706]/25 pointer-events-none rounded"
                         />
                       )}
                     </div>
 
-                    <div className="p-2 rounded-xl border border-white/15 bg-black flex flex-col items-center justify-center gap-1">
-                      <span className="text-[10px] font-mono text-stone-400">도려낸 자막 영역</span>
+                    <div className="p-2 rounded-xl bg-black flex flex-col items-center justify-center gap-1">
+                      <span className="text-[11px] text-[#94A3B8]">도려낸 자막 영역</span>
                       <img
                         src={studioDraftItem.subtitleCropUrl || studioDraftItem.imageUrl}
                         alt="Cropped Subtitle"
-                        className="max-h-44 w-auto object-contain rounded border border-amber-400/60"
+                        className="max-h-44 w-auto object-contain rounded"
                       />
                     </div>
                   </div>
                 </div>
               )}
 
-              <div className="space-y-1">
-                <label className="text-xs font-bold block">
-                  추출된 설교 자막 · 적용질문 텍스트 (자유롭게 수정 가능)
-                </label>
+              <div className="space-y-1.5">
+                <label className={`text-[12px] font-bold ${textSub} block`}>추출된 설교 자막 · 적용질문 텍스트</label>
                 <textarea
                   rows={3}
                   value={studioDraftItem?.ocrText || ''}
                   onChange={(e) => {
                     const val = e.target.value;
-                    setStudioDraftItem(prev => prev ? { ...prev, ocrText: val } : { id: `cap_${Date.now()}`, ocrText: val, timestamp: '직접입력' });
+                    setStudioDraftItem((prev) =>
+                      prev ? { ...prev, ocrText: val } : { id: `cap_${Date.now()}`, ocrText: val, timestamp: '직접입력' }
+                    );
                   }}
                   placeholder="유튜브 영상에서 캡처된 자막이나 적용질문이 이곳에 표시됩니다."
-                  className={`w-full p-3 rounded-2xl border text-[13px] leading-relaxed outline-none resize-none ${
-                    isDark ? 'bg-[#0E1015] border-white/15 text-white' : 'bg-stone-50 border-stone-200 text-stone-900'
-                  }`}
+                  className={`w-full p-3.5 rounded-xl text-[14.5px] leading-relaxed outline-none resize-none ${subSurfaceBg} ${textMain}`}
                 />
               </div>
             </div>
 
-            <div className="pt-3 border-t border-stone-200 dark:border-white/10 flex flex-wrap items-center justify-between gap-1.5 shrink-0">
+            <div className={`pt-3 border-t ${borderClass} flex flex-wrap items-center justify-between gap-1.5 shrink-0`}>
               {[
-                { label: '적용질문 칸에 넣기', field: 'apply', primary: true },
-                { label: '핵심요약', field: 'conviction' },
-                { label: '제1대지', field: 'point1' },
-                { label: '제2대지', field: 'point2' },
-                { label: '제3대지', field: 'point3' },
-                { label: '설교노트 본문', field: 'notes' }
+                { label: '적용질문 칸에 넣기', field: 'apply', cls: 'bg-[#0D9488] text-white' },
+                { label: '핵심요약', field: 'conviction', cls: amberPillClass },
+                { label: '제1대지', field: 'point1', cls: bluePillClass },
+                { label: '제2대지', field: 'point2', cls: bluePillClass },
+                { label: '제3대지', field: 'point3', cls: bluePillClass },
+                { label: '설교노트 본문', field: 'notes', cls: 'bg-[#2563EB] text-white' }
               ].map((act) => (
                 <button
                   key={act.field}
@@ -2943,11 +3015,7 @@ export default function Sermon({
                     handleDispatchOcrTextToField(act.field, studioDraftItem?.ocrText, studioDraftItem);
                     setIsOcrStudioOpen(false);
                   }}
-                  className={`px-2.5 py-2 rounded-xl text-xs font-bold cursor-pointer transition-all ${
-                    act.primary
-                      ? 'bg-amber-500 text-stone-950 hover:bg-amber-400'
-                      : isDark ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-stone-100 text-stone-800 hover:bg-stone-200'
-                  }`}
+                  className={`px-3 py-2 rounded-xl text-[12px] font-bold cursor-pointer ${act.cls}`}
                 >
                   {act.label}
                 </button>
@@ -2958,72 +3026,79 @@ export default function Sermon({
       )}
 
       {/* ===================================================================== */}
-      {/* 9. [SaaS 멀티바이블 고도화] 내가 적은 구절만 딱 보여주는 개역개정 4판 말씀·예시 모달 */}
+      {/* 9. 개역개정 4판 말씀·예시 구절 뷰어 모달 */}
       {/* ===================================================================== */}
       {isBibleFinderOpen && !minimizedModals.finder && (
         <div
-          className="fixed inset-0 z-[999999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
+          className="fixed inset-0 z-[999999] bg-black/65 flex items-end sm:items-center justify-center p-0 sm:p-4"
           onClick={() => setIsBibleFinderOpen(false)}
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className={`w-full max-w-xl rounded-2xl border p-4 sm:p-5 shadow-2xl flex flex-col max-h-[86vh] overflow-hidden ${
-              isDark ? 'bg-[#121620] border-white/15 text-white' : 'bg-white border-stone-300 text-stone-900'
-            }`}
+            className={`w-full max-w-xl rounded-t-3xl sm:rounded-2xl border ${borderClass} ${surfaceBg} ${textMain} p-5 flex flex-col max-h-[86vh] overflow-hidden`}
           >
-            <div className="flex items-center justify-between border-b border-stone-200 dark:border-white/10 pb-3">
+            <div className={`flex items-center justify-between border-b ${borderClass} pb-3`}>
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-sm font-bold">📖 설교 본문 · 말씀 구절 뷰어</span>
-                <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-500 text-[10px] font-black border border-amber-500/30">
-                  개역개정 4판 표준
-                </span>
+                <span className="text-[17px] font-bold">설교 본문 · 말씀 구절 뷰어</span>
+                <span className={`px-2 py-0.5 rounded-md text-[12px] font-bold ${amberPillClass}`}>개역개정 4판</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <button
-                  onClick={() => setMinimizedModals(prev => ({ ...prev, finder: true }))}
-                  className="px-2.5 py-1 rounded-lg bg-stone-200 dark:bg-white/10 text-xs font-bold cursor-pointer"
+                  type="button"
+                  onClick={() => setMinimizedModals((prev) => ({ ...prev, finder: true }))}
+                  className={`px-2.5 py-1.5 rounded-lg text-[12px] font-bold cursor-pointer ${subSurfaceBg} ${textMain}`}
                 >
-                  _ 접기
+                  접기
                 </button>
                 <button
+                  type="button"
                   onClick={() => setIsBibleFinderOpen(false)}
-                  className="px-2.5 py-1 rounded-lg bg-rose-500/15 text-rose-500 text-xs font-bold cursor-pointer"
+                  className={`w-8 h-8 rounded-lg flex items-center justify-center ${subSurfaceBg} cursor-pointer`}
                 >
-                  닫기 ✕
+                  <X className="w-4 h-4" />
                 </button>
               </div>
             </div>
 
-            {/* 상단 모드 탭 & 역본 대조 토글 */}
             <div className="flex items-center justify-between gap-2 my-3 flex-wrap">
-              <div className="flex gap-1.5 flex-1">
+              <div className={`flex p-0.5 rounded-lg ${subSurfaceBg} flex-1`}>
                 <button
+                  type="button"
                   onClick={() => setFinderMode('ref')}
-                  className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold cursor-pointer ${finderMode === 'ref' ? 'bg-stone-900 text-white dark:bg-white dark:text-stone-900' : 'bg-stone-100 dark:bg-white/5 text-stone-500'}`}
+                  className={`flex-1 py-1.5 px-3 rounded-md text-[12px] font-bold cursor-pointer ${
+                    finderMode === 'ref' ? 'bg-[#2563EB] text-white' : textSub
+                  }`}
                 >
                   구절 주소로 보기
                 </button>
                 <button
+                  type="button"
                   onClick={() => setFinderMode('keyword')}
-                  className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold cursor-pointer ${finderMode === 'keyword' ? 'bg-stone-900 text-white dark:bg-white dark:text-stone-900' : 'bg-stone-100 dark:bg-white/5 text-stone-500'}`}
+                  className={`flex-1 py-1.5 px-3 rounded-md text-[12px] font-bold cursor-pointer ${
+                    finderMode === 'keyword' ? 'bg-[#0D9488] text-white' : textSub
+                  }`}
                 >
                   단어·키워드로 검색
                 </button>
               </div>
 
               {finderMode === 'ref' && (
-                <div className="flex p-0.5 rounded-lg border border-stone-200 dark:border-white/10 text-[11px] font-bold">
+                <div className={`flex p-0.5 rounded-lg ${subSurfaceBg} text-[12px] font-bold`}>
                   <button
+                    type="button"
                     onClick={() => setFinderVersionMode('krv4')}
-                    className={`px-2.5 py-1 rounded-md cursor-pointer ${finderVersionMode === 'krv4' ? 'bg-amber-500 text-stone-950 font-black' : 'text-stone-400'}`}
+                    className={`px-2.5 py-1 rounded-md cursor-pointer ${finderVersionMode === 'krv4' ? 'bg-[#D97706] text-white' : textSub}`}
                   >
                     개역개정4판
                   </button>
                   <button
+                    type="button"
                     onClick={() => setFinderVersionMode('parallel')}
-                    className={`px-2.5 py-1 rounded-md cursor-pointer ${finderVersionMode === 'parallel' ? 'bg-amber-500 text-stone-950 font-black' : 'text-stone-400'}`}
+                    className={`px-2.5 py-1 rounded-md cursor-pointer ${
+                      finderVersionMode === 'parallel' ? 'bg-[#D97706] text-white' : textSub
+                    }`}
                   >
-                    3역본 동시대조
+                    3역본 대조
                   </button>
                 </div>
               )}
@@ -3031,7 +3106,7 @@ export default function Sermon({
 
             {finderMode === 'ref' ? (
               <div className="space-y-3 overflow-y-auto hide-scrollbar flex-1">
-                <div className="flex gap-1.5">
+                <div className="flex gap-2">
                   <input
                     type="text"
                     value={finderRefInput}
@@ -3040,107 +3115,87 @@ export default function Sermon({
                       setShowFullChapterInFinder(false);
                     }}
                     placeholder="설교 본문 구절을 입력하세요 (예: 창 1:1, 요 3:16, 롬 8:28-30)"
-                    className={`flex-1 px-3 py-2 rounded-lg border text-xs font-bold outline-none ${isDark ? 'bg-[#0E1015] border-white/15 text-white' : 'bg-stone-50 border-stone-200 text-stone-900'}`}
+                    className={`flex-1 px-3.5 py-2.5 rounded-xl text-[15px] font-bold outline-none ${subSurfaceBg} ${textMain}`}
                   />
                   <a
                     href={`https://www.youtube.com/results?search_query=${encodeURIComponent(`개역개정 4판 ${finderRefInput || activeReferenceStr || '성경'} 낭독`)}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="px-3 py-2 rounded-lg bg-amber-500 text-stone-950 text-xs font-black flex items-center gap-1 shrink-0"
+                    className={`px-3 py-2.5 rounded-xl text-[12px] font-bold flex items-center gap-1 shrink-0 ${amberPillClass}`}
                   >
-                    <span>🎬 유튜브 듣기</span> <IconExternal/>
+                    <span>유튜브 듣기</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
                   </a>
                 </div>
 
-                {/* 내가 적은 절만 깔끔하게 표시 + 전체 복사/일괄 삽입/전후 문맥 토글 컨트롤 바 */}
                 {finderScriptureData.parsed && (
-                  <div className={`px-3 py-2 rounded-xl border flex flex-wrap items-center justify-between gap-2 ${
-                    isDark ? 'bg-[#0E1015] border-white/10' : 'bg-stone-50 border-stone-200'
-                  }`}>
+                  <div className={`px-3.5 py-2.5 rounded-xl ${subSurfaceBg} flex flex-wrap items-center justify-between gap-2`}>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-black text-amber-500">
-                        📌 {finderScriptureData.parsed.displayLabel}
-                      </span>
-                      <span className="text-[11px] text-stone-400">
-                        ({displayedFinderVerses.length}개 구절 표시 중)
-                      </span>
+                      <span className="text-[13px] font-bold text-[#D97706]">{finderScriptureData.parsed.displayLabel}</span>
+                      <span className={`text-[12px] ${textSub}`}>({displayedFinderVerses.length}개 구절)</span>
                     </div>
 
                     <div className="flex items-center gap-1.5 flex-wrap">
                       {finderScriptureData.parsed.hasSpecificVerse && (
                         <button
                           type="button"
-                          onClick={() => setShowFullChapterInFinder(prev => !prev)}
-                          className={`px-2 py-1 rounded text-[10.5px] font-bold border cursor-pointer ${
-                            showFullChapterInFinder
-                              ? 'bg-sky-500 text-stone-950 border-sky-500'
-                              : isDark ? 'bg-white/5 border-white/15 text-stone-300' : 'bg-white border-stone-200 text-stone-700'
+                          onClick={() => setShowFullChapterInFinder((prev) => !prev)}
+                          className={`px-2.5 py-1 rounded-lg text-[12px] font-bold cursor-pointer ${
+                            showFullChapterInFinder ? 'bg-[#0D9488] text-white' : `${surfaceBg} ${textMain}`
                           }`}
                         >
-                          {showFullChapterInFinder ? '선택 구절만 보기' : `${finderScriptureData.parsed.chapter}장 전체 문맥 보기`}
+                          {showFullChapterInFinder ? '선택 구절만 보기' : `${finderScriptureData.parsed.chapter}장 전체 보기`}
                         </button>
                       )}
 
                       <button
                         type="button"
                         onClick={() => {
-                          const combined = displayedFinderVerses.map(v => `${v.vNum}. ${v.text}`).join('\n');
+                          const combined = displayedFinderVerses.map((v) => `${v.vNum}. ${v.text}`).join('\n');
                           handleInsertVerseToSermonNotes(finderScriptureData.parsed.displayLabel, combined);
                           setIsBibleFinderOpen(false);
                         }}
-                        className="px-2.5 py-1 rounded bg-amber-500 text-stone-950 text-[10.5px] font-black cursor-pointer"
+                        className="px-3 py-1 rounded-lg bg-[#2563EB] text-white text-[12px] font-bold cursor-pointer"
                       >
-                        + 표시된 구절 전체 필기장 삽입
+                        필기장 일괄 삽입
                       </button>
                     </div>
                   </div>
                 )}
 
-                <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1 hide-scrollbar text-left">
+                <div className={`divide-y ${dividerClass} border ${borderClass} rounded-xl overflow-hidden max-h-64 overflow-y-auto hide-scrollbar text-left`}>
                   {displayedFinderVerses.length === 0 ? (
-                    <div className="py-10 text-center text-xs text-stone-400">
-                      위에 성경 구절 주소(예: <b>창 1:1</b>, <b>요 3:16</b>, <b>시 23:1-6</b>)를 입력하시면 내가 적은 구절만 즉시 나타납니다.
+                    <div className={`py-10 text-center text-[14px] ${textSub}`}>
+                      성경 구절 주소를 입력하면 내가 적은 구절만 즉시 표시됩니다.
                     </div>
                   ) : (
                     displayedFinderVerses.map((v) => {
                       const koBook = finderScriptureData.parsed?.bookKo || '';
                       const chNum = finderScriptureData.parsed?.chapter || 1;
                       const easyText = easyBibleDb[`${koBook}-${chNum}-${v.vNum}`] || '';
-                      const webText = webBibleDb[`${koBook}-${chNum}-${v.vNum}`] || webBibleDb[`${finderScriptureData.parsed?.bookEn}-${chNum}-${v.vNum}`] || '';
+                      const webText =
+                        webBibleDb[`${koBook}-${chNum}-${v.vNum}`] || webBibleDb[`${finderScriptureData.parsed?.bookEn}-${chNum}-${v.vNum}`] || '';
 
                       return (
                         <div
                           key={v.vNum}
                           onClick={() => handleInsertVerseToSermonNotes(`${koBook} ${chNum}:${v.vNum}`, v.text)}
-                          className={`p-3 rounded-xl border text-xs font-serif leading-relaxed cursor-pointer transition-colors ${
-                            v.isHighlight
-                              ? isDark ? 'bg-amber-500/15 border-amber-500/40 text-amber-100' : 'bg-amber-50/90 border-amber-300 text-stone-900'
-                              : isDark ? 'bg-white/5 border-white/10 text-stone-300 hover:bg-white/10' : 'bg-stone-50 border-stone-200 text-stone-700 hover:bg-stone-100'
-                          }`}
+                          className="p-3.5 text-[15px] leading-relaxed cursor-pointer hover:bg-black/[0.02] dark:hover:bg-white/[0.02]"
                         >
                           {v.pericope && (
-                            <div className="mb-1.5 px-2 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300 font-sans font-extrabold text-[11px] inline-block">
-                              📌 {v.pericope}
+                            <div className={`mb-1.5 px-2 py-0.5 rounded text-[12px] font-bold inline-block ${amberPillClass}`}>
+                              {v.pericope}
                             </div>
                           )}
-                          <div className="text-[13.5px]">
-                            <b className="mr-1.5 font-mono text-amber-500">{v.vNum}</b>
-                            {v.text}
-                            <span className="ml-2 text-[10px] font-sans font-bold text-sky-500">[+ 클릭 시 필기장 삽입]</span>
+                          <div>
+                            <span className="mr-2 font-bold text-[#D97706]">{v.vNum}</span>
+                            <span>{v.text}</span>
                           </div>
 
                           {finderVersionMode === 'parallel' && (
-                            <div className="mt-2 pt-2 border-t border-dashed border-stone-300 dark:border-white/15 space-y-1">
-                              {easyText && (
-                                <p className="text-[12px] font-sans text-emerald-700 dark:text-emerald-300">
-                                  <b>[쉬운]</b> {easyText}
-                                </p>
-                              )}
-                              {webText && (
-                                <p className="text-[12px] font-serif text-sky-700 dark:text-sky-300">
-                                  <b>[WEB]</b> {webText}
-                                </p>
-                              )}
+                            <div className={`mt-2 pt-2 border-t ${borderClass} space-y-1 text-[14px] ${textSub}`}>
+                              {easyText && <p>쉬운성경: {easyText}</p>}
+                              {webText && <p>WEB: {webText}</p>}
                             </div>
                           )}
                         </div>
@@ -3151,7 +3206,7 @@ export default function Sermon({
               </div>
             ) : (
               <div className="space-y-3 overflow-y-auto hide-scrollbar flex-1">
-                <div className="flex gap-1.5">
+                <div className="flex gap-2">
                   <input
                     type="text"
                     value={finderKeyword}
@@ -3160,28 +3215,25 @@ export default function Sermon({
                       if (e.key === 'Enter') setFinderKeywordResults(searchBibleByKeyword(finderKeyword, 45, krv4TxtDb));
                     }}
                     placeholder="찾을 성경 단어 입력 (예: 태초, 언약, 사랑, 기도, 은혜)"
-                    className={`flex-1 px-3 py-2 rounded-lg border text-xs font-bold outline-none ${isDark ? 'bg-[#0E1015] border-white/15 text-white' : 'bg-stone-50 border-stone-200 text-stone-900'}`}
+                    className={`flex-1 px-3.5 py-2.5 rounded-xl text-[15px] outline-none ${subSurfaceBg} ${textMain}`}
                   />
                   <button
+                    type="button"
                     onClick={() => setFinderKeywordResults(searchBibleByKeyword(finderKeyword, 45, krv4TxtDb))}
-                    className="px-3.5 py-2 rounded-lg bg-stone-900 dark:bg-white text-white dark:text-stone-900 text-xs font-bold cursor-pointer"
+                    className="px-4 py-2.5 rounded-xl bg-[#0D9488] text-white text-[13px] font-bold cursor-pointer"
                   >
                     검색
                   </button>
                 </div>
-                <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1 hide-scrollbar text-left">
+                <div className={`divide-y ${dividerClass} border ${borderClass} rounded-xl overflow-hidden max-h-64 overflow-y-auto hide-scrollbar text-left`}>
                   {finderKeywordResults.map((res, idx) => (
                     <div
                       key={idx}
                       onClick={() => handleInsertVerseToSermonNotes(res.ref, res.text)}
-                      className={`p-2.5 rounded-lg border text-xs cursor-pointer ${isDark ? 'bg-white/5 border-white/10 hover:bg-white/10' : 'bg-stone-50 border-stone-200 hover:bg-stone-100'}`}
+                      className="p-3.5 cursor-pointer hover:bg-black/[0.02] dark:hover:bg-white/[0.02]"
                     >
-                      <div className="font-bold text-amber-500 mb-0.5">
-                        {res.ref} <span className="text-[10px] text-emerald-500 ml-1">[개역개정4판]</span>
-                        {res.pericope && <span className="ml-1.5 text-[10.5px] text-amber-400">📌 &lt;{res.pericope}&gt;</span>}
-                        <span className="text-[10px] text-sky-500 ml-1.5">[+ 필기장 삽입]</span>
-                      </div>
-                      <p className="font-serif leading-relaxed">{res.text}</p>
+                      <div className="text-[12px] font-bold text-[#0D9488] mb-0.5">{res.ref}</div>
+                      <p className="text-[14.5px] leading-relaxed">{res.text}</p>
                     </div>
                   ))}
                 </div>
@@ -3196,65 +3248,66 @@ export default function Sermon({
       {/* ===================================================================== */}
       {inspectorTarget && !minimizedModals.inspector && (
         <div
-          className="fixed inset-0 z-[999999] bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-3 animate-fade-in select-none"
+          className="fixed inset-0 z-[999999] bg-black/65 flex items-end sm:items-center justify-center p-0 sm:p-4 select-none"
           onClick={() => setInspectorTarget(null)}
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className={`w-full sm:max-w-2xl rounded-t-3xl sm:rounded-2xl border p-4 sm:p-5 shadow-2xl flex flex-col max-h-[85vh] overflow-hidden ${
-              isDark ? 'bg-[#0F141F] border-slate-700 text-white' : 'bg-white border-stone-300 text-stone-900'
-            }`}
+            className={`w-full sm:max-w-2xl rounded-t-3xl sm:rounded-2xl border ${borderClass} ${surfaceBg} ${textMain} p-5 flex flex-col max-h-[85vh] overflow-hidden`}
           >
-            <div className="flex justify-between items-center border-b border-stone-200 dark:border-slate-800 pb-2.5">
-              <span className="text-xs font-mono font-bold text-amber-500">
-                {inspectorTarget.book} {inspectorTarget.chapter}:{inspectorTarget.verse} 원어 강해 (개역개정 4판 기준)
+            <div className={`flex justify-between items-center border-b ${borderClass} pb-3`}>
+              <span className="text-[15px] font-bold text-[#2563EB]">
+                {inspectorTarget.book} {inspectorTarget.chapter}:{inspectorTarget.verse} 원어 강해
               </span>
               <div className="flex items-center gap-1.5">
                 <button
+                  type="button"
                   onClick={handleJumpToInterlinearStudio}
-                  className="px-2.5 py-1 rounded bg-indigo-600 text-white text-[11px] font-bold cursor-pointer"
+                  className={`px-3 py-1.5 rounded-lg text-[12px] font-bold cursor-pointer ${bluePillClass}`}
                 >
                   원어 스튜디오 이동
                 </button>
                 <button
-                  onClick={() => setMinimizedModals(prev => ({ ...prev, inspector: true }))}
-                  className="px-2.5 py-1 rounded bg-stone-200 dark:bg-white/10 text-xs font-bold cursor-pointer"
+                  type="button"
+                  onClick={() => setMinimizedModals((prev) => ({ ...prev, inspector: true }))}
+                  className={`px-2.5 py-1.5 rounded-lg text-[12px] font-bold cursor-pointer ${subSurfaceBg} ${textMain}`}
                 >
-                  _ 접기
+                  접기
                 </button>
                 <button
+                  type="button"
                   onClick={() => setInspectorTarget(null)}
-                  className="px-2.5 py-1 rounded bg-rose-500/15 text-rose-500 text-xs font-bold cursor-pointer"
+                  className={`w-8 h-8 rounded-lg flex items-center justify-center ${subSurfaceBg} cursor-pointer`}
                 >
-                  닫기 ✕
+                  <X className="w-4 h-4" />
                 </button>
               </div>
             </div>
 
-            <div className="overflow-y-auto hide-scrollbar space-y-3 py-3 flex-1 text-left">
+            <div className="overflow-y-auto hide-scrollbar space-y-3.5 py-4 flex-1 text-left">
               {inspectorTarget.pericope && (
-                <div className="px-2.5 py-1 rounded bg-amber-500/15 text-amber-500 text-xs font-bold inline-block">
-                  📌 {inspectorTarget.pericope}
+                <div className={`px-2.5 py-1 rounded-md text-[12px] font-bold inline-block ${amberPillClass}`}>
+                  {inspectorTarget.pericope}
                 </div>
               )}
-              <p className="text-xs font-serif leading-relaxed">
-                <span className="text-[10px] font-sans font-bold text-amber-500 mr-1.5">[개역개정4판]</span>
-                {inspectorTarget.text}
-              </p>
+              <p className={`text-[15px] leading-relaxed ${textMain}`}>{inspectorTarget.text}</p>
 
-              <div className={`p-3 rounded-xl border ${isDark ? 'bg-[#141A26] border-slate-700' : 'bg-stone-50 border-stone-200'}`}>
-                <span className="text-[10px] font-bold text-stone-400 block mb-1.5">원어 어절 선택</span>
+              <div className={`p-3.5 rounded-xl ${subSurfaceBg}`}>
+                <span className={`text-[12px] font-medium ${textSub} block mb-2`}>원어 어절 선택</span>
                 {isInspectorLoading ? (
-                  <div className="py-3 text-center text-xs text-stone-400">원어 형태소 로딩 중...</div>
+                  <div className={`py-3 text-center text-[12px] ${textSub}`}>원어 형태소 로딩 중...</div>
                 ) : (
-                  <div className="flex flex-wrap gap-2 items-baseline">
+                  <div
+                    className={`flex flex-wrap gap-2 items-baseline ${inspectorTarget.isOT ? 'justify-end' : 'justify-start'}`}
+                    dir={inspectorTarget.isOT ? 'rtl' : 'ltr'}
+                  >
                     {inspectorWords.map((w) => (
                       <span
                         key={w.id}
                         onClick={() => handleSelectInspectorWord(w)}
                         style={originalFontStyle(inspectorTarget.isOT)}
-                        className={`text-lg font-bold px-2 py-0.5 rounded cursor-pointer ${
-                          selectedWordDetail?.order === w.order ? 'bg-amber-500 text-stone-950' : 'hover:bg-white/10'
+                        className={`text-[18px] font-bold px-2.5 py-1 rounded-lg cursor-pointer ${
+                          selectedWordDetail?.order === w.order ? 'bg-[#2563EB] text-white' : `${surfaceBg} ${textMain}`
                         }`}
                       >
                         {cleanTypography(w.inflected, inspectorTarget.isOT)}
@@ -3265,47 +3318,54 @@ export default function Sermon({
               </div>
 
               {selectedWordDetail && (
-                <div className={`p-3 rounded-xl border space-y-1.5 text-xs ${isDark ? 'bg-[#161D2B] border-slate-700' : 'bg-stone-50 border-stone-200'}`}>
+                <div className={`p-4 rounded-xl ${subSurfaceBg} space-y-2 text-[14.5px]`}>
                   <div className="flex items-center justify-between">
-                    <span className="font-mono font-bold text-amber-500">{selectedWordDetail.strongs} · {selectedWordDetail.pron}</span>
-                    <span className="text-[11px] text-stone-400">{selectedWordDetail.grammarDecoded}</span>
+                    <span className="font-bold text-[#D97706]">
+                      {selectedWordDetail.strongs} · {selectedWordDetail.pron}
+                    </span>
+                    <span className={`text-[12px] ${textSub}`}>{selectedWordDetail.grammarDecoded}</span>
                   </div>
-                  <div className="font-bold">문맥 뜻: {selectedWordDetail.korContextual} (원형: {selectedWordDetail.lemma})</div>
+                  <div className="font-bold text-[#0D9488]">
+                    문맥 뜻: {selectedWordDetail.korContextual} (원형: {selectedWordDetail.lemma})
+                  </div>
                   <div className="flex gap-2 pt-1">
                     <button
+                      type="button"
                       onClick={() => handleInsertWordToSermonNote(selectedWordDetail)}
-                      className="flex-1 py-2 rounded-lg bg-indigo-600 text-white font-bold text-xs cursor-pointer"
+                      className="flex-1 py-2.5 rounded-xl bg-[#0D9488] text-white font-bold text-[14px] cursor-pointer"
                     >
                       설교 필기장에 원어 강해 삽입
                     </button>
                     <button
+                      type="button"
                       onClick={() => speakOriginalAudio(selectedWordDetail.inflected, inspectorTarget.isOT)}
-                      className="px-3 py-2 rounded-lg bg-stone-200 dark:bg-slate-800 text-xs font-bold cursor-pointer"
+                      className={`px-4 py-2.5 rounded-xl font-bold text-[14px] flex items-center gap-1.5 cursor-pointer ${surfaceBg} ${textMain}`}
                     >
-                      🔊 발음
+                      <Volume2 className="w-4 h-4 text-[#2563EB]" />
+                      <span>발음</span>
                     </button>
                   </div>
                 </div>
               )}
 
               {currentHebrewSyntax && (
-                <div className="p-3 rounded-xl border border-amber-500/30 bg-amber-500/10 text-xs space-y-1">
-                  <span className="font-bold block">📜 히브리어 구문론 분석</span>
-                  <p className="leading-relaxed">{currentHebrewSyntax.summary}</p>
+                <div className={`p-3.5 rounded-xl border ${borderClass} space-y-1`}>
+                  <span className="font-bold text-[12px] text-[#0D9488] block">히브리어 구문론 분석</span>
+                  <p className={`text-[14px] leading-relaxed ${textMain}`}>{currentHebrewSyntax.summary}</p>
                 </div>
               )}
 
               {currentCommentary && (
-                <div className="p-3 rounded-xl border border-indigo-500/30 bg-indigo-500/10 text-xs space-y-1">
-                  <span className="font-bold block">📖 학술 주석 ({currentCommentary.commentator})</span>
-                  <p className="font-serif leading-relaxed">{decodeHtmlEntities(currentCommentary.exegesis)}</p>
+                <div className={`p-3.5 rounded-xl border ${borderClass} space-y-1`}>
+                  <span className="font-bold text-[12px] text-[#2563EB] block">학술 주석 ({currentCommentary.commentator})</span>
+                  <p className={`text-[14.5px] leading-relaxed ${textMain}`}>{decodeHtmlEntities(currentCommentary.exegesis)}</p>
                 </div>
               )}
 
               {currentMatthewHenry && (
-                <div className="p-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-xs space-y-1">
-                  <span className="font-bold block">🌿 매튜 헨리 강해</span>
-                  <p className="font-serif leading-relaxed">{decodeHtmlEntities(currentMatthewHenry.devotionalExegesis)}</p>
+                <div className={`p-3.5 rounded-xl border ${borderClass} space-y-1`}>
+                  <span className="font-bold text-[12px] text-[#0D9488] block">매튜 헨리 강해</span>
+                  <p className={`text-[14.5px] leading-relaxed ${textMain}`}>{decodeHtmlEntities(currentMatthewHenry.devotionalExegesis)}</p>
                 </div>
               )}
             </div>
@@ -3320,7 +3380,9 @@ export default function Sermon({
         <div className="fixed inset-0 z-[999999]">
           <BibleGalaxyArcModal
             isOpen={isArcModalOpen}
-            onClose={function () { setIsArcModalOpen(false); }}
+            onClose={function () {
+              setIsArcModalOpen(false);
+            }}
             initialViewMode={arcModalInitialMode}
             focusReference={activeReferenceStr}
           />
@@ -3331,32 +3393,25 @@ export default function Sermon({
       {/* 12. 전체화면 라이브 시네마 워크스테이션 모달 */}
       {/* ===================================================================== */}
       {isLiveCinemaMode && (
-        <div className="fixed inset-0 z-[99998] bg-[#06080D] text-white flex flex-col lg:flex-row overflow-hidden animate-fade-in">
-          <div className="flex-1 flex flex-col relative bg-black min-h-[38vh]">
-            <div className="px-3 sm:px-4 py-2 bg-[#0C0F17] border-b border-white/10 flex flex-wrap items-center justify-between gap-2 z-10">
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="px-2 py-0.5 rounded bg-rose-600 text-white text-[10px] font-mono font-black shrink-0">
-                  WORKSTATION
-                </span>
-                <span className="text-xs sm:text-sm font-bold truncate">
-                  {safeDay.sermonTitle || '예배 설교 전체화면 워크스테이션'}
-                </span>
-              </div>
+        <div className="fixed inset-0 z-[99998] bg-[#0F1115] text-white flex flex-col lg:flex-row overflow-hidden">
+          <div className="flex-1 flex flex-col relative bg-black min-h-[40vh]">
+            <div className={`px-4 py-3 ${surfaceBg} border-b ${borderClass} flex flex-wrap items-center justify-between gap-2 z-10`}>
+              <span className={`text-[15px] font-bold truncate ${textMain}`}>
+                {safeDay.sermonTitle || '예배 설교 전체화면 워크스테이션'}
+              </span>
 
               <div className="flex items-center gap-1.5 flex-wrap shrink-0">
                 <button
                   type="button"
                   onClick={handleDirectTabCapture}
-                  className="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-stone-950 text-xs font-black cursor-pointer"
+                  className={`px-2.5 py-1.5 rounded-lg text-[12px] font-bold cursor-pointer ${amberPillClass}`}
                 >
-                  📷 영상 자막 즉시캡처
+                  자막 즉시캡처
                 </button>
                 <button
                   type="button"
                   onClick={handleToggleOcrStudioModal}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold cursor-pointer ${
-                    isOcrStudioOpen ? 'bg-rose-600 text-white' : 'bg-white/10 hover:bg-white/20 text-amber-300'
-                  }`}
+                  className={`px-2.5 py-1.5 rounded-lg text-[12px] font-bold cursor-pointer ${subSurfaceBg} ${textMain}`}
                 >
                   {isOcrStudioOpen ? '스캔창 닫기' : '스캔창 열기'}
                 </button>
@@ -3367,15 +3422,13 @@ export default function Sermon({
                     else {
                       setFinderRefInput(activeReferenceStr);
                       setShowFullChapterInFinder(false);
-                      setMinimizedModals(prev => ({ ...prev, finder: false }));
+                      setMinimizedModals((prev) => ({ ...prev, finder: false }));
                       setIsBibleFinderOpen(true);
                     }
                   }}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold cursor-pointer ${
-                    isBibleFinderOpen ? 'bg-sky-500 text-stone-950' : 'bg-white/10 hover:bg-white/20 text-white'
-                  }`}
+                  className={`px-2.5 py-1.5 rounded-lg text-[12px] font-bold cursor-pointer ${bluePillClass}`}
                 >
-                  📖 개역개정4판 찾기
+                  개역개정4판 찾기
                 </button>
                 <button
                   type="button"
@@ -3383,34 +3436,23 @@ export default function Sermon({
                     if (inspectorTarget) setInspectorTarget(null);
                     else openMcheyneStyleVerseInspector(activeReferenceStr, selectedWordVerse);
                   }}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold cursor-pointer ${
-                    inspectorTarget ? 'bg-indigo-600 text-white' : 'bg-white/10 hover:bg-white/20 text-white'
-                  }`}
+                  className={`px-2.5 py-1.5 rounded-lg text-[12px] font-bold cursor-pointer ${sagePillClass}`}
                 >
-                  🔬 원어강해
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsArcModalOpen(!isArcModalOpen)}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold cursor-pointer ${
-                    isArcModalOpen ? 'bg-emerald-500 text-stone-950' : 'bg-white/10 hover:bg-white/20 text-white'
-                  }`}
-                >
-                  🌈 신구약아크
+                  원어강해
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsCinemaUiHidden(!isCinemaUiHidden)}
-                  className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-bold cursor-pointer"
+                  className={`px-2.5 py-1.5 rounded-lg text-[12px] font-bold cursor-pointer ${subSurfaceBg} ${textMain}`}
                 >
                   {isCinemaUiHidden ? '필기창 열기' : '영상만 보기'}
                 </button>
                 <button
                   type="button"
                   onClick={exitLiveCinemaFullscreen}
-                  className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold cursor-pointer"
+                  className="px-3 py-1.5 rounded-lg bg-[#2563EB] text-white text-[12px] font-bold cursor-pointer"
                 >
-                  종료 ✕
+                  종료
                 </button>
               </div>
             </div>
@@ -3428,7 +3470,7 @@ export default function Sermon({
                   className="absolute inset-0 w-full h-full"
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-stone-400 text-xs">
+                <div className="w-full h-full flex items-center justify-center text-[#94A3B8] text-[15px]">
                   등록된 유튜브 설교 영상이 없습니다.
                 </div>
               )}
@@ -3436,8 +3478,8 @@ export default function Sermon({
           </div>
 
           {!isCinemaUiHidden && (
-            <div className="w-full lg:w-[440px] h-[54vh] lg:h-full bg-[#0E121B] border-t lg:border-t-0 lg:border-l border-white/10 flex flex-col shrink-0">
-              <div className="px-3 py-2 border-b border-white/10 flex items-center gap-1">
+            <div className={`w-full lg:w-[460px] h-[52vh] lg:h-full ${surfaceBg} border-t lg:border-t-0 lg:border-l ${borderClass} flex flex-col shrink-0`}>
+              <div className={`px-4 py-3 border-b ${borderClass} flex items-center gap-1`}>
                 {[
                   { id: 'outline', label: '3대지·요약' },
                   { id: 'apply', label: '적용질문' },
@@ -3447,8 +3489,8 @@ export default function Sermon({
                     key={tab.id}
                     type="button"
                     onClick={() => setCinemaHudTab(tab.id)}
-                    className={`flex-1 py-1.5 rounded-lg text-xs font-bold cursor-pointer ${
-                      cinemaHudTab === tab.id ? 'bg-white text-stone-950' : 'text-stone-400 hover:text-white'
+                    className={`flex-1 py-2 rounded-lg text-[12px] font-bold cursor-pointer ${
+                      cinemaHudTab === tab.id ? 'bg-[#2563EB] text-white' : textSub
                     }`}
                   >
                     {tab.label}
@@ -3456,11 +3498,11 @@ export default function Sermon({
                 ))}
               </div>
 
-              <div className="flex-1 overflow-y-auto p-4 space-y-3 hide-scrollbar text-left">
+              <div className="flex-1 overflow-y-auto p-4 space-y-3.5 hide-scrollbar text-left">
                 {cinemaHudTab === 'outline' && (
                   <div className="space-y-3">
                     <div>
-                      <label className="text-[11px] font-bold text-amber-400 block mb-1">설교 본문 구절 (개역개정4판·원어·아크 연동)</label>
+                      <span className="text-[12px] font-bold text-[#D97706] block mb-1">설교 본문 구절</span>
                       <input
                         type="text"
                         value={safeDay.sermonReference || ''}
@@ -3469,18 +3511,18 @@ export default function Sermon({
                           updateDay && updateDay({ sermonReference: e.target.value });
                         }}
                         placeholder="예: 고전 7:29-40 또는 벧전 3:7"
-                        className="w-full px-3 py-2 rounded-lg bg-black/50 border border-white/15 text-xs text-white outline-none"
+                        className={`w-full px-3.5 py-2.5 rounded-xl ${subSurfaceBg} ${textMain} text-[14.5px] outline-none`}
                       />
                     </div>
                     <div>
-                      <label className="text-[11px] font-bold text-amber-400 block mb-1">핵심 한 문장 요약</label>
+                      <span className="text-[12px] font-bold text-[#D97706] block mb-1">핵심 한 문장 요약</span>
                       <input
                         type="text"
                         value={safeDay.sermonConviction || ''}
                         onChange={(e) => updateDay && updateDay({ sermonConviction: e.target.value })}
                         onKeyDown={(e) => handleSpacebarVerseAutoCompleteOnInput(e, 'sermonConviction', safeDay.sermonConviction || '')}
                         placeholder="핵심 요약 문장 입력 ('창1:1' + 스페이스바 자동완성)"
-                        className="w-full px-3 py-2 rounded-lg bg-black/50 border border-white/15 text-xs text-white outline-none"
+                        className={`w-full px-3.5 py-2.5 rounded-xl ${subSurfaceBg} ${textMain} text-[14.5px] outline-none`}
                       />
                     </div>
                     {[
@@ -3489,13 +3531,13 @@ export default function Sermon({
                       { key: 'sermonPoint3', label: '제3대지' }
                     ].map((pt) => (
                       <div key={pt.key}>
-                        <label className="text-[11px] font-bold text-stone-300 block mb-1">{pt.label}</label>
+                        <span className={`text-[12px] font-bold ${textSub} block mb-1`}>{pt.label}</span>
                         <textarea
                           rows={2}
                           value={safeDay[pt.key] || ''}
                           onChange={(e) => updateDay && updateDay({ [pt.key]: e.target.value })}
                           onKeyDown={(e) => handleSpacebarVerseAutoCompleteOnInput(e, pt.key, safeDay[pt.key] || '')}
-                          className="w-full p-2.5 rounded-lg bg-black/50 border border-white/15 text-xs text-white outline-none resize-none"
+                          className={`w-full p-3 rounded-xl ${subSurfaceBg} ${textMain} text-[14.5px] outline-none resize-none`}
                         />
                       </div>
                     ))}
@@ -3503,9 +3545,9 @@ export default function Sermon({
                 )}
 
                 {cinemaHudTab === 'apply' && (
-                  <div className="space-y-2.5">
+                  <div className="space-y-3">
                     {((getArr ? getArr(safeDay.applyQuestions) : safeDay.applyQuestions) || ['']).map((qText, qIdx) => (
-                      <div key={qIdx} className="p-2.5 rounded-xl bg-black/40 border border-white/10 space-y-1.5">
+                      <div key={qIdx} className={`p-3.5 rounded-xl ${subSurfaceBg} space-y-2`}>
                         <input
                           type="text"
                           value={qText || ''}
@@ -3515,7 +3557,7 @@ export default function Sermon({
                             updateDay && updateDay({ applyQuestions: nextQ });
                           }}
                           placeholder={`적용질문 Q${qIdx + 1}`}
-                          className="w-full bg-transparent text-xs font-bold text-amber-300 outline-none"
+                          className={`w-full bg-transparent text-[14.5px] font-bold outline-none ${textMain}`}
                         />
                         <textarea
                           rows={2}
@@ -3525,7 +3567,7 @@ export default function Sermon({
                             updateDay && updateDay({ applyAnswers: nextA });
                           }}
                           placeholder="나의 적용과 실천 결단 입력"
-                          className="w-full p-2 rounded bg-black/60 border border-white/10 text-xs text-white outline-none resize-none"
+                          className={`w-full p-2.5 rounded-lg ${surfaceBg} ${textMain} text-[14px] outline-none resize-none`}
                         />
                       </div>
                     ))}
@@ -3535,13 +3577,13 @@ export default function Sermon({
                 {cinemaHudTab === 'notes' && (
                   <div
                     onKeyDownCapture={handleEditorContainerKeyDown}
-                    className="h-full min-h-[260px] rounded-xl overflow-hidden border border-white/15"
+                    className={`h-full min-h-[300px] rounded-xl overflow-hidden border ${borderClass}`}
                   >
                     <RichTextEditor
                       value={safeDay.sermonNotes || ''}
                       onChange={handleRichTextChange}
                       placeholder="영상을 보며 자유롭게 필기하세요... ('창1:1' + 스페이스바 자동완성 지원)"
-                      isDarkMode={true}
+                      isDarkMode={isDark}
                     />
                   </div>
                 )}
@@ -3552,29 +3594,31 @@ export default function Sermon({
       )}
 
       {/* ===================================================================== */}
-      {/* 13. 월별 특별집회(기상고기) 유튜브 링크 설정 모달 */}
+      {/* 13. 월별 특별집회 유튜브 링크 설정 모달 */}
       {/* ===================================================================== */}
       {showMonthlyModal && (
         <div
-          className="fixed inset-0 z-[999999] bg-black/75 backdrop-blur-xs flex items-center justify-center p-4"
+          className="fixed inset-0 z-[999999] bg-black/65 flex items-center justify-center p-4"
           onClick={() => setShowMonthlyModal(false)}
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className={`w-full max-w-md rounded-2xl border p-5 shadow-2xl space-y-4 text-left ${
-              isDark ? 'bg-[#121620] border-white/15 text-white' : 'bg-white border-stone-300 text-stone-900'
-            }`}
+            className={`w-full max-w-md rounded-2xl border ${borderClass} ${surfaceBg} ${textMain} p-5 space-y-4 text-left`}
           >
-            <div className="flex items-center justify-between border-b border-stone-200 dark:border-white/10 pb-3">
-              <span className="text-sm font-bold">📅 월별 특별집회 유튜브 링크 관리</span>
-              <button onClick={() => setShowMonthlyModal(false)} className="text-xs font-bold text-stone-400 cursor-pointer">
-                닫기 ✕
+            <div className={`flex items-center justify-between border-b ${borderClass} pb-3`}>
+              <span className="text-[16px] font-bold">월별 특별집회 유튜브 링크 관리</span>
+              <button
+                type="button"
+                onClick={() => setShowMonthlyModal(false)}
+                className={`w-8 h-8 rounded-lg flex items-center justify-center ${subSurfaceBg} cursor-pointer`}
+              >
+                <X className="w-4 h-4" />
               </button>
             </div>
             <div className="space-y-2 max-h-64 overflow-y-auto pr-1 hide-scrollbar">
               {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((mNum) => (
                 <div key={mNum} className="flex items-center gap-2">
-                  <span className="w-12 text-xs font-bold shrink-0">{mNum}월</span>
+                  <span className="w-12 text-[13px] font-bold shrink-0">{mNum}월</span>
                   <input
                     type="text"
                     value={monthlyGisanUrls[mNum] || ''}
@@ -3584,19 +3628,18 @@ export default function Sermon({
                       localStorage.setItem('monthly_gisangogi_urls', JSON.stringify(next));
                     }}
                     placeholder={`${mNum}월 특별집회 유튜브 URL`}
-                    className={`flex-1 px-3 py-1.5 rounded-lg border text-xs outline-none ${
-                      isDark ? 'bg-[#0E1015] border-white/15 text-white' : 'bg-stone-50 border-stone-200 text-stone-900'
-                    }`}
+                    className={`flex-1 px-3 py-2 rounded-xl text-[13.5px] outline-none ${subSurfaceBg} ${textMain}`}
                   />
                 </div>
               ))}
             </div>
             <button
+              type="button"
               onClick={() => {
                 showToast('월별 특별집회 링크가 저장되었습니다.');
                 setShowMonthlyModal(false);
               }}
-              className="w-full py-2.5 rounded-xl bg-stone-900 dark:bg-white text-white dark:text-stone-900 text-xs font-bold cursor-pointer"
+              className="w-full py-3 rounded-xl bg-[#2563EB] text-white text-[14px] font-bold cursor-pointer"
             >
               저장 완료
             </button>

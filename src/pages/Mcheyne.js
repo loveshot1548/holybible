@@ -5,7 +5,9 @@ import {
   BookOpen,
   Check,
   ChevronDown,
+  Compass,
   Download,
+  ExternalLink,
   FileText,
   Globe,
   Maximize2,
@@ -16,8 +18,6 @@ import {
   Play,
   RotateCcw,
   RotateCw,
-  Search,
-  Sparkles,
   Square,
   Trash2,
   Volume2,
@@ -402,7 +402,7 @@ const renderStroke = (ctx, stroke, isDark) => {
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
 
-  const resolvedColor = isDark && color === '#191F28' ? '#F9FAFB' : color;
+  const resolvedColor = isDark && color === '#191F28' ? '#F8FAFC' : color;
 
   switch (tool) {
     case 'pencil':
@@ -419,7 +419,7 @@ const renderStroke = (ctx, stroke, isDark) => {
       break;
     case 'highlighter':
       ctx.globalCompositeOperation = isDark ? 'screen' : 'multiply';
-      ctx.strokeStyle = color === '#191F28' ? 'rgba(49, 130, 246, 0.35)' : color;
+      ctx.strokeStyle = color === '#191F28' ? 'rgba(13, 148, 136, 0.35)' : color;
       ctx.lineWidth = size * 3.8;
       ctx.globalAlpha = isDark ? 0.5 : 0.35;
       break;
@@ -462,7 +462,7 @@ const renderStroke = (ctx, stroke, isDark) => {
 };
 
 // =====================================================================
-// 맥체인 전용 2단 필사 & 텍스트 노트 패널 (토스 스타일 · 이모지 0%)
+// 맥체인 전용 2단 필사 & 텍스트 노트 패널 (3색 조화 팔레트 · 이모지 0%)
 // =====================================================================
 const McheyneTranscriptionNotePanel = ({
   currentPlanKey,
@@ -650,7 +650,7 @@ const McheyneTranscriptionNotePanel = ({
     const ctx = exportCanvas.getContext('2d');
     const dpr = window.devicePixelRatio || 1;
 
-    ctx.fillStyle = isDark ? '#181B20' : '#FFFFFF';
+    ctx.fillStyle = isDark ? '#171A21' : '#FFFFFF';
     ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
     ctx.scale(dpr, dpr);
     strokes.forEach((s) => renderStroke(ctx, s, isDark));
@@ -663,9 +663,9 @@ const McheyneTranscriptionNotePanel = ({
 
   const colorPalette = [
     { id: 'dark', color: '#191F28' },
-    { id: 'blue', color: '#3182F6' },
-    { id: 'gray', color: '#6B7684' },
-    { id: 'navy', color: '#1E3A8A' }
+    { id: 'blue', color: '#2563EB' },
+    { id: 'teal', color: '#0D9488' },
+    { id: 'amber', color: '#D97706' }
   ];
 
   const tools = [
@@ -696,22 +696,22 @@ const McheyneTranscriptionNotePanel = ({
     }
   };
 
-  const borderClass = isDark ? 'border-[#262A32]' : 'border-[#E5E8EB]';
-  const surfaceClass = isDark ? 'bg-[#181B20]' : 'bg-white';
+  const borderClass = isDark ? 'border-[#262B36]' : 'border-[#E5E8EC]';
+  const surfaceClass = isDark ? 'bg-[#171A21]' : 'bg-white';
 
   return (
-    <div className={`flex flex-col h-full rounded-3xl border overflow-hidden ${surfaceClass} ${borderClass}`}>
+    <div className={`flex flex-col h-full rounded-2xl border overflow-hidden ${surfaceClass} ${borderClass}`}>
       <div className={`px-3.5 py-2.5 border-b ${borderClass} flex flex-wrap items-center justify-between gap-2 shrink-0`}>
         <div className="flex items-center gap-1">
           <button
             type="button"
             onClick={() => setPanelTab('handwriting')}
-            className={`px-3 py-1.5 rounded-xl text-[12px] font-bold flex items-center gap-1.5 cursor-pointer transition-colors ${
+            className={`px-3 py-1.5 rounded-lg text-[12px] font-bold flex items-center gap-1.5 cursor-pointer transition-colors ${
               panelTab === 'handwriting'
-                ? 'bg-[#3182F6] text-white'
+                ? 'bg-[#0D9488] text-white'
                 : isDark
-                ? 'text-[#9BA3B0] hover:text-white'
-                : 'text-[#6B7684] hover:text-[#191F28]'
+                ? 'text-[#94A3B8] hover:text-white'
+                : 'text-[#64748B] hover:text-[#191F28]'
             }`}
           >
             <PenLine className="w-3.5 h-3.5" />
@@ -720,12 +720,12 @@ const McheyneTranscriptionNotePanel = ({
           <button
             type="button"
             onClick={() => setPanelTab('typing')}
-            className={`px-3 py-1.5 rounded-xl text-[12px] font-bold flex items-center gap-1.5 cursor-pointer transition-colors ${
+            className={`px-3 py-1.5 rounded-lg text-[12px] font-bold flex items-center gap-1.5 cursor-pointer transition-colors ${
               panelTab === 'typing'
-                ? 'bg-[#3182F6] text-white'
+                ? 'bg-[#2563EB] text-white'
                 : isDark
-                ? 'text-[#9BA3B0] hover:text-white'
-                : 'text-[#6B7684] hover:text-[#191F28]'
+                ? 'text-[#94A3B8] hover:text-white'
+                : 'text-[#64748B] hover:text-[#191F28]'
             }`}
           >
             <FileText className="w-3.5 h-3.5" />
@@ -734,7 +734,7 @@ const McheyneTranscriptionNotePanel = ({
         </div>
 
         <div className="flex items-center gap-1.5">
-          <div className={`flex p-0.5 rounded-xl text-[12px] font-bold ${isDark ? 'bg-[#22262E]' : 'bg-[#F2F4F6]'}`}>
+          <div className={`flex p-0.5 rounded-lg text-[12px] font-bold ${isDark ? 'bg-[#20242E]' : 'bg-[#F1F3F6]'}`}>
             {[
               { id: 'line', label: '유선' },
               { id: 'dot', label: '도트' },
@@ -745,10 +745,10 @@ const McheyneTranscriptionNotePanel = ({
                 key={p.id}
                 type="button"
                 onClick={() => setPaperStyle(p.id)}
-                className={`px-2 py-1 rounded-lg transition-colors cursor-pointer ${
+                className={`px-2 py-1 rounded-md transition-colors cursor-pointer ${
                   paperStyle === p.id
                     ? isDark
-                      ? 'bg-[#181B20] text-white'
+                      ? 'bg-[#171A21] text-white'
                       : 'bg-white text-[#191F28]'
                     : 'text-[#8B95A1]'
                 }`}
@@ -762,7 +762,9 @@ const McheyneTranscriptionNotePanel = ({
             <button
               type="button"
               onClick={handleExportPng}
-              className="px-2.5 py-1.5 rounded-xl text-[12px] font-bold bg-[#3182F6]/10 text-[#3182F6] flex items-center gap-1 cursor-pointer"
+              className={`px-2.5 py-1.5 rounded-lg text-[12px] font-bold flex items-center gap-1 cursor-pointer ${
+                isDark ? 'bg-[#0D9488]/15 text-[#5EEAD4]' : 'bg-[#0D9488]/10 text-[#0F766E]'
+              }`}
               title="이미지로 저장"
             >
               <Download className="w-3.5 h-3.5" />
@@ -780,12 +782,12 @@ const McheyneTranscriptionNotePanel = ({
                 key={toolItem.id}
                 type="button"
                 onClick={() => setCurrentTool(toolItem.id)}
-                className={`px-2.5 py-1 rounded-lg text-[12px] font-bold transition-colors cursor-pointer ${
+                className={`px-2.5 py-1 rounded-md text-[12px] font-bold transition-colors cursor-pointer ${
                   currentTool === toolItem.id
-                    ? 'bg-[#3182F6] text-white'
+                    ? 'bg-[#191F28] text-white dark:bg-white dark:text-[#101216]'
                     : isDark
-                    ? 'text-[#9BA3B0] hover:text-white'
-                    : 'text-[#6B7684] hover:text-[#191F28]'
+                    ? 'text-[#94A3B8] hover:text-white'
+                    : 'text-[#64748B] hover:text-[#191F28]'
                 }`}
               >
                 {toolItem.label}
@@ -801,7 +803,7 @@ const McheyneTranscriptionNotePanel = ({
                 onClick={() => setStrokeColor(c.color)}
                 style={{ backgroundColor: c.color }}
                 className={`w-4 h-4 rounded-full cursor-pointer transition-transform ${
-                  strokeColor === c.color ? 'scale-125 ring-2 ring-[#3182F6]' : 'opacity-75 hover:opacity-100'
+                  strokeColor === c.color ? 'scale-125 ring-2 ring-[#0D9488]' : 'opacity-75 hover:opacity-100'
                 }`}
               />
             ))}
@@ -812,7 +814,7 @@ const McheyneTranscriptionNotePanel = ({
               type="button"
               onClick={handleUndo}
               disabled={strokes.length === 0}
-              className="p-1.5 rounded-lg text-[#6B7684] disabled:opacity-30 cursor-pointer"
+              className="p-1.5 rounded-lg text-[#64748B] disabled:opacity-30 cursor-pointer"
               title="실행 취소"
             >
               <RotateCcw className="w-3.5 h-3.5" />
@@ -821,7 +823,7 @@ const McheyneTranscriptionNotePanel = ({
               type="button"
               onClick={handleRedo}
               disabled={redoStack.length === 0}
-              className="p-1.5 rounded-lg text-[#6B7684] disabled:opacity-30 cursor-pointer"
+              className="p-1.5 rounded-lg text-[#64748B] disabled:opacity-30 cursor-pointer"
               title="다시 실행"
             >
               <RotateCw className="w-3.5 h-3.5" />
@@ -830,7 +832,7 @@ const McheyneTranscriptionNotePanel = ({
               type="button"
               onClick={handleClear}
               disabled={strokes.length === 0}
-              className="p-1.5 rounded-lg text-[#6B7684] disabled:opacity-30 cursor-pointer"
+              className="p-1.5 rounded-lg text-[#64748B] disabled:opacity-30 cursor-pointer"
               title="전체 지우기"
             >
               <Trash2 className="w-3.5 h-3.5" />
@@ -841,13 +843,15 @@ const McheyneTranscriptionNotePanel = ({
 
       {panelTab === 'typing' && detectedTypingRefs.length > 0 && onOpenGalaxyPopup && (
         <div className={`px-3.5 py-2 border-b ${borderClass} flex items-center gap-1.5 overflow-x-auto hide-scrollbar shrink-0`}>
-          <span className="text-[12px] font-medium text-[#6B7684] shrink-0">감지된 구절:</span>
+          <span className="text-[12px] font-medium text-[#64748B] shrink-0">감지된 구절:</span>
           {detectedTypingRefs.map((refStr) => (
             <button
               key={refStr}
               type="button"
               onClick={() => onOpenGalaxyPopup('arc', refStr)}
-              className="px-2.5 py-1 rounded-lg bg-[#3182F6]/10 text-[#3182F6] text-[12px] font-bold shrink-0 cursor-pointer"
+              className={`px-2.5 py-1 rounded-md text-[12px] font-bold shrink-0 cursor-pointer ${
+                isDark ? 'bg-[#D97706]/15 text-[#FCD34D]' : 'bg-[#D97706]/10 text-[#B45309]'
+              }`}
             >
               {refStr}
             </button>
@@ -876,8 +880,8 @@ const McheyneTranscriptionNotePanel = ({
                 if (updateDay) updateDay({ mcheyneNote: e.target.value });
               }}
               placeholder={`${planTitle || '맥체인'} 말씀을 묵상하며 필사나 묵상 내용을 자유롭게 기록하세요.`}
-              className={`w-full h-full bg-transparent outline-none resize-none text-[15px] leading-[1.85] border-none ${
-                isDark ? 'text-[#F9FAFB] placeholder:text-[#6B7684]' : 'text-[#191F28] placeholder:text-[#8B95A1]'
+              className={`w-full h-full bg-transparent outline-none resize-none text-[15px] leading-[1.8] border-none ${
+                isDark ? 'text-[#F8FAFC] placeholder:text-[#64748B]' : 'text-[#191F28] placeholder:text-[#94A3B8]'
               }`}
             />
           </div>
@@ -888,7 +892,7 @@ const McheyneTranscriptionNotePanel = ({
 };
 
 // =====================================================================
-// 메인 오늘의 맥체인 컴포넌트 (토스 디자인 시스템 · 단일 포인트 블루)
+// 메인 오늘의 맥체인 컴포넌트 (3색 조화 · 와이드 반응형 · 이모지 0%)
 // =====================================================================
 export default function Mcheyne({
   isDarkMode,
@@ -986,8 +990,8 @@ export default function Mcheyne({
 
     fetch('/data/easy_bible.json').then((r) => (r.ok ? r.json() : {})).then((d) => setEasyBibleDb(d || {})).catch(() => {});
     fetch('/data/web_bible.json').then((r) => (r.ok ? r.json() : {})).then((d) => setWebBibleDb(d || {})).catch(() => {});
-    fetch('/data/commentaries.json').then((r) => (r.ok ? r.json() : {})).then((d) => setCommentaryDb((prev) => ({ ...prev, ...d }))).catch(() => {});
-    fetch('/data/matthew_henry.json').then((r) => (r.ok ? r.json() : {})).then((d) => setMatthewHenryDb((prev) => ({ ...prev, ...d }))).catch(() => {});
+    fetch('/data/commentaries.json').then((r) => (r.ok ? r.json() : {})).then((d) => setCommentaryDb((prev) => ({ ...prev, ...prev }))).catch(() => {});
+    fetch('/data/matthew_henry.json').then((r) => (r.ok ? r.json() : {})).then((d) => setMatthewHenryDb((prev) => ({ ...prev, ...prev }))).catch(() => {});
     fetch('/data/net_notes.json').then((r) => (r.ok ? r.json() : {})).then((d) => setNetNotesDb(d || {})).catch(() => {});
     fetch('/data/targum_peshitta.json').then((r) => (r.ok ? r.json() : {})).then((d) => setTargumPeshittaDb(d || {})).catch(() => {});
     fetch('/data/mcheyne_devotions.json').then((r) => (r.ok ? r.json() : {})).then((d) => setMcheyneDevotionsDb(d || {})).catch(() => {});
@@ -1233,6 +1237,20 @@ export default function Mcheyne({
       const verses = getDisplayVersesForChapter(ch);
       return verses.every((v) => (readVerses || {})[`${mBookD?.name}-${ch}-${v.vNum - 1}`]);
     });
+  }, [mChaps, getDisplayVersesForChapter, readVerses, mBookD]);
+
+  // 능동형 진행률 계산
+  const currentPlanProgress = useMemo(() => {
+    let totalV = 0;
+    let readV = 0;
+    mChaps.forEach((ch) => {
+      const verses = getDisplayVersesForChapter(ch);
+      totalV += verses.length;
+      verses.forEach((v) => {
+        if ((readVerses || {})[`${mBookD?.name}-${ch}-${v.vNum - 1}`]) readV++;
+      });
+    });
+    return totalV === 0 ? 0 : Math.round((readV / totalV) * 100);
   }, [mChaps, getDisplayVersesForChapter, readVerses, mBookD]);
 
   // 목장 모임 출석부 및 오늘의 루틴 동기화
@@ -1559,15 +1577,27 @@ export default function Mcheyne({
     };
   }, [currentBookMeta, mChaps, mcheyneDevotionsDb]);
 
-  // 토스 디자인 시스템 컬러 토큰 (다크/라이트 완벽 호환 · 단일 포인트 블루 #3182F6)
+  // =====================================================================
+  // 3색 조화 팔레트 (메인 블루 #2563EB + 세이지 그린 #0D9488 + 웜 앰버 #D97706)
+  // =====================================================================
   const isDark = isDarkMode;
-  const pageBg = isDark ? 'bg-[#101216]' : 'bg-[#F4F6FA]';
-  const surfaceBg = isDark ? 'bg-[#181B20]' : 'bg-white';
-  const subSurfaceBg = isDark ? 'bg-[#22262E]' : 'bg-[#F2F4F6]';
-  const borderClass = isDark ? 'border-[#262A32]' : 'border-[#E5E8EB]';
-  const dividerClass = isDark ? 'divide-[#262A32]' : 'divide-[#F2F4F6]';
-  const textMain = isDark ? 'text-[#F9FAFB]' : 'text-[#191F28]';
-  const textSub = isDark ? 'text-[#9BA3B0]' : 'text-[#6B7684]';
+  const pageBg = isDark ? 'bg-[#0F1115]' : 'bg-[#F5F6F8]';
+  const surfaceBg = isDark ? 'bg-[#171A21]' : 'bg-white';
+  const subSurfaceBg = isDark ? 'bg-[#20242E]' : 'bg-[#F1F3F6]';
+  const borderClass = isDark ? 'border-[#262B36]' : 'border-[#E5E8EC]';
+  const dividerClass = isDark ? 'divide-[#262B36]' : 'divide-[#EEF0F3]';
+  const textMain = isDark ? 'text-[#F8FAFC]' : 'text-[#191F28]';
+  const textSub = isDark ? 'text-[#94A3B8]' : 'text-[#64748B]';
+
+  const sagePillClass = isDark
+    ? 'bg-[#0D9488]/15 text-[#5EEAD4] hover:bg-[#0D9488]/25'
+    : 'bg-[#0D9488]/10 text-[#0F766E] hover:bg-[#0D9488]/15';
+  const amberPillClass = isDark
+    ? 'bg-[#D97706]/15 text-[#FCD34D] hover:bg-[#D97706]/25'
+    : 'bg-[#D97706]/10 text-[#B45309] hover:bg-[#D97706]/15';
+  const bluePillClass = isDark
+    ? 'bg-[#2563EB]/15 text-[#93C5FD] hover:bg-[#2563EB]/25'
+    : 'bg-[#2563EB]/10 text-[#1D4ED8] hover:bg-[#2563EB]/15';
 
   // 표준 본문 가독성 규격
   const fontSizeClass =
@@ -1599,8 +1629,8 @@ export default function Mcheyne({
     <div className={`flex-1 flex flex-col h-full relative overflow-hidden font-sans select-none ${pageBg}`}>
       {/* 목장모임 출석 연동 토스트 알림 */}
       {cellSyncToast && (
-        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-[9999999] bg-[#3182F6] text-white text-[12px] font-bold px-4 py-2.5 rounded-2xl shadow-lg flex items-center gap-2">
-          <Check className="w-4 h-4" />
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-[9999999] bg-[#191F28] text-white text-[13px] font-bold px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-2">
+          <Check className="w-4 h-4 text-[#0D9488]" />
           <span>맥체인 통독이 목장 모임 출석부 및 오늘의 루틴에 반영되었습니다.</span>
         </div>
       )}
@@ -1616,39 +1646,34 @@ export default function Mcheyne({
       />
 
       {/* 1. 상단 고정 글로벌 헤더 */}
-      <header
-        className={`relative z-20 px-4 sm:px-6 h-14 flex items-center justify-between border-b shrink-0 ${borderClass} ${
-          isDark ? 'bg-[#101216]/95' : 'bg-[#F4F6FA]/95'
-        } backdrop-blur-md`}
-      >
+      <header className={`relative z-20 px-3 sm:px-6 h-14 flex items-center justify-between border-b shrink-0 ${borderClass} ${surfaceBg}`}>
         <div className="flex items-center gap-2 min-w-0">
           <button
             type="button"
             onClick={() => setActiveScreen('home')}
-            className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors cursor-pointer ${
+            className={`w-9 h-9 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
               isDark ? 'hover:bg-white/10 text-white' : 'hover:bg-black/5 text-[#191F28]'
             }`}
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <h1 className={`text-[18px] font-bold tracking-tight truncate ${textMain}`}>오늘의 맥체인</h1>
-          {(mAllR || currDay?.checks?.['맥체인']) && (
-            <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#3182F6]/10 text-[#3182F6] text-[12px] font-bold">
-              <Check className="w-3 h-3" />
-              <span>출석 연동됨</span>
+          <div className="flex items-center gap-2">
+            <h1 className={`text-[17px] font-bold tracking-tight truncate ${textMain}`}>오늘의 맥체인</h1>
+            <span className={`hidden sm:inline-block text-[12px] font-bold px-2 py-0.5 rounded-md ${sagePillClass}`}>
+              진행률 {currentPlanProgress}%
             </span>
-          )}
+          </div>
           {isMoHana && partnerActivity && (
-            <span className="px-2 py-0.5 rounded-lg bg-[#3182F6]/10 text-[#3182F6] text-[12px] font-bold">동행 묵상 중</span>
+            <span className={`px-2 py-0.5 rounded-md text-[12px] font-bold ${amberPillClass}`}>동행 묵상 중</span>
           )}
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
-          <div className={`flex items-center p-0.5 rounded-xl text-[12px] font-bold ${subSurfaceBg}`}>
+          <div className={`flex items-center p-0.5 rounded-lg text-[12px] font-bold ${subSurfaceBg}`}>
             <button
               type="button"
               onClick={() => setFontSizeLevel((l) => Math.max(0, l - 1))}
-              className={`px-2 py-1 rounded-lg cursor-pointer ${textSub}`}
+              className={`px-2 py-1 rounded-md cursor-pointer ${textSub}`}
               title="글자 작게"
             >
               가-
@@ -1656,7 +1681,7 @@ export default function Mcheyne({
             <button
               type="button"
               onClick={() => setFontSizeLevel((l) => Math.min(2, l + 1))}
-              className={`px-2 py-1 rounded-lg cursor-pointer ${textSub}`}
+              className={`px-2 py-1 rounded-md cursor-pointer ${textSub}`}
               title="글자 크게"
             >
               가+
@@ -1666,8 +1691,8 @@ export default function Mcheyne({
           <button
             type="button"
             onClick={() => setIsFocusMode(!isFocusMode)}
-            className={`h-9 px-3 rounded-xl text-[12px] font-bold flex items-center gap-1.5 cursor-pointer transition-colors ${
-              isFocusMode ? 'bg-[#3182F6] text-white' : `${surfaceBg} border ${borderClass} ${textMain}`
+            className={`h-8 px-2.5 rounded-lg text-[12px] font-bold flex items-center gap-1.5 cursor-pointer transition-colors ${
+              isFocusMode ? 'bg-[#0D9488] text-white' : `${subSurfaceBg} ${textMain}`
             }`}
           >
             {isFocusMode ? (
@@ -1677,7 +1702,7 @@ export default function Mcheyne({
               </>
             ) : (
               <>
-                <Maximize2 className="w-3.5 h-3.5 text-[#3182F6]" />
+                <Maximize2 className="w-3.5 h-3.5 text-[#0D9488]" />
                 <span>집중 모드</span>
               </>
             )}
@@ -1686,7 +1711,7 @@ export default function Mcheyne({
           <button
             type="button"
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors cursor-pointer ${
+            className={`w-9 h-9 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
               isDark ? 'hover:bg-white/10 text-white' : 'hover:bg-black/5 text-[#191F28]'
             }`}
           >
@@ -1695,10 +1720,17 @@ export default function Mcheyne({
         </div>
       </header>
 
+      {/* 능동형 진행률 헤어라인 인디케이터 */}
+      <div className={`w-full h-[2px] ${subSurfaceBg} shrink-0`}>
+        <div
+          className="h-full bg-gradient-to-r from-[#0D9488] to-[#2563EB] transition-all duration-500"
+          style={{ width: `${currentPlanProgress}%` }}
+        />
+      </div>
+
       {/* 2. 상단 4대 플랜 탭 & 역본·보기 모드 컨트롤 바 */}
       <div className={`w-full flex-col shrink-0 border-b ${borderClass} ${isFocusMode ? 'hidden' : 'flex'} ${surfaceBg}`}>
-        {/* 2-1. 오늘의 맥체인 4개 본문 탭 + 역본·모드 스위치 */}
-        <div className={`px-4 sm:px-6 py-2.5 border-b ${borderClass} flex items-center justify-between gap-2 flex-wrap`}>
+        <div className={`px-3 sm:px-6 py-2.5 border-b ${borderClass} flex items-center justify-between gap-2 flex-wrap`}>
           <div className="flex items-center gap-1.5 overflow-x-auto hide-scrollbar">
             {(getArr ? getArr(mpList) : mpList || []).map((planItem, idx) => {
               const isSelected = mcheynePlanIdx === idx;
@@ -1707,8 +1739,8 @@ export default function Mcheyne({
                   key={idx}
                   type="button"
                   onClick={() => setMcheynePlanIdx && setMcheynePlanIdx(idx)}
-                  className={`px-3.5 py-1.5 rounded-xl text-[12px] font-bold whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
-                    isSelected ? 'bg-[#3182F6] text-white' : `${subSurfaceBg} ${textSub} hover:text-[#3182F6]`
+                  className={`px-3 py-1.5 rounded-lg text-[12px] font-bold whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
+                    isSelected ? 'bg-[#2563EB] text-white' : `${subSurfaceBg} ${textSub} hover:text-[#2563EB]`
                   }`}
                 >
                   {decodeHtmlEntities(safeCleanText(planItem.title))}
@@ -1718,7 +1750,7 @@ export default function Mcheyne({
           </div>
 
           <div className="flex items-center gap-1.5 shrink-0 ml-auto">
-            <div className={`flex p-0.5 rounded-xl text-[12px] font-bold ${subSurfaceBg}`}>
+            <div className={`flex p-0.5 rounded-lg text-[12px] font-bold ${subSurfaceBg}`}>
               {[
                 { id: 'krv', label: '개역개정' },
                 { id: 'easy', label: '쉬운성경' },
@@ -1729,8 +1761,8 @@ export default function Mcheyne({
                   key={v.id}
                   type="button"
                   onClick={() => handleVersionChange(v.id)}
-                  className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer whitespace-nowrap ${
-                    bibleVersion === v.id ? 'bg-[#3182F6] text-white' : textSub
+                  className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer whitespace-nowrap ${
+                    bibleVersion === v.id ? 'bg-[#0D9488] text-white' : textSub
                   }`}
                 >
                   {v.label}
@@ -1738,12 +1770,12 @@ export default function Mcheyne({
               ))}
             </div>
 
-            <div className={`flex p-0.5 rounded-xl text-[12px] font-bold ${subSurfaceBg}`}>
+            <div className={`flex p-0.5 rounded-lg text-[12px] font-bold ${subSurfaceBg}`}>
               <button
                 type="button"
                 onClick={() => setViewMode('single')}
-                className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer whitespace-nowrap ${
-                  viewMode === 'single' ? (isDark ? 'bg-[#181B20] text-white' : 'bg-white text-[#191F28]') : textSub
+                className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer whitespace-nowrap ${
+                  viewMode === 'single' ? (isDark ? 'bg-[#171A21] text-white' : 'bg-white text-[#191F28]') : textSub
                 }`}
               >
                 읽기 모드
@@ -1751,8 +1783,8 @@ export default function Mcheyne({
               <button
                 type="button"
                 onClick={() => setViewMode('split')}
-                className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer whitespace-nowrap flex items-center gap-1 ${
-                  viewMode === 'split' ? 'bg-[#3182F6] text-white' : textSub
+                className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer whitespace-nowrap flex items-center gap-1 ${
+                  viewMode === 'split' ? 'bg-[#0D9488] text-white' : textSub
                 }`}
               >
                 <PenLine className="w-3 h-3" />
@@ -1762,13 +1794,13 @@ export default function Mcheyne({
           </div>
         </div>
 
-        {/* 2-2. 음성 낭독·녹음 & 해설·연구 링크 바 */}
-        <div className="px-4 sm:px-6 py-2 flex items-center justify-between gap-2 overflow-x-auto hide-scrollbar">
+        {/* 2-2. 음성 낭독·녹음 및 해설·연구 링크 바 */}
+        <div className="px-3 sm:px-6 py-2 flex items-center justify-between gap-2 overflow-x-auto hide-scrollbar">
           <div className="flex items-center gap-1.5 shrink-0">
             <button
               type="button"
               onClick={() => setTtsRate && setTtsRate((r) => (r === 1.0 ? 1.2 : r === 1.2 ? 1.5 : r === 1.5 ? 2.0 : 1.0))}
-              className={`h-8 px-2.5 rounded-xl text-[12px] font-bold ${subSurfaceBg} ${textMain} cursor-pointer whitespace-nowrap`}
+              className={`h-8 px-2.5 rounded-lg text-[12px] font-bold ${subSurfaceBg} ${textMain} cursor-pointer whitespace-nowrap`}
             >
               {ttsRate}배속
             </button>
@@ -1791,8 +1823,8 @@ export default function Mcheyne({
                 });
                 if (toggleTTS) toggleTTS(q);
               }}
-              className={`h-8 px-3 rounded-xl text-[12px] font-bold transition-colors flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
-                isSpeaking ? 'bg-[#191F28] text-white' : 'bg-[#3182F6] text-white'
+              className={`h-8 px-3 rounded-lg text-[12px] font-bold transition-colors flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                isSpeaking ? 'bg-[#191F28] text-white' : 'bg-[#2563EB] text-white'
               }`}
             >
               {isSpeaking ? <Square className="w-3 h-3 fill-current" /> : <Play className="w-3 h-3 fill-current" />}
@@ -1802,32 +1834,33 @@ export default function Mcheyne({
             <button
               type="button"
               onClick={isRecording ? stopRecording : startRecording}
-              className={`h-8 px-2.5 rounded-xl text-[12px] font-bold flex items-center gap-1 cursor-pointer whitespace-nowrap ${
-                isRecording ? 'bg-[#3182F6] text-white' : `${subSurfaceBg} ${textMain}`
+              className={`h-8 px-2.5 rounded-lg text-[12px] font-bold flex items-center gap-1 cursor-pointer whitespace-nowrap ${
+                isRecording ? 'bg-[#0D9488] text-white' : `${subSurfaceBg} ${textMain}`
               }`}
             >
-              <Mic className="w-3.5 h-3.5 text-[#3182F6]" />
+              <Mic className="w-3.5 h-3.5 text-[#0D9488]" />
               <span>{isRecording ? '녹음 저장' : '음성 녹음'}</span>
             </button>
 
-            <div className={`w-[1px] h-4 ${isDark ? 'bg-[#262A32]' : 'bg-[#E5E8EB]'} mx-0.5`} />
+            <div className={`w-[1px] h-4 ${isDark ? 'bg-[#262B36]' : 'bg-[#E5E8EC]'} mx-0.5`} />
 
             <a
               href={`https://www.youtube.com/results?search_query=부산신성교회+맥체인+성경읽기+${ymdStr}`}
               target="_blank"
               rel="noreferrer"
-              className={`h-8 px-2.5 rounded-xl text-[12px] font-bold flex items-center gap-1 ${subSurfaceBg} ${textMain} whitespace-nowrap`}
+              className={`h-8 px-2.5 rounded-lg text-[12px] font-bold flex items-center gap-1 ${bluePillClass} whitespace-nowrap`}
             >
-              <Search className="w-3.5 h-3.5 text-[#3182F6]" />
               <span>통독 영상</span>
+              <ExternalLink className="w-3 h-3" />
             </a>
             <a
               href={`https://www.youtube.com/results?search_query=부산신성교회+맥체인+성경+해설+${ymdStr}`}
               target="_blank"
               rel="noreferrer"
-              className={`h-8 px-2.5 rounded-xl text-[12px] font-bold flex items-center gap-1 ${subSurfaceBg} ${textMain} whitespace-nowrap`}
+              className={`h-8 px-2.5 rounded-lg text-[12px] font-bold flex items-center gap-1 ${bluePillClass} whitespace-nowrap`}
             >
               <span>해설 영상</span>
+              <ExternalLink className="w-3 h-3" />
             </a>
           </div>
 
@@ -1835,18 +1868,18 @@ export default function Mcheyne({
             <button
               type="button"
               onClick={() => setShowDevotionGuide((prev) => !prev)}
-              className={`h-8 px-3 rounded-xl text-[12px] font-bold flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
-                showDevotionGuide ? 'bg-[#3182F6] text-white' : `${subSurfaceBg} ${textMain}`
+              className={`h-8 px-3 rounded-lg text-[12px] font-bold flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                showDevotionGuide ? 'bg-[#0D9488] text-white' : sagePillClass
               }`}
             >
-              <BookOpen className={`w-3.5 h-3.5 ${showDevotionGuide ? 'text-white' : 'text-[#3182F6]'}`} />
+              <BookOpen className="w-3.5 h-3.5" />
               <span>맥체인 해설</span>
             </button>
 
             <button
               type="button"
               onClick={() => openGalaxyPopup('arc')}
-              className={`h-8 px-2.5 rounded-xl text-[12px] font-bold ${subSurfaceBg} ${textMain} cursor-pointer whitespace-nowrap`}
+              className={`h-8 px-2.5 rounded-lg text-[12px] font-bold cursor-pointer whitespace-nowrap ${amberPillClass}`}
             >
               신구약 아크
             </button>
@@ -1854,7 +1887,7 @@ export default function Mcheyne({
             <button
               type="button"
               onClick={() => openGalaxyPopup('2d')}
-              className={`h-8 px-2.5 rounded-xl text-[12px] font-bold ${subSurfaceBg} ${textMain} cursor-pointer whitespace-nowrap`}
+              className={`h-8 px-2.5 rounded-lg text-[12px] font-bold cursor-pointer whitespace-nowrap ${bluePillClass}`}
             >
               말씀 은하계
             </button>
@@ -1862,7 +1895,7 @@ export default function Mcheyne({
             <button
               type="button"
               onClick={() => setActiveScreen && setActiveScreen('interlinear')}
-              className={`h-8 px-2.5 rounded-xl text-[12px] font-bold ${subSurfaceBg} ${textMain} cursor-pointer whitespace-nowrap`}
+              className={`h-8 px-2.5 rounded-lg text-[12px] font-bold ${subSurfaceBg} ${textMain} cursor-pointer whitespace-nowrap`}
             >
               원어 연구실
             </button>
@@ -1870,10 +1903,10 @@ export default function Mcheyne({
         </div>
       </div>
 
-      {/* 3. 본문 메인 레이아웃 */}
+      {/* 3. 본문 메인 레이아웃 (모바일 풀블리드 / PC·태블릿 2단 와이드 분할) */}
       <div
-        className={`flex-1 px-3 sm:px-5 pt-3 pb-20 grid gap-4 h-full relative z-10 overflow-hidden ${
-          viewMode === 'split' ? 'grid-cols-1 lg:grid-cols-12 max-w-[1440px]' : 'grid-cols-1 max-w-[760px]'
+        className={`flex-1 px-2 sm:px-5 lg:px-8 pt-3 sm:pt-5 pb-20 grid gap-4 lg:gap-6 h-full relative z-10 overflow-hidden ${
+          viewMode === 'split' ? 'grid-cols-1 lg:grid-cols-12 max-w-[1380px]' : 'grid-cols-1 max-w-[820px]'
         } mx-auto w-full`}
       >
         {/* 좌측 성경 본문 리스트 스트림 */}
@@ -1882,14 +1915,14 @@ export default function Mcheyne({
             viewMode === 'split' ? 'lg:col-span-7' : ''
           } flex flex-col relative z-[45] pointer-events-auto h-full overflow-y-auto hide-scrollbar space-y-4`}
         >
-          {/* 맥체인 장별 강해 아코디언 패널 (단일 표면 + 구분선 구조) */}
-          <div className={`${surfaceBg} rounded-3xl border ${borderClass} overflow-hidden shrink-0`}>
+          {/* 맥체인 장별 강해 아코디언 패널 */}
+          <div className={`${surfaceBg} rounded-2xl border ${borderClass} overflow-hidden shrink-0`}>
             <div
               onClick={() => setShowDevotionGuide(!showDevotionGuide)}
-              className="px-5 py-3.5 flex items-center justify-between cursor-pointer select-none"
+              className="px-4 sm:px-5 py-3.5 flex items-center justify-between cursor-pointer select-none"
             >
               <div className="flex items-center gap-2 min-w-0">
-                <span className="px-2.5 py-0.5 rounded-lg text-[12px] font-bold bg-[#3182F6]/10 text-[#3182F6] shrink-0">
+                <span className={`px-2 py-0.5 rounded-md text-[12px] font-bold shrink-0 ${sagePillClass}`}>
                   {activeBookMeta.section}
                 </span>
                 <span className={`text-[15px] font-bold truncate ${textMain}`}>
@@ -1905,20 +1938,20 @@ export default function Mcheyne({
             </div>
 
             {showDevotionGuide && (
-              <div className={`px-5 pb-5 pt-3 border-t ${borderClass} divide-y ${dividerClass} text-left`}>
+              <div className={`px-4 sm:px-5 pb-5 pt-3 border-t ${borderClass} divide-y ${dividerClass} text-left`}>
                 <div className="pb-3 space-y-1">
-                  <span className="text-[12px] font-bold text-[#3182F6] block">본문 핵심 요약</span>
+                  <span className="text-[12px] font-bold text-[#0D9488] block">본문 핵심 요약</span>
                   <p className={`text-[15px] leading-relaxed ${textMain}`}>{activeBookMeta.summary}</p>
                 </div>
 
                 <div className="py-3 space-y-1">
-                  <span className={`text-[12px] font-bold ${textSub} block`}>핵심 관찰 포인트</span>
+                  <span className="text-[12px] font-bold text-[#2563EB] block">핵심 관찰 포인트</span>
                   <p className={`text-[15px] leading-relaxed ${textMain}`}>{activeBookMeta.coreObservation}</p>
                 </div>
 
                 {activeBookMeta.christConnection && (
                   <div className="py-3 space-y-1">
-                    <span className={`text-[12px] font-bold ${textSub} block`}>구속사적 연결</span>
+                    <span className="text-[12px] font-bold text-[#D97706] block">구속사적 연결</span>
                     <p className={`text-[15px] leading-relaxed ${textMain}`}>{activeBookMeta.christConnection}</p>
                   </div>
                 )}
@@ -1941,7 +1974,7 @@ export default function Mcheyne({
                         setNoteContent(nextNote);
                         if (updateDay) updateDay({ mcheyneNote: nextNote });
                       }}
-                      className="px-3.5 py-2 rounded-xl text-[12px] font-bold bg-[#3182F6] text-white cursor-pointer"
+                      className="px-3.5 py-2 rounded-xl text-[12px] font-bold bg-[#0D9488] text-white cursor-pointer"
                     >
                       해설 요약을 노트에 삽입
                     </button>
@@ -1952,7 +1985,7 @@ export default function Mcheyne({
           </div>
 
           {/* 성경 본문 스트림 카드 */}
-          <div className={`${surfaceBg} rounded-3xl border ${borderClass} px-4 sm:px-6 py-5`} data-live-web-tick={liveWebTick}>
+          <div className={`${surfaceBg} rounded-2xl border ${borderClass} px-4 sm:px-6 py-5`} data-live-web-tick={liveWebTick}>
             <div className={`mb-4 pb-3 border-b ${borderClass} flex items-center justify-between text-[12px] ${textSub}`}>
               <span>절 번호 터치: 원어 분석 · 본문 터치: 읽음 체크 및 도구</span>
               {audioUrl && <audio src={audioUrl} controls className="h-7 max-w-[160px]" />}
@@ -1968,13 +2001,13 @@ export default function Mcheyne({
                   {/* 장 헤더 바 */}
                   <div className={`flex items-center justify-between mb-3 pb-2.5 border-b ${borderClass} flex-wrap gap-2`}>
                     <div className="flex items-center gap-2">
-                      <h3 className={`font-bold text-[18px] tracking-tight ${textMain}`}>
+                      <h3 className={`font-bold text-[17px] tracking-tight ${textMain}`}>
                         {koBookNameForChap} {ch}장
                       </h3>
                       <button
                         type="button"
                         onClick={() => openGalaxyPopup('arc', `${koBookNameForChap} ${ch}:1`)}
-                        className={`px-2.5 py-1 rounded-lg text-[12px] font-bold ${subSurfaceBg} ${textMain} cursor-pointer`}
+                        className={`px-2.5 py-1 rounded-lg text-[12px] font-bold cursor-pointer ${amberPillClass}`}
                       >
                         구속사 아크
                       </button>
@@ -1983,8 +2016,8 @@ export default function Mcheyne({
                     <button
                       type="button"
                       onClick={() => handleToggleWholeChapter(ch)}
-                      className={`px-3 py-1.5 rounded-xl text-[12px] font-bold transition-colors flex items-center gap-1.5 cursor-pointer ${
-                        chRead ? 'bg-[#3182F6] text-white' : `${subSurfaceBg} ${textMain}`
+                      className={`px-3 py-1.5 rounded-lg text-[12px] font-bold transition-colors flex items-center gap-1.5 cursor-pointer ${
+                        chRead ? 'bg-[#0D9488] text-white' : `${subSurfaceBg} ${textMain}`
                       }`}
                     >
                       <Check className="w-3.5 h-3.5" />
@@ -2012,7 +2045,7 @@ export default function Mcheyne({
                           {/* 단락 소제목 */}
                           {pericope && (
                             <div className="mb-2">
-                              <span className="text-[12px] font-bold text-[#3182F6] bg-[#3182F6]/10 px-2.5 py-1 rounded-lg inline-block">
+                              <span className={`text-[12px] font-bold px-2.5 py-1 rounded-md inline-block ${amberPillClass}`}>
                                 {pericope}
                               </span>
                             </div>
@@ -2020,7 +2053,7 @@ export default function Mcheyne({
 
                           <div
                             className={`rounded-xl transition-colors flex items-start gap-2.5 ${
-                              isSelectedVerse ? 'bg-[#3182F6]/5 p-2' : ''
+                              isSelectedVerse ? 'bg-[#0D9488]/5 p-2' : ''
                             }`}
                           >
                             {/* 절 번호 */}
@@ -2031,7 +2064,7 @@ export default function Mcheyne({
                                 openVerseInspector(ch, vNum, displayVerseText);
                               }}
                               className={`font-bold text-[12px] mt-1 min-w-[22px] text-right shrink-0 select-none cursor-pointer ${
-                                isRead ? 'text-[#8B95A1]' : 'text-[#3182F6] hover:underline'
+                                isRead ? 'text-[#8B95A1]' : 'text-[#D97706] hover:underline'
                               }`}
                               title={`${vNum}절 원어 강해 열기`}
                             >
@@ -2059,12 +2092,12 @@ export default function Mcheyne({
                                 <div className="space-y-1.5">
                                   <p>{displayVerseText}</p>
                                   {easyText && (
-                                    <p className={`text-[15px] ${textSub} pl-2.5 border-l-2 border-[#3182F6]/40`}>
+                                    <p className={`text-[14.5px] ${textSub} pl-2.5 border-l-2 border-[#0D9488]/50`}>
                                       {easyText}
                                     </p>
                                   )}
                                   {webText && (
-                                    <p className={`text-[15px] ${textSub} pl-2.5 border-l-2 border-[#8B95A1]/40`}>
+                                    <p className={`text-[14.5px] ${textSub} pl-2.5 border-l-2 border-[#2563EB]/40`}>
                                       {webText}
                                     </p>
                                   )}
@@ -2083,14 +2116,14 @@ export default function Mcheyne({
                                 <button
                                   type="button"
                                   onClick={() => openVerseInspector(ch, vNum, displayVerseText)}
-                                  className="px-2.5 py-1 rounded-lg text-[12px] font-bold bg-[#3182F6] text-white cursor-pointer"
+                                  className="px-2.5 py-1 rounded-lg text-[12px] font-bold bg-[#2563EB] text-white cursor-pointer"
                                 >
                                   원어 분석
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => openGalaxyPopup('arc', `${currentBookMeta.ko} ${ch}:${vNum}`)}
-                                  className={`px-2.5 py-1 rounded-lg text-[12px] font-bold ${surfaceBg} ${textMain} cursor-pointer`}
+                                  className={`px-2.5 py-1 rounded-lg text-[12px] font-bold cursor-pointer ${amberPillClass}`}
                                 >
                                   신구약 아크
                                 </button>
@@ -2103,7 +2136,7 @@ export default function Mcheyne({
                                     if (updateDay) updateDay({ mcheyneNote: nextNote });
                                     setSelectedVerseKey(null);
                                   }}
-                                  className={`px-2.5 py-1 rounded-lg text-[12px] font-bold ${surfaceBg} ${textMain} cursor-pointer`}
+                                  className={`px-2.5 py-1 rounded-lg text-[12px] font-bold cursor-pointer ${sagePillClass}`}
                                 >
                                   노트에 인용
                                 </button>
@@ -2154,8 +2187,8 @@ export default function Mcheyne({
                     window.dispatchEvent(new CustomEvent('bible-progress-updated'));
                   }
                 }}
-                className={`w-full py-3.5 rounded-2xl font-bold text-[15px] transition-colors flex items-center justify-center gap-2 cursor-pointer ${
-                  mAllR ? `${subSurfaceBg} text-[#3182F6] border ${borderClass}` : 'bg-[#3182F6] text-white'
+                className={`w-full py-3.5 rounded-xl font-bold text-[15px] transition-colors flex items-center justify-center gap-2 cursor-pointer ${
+                  mAllR ? `${subSurfaceBg} text-[#0D9488] border ${borderClass}` : 'bg-[#0D9488] text-white'
                 }`}
               >
                 <Check className="w-4 h-4" />
@@ -2182,7 +2215,7 @@ export default function Mcheyne({
       </div>
 
       {/* ===================================================================== */}
-      {/* 4. 원어 연구 인스펙터 모달 (토스식 시트 디자인 · 이모지 0%) */}
+      {/* 4. 원어 연구 인스펙터 모달 (3색 조화 팔레트 · 이모지 0%) */}
       {/* ===================================================================== */}
       {inspectorTarget && (
         <div
@@ -2191,11 +2224,11 @@ export default function Mcheyne({
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className={`w-full sm:max-w-2xl rounded-t-3xl sm:rounded-3xl border ${borderClass} ${surfaceBg} ${textMain} p-5 flex flex-col max-h-[88vh] overflow-hidden`}
+            className={`w-full sm:max-w-2xl rounded-t-3xl sm:rounded-2xl border ${borderClass} ${surfaceBg} ${textMain} p-5 flex flex-col max-h-[88vh] overflow-hidden`}
           >
             <div className={`border-b ${borderClass} pb-3 shrink-0 space-y-3`}>
               <div className="flex justify-between items-center gap-2">
-                <span className="text-[15px] font-bold text-[#3182F6]">
+                <span className="text-[15px] font-bold text-[#2563EB]">
                   {inspectorTarget.book} {inspectorTarget.chapter}장 {inspectorTarget.verse}절 원어 분석
                 </span>
 
@@ -2207,21 +2240,21 @@ export default function Mcheyne({
                       setInspectorTarget(null);
                       openGalaxyPopup('arc', refStr);
                     }}
-                    className={`px-3 py-1.5 rounded-xl text-[12px] font-bold ${subSurfaceBg} ${textMain} cursor-pointer`}
+                    className={`px-3 py-1.5 rounded-lg text-[12px] font-bold cursor-pointer ${amberPillClass}`}
                   >
                     신구약 아크
                   </button>
                   <button
                     type="button"
                     onClick={handleJumpToInterlinearStudio}
-                    className={`px-3 py-1.5 rounded-xl text-[12px] font-bold ${subSurfaceBg} ${textMain} cursor-pointer`}
+                    className={`px-3 py-1.5 rounded-lg text-[12px] font-bold ${subSurfaceBg} ${textMain} cursor-pointer`}
                   >
                     원어 연구실
                   </button>
                   <button
                     type="button"
                     onClick={() => setInspectorTarget(null)}
-                    className={`w-8 h-8 rounded-xl flex items-center justify-center ${subSurfaceBg} ${textMain} cursor-pointer`}
+                    className={`w-8 h-8 rounded-lg flex items-center justify-center ${subSurfaceBg} ${textMain} cursor-pointer`}
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -2229,7 +2262,7 @@ export default function Mcheyne({
               </div>
 
               {selectedWordDetail && (
-                <div className={`grid grid-cols-2 gap-3 p-3.5 rounded-2xl ${subSurfaceBg}`}>
+                <div className={`grid grid-cols-2 gap-3 p-3.5 rounded-xl ${subSurfaceBg}`}>
                   <div className="space-y-1 text-left">
                     <span className={`text-[12px] font-medium ${textSub} block`}>본문 어형</span>
                     <div className="flex items-baseline gap-2 flex-wrap">
@@ -2238,7 +2271,7 @@ export default function Mcheyne({
                       </span>
                       <span className={`text-[12px] ${textSub}`}>{selectedWordDetail.pron}</span>
                     </div>
-                    <p className="text-[12px] font-bold text-[#3182F6]">{selectedWordDetail.korContextual}</p>
+                    <p className="text-[12px] font-bold text-[#2563EB]">{selectedWordDetail.korContextual}</p>
                     <p className={`text-[12px] ${textSub}`}>{selectedWordDetail.grammarDecoded}</p>
                   </div>
 
@@ -2248,11 +2281,11 @@ export default function Mcheyne({
                       <span style={originalFontStyle(inspectorTarget.isOT)} className="text-[20px] font-bold">
                         {cleanTypography(selectedWordDetail.lemma, inspectorTarget.isOT)}
                       </span>
-                      <span className="text-[12px] font-bold px-2 py-0.5 rounded-md bg-[#3182F6]/10 text-[#3182F6]">
+                      <span className={`text-[12px] font-bold px-2 py-0.5 rounded-md ${amberPillClass}`}>
                         {selectedWordDetail.strongs}
                       </span>
                     </div>
-                    <p className="text-[12px] font-bold">기본뜻: {selectedWordDetail.korLemma}</p>
+                    <p className="text-[12px] font-bold text-[#0D9488]">기본뜻: {selectedWordDetail.korLemma}</p>
                   </div>
                 </div>
               )}
@@ -2261,7 +2294,7 @@ export default function Mcheyne({
             </div>
 
             {/* 탭 바 */}
-            <div className={`flex gap-1 p-1 rounded-2xl ${subSurfaceBg} my-3 shrink-0`}>
+            <div className={`flex gap-1 p-1 rounded-xl ${subSurfaceBg} my-3 shrink-0`}>
               {[
                 { id: 'scholarly', label: '주석 및 사료' },
                 { id: 'concordance', label: `전권 용례 (${concordanceTotalCount}회)` },
@@ -2271,8 +2304,8 @@ export default function Mcheyne({
                   key={tb.id}
                   type="button"
                   onClick={() => setModalTab(tb.id)}
-                  className={`flex-1 py-2 rounded-xl text-[12px] font-bold cursor-pointer transition-colors ${
-                    modalTab === tb.id ? 'bg-[#3182F6] text-white' : textSub
+                  className={`flex-1 py-2 rounded-lg text-[12px] font-bold cursor-pointer transition-colors ${
+                    modalTab === tb.id ? 'bg-[#2563EB] text-white' : textSub
                   }`}
                 >
                   {tb.label}
@@ -2282,7 +2315,7 @@ export default function Mcheyne({
 
             {/* 본문 스크롤 */}
             <div className="overflow-y-auto hide-scrollbar space-y-3 flex-1 text-left">
-              <div className={`p-3.5 rounded-2xl ${subSurfaceBg}`}>
+              <div className={`p-3.5 rounded-xl ${subSurfaceBg}`}>
                 <span className={`text-[12px] font-medium ${textSub} block mb-2`}>어절 선택</span>
                 {isInspectorLoading ? (
                   <div className={`py-3 text-center text-[12px] ${textSub}`}>원어 데이터를 불러오는 중입니다...</div>
@@ -2296,9 +2329,9 @@ export default function Mcheyne({
                         key={w.id}
                         onClick={() => handleSelectInspectorWord(w)}
                         style={originalFontStyle(inspectorTarget.isOT)}
-                        className={`text-[18px] font-bold px-2 py-1 rounded-xl cursor-pointer transition-colors ${
+                        className={`text-[18px] font-bold px-2 py-1 rounded-lg cursor-pointer transition-colors ${
                           selectedWordDetail?.order === w.order
-                            ? 'bg-[#3182F6] text-white'
+                            ? 'bg-[#2563EB] text-white'
                             : isDark
                             ? 'text-white hover:bg-white/10'
                             : 'text-[#191F28] hover:bg-black/5'
@@ -2314,8 +2347,8 @@ export default function Mcheyne({
               {modalTab === 'scholarly' && (
                 <div className="space-y-3">
                   {crossRefs.length > 0 && (
-                    <div className={`p-3.5 rounded-2xl border ${borderClass}`}>
-                      <span className="font-bold text-[12px] text-[#3182F6] block mb-2">
+                    <div className={`p-3.5 rounded-xl border ${borderClass}`}>
+                      <span className="font-bold text-[12px] text-[#D97706] block mb-2">
                         교차참조 ({crossRefs.length}구절)
                       </span>
                       <div className="flex flex-wrap gap-1.5">
@@ -2327,7 +2360,7 @@ export default function Mcheyne({
                               setInspectorTarget(null);
                               openGalaxyPopup('arc', ref.label);
                             }}
-                            className={`px-2 py-1 rounded-lg text-[12px] font-medium ${subSurfaceBg} ${textMain} cursor-pointer`}
+                            className={`px-2 py-1 rounded-md text-[12px] font-medium ${subSurfaceBg} ${textMain} cursor-pointer`}
                           >
                             {ref.label}
                           </button>
@@ -2337,10 +2370,10 @@ export default function Mcheyne({
                   )}
 
                   {currentHebrewSyntax && (
-                    <div className={`p-3.5 rounded-2xl border ${borderClass} space-y-1.5`}>
-                      <span className="font-bold text-[12px] text-[#3182F6] block">히브리어 구문 구조</span>
+                    <div className={`p-3.5 rounded-xl border ${borderClass} space-y-1.5`}>
+                      <span className="font-bold text-[12px] text-[#0D9488] block">히브리어 구문 구조</span>
                       {currentHebrewSyntax.clauseHierarchy.map((c, idx) => (
-                        <div key={idx} className={`p-2 rounded-xl flex justify-between text-[12px] ${subSurfaceBg}`}>
+                        <div key={idx} className={`p-2 rounded-lg flex justify-between text-[12px] ${subSurfaceBg}`}>
                           <span style={originalFontStyle(true)} className="font-bold">
                             {c.unit}
                           </span>
@@ -2351,15 +2384,15 @@ export default function Mcheyne({
                   )}
 
                   {currentCommentary && (
-                    <div className={`p-4 rounded-2xl border ${borderClass} space-y-2`}>
+                    <div className={`p-4 rounded-xl border ${borderClass} space-y-2`}>
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-[12px] text-[#3182F6]">
+                        <span className="font-bold text-[12px] text-[#2563EB]">
                           학술 주석 ({currentCommentary.commentator})
                         </span>
                         <button
                           type="button"
                           onClick={() => handleTranslateScholarlyBlock(`comm_${currentKey}`, currentCommentary.exegesis)}
-                          className="px-2.5 py-1 rounded-lg bg-[#3182F6]/10 text-[#3182F6] text-[12px] font-bold cursor-pointer"
+                          className={`px-2.5 py-1 rounded-md text-[12px] font-bold cursor-pointer ${bluePillClass}`}
                         >
                           {translatingKey === `comm_${currentKey}`
                             ? '번역 중...'
@@ -2375,13 +2408,13 @@ export default function Mcheyne({
                   )}
 
                   {currentMatthewHenry && (
-                    <div className={`p-4 rounded-2xl border ${borderClass} space-y-2`}>
+                    <div className={`p-4 rounded-xl border ${borderClass} space-y-2`}>
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-[12px] text-[#3182F6]">매튜 헨리 묵상 강해</span>
+                        <span className="font-bold text-[12px] text-[#0D9488]">매튜 헨리 묵상 강해</span>
                         <button
                           type="button"
                           onClick={() => handleTranslateScholarlyBlock(`mh_${currentKey}`, currentMatthewHenry.devotionalExegesis)}
-                          className="px-2.5 py-1 rounded-lg bg-[#3182F6]/10 text-[#3182F6] text-[12px] font-bold cursor-pointer"
+                          className={`px-2.5 py-1 rounded-md text-[12px] font-bold cursor-pointer ${sagePillClass}`}
                         >
                           {translatingKey === `mh_${currentKey}`
                             ? '번역 중...'
@@ -2397,8 +2430,8 @@ export default function Mcheyne({
                   )}
 
                   {currentNetNote && (
-                    <div className={`p-4 rounded-2xl border ${borderClass} space-y-1`}>
-                      <span className="font-bold text-[12px] text-[#3182F6] block">
+                    <div className={`p-4 rounded-xl border ${borderClass} space-y-1`}>
+                      <span className="font-bold text-[12px] text-[#D97706] block">
                         비평 각주: {decodeHtmlEntities(currentNetNote.title)}
                       </span>
                       <p className={`text-[15px] leading-relaxed ${textMain}`}>{decodeHtmlEntities(currentNetNote.note)}</p>
@@ -2408,13 +2441,13 @@ export default function Mcheyne({
               )}
 
               {modalTab === 'concordance' && (
-                <div className={`divide-y ${dividerClass} border ${borderClass} rounded-2xl overflow-hidden`}>
+                <div className={`divide-y ${dividerClass} border ${borderClass} rounded-xl overflow-hidden`}>
                   {concordanceList.length === 0 ? (
                     <div className={`py-6 text-center text-[15px] ${textSub}`}>동일 스트롱 코드 용례가 없습니다.</div>
                   ) : (
                     concordanceList.map((item, idx) => (
                       <div key={idx} className="p-3 flex items-center justify-between gap-2">
-                        <span className="text-[12px] font-bold text-[#3182F6] min-w-[74px]">
+                        <span className="text-[12px] font-bold text-[#2563EB] min-w-[74px]">
                           {item.book} {item.chapter}:{item.verse}
                         </span>
                         <span style={originalFontStyle(inspectorTarget.isOT)} className="font-bold text-[15px]">
@@ -2452,7 +2485,7 @@ export default function Mcheyne({
                 <button
                   type="button"
                   onClick={() => handleInsertWordToMcheyneNote(selectedWordDetail)}
-                  className="flex-1 py-3 rounded-2xl bg-[#3182F6] text-white font-bold text-[15px] flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="flex-1 py-3 rounded-xl bg-[#0D9488] text-white font-bold text-[15px] flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <PenLine className="w-4 h-4" />
                   <span>필사 노트에 강해 삽입</span>
@@ -2460,9 +2493,9 @@ export default function Mcheyne({
                 <button
                   type="button"
                   onClick={() => speakOriginalAudio(selectedWordDetail.inflected, inspectorTarget.isOT)}
-                  className={`px-4 py-3 rounded-2xl font-bold text-[15px] flex items-center gap-1.5 cursor-pointer ${subSurfaceBg} ${textMain}`}
+                  className={`px-4 py-3 rounded-xl font-bold text-[15px] flex items-center gap-1.5 cursor-pointer ${subSurfaceBg} ${textMain}`}
                 >
-                  <Volume2 className="w-4 h-4 text-[#3182F6]" />
+                  <Volume2 className="w-4 h-4 text-[#2563EB]" />
                   <span>낭독</span>
                 </button>
               </div>

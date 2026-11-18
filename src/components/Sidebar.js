@@ -280,21 +280,21 @@ export default function Sidebar({
       id: 'eye_lock_lotus',
       badge: '💋 시선 구속 · 밀착 좌위',
       title: '아이락 로터스 (밀착 대면좌위)',
-      pose: '남편 무릎 위에 마주 앉아 허리를 감싼 자세',
+      pose: '사랑 무릎 위에 마주 앉아 허리를 감싼 자세',
       desc: '내 무릎 위로 올라타서 내 목을 껴안고 깊숙이 삼켜봐. 눈을 절대 피하지 말고 내 눈을 똑바로 쳐다보면서, 네가 원하는 깊이와 속도로 스스로 허리를 움직이며 애원해.'
     },
     {
       id: 'edge_lock',
       badge: '⚡ 애태우기 · 절정 통제',
       title: '베드 엣지 딥 스팟 & 절정 통제',
-      pose: '침대 모서리에 걸터누워 두 다리를 남편 어깨에 올린 자세',
+      pose: '침대 모서리에 걸터누워 두 다리를 사랑 어깨에 올린 자세',
       desc: '침대 끝에 엉덩이를 걸치고 두 다리를 내 어깨 위로 올려. 빠져나갈 곳 없이 꽉 잠긴 각도로 끝까지 밀어 넣어줄게. 내가 허락하기 전까지는 절대 혼자 먼저 가면 안 돼.'
     },
     {
       id: 'whisper_submission',
       badge: '🔞 보이스 미션 · 음란 고백',
       title: '귀엣말 복종 서약 & 애원 플레이',
-      pose: '속옷만 입거나 탈의한 채 남편 품에 안긴 자세',
+      pose: '속옷만 입거나 탈의한 채 사랑 품에 안긴 자세',
       desc: '오늘 밤 시작하기 전에 내 귀에 대고 네가 오늘 어떻게 당하고 싶은지, 어디가 제일 달아올랐는지 가장 야하고 솔직한 말로 직접 속삭여서 날 미치게 만들어봐.'
     }
   ];
@@ -2000,7 +2000,7 @@ export default function Sidebar({
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[250] flex items-center justify-center p-4 w-full h-full">
           <div className={`w-full max-w-[340px] rounded-[24px] p-6 shadow-2xl backdrop-blur-2xl border ${isDark ? 'bg-[#1C1C1E]/95 border-white/10' : 'bg-white/95 border-white/60'}`}>
             <h3 className={`text-[16px] font-black mb-1.5 text-center ${ui.textPrimary}`}>The Sanctuary 인증</h3>
-            <p className={`text-[12px] text-center mb-5 font-medium ${ui.textSecondary}`}>연인 성소 마스터 PIN을 입력해주세요.</p>
+            <p className={`text-[12px] text-center mb-5 font-medium ${ui.textSecondary}`}>유지보수 분석 PIN을 입력해주세요.</p>
             <input type="password" value={pinInput} onChange={e => setPinInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && verifyPin()} className={`w-full text-center tracking-[0.4em] text-lg py-3 rounded-xl mb-5 outline-none border transition-all ${isDark ? 'bg-black/30 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'}`} autoFocus />
             <div className="flex gap-2 w-full">
               <button onClick={() => { setShowPinPrompt(false); setPinInput(''); }} className={`flex-1 py-3 rounded-xl font-bold text-[13px] transition-colors border cursor-pointer ${isDark ? 'border-white/10 bg-white/5 text-white hover:bg-white/10' : 'border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>취소</button>
@@ -2765,7 +2765,7 @@ export default function Sidebar({
 
                 <div className="absolute bottom-4 inset-x-0 text-center pointer-events-none">
                   <span className="text-[11.5px] font-black text-white bg-black/50 px-4 py-1.5 rounded-full backdrop-blur-md shadow-md animate-pulse">
-                    왁스를 터치해 남편 신동이의 편지를 열어봐
+                    왁스를 터치해 사랑스런 신동이의 편지를 열어봐
                   </span>
                 </div>
               </div>
@@ -2773,7 +2773,7 @@ export default function Sidebar({
               <div className="w-full rounded-[32px] bg-[#FFFDF9] text-slate-800 p-6 sm:p-7 shadow-[0_30px_70px_rgba(0,0,0,0.6)] border border-amber-200/80 flex flex-col gap-4 animate-fade-in-up">
                 <div className="flex items-center justify-between border-b border-amber-150 pb-3">
                   <span className="text-[11.5px] font-serif font-black tracking-widest text-amber-900 bg-amber-100/90 px-3 py-1 rounded-md uppercase">
-                    From. 너의 남편 신동
+                    From. 너의 사랑 신동
                   </span>
                   <span className="text-[11px] font-bold text-rose-600">사랑의 펜팔 편지</span>
                 </div>

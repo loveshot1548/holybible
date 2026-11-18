@@ -506,48 +506,43 @@ export function Home({
           </button>
 
           <div
-            className={`relative inline-flex items-center gap-1.5 px-3 h-9 rounded-xl cursor-pointer ${
-              isDarkMode ? 'bg-[#1C1F26] text-white' : 'bg-white text-[#191F28]'
-            } border ${borderClass}`}
-          >
-            <Calendar className="w-4 h-4 text-[#3182F6]" />
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-40"
-            />
-            <span className="font-bold text-[15px] tracking-tight pointer-events-none">
-              {new Date(date).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })} (
-              {['일', '월', '화', '수', '목', '금', '토'][new Date(date).getDay()]})
-            </span>
-          </div>
+  className={`relative inline-flex items-center gap-1.5 px-3 h-9 rounded-xl cursor-pointer ${
+    isDarkMode ? 'bg-[#1C1F26] text-white' : 'bg-white text-[#191F28]'
+  } border ${borderClass}`}
+>
+  <Calendar className="w-4 h-4 text-[#3182F6] shrink-0" />
+  <input
+    type="date"
+    value={date}
+    onChange={(e) => setDate(e.target.value)}
+    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-40"
+  />
+  {/* 🌟 핵심 수정: whitespace-nowrap 추가 및 글자 크기를 모바일에 맞게 13.5px로 살짝 조정 */}
+  <span className="font-bold text-[13.5px] tracking-tight pointer-events-none whitespace-nowrap">
+    {new Date(date).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })} (
+    {['일', '월', '화', '수', '목', '금', '토'][new Date(date).getDay()]})
+  </span>
+</div>
         </div>
 
-        <div className="flex items-center gap-1.5">
-          <button
-            onClick={() => {
-              setActiveScreen('board');
-              setHasNewBoardPost(false);
-            }}
-            className={`h-9 px-3 rounded-xl text-[12px] font-bold flex items-center gap-1.5 border ${borderClass} ${surfaceClass} ${t.textMain} relative cursor-pointer`}
-          >
-            <Heart className="w-3.5 h-3.5 text-[#3182F6]" />
-            <span>공동체 감사</span>
-            {hasNewBoardPost && <span className="w-1.5 h-1.5 bg-[#3182F6] rounded-full" />}
-          </button>
-
-          <button
-            onClick={() => {
-              setActiveScreen('board');
-              setHasNewBoardPost(false);
-            }}
-            className={`h-9 px-3 rounded-xl text-[12px] font-bold flex items-center gap-1.5 border ${borderClass} ${surfaceClass} ${t.textMain} cursor-pointer`}
-          >
-            <HandHeart className="w-3.5 h-3.5 text-[#3182F6]" />
-            <span>공동체 기도</span>
-          </button>
-        </div>
+       <div className="flex items-center gap-1 shrink-0">
+  <button 
+    onClick={() => { setActiveScreen('board'); setHasNewBoardPost(false); }} 
+    className={`h-8 px-2 rounded-xl text-[11px] font-extrabold flex items-center justify-center gap-1 active:scale-95 transition-all border whitespace-nowrap ${isDarkMode ? 'bg-[#FF375F]/15 border-[#FF375F]/30 text-[#FF375F]' : 'bg-rose-50 border-rose-200/80 text-[#FF2D55]'} relative`}
+  >
+    <Heart className="w-3.5 h-3.5 shrink-0" />
+    <span>공동체감사</span>
+    {hasNewBoardPost && <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-[#FF2D55] rounded-full animate-ping" />}
+  </button>
+  
+  <button 
+    onClick={() => { setActiveScreen('board'); setHasNewBoardPost(false); }} 
+    className={`h-8 px-2 rounded-xl text-[11px] font-extrabold flex items-center justify-center gap-1 active:scale-95 transition-all border whitespace-nowrap ${isDarkMode ? 'bg-[#30D158]/15 border-[#30D158]/30 text-[#30D158]' : 'bg-emerald-50 border-emerald-200/80 text-[#34C759]'}`}
+  >
+    <HandHeart className="w-3.5 h-3.5 shrink-0" />
+    <span>공동체기도</span>
+  </button>
+</div>
       </header>
 
       {/* 메인 콘텐츠 컨테이너 */}

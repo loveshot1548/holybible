@@ -6,19 +6,14 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
-  Clock,
   Download,
   FileText,
-  Globe,
   Highlighter,
-  Layers,
   Mic,
   PenLine,
   RotateCcw,
   RotateCw,
-  Search,
   SlidersHorizontal,
-  Sparkles,
   Trash2,
   Volume2,
   X
@@ -148,7 +143,7 @@ BIBLE_66_LIST.forEach((b) => {
 });
 
 // =====================================================================
-// 365일 맞춤 1독·2독·N독 자동 분할 계산 엔진
+// 365일 맞춤 1독·2독·3독 자동 분할 계산 엔진
 // =====================================================================
 const ALL_CHAPTER_SEQUENCE = (() => {
   const list = [];
@@ -163,7 +158,7 @@ const ALL_CHAPTER_SEQUENCE = (() => {
       });
     }
   });
-  return list; // 총 1,189장
+  return list;
 })();
 
 const getDailyReadingPlanChapters = (dayNumber, targetRounds = 1) => {
@@ -562,7 +557,7 @@ const renderStroke = (ctx, stroke, isDark) => {
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
 
-  const resolvedColor = isDark && color === '#191F28' ? '#F9FAFB' : color;
+  const resolvedColor = isDark && color === '#191F28' ? '#F8FAFC' : color;
 
   switch (tool) {
     case 'pencil':
@@ -579,7 +574,7 @@ const renderStroke = (ctx, stroke, isDark) => {
       break;
     case 'highlighter':
       ctx.globalCompositeOperation = isDark ? 'screen' : 'multiply';
-      ctx.strokeStyle = color === '#191F28' ? 'rgba(49, 130, 246, 0.35)' : color;
+      ctx.strokeStyle = color === '#191F28' ? 'rgba(13, 148, 136, 0.35)' : color;
       ctx.lineWidth = size * 3.8;
       ctx.globalAlpha = isDark ? 0.5 : 0.35;
       break;
@@ -622,7 +617,7 @@ const renderStroke = (ctx, stroke, isDark) => {
 };
 
 // =====================================================================
-// 2단 필사 전용 필기 & 텍스트 노트 패널 (토스 스타일 · 이모지 0%)
+// 2단 필사 전용 필기 & 텍스트 노트 패널 (3색 조화 팔레트 · 이모지 0%)
 // =====================================================================
 const BibleTranscriptionNotePanel = ({ currentChapId, chapterTitle, isDark, noteContent, setNoteContent, updateDay }) => {
   const [panelTab, setPanelTab] = useState('handwriting');
@@ -798,7 +793,7 @@ const BibleTranscriptionNotePanel = ({ currentChapId, chapterTitle, isDark, note
     const ctx = exportCanvas.getContext('2d');
     const dpr = window.devicePixelRatio || 1;
 
-    ctx.fillStyle = isDark ? '#181B20' : '#FFFFFF';
+    ctx.fillStyle = isDark ? '#171A21' : '#FFFFFF';
     ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
     ctx.scale(dpr, dpr);
     strokes.forEach((s) => renderStroke(ctx, s, isDark));
@@ -811,9 +806,9 @@ const BibleTranscriptionNotePanel = ({ currentChapId, chapterTitle, isDark, note
 
   const colorPalette = [
     { id: 'dark', color: '#191F28' },
-    { id: 'blue', color: '#3182F6' },
-    { id: 'gray', color: '#6B7684' },
-    { id: 'navy', color: '#1E3A8A' }
+    { id: 'blue', color: '#2563EB' },
+    { id: 'teal', color: '#0D9488' },
+    { id: 'amber', color: '#D97706' }
   ];
 
   const tools = [
@@ -844,22 +839,22 @@ const BibleTranscriptionNotePanel = ({ currentChapId, chapterTitle, isDark, note
     }
   };
 
-  const borderClass = isDark ? 'border-[#262A32]' : 'border-[#E5E8EB]';
-  const surfaceClass = isDark ? 'bg-[#181B20]' : 'bg-white';
+  const borderClass = isDark ? 'border-[#262B36]' : 'border-[#E5E8EC]';
+  const surfaceClass = isDark ? 'bg-[#171A21]' : 'bg-white';
 
   return (
-    <div className={`flex flex-col h-full rounded-3xl border overflow-hidden ${surfaceClass} ${borderClass}`}>
+    <div className={`flex flex-col h-full rounded-2xl border overflow-hidden ${surfaceClass} ${borderClass}`}>
       <div className={`px-3.5 py-2.5 border-b ${borderClass} flex flex-wrap items-center justify-between gap-2 shrink-0`}>
         <div className="flex items-center gap-1">
           <button
             type="button"
             onClick={() => setPanelTab('handwriting')}
-            className={`px-3 py-1.5 rounded-xl text-[12px] font-bold flex items-center gap-1.5 cursor-pointer transition-colors ${
+            className={`px-3 py-1.5 rounded-lg text-[12px] font-bold flex items-center gap-1.5 cursor-pointer transition-colors ${
               panelTab === 'handwriting'
-                ? 'bg-[#3182F6] text-white'
+                ? 'bg-[#0D9488] text-white'
                 : isDark
-                ? 'text-[#9BA3B0] hover:text-white'
-                : 'text-[#6B7684] hover:text-[#191F28]'
+                ? 'text-[#94A3B8] hover:text-white'
+                : 'text-[#64748B] hover:text-[#191F28]'
             }`}
           >
             <PenLine className="w-3.5 h-3.5" />
@@ -868,12 +863,12 @@ const BibleTranscriptionNotePanel = ({ currentChapId, chapterTitle, isDark, note
           <button
             type="button"
             onClick={() => setPanelTab('typing')}
-            className={`px-3 py-1.5 rounded-xl text-[12px] font-bold flex items-center gap-1.5 cursor-pointer transition-colors ${
+            className={`px-3 py-1.5 rounded-lg text-[12px] font-bold flex items-center gap-1.5 cursor-pointer transition-colors ${
               panelTab === 'typing'
-                ? 'bg-[#3182F6] text-white'
+                ? 'bg-[#2563EB] text-white'
                 : isDark
-                ? 'text-[#9BA3B0] hover:text-white'
-                : 'text-[#6B7684] hover:text-[#191F28]'
+                ? 'text-[#94A3B8] hover:text-white'
+                : 'text-[#64748B] hover:text-[#191F28]'
             }`}
           >
             <FileText className="w-3.5 h-3.5" />
@@ -882,7 +877,7 @@ const BibleTranscriptionNotePanel = ({ currentChapId, chapterTitle, isDark, note
         </div>
 
         <div className="flex items-center gap-1.5">
-          <div className={`flex p-0.5 rounded-xl text-[12px] font-bold ${isDark ? 'bg-[#22262E]' : 'bg-[#F2F4F6]'}`}>
+          <div className={`flex p-0.5 rounded-lg text-[12px] font-bold ${isDark ? 'bg-[#20242E]' : 'bg-[#F1F3F6]'}`}>
             {[
               { id: 'line', label: '유선' },
               { id: 'dot', label: '도트' },
@@ -893,10 +888,10 @@ const BibleTranscriptionNotePanel = ({ currentChapId, chapterTitle, isDark, note
                 key={p.id}
                 type="button"
                 onClick={() => setPaperStyle(p.id)}
-                className={`px-2 py-1 rounded-lg transition-colors cursor-pointer ${
+                className={`px-2 py-1 rounded-md transition-colors cursor-pointer ${
                   paperStyle === p.id
                     ? isDark
-                      ? 'bg-[#181B20] text-white'
+                      ? 'bg-[#171A21] text-white'
                       : 'bg-white text-[#191F28]'
                     : 'text-[#8B95A1]'
                 }`}
@@ -910,7 +905,9 @@ const BibleTranscriptionNotePanel = ({ currentChapId, chapterTitle, isDark, note
             <button
               type="button"
               onClick={handleExportPng}
-              className="px-2.5 py-1.5 rounded-xl text-[12px] font-bold bg-[#3182F6]/10 text-[#3182F6] flex items-center gap-1 cursor-pointer"
+              className={`px-2.5 py-1.5 rounded-lg text-[12px] font-bold flex items-center gap-1 cursor-pointer ${
+                isDark ? 'bg-[#0D9488]/15 text-[#5EEAD4]' : 'bg-[#0D9488]/10 text-[#0F766E]'
+              }`}
               title="이미지로 저장"
             >
               <Download className="w-3.5 h-3.5" />
@@ -928,12 +925,12 @@ const BibleTranscriptionNotePanel = ({ currentChapId, chapterTitle, isDark, note
                 key={toolItem.id}
                 type="button"
                 onClick={() => setCurrentTool(toolItem.id)}
-                className={`px-2.5 py-1 rounded-lg text-[12px] font-bold transition-colors cursor-pointer ${
+                className={`px-2.5 py-1 rounded-md text-[12px] font-bold transition-colors cursor-pointer ${
                   currentTool === toolItem.id
-                    ? 'bg-[#3182F6] text-white'
+                    ? 'bg-[#191F28] text-white dark:bg-white dark:text-[#101216]'
                     : isDark
-                    ? 'text-[#9BA3B0] hover:text-white'
-                    : 'text-[#6B7684] hover:text-[#191F28]'
+                    ? 'text-[#94A3B8] hover:text-white'
+                    : 'text-[#64748B] hover:text-[#191F28]'
                 }`}
               >
                 {toolItem.label}
@@ -949,7 +946,7 @@ const BibleTranscriptionNotePanel = ({ currentChapId, chapterTitle, isDark, note
                 onClick={() => setStrokeColor(c.color)}
                 style={{ backgroundColor: c.color }}
                 className={`w-4 h-4 rounded-full cursor-pointer transition-transform ${
-                  strokeColor === c.color ? 'scale-125 ring-2 ring-[#3182F6]' : 'opacity-75 hover:opacity-100'
+                  strokeColor === c.color ? 'scale-125 ring-2 ring-[#0D9488]' : 'opacity-75 hover:opacity-100'
                 }`}
               />
             ))}
@@ -960,7 +957,7 @@ const BibleTranscriptionNotePanel = ({ currentChapId, chapterTitle, isDark, note
               type="button"
               onClick={handleUndo}
               disabled={strokes.length === 0}
-              className="p-1.5 rounded-lg text-[#6B7684] disabled:opacity-30 cursor-pointer"
+              className="p-1.5 rounded-lg text-[#64748B] disabled:opacity-30 cursor-pointer"
               title="실행 취소"
             >
               <RotateCcw className="w-3.5 h-3.5" />
@@ -969,7 +966,7 @@ const BibleTranscriptionNotePanel = ({ currentChapId, chapterTitle, isDark, note
               type="button"
               onClick={handleRedo}
               disabled={redoStack.length === 0}
-              className="p-1.5 rounded-lg text-[#6B7684] disabled:opacity-30 cursor-pointer"
+              className="p-1.5 rounded-lg text-[#64748B] disabled:opacity-30 cursor-pointer"
               title="다시 실행"
             >
               <RotateCw className="w-3.5 h-3.5" />
@@ -978,7 +975,7 @@ const BibleTranscriptionNotePanel = ({ currentChapId, chapterTitle, isDark, note
               type="button"
               onClick={handleClear}
               disabled={strokes.length === 0}
-              className="p-1.5 rounded-lg text-[#6B7684] disabled:opacity-30 cursor-pointer"
+              className="p-1.5 rounded-lg text-[#64748B] disabled:opacity-30 cursor-pointer"
               title="전체 지우기"
             >
               <Trash2 className="w-3.5 h-3.5" />
@@ -1008,8 +1005,8 @@ const BibleTranscriptionNotePanel = ({ currentChapId, chapterTitle, isDark, note
                 if (updateDay) updateDay({ bibleFreeNote: e.target.value });
               }}
               placeholder={`${chapterTitle || '말씀'} 본문을 묵상하며 이곳에 필사나 묵상 내용을 자유롭게 기록하세요.`}
-              className={`w-full h-full bg-transparent outline-none resize-none text-[15px] leading-[1.85] border-none ${
-                isDark ? 'text-[#F9FAFB] placeholder:text-[#6B7684]' : 'text-[#191F28] placeholder:text-[#8B95A1]'
+              className={`w-full h-full bg-transparent outline-none resize-none text-[15px] leading-[1.8] border-none ${
+                isDark ? 'text-[#F8FAFC] placeholder:text-[#64748B]' : 'text-[#191F28] placeholder:text-[#94A3B8]'
               }`}
             />
           </div>
@@ -1020,14 +1017,13 @@ const BibleTranscriptionNotePanel = ({ currentChapId, chapterTitle, isDark, note
 };
 
 // =====================================================================
-// 설교 상세 인라인/모달 뷰어 (설교 버튼 클릭 시 빈 화면 없이 즉시 내용 표시)
+// 설교 상세 인라인/모달 뷰어 (설교 버튼 클릭 시 즉시 상세 표시)
 // =====================================================================
 const InlineSermonReferencePanel = ({ verseKey, sermons, dailyData, isDark, onClose, onJumpToNote }) => {
-  const borderClass = isDark ? 'border-[#262A32]' : 'border-[#E5E8EB]';
-  const surfaceClass = isDark ? 'bg-[#181B20]' : 'bg-white';
-  const subBgClass = isDark ? 'bg-[#22262E]' : 'bg-[#F2F4F6]';
+  const borderClass = isDark ? 'border-[#262B36]' : 'border-[#E5E8EC]';
+  const surfaceClass = isDark ? 'bg-[#171A21]' : 'bg-white';
+  const subBgClass = isDark ? 'bg-[#20242E]' : 'bg-[#F1F3F6]';
 
-  // localStorage의 dailyData(예배노트)에서 해당 본문과 매칭되는 설교 노트도 함께 탐색
   const matchedUserNotes = useMemo(() => {
     if (!dailyData || !verseKey) return [];
     const targetClean = verseKey.replace(/\s+/g, '');
@@ -1041,13 +1037,14 @@ const InlineSermonReferencePanel = ({ verseKey, sermons, dailyData, isDark, onCl
           title: dVal.sermonTitle || '제목 없는 예배 노트',
           preacher: dVal.sermonPreacher || '담임목사',
           reference: dVal.sermonReference,
-          notes: dVal.sermonNotes ? dVal.sermonNotes.replace(/<[^>]*>?/gm, ' ').trim() : '',
-          applyQuestions: Array.isArray(dVal.applyQuestions) ? dVal.applyQuestions.filter(Boolean) : []
+          notes: dVal.sermonNotes ? dVal.sermonNotes.replace(/<[^>]*>?/gm, ' ').trim() : ''
         });
       }
     });
     return results;
   }, [dailyData, verseKey]);
+
+  const sermonItems = Array.isArray(sermons) ? sermons : sermons ? [sermons] : [];
 
   return (
     <div
@@ -1056,36 +1053,31 @@ const InlineSermonReferencePanel = ({ verseKey, sermons, dailyData, isDark, onCl
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className={`w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl border ${borderClass} ${surfaceClass} flex flex-col max-h-[86vh] overflow-hidden`}
+        className={`w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl border ${borderClass} ${surfaceClass} flex flex-col max-h-[86vh] overflow-hidden`}
       >
         <div className={`px-5 py-4 border-b ${borderClass} flex items-center justify-between shrink-0`}>
           <div>
-            <span className="text-[12px] font-bold text-[#3182F6] block">관련 설교 및 말씀 노트</span>
-            <h3 className={`text-[18px] font-bold mt-0.5 ${isDark ? 'text-white' : 'text-[#191F28]'}`}>
-              {verseKey}
-            </h3>
+            <span className="text-[12px] font-bold text-[#D97706] block">관련 설교 및 말씀 노트</span>
+            <h3 className={`text-[17px] font-bold mt-0.5 ${isDark ? 'text-white' : 'text-[#191F28]'}`}>{verseKey}</h3>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className={`w-8 h-8 rounded-xl flex items-center justify-center ${subBgClass} ${isDark ? 'text-white' : 'text-[#191F28]'} cursor-pointer`}
+            className={`w-8 h-8 rounded-lg flex items-center justify-center ${subBgClass} ${isDark ? 'text-white' : 'text-[#191F28]'} cursor-pointer`}
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-5 space-y-4 hide-scrollbar">
-          {/* 1. 아카이브 DB(sermon_summary.json) 설교 목록 */}
-          {sermonListSafe(sermons).map((item, idx) => (
-            <div key={`db_${idx}`} className={`p-4 rounded-2xl border ${borderClass} space-y-2`}>
+          {sermonItems.map((item, idx) => (
+            <div key={`db_${idx}`} className={`p-4 rounded-xl border ${borderClass} space-y-2`}>
               <div className="flex items-center justify-between gap-2">
-                <span className="text-[12px] font-bold text-[#3182F6] bg-[#3182F6]/10 px-2.5 py-0.5 rounded-lg">
+                <span className="text-[12px] font-bold text-[#2563EB] bg-[#2563EB]/10 px-2.5 py-0.5 rounded-md">
                   {item.date || '주일예배'}
                 </span>
                 {item.preacher && (
-                  <span className={`text-[12px] font-medium ${isDark ? 'text-[#9BA3B0]' : 'text-[#6B7684]'}`}>
-                    {item.preacher}
-                  </span>
+                  <span className={`text-[12px] font-medium ${isDark ? 'text-[#94A3B8]' : 'text-[#64748B]'}`}>{item.preacher}</span>
                 )}
               </div>
               <h4 className={`text-[15px] font-bold ${isDark ? 'text-white' : 'text-[#191F28]'}`}>
@@ -1097,46 +1089,43 @@ const InlineSermonReferencePanel = ({ verseKey, sermons, dailyData, isDark, onCl
                 </p>
               )}
               {item.application && (
-                <div className={`p-3 rounded-xl ${subBgClass} text-[12px] leading-relaxed ${isDark ? 'text-[#E5E7EB]' : 'text-[#333D4B]'}`}>
-                  <strong className="text-[#3182F6] mr-1.5">적용 포인트</strong>
+                <div className={`p-3 rounded-lg ${subBgClass} text-[12.5px] leading-relaxed ${isDark ? 'text-[#E5E7EB]' : 'text-[#333D4B]'}`}>
+                  <strong className="text-[#0D9488] mr-1.5">적용 포인트</strong>
                   {item.application}
                 </div>
               )}
             </div>
           ))}
 
-          {/* 2. 사용자가 직접 작성한 예배노트(dailyData) 매칭 결과 */}
           {matchedUserNotes.map((note, idx) => (
-            <div key={`note_${idx}`} className={`p-4 rounded-2xl border ${borderClass} space-y-2`}>
+            <div key={`note_${idx}`} className={`p-4 rounded-xl border ${borderClass} space-y-2`}>
               <div className="flex items-center justify-between">
-                <span className="text-[12px] font-bold text-[#3182F6]">나의 예배 노트 · {note.date}</span>
-                <span className={`text-[12px] ${isDark ? 'text-[#9BA3B0]' : 'text-[#6B7684]'}`}>{note.preacher}</span>
+                <span className="text-[12px] font-bold text-[#0D9488]">나의 예배 노트 · {note.date}</span>
+                <span className={`text-[12px] ${isDark ? 'text-[#94A3B8]' : 'text-[#64748B]'}`}>{note.preacher}</span>
               </div>
               <h4 className={`text-[15px] font-bold ${isDark ? 'text-white' : 'text-[#191F28]'}`}>{note.title}</h4>
               {note.notes && (
-                <p className={`text-[15px] leading-relaxed line-clamp-4 ${isDark ? 'text-[#D1D5DB]' : 'text-[#4E5968]'}`}>
-                  {note.notes}
-                </p>
+                <p className={`text-[15px] leading-relaxed line-clamp-4 ${isDark ? 'text-[#D1D5DB]' : 'text-[#4E5968]'}`}>{note.notes}</p>
               )}
               <button
                 type="button"
                 onClick={() => onJumpToNote(note.date)}
-                className="w-full py-2.5 rounded-xl bg-[#3182F6] text-white text-[12px] font-bold cursor-pointer mt-1"
+                className="w-full py-2.5 rounded-xl bg-[#2563EB] text-white text-[12px] font-bold cursor-pointer mt-1"
               >
                 해당 날짜 예배 노트 전체 열기
               </button>
             </div>
           ))}
 
-          {sermonListSafe(sermons).length === 0 && matchedUserNotes.length === 0 && (
+          {sermonItems.length === 0 && matchedUserNotes.length === 0 && (
             <div className="py-10 text-center space-y-3">
-              <p className={`text-[15px] font-medium ${isDark ? 'text-[#9BA3B0]' : 'text-[#6B7684]'}`}>
+              <p className={`text-[15px] font-medium ${isDark ? 'text-[#94A3B8]' : 'text-[#64748B]'}`}>
                 이 본문과 연결된 상세 요약이 아직 등록되지 않았습니다.
               </p>
               <button
                 type="button"
                 onClick={() => onJumpToNote(null)}
-                className="px-5 py-2.5 rounded-xl bg-[#3182F6] text-white text-[15px] font-bold cursor-pointer"
+                className="px-5 py-2.5 rounded-xl bg-[#2563EB] text-white text-[14px] font-bold cursor-pointer"
               >
                 이 본문으로 예배 노트 작성하기
               </button>
@@ -1148,15 +1137,8 @@ const InlineSermonReferencePanel = ({ verseKey, sermons, dailyData, isDark, onCl
   );
 };
 
-function sermonListSafe(val) {
-  if (!val) return [];
-  if (Array.isArray(val)) return val;
-  if (typeof val === 'object') return [val];
-  return [];
-}
-
 // =====================================================================
-// 메인 통독 365 컴포넌트 (토스 디자인 시스템 · 3단계 타이포 · 맞춤 독수 플랜)
+// 메인 통독 365 컴포넌트 (3색 조화 · 와이드 반응형 · 이모지 0%)
 // =====================================================================
 export default function Bible({
   bibles,
@@ -1194,7 +1176,7 @@ export default function Bible({
   const [noteContent, setNoteContent] = useState(currDay?.bibleFreeNote || '');
   const [cellSyncToast, setCellSyncToast] = useState(false);
 
-  // 365일 맞춤 통독 목표 독수 설정 (1독 / 2독 / 3독) & 설정 패널 열림 상태
+  // 365일 맞춤 통독 목표 독수 설정 (1독 / 2독 / 3독)
   const [targetRounds, setTargetRounds] = useState(() => {
     try {
       return Number(localStorage.getItem('bible_target_rounds') || '1') || 1;
@@ -1211,7 +1193,6 @@ export default function Bible({
     } catch (_) {}
   };
 
-  // 기본 성경 역본을 개역개정 4판('krv')으로 설정
   const [bibleVersion, setBibleVersion] = useState(() => {
     try {
       return localStorage.getItem('bible_version_mode') || 'krv';
@@ -1244,11 +1225,9 @@ export default function Bible({
   const [customInputMemo, setCustomInputMemo] = useState('');
 
   // 학술 데이터베이스 상태
-  const [lxxDb, setLxxDb] = useState({});
   const [commentaryDb, setCommentaryDb] = useState({});
   const [matthewHenryDb, setMatthewHenryDb] = useState({});
   const [netNotesDb, setNetNotesDb] = useState({});
-  const [targumPeshittaDb, setTargumPeshittaDb] = useState({});
   const [crossRefs, setCrossRefs] = useState([]);
   const [translatedScholarlyMap, setTranslatedScholarlyMap] = useState({});
   const [translatingKey, setTranslatingKey] = useState(null);
@@ -1256,7 +1235,6 @@ export default function Bible({
   const longPressTimerRef = useRef(null);
   const isLongPressActiveRef = useRef(false);
 
-  // 시작일 & 경과일수 계산 및 오늘의 맞춤 통독 분량 산출
   const effectiveStartDate = localStorage.getItem('readChallengeStart') || readChallengeStart || '2026-01-01';
   const todayStr = getLocalToday ? getLocalToday() : new Date().toISOString().slice(0, 10);
   const elapsedDayNum = useMemo(() => {
@@ -1286,11 +1264,9 @@ export default function Bible({
 
     fetch('/data/easy_bible.json').then((r) => (r.ok ? r.json() : {})).then((d) => setEasyBibleDb(d || {})).catch(() => {});
     fetch('/data/web_bible.json').then((r) => (r.ok ? r.json() : {})).then((d) => setWebBibleDb(d || {})).catch(() => {});
-    fetch('/data/lxx_quotes.json').then((r) => (r.ok ? r.json() : {})).then((d) => setLxxDb(d || {})).catch(() => {});
-    fetch('/data/commentaries.json').then((r) => (r.ok ? r.json() : {})).then((d) => setCommentaryDb((prev) => ({ ...prev, ...d }))).catch(() => {});
-    fetch('/data/matthew_henry.json').then((r) => (r.ok ? r.json() : {})).then((d) => setMatthewHenryDb((prev) => ({ ...prev, ...d }))).catch(() => {});
+    fetch('/data/commentaries.json').then((r) => (r.ok ? r.json() : {})).then((d) => setCommentaryDb((prev) => ({ ...prev, ...prev }))).catch(() => {});
+    fetch('/data/matthew_henry.json').then((r) => (r.ok ? r.json() : {})).then((d) => setMatthewHenryDb((prev) => ({ ...prev, ...prev }))).catch(() => {});
     fetch('/data/net_notes.json').then((r) => (r.ok ? r.json() : {})).then((d) => setNetNotesDb(d || {})).catch(() => {});
-    fetch('/data/targum_peshitta.json').then((r) => (r.ok ? r.json() : {})).then((d) => setTargumPeshittaDb(d || {})).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -1389,12 +1365,21 @@ export default function Bible({
     return cBk && cBk.chapters && Array.isArray(cBk.chapters[currentChapterNum - 1]) ? cBk.chapters[currentChapterNum - 1] : [];
   }, [krv4TxtDb, currentBookMeta, currentChapterNum, cBk]);
 
+  // 현재 장의 실시간 읽음 진행률 계산 (능동형 UI)
+  const chapterProgressPercent = useMemo(() => {
+    if (!cVs || cVs.length === 0) return 0;
+    let count = 0;
+    cVs.forEach((_, idx) => {
+      if ((readVerses || {})[`${sBk}-${sCh}-${idx}`]) count++;
+    });
+    return Math.round((count / cVs.length) * 100);
+  }, [cVs, readVerses, sBk, sCh]);
+
   const isAllR = cVs.length > 0 && (getArr ? getArr(cVs) : cVs).every((_, i) => (readVerses || {})[`${sBk}-${sCh}-${i}`]);
   const totalChapters = krv4TxtDb?.[currentBookMeta.en]?.length || (getArr ? getArr(cBk?.chapters) : cBk?.chapters || []).length;
   const hasPrevChapter = currentChapterNum > 1;
   const hasNextChapter = currentChapterNum < totalChapters;
 
-  // 설교 매칭 검사기 (sermon_summary.json + 사용자 예배 노트 동시 검색)
   const checkHasSermon = useCallback(
     (koName, enName, chapter, verseNum) => {
       const vInt = parseInt(verseNum, 10);
@@ -1438,7 +1423,6 @@ export default function Bible({
         }
       }
 
-      // 사용자 예배노트(qt_daily)에서도 해당 장·절 본문 검색
       try {
         const rawDaily = JSON.parse(localStorage.getItem('qt_daily') || '{}');
         for (const dVal of Object.values(rawDaily)) {
@@ -1537,9 +1521,7 @@ export default function Bible({
     if (s) syncBibleReading();
   };
 
-  // =====================================================================
   // 원어 강해 인스펙터
-  // =====================================================================
   const handleSelectInspectorWord = useCallback(
     async (word) => {
       setSelectedWordDetail(word);
@@ -1739,15 +1721,27 @@ export default function Bible({
     alert(`[${word.inflected}] 원어 강해가 2단 필사 노트에 기록되었습니다.`);
   };
 
-  // 토스 디자인 시스템 컬러 토큰 (다크/라이트 완벽 호환 · 단일 포인트 블루 #3182F6)
+  // =====================================================================
+  // 3색 조화 팔레트 (메인 블루 #2563EB + 세이지 그린 #0D9488 + 웜 앰버 #D97706)
+  // =====================================================================
   const isDark = isDarkMode;
-  const pageBg = isDark ? 'bg-[#101216]' : 'bg-[#F4F6FA]';
-  const surfaceBg = isDark ? 'bg-[#181B20]' : 'bg-white';
-  const subSurfaceBg = isDark ? 'bg-[#22262E]' : 'bg-[#F2F4F6]';
-  const borderClass = isDark ? 'border-[#262A32]' : 'border-[#E5E8EB]';
-  const dividerClass = isDark ? 'divide-[#262A32]' : 'divide-[#F2F4F6]';
-  const textMain = isDark ? 'text-[#F9FAFB]' : 'text-[#191F28]';
-  const textSub = isDark ? 'text-[#9BA3B0]' : 'text-[#6B7684]';
+  const pageBg = isDark ? 'bg-[#0F1115]' : 'bg-[#F5F6F8]';
+  const surfaceBg = isDark ? 'bg-[#171A21]' : 'bg-white';
+  const subSurfaceBg = isDark ? 'bg-[#20242E]' : 'bg-[#F1F3F6]';
+  const borderClass = isDark ? 'border-[#262B36]' : 'border-[#E5E8EC]';
+  const dividerClass = isDark ? 'divide-[#262B36]' : 'divide-[#EEF0F3]';
+  const textMain = isDark ? 'text-[#F8FAFC]' : 'text-[#191F28]';
+  const textSub = isDark ? 'text-[#94A3B8]' : 'text-[#64748B]';
+
+  const sagePillClass = isDark
+    ? 'bg-[#0D9488]/15 text-[#5EEAD4] hover:bg-[#0D9488]/25'
+    : 'bg-[#0D9488]/10 text-[#0F766E] hover:bg-[#0D9488]/15';
+  const amberPillClass = isDark
+    ? 'bg-[#D97706]/15 text-[#FCD34D] hover:bg-[#D97706]/25'
+    : 'bg-[#D97706]/10 text-[#B45309] hover:bg-[#D97706]/15';
+  const bluePillClass = isDark
+    ? 'bg-[#2563EB]/15 text-[#93C5FD] hover:bg-[#2563EB]/25'
+    : 'bg-[#2563EB]/10 text-[#1D4ED8] hover:bg-[#2563EB]/15';
 
   const originalFontStyle = (isOT) =>
     isOT
@@ -1758,7 +1752,6 @@ export default function Bible({
   const currentCommentary = commentaryDb[currentKey] || null;
   const currentMatthewHenry = matthewHenryDb[currentKey] || null;
   const currentNetNote = netNotesDb[currentKey] || null;
-  const currentTargumPeshitta = targumPeshittaDb[currentKey] || null;
 
   const currentHebrewSyntax = useMemo(() => {
     if (inspectorTarget?.isOT && inspectorWords && inspectorWords.length > 0) {
@@ -1767,7 +1760,6 @@ export default function Bible({
     return null;
   }, [inspectorTarget, inspectorWords]);
 
-  // 현재 본문 읽기 화면에서 오늘의 통독 분량 중 다음 읽을 장 찾기
   const currentIdxInTodaysPlan = todaysPlanChapters.findIndex((c) => c.en === sBk && c.chapter === currentChapterNum);
   const nextPlanChapter =
     currentIdxInTodaysPlan >= 0 && currentIdxInTodaysPlan < todaysPlanChapters.length - 1
@@ -1778,13 +1770,13 @@ export default function Bible({
     <div className={`flex-1 flex flex-col h-full ${pageBg} relative overflow-hidden font-sans select-none`}>
       {/* 목장모임 출석 연동 토스트 알림 */}
       {cellSyncToast && (
-        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-[9999999] bg-[#3182F6] text-white text-[12px] font-bold px-4 py-2.5 rounded-2xl shadow-lg flex items-center gap-2">
-          <Check className="w-4 h-4" />
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-[9999999] bg-[#191F28] text-white text-[13px] font-bold px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-2">
+          <Check className="w-4 h-4 text-[#0D9488]" />
           <span>성경 통독이 목장 모임 출석부 및 오늘의 루틴에 반영되었습니다.</span>
         </div>
       )}
 
-      {/* 설교 상세 모달 (설교 버튼 클릭 시 즉시 표시) */}
+      {/* 설교 상세 모달 */}
       {selectedSermonVerse && (
         <InlineSermonReferencePanel
           verseKey={selectedSermonVerse}
@@ -1792,7 +1784,7 @@ export default function Bible({
           dailyData={dailyDailyData}
           isDark={isDark}
           onClose={() => setSelectedSermonVerse(null)}
-          onJumpToNote={(targetDate) => {
+          onJumpToNote={() => {
             setSelectedSermonVerse(null);
             if (setActiveScreen) setActiveScreen('sermon');
           }}
@@ -1801,9 +1793,9 @@ export default function Bible({
 
       {bibleViewMode === 'index' ? (
         // ===============================================================
-        // 1. 성경 통독 365 홈 & 66권 목차 (토스 스타일 · 맞춤 독수 플랜 포함)
+        // 1. 성경 통독 365 홈 & 66권 목차 (3색 조화 · 와이드 반응형)
         // ===============================================================
-        <div className="flex-1 overflow-y-auto px-4 sm:px-6 pb-24 space-y-5 relative z-10 w-full max-w-[760px] mx-auto hide-scrollbar">
+        <div className="flex-1 overflow-y-auto px-2 sm:px-5 lg:px-8 pb-24 space-y-5 relative z-10 w-full max-w-[1280px] mx-auto hide-scrollbar">
           <div className="pt-1">
             <SubPageHeader
               title="성경 통독 365"
@@ -1813,15 +1805,16 @@ export default function Bible({
             />
           </div>
 
-          {/* 통독 진행률 및 맞춤 1독·2독·3독 설정 카드 (중첩 박스 없이 단일 카드 + 구분선) */}
-          <section className={`${surfaceBg} rounded-3xl border ${borderClass} overflow-hidden`}>
-            <div className="p-5 space-y-4">
+          {/* 통독 진행률 & 오늘의 맞춤 통독 플랜 (PC 2단 와이드 / 모바일 풀폭) */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6">
+            {/* 좌측 6컬럼: 전체 통독 진행률 및 1·2·3독 목표 설정 */}
+            <section className={`lg:col-span-6 ${surfaceBg} rounded-2xl border ${borderClass} p-5 flex flex-col justify-between space-y-4`}>
               <div className="flex items-center justify-between">
                 <div>
-                  <span className="text-[12px] font-bold text-[#3182F6] bg-[#3182F6]/10 px-2.5 py-1 rounded-lg">
+                  <span className={`text-[12px] font-bold px-2.5 py-1 rounded-md ${bluePillClass}`}>
                     1년 {targetRounds}독 플랜 · {elapsedDayNum}일차
                   </span>
-                  <h2 className={`text-[18px] font-bold ${textMain} mt-2`}>
+                  <h2 className={`text-[17px] font-bold ${textMain} mt-2`}>
                     전체 통독 진행률 {bibleProgress}%
                   </h2>
                 </div>
@@ -1830,27 +1823,29 @@ export default function Bible({
                   onClick={() => setShowPlanSettings((prev) => !prev)}
                   className={`px-3 py-2 rounded-xl text-[12px] font-bold flex items-center gap-1.5 ${subSurfaceBg} ${textMain} cursor-pointer`}
                 >
-                  <SlidersHorizontal className="w-3.5 h-3.5 text-[#3182F6]" />
+                  <SlidersHorizontal className="w-3.5 h-3.5 text-[#2563EB]" />
                   <span>{showPlanSettings ? '설정 닫기' : '목표 설정'}</span>
                 </button>
               </div>
 
               <div className={`w-full ${subSurfaceBg} rounded-full h-2 overflow-hidden`}>
-                <div className="bg-[#3182F6] h-full transition-all duration-500 rounded-full" style={{ width: `${bibleProgress}%` }} />
+                <div
+                  className="bg-gradient-to-r from-[#2563EB] to-[#0D9488] h-full transition-all duration-500 rounded-full"
+                  style={{ width: `${bibleProgress}%` }}
+                />
               </div>
 
-              <div className={`flex items-center justify-between text-[12px] font-medium ${textSub}`}>
+              <div className={`flex items-center justify-between text-[12.5px] font-medium ${textSub}`}>
                 <span>완독 {readChapsCount}장 / 전체 1,189장</span>
-                <span>하루 권장 약 {Math.ceil((1189 * targetRounds) / 365)}장</span>
+                <span className="text-[#0D9488] font-bold">하루 권장 약 {Math.ceil((1189 * targetRounds) / 365)}장</span>
               </div>
 
-              {/* 접이식 통독 목표 설정 패널 (시작일 & 1독/2독/3독 선택) */}
               {showPlanSettings && (
                 <div className={`pt-4 border-t ${borderClass} space-y-3`}>
                   <div className="flex items-center justify-between">
-                    <span className={`text-[15px] font-bold ${textMain}`}>통독 시작일</span>
+                    <span className={`text-[14px] font-bold ${textMain}`}>통독 시작일</span>
                     <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl ${subSurfaceBg}`}>
-                      <Calendar className="w-4 h-4 text-[#3182F6]" />
+                      <Calendar className="w-4 h-4 text-[#2563EB]" />
                       <input
                         type="date"
                         value={effectiveStartDate}
@@ -1858,13 +1853,13 @@ export default function Bible({
                           setReadChallengeStart(e.target.value);
                           localStorage.setItem('readChallengeStart', e.target.value);
                         }}
-                        className={`bg-transparent text-[15px] font-bold ${textMain} outline-none cursor-pointer`}
+                        className={`bg-transparent text-[14px] font-bold ${textMain} outline-none cursor-pointer`}
                       />
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <span className={`text-[15px] font-bold ${textMain} block`}>1년 목표 독수 선택</span>
+                    <span className={`text-[14px] font-bold ${textMain} block`}>1년 목표 독수 선택</span>
                     <div className="grid grid-cols-3 gap-2">
                       {[
                         { rounds: 1, label: '1년 1독', sub: '하루 3~4장' },
@@ -1877,16 +1872,12 @@ export default function Bible({
                             key={opt.rounds}
                             type="button"
                             onClick={() => handleTargetRoundsChange(opt.rounds)}
-                            className={`p-3 rounded-2xl border text-left transition-colors cursor-pointer ${
-                              active
-                                ? 'bg-[#3182F6] border-[#3182F6] text-white'
-                                : `${subSurfaceBg} border-transparent ${textMain}`
+                            className={`p-3 rounded-xl text-left transition-colors cursor-pointer ${
+                              active ? 'bg-[#2563EB] text-white' : `${subSurfaceBg} ${textMain}`
                             }`}
                           >
-                            <span className="text-[15px] font-bold block">{opt.label}</span>
-                            <span className={`text-[12px] block mt-0.5 ${active ? 'text-white/85' : textSub}`}>
-                              {opt.sub}
-                            </span>
+                            <span className="text-[14px] font-bold block">{opt.label}</span>
+                            <span className={`text-[12px] block mt-0.5 ${active ? 'text-white/85' : textSub}`}>{opt.sub}</span>
                           </button>
                         );
                       })}
@@ -1894,21 +1885,23 @@ export default function Bible({
                   </div>
                 </div>
               )}
-            </div>
+            </section>
 
-            {/* 오늘의 맞춤 통독 분량 바로가기 (구분선으로 연결) */}
-            <div className={`border-t ${borderClass} p-5 space-y-3`}>
+            {/* 우측 6컬럼: 오늘의 맞춤 통독 분량 카드 */}
+            <section className={`lg:col-span-6 ${surfaceBg} rounded-2xl border ${borderClass} p-5 flex flex-col justify-between space-y-4`}>
               <div className="flex items-center justify-between">
                 <div>
-                  <span className={`text-[12px] font-medium ${textSub} block`}>오늘의 맞춤 통독 분량 ({elapsedDayNum}일차)</span>
-                  <span className={`text-[15px] font-bold ${textMain} mt-0.5 block`}>
-                    {formatReadingRangeLabel(todaysPlanChapters)}
+                  <span className={`text-[12px] font-bold px-2.5 py-1 rounded-md ${sagePillClass}`}>
+                    오늘의 맞춤 분량 · {elapsedDayNum}일차
                   </span>
+                  <h2 className={`text-[17px] font-bold ${textMain} mt-2`}>
+                    {formatReadingRangeLabel(todaysPlanChapters)}
+                  </h2>
                 </div>
                 <button
                   type="button"
                   onClick={() => openModal('bibleChallenge')}
-                  className="text-[12px] font-bold text-[#3182F6] cursor-pointer"
+                  className={`px-3 py-2 rounded-xl text-[12px] font-bold cursor-pointer ${bluePillClass}`}
                 >
                   전체 통독표
                 </button>
@@ -1916,10 +1909,7 @@ export default function Bible({
 
               <div className="flex flex-wrap gap-2">
                 {todaysPlanChapters.map((chItem, idx) => {
-                  const totalV = BIBLE_66_MAP[chItem.en]?.chaptersCount || 1;
-                  const isChRead =
-                    cBk &&
-                    Array.from({ length: 1 }).every((_, vi) => Boolean((readVerses || {})[`${chItem.en}-${chItem.chapter}-${vi}`]));
+                  const isChRead = Boolean((readVerses || {})[`${chItem.en}-${chItem.chapter}-0`]);
                   return (
                     <button
                       key={`${chItem.id}_${idx}`}
@@ -1928,10 +1918,8 @@ export default function Bible({
                         setCurrentChapId(chItem.id);
                         setBibleViewMode('read');
                       }}
-                      className={`px-3.5 py-2 rounded-xl text-[12px] font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
-                        isChRead
-                          ? 'bg-[#3182F6] text-white'
-                          : `${subSurfaceBg} ${textMain} hover:bg-[#3182F6]/10 hover:text-[#3182F6]`
+                      className={`px-3.5 py-2 rounded-xl text-[13px] font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
+                        isChRead ? 'bg-[#0D9488] text-white' : `${subSurfaceBg} ${textMain} hover:bg-[#0D9488]/10`
                       }`}
                     >
                       {isChRead && <Check className="w-3.5 h-3.5" />}
@@ -1942,52 +1930,57 @@ export default function Bible({
                   );
                 })}
               </div>
-            </div>
-          </section>
 
-          {/* 구약 성경 39권 리스트 카드 */}
-          <section className={`${surfaceBg} rounded-3xl border ${borderClass} p-5 space-y-3`}>
-            <div className="flex items-center justify-between">
-              <h3 className={`text-[18px] font-bold ${textMain}`}>구약 성경</h3>
-              <span className={`text-[12px] font-medium ${textSub}`}>39권</span>
-            </div>
-            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-              {(getArr ? getArr(bibles) : bibles || []).slice(0, 39).map((b) => (
-                <button
-                  key={b.name}
-                  type="button"
-                  onClick={() => openModal('bibleChapterSelect', b)}
-                  className={`px-3 py-2.5 rounded-xl text-[15px] font-medium ${subSurfaceBg} ${textMain} hover:bg-[#3182F6]/10 hover:text-[#3182F6] transition-colors truncate cursor-pointer text-center`}
-                >
-                  {getKoName(b.name)}
-                </button>
-              ))}
-            </div>
-          </section>
+              <p className={`text-[12.5px] ${textSub}`}>
+                목표 독수를 변경하면 66권 1,189장이 365일 일정으로 자동 재분배됩니다.
+              </p>
+            </section>
+          </div>
 
-          {/* 신약 성경 27권 리스트 카드 */}
-          <section className={`${surfaceBg} rounded-3xl border ${borderClass} p-5 space-y-3`}>
-            <div className="flex items-center justify-between">
-              <h3 className={`text-[18px] font-bold ${textMain}`}>신약 성경</h3>
-              <span className={`text-[12px] font-medium ${textSub}`}>27권</span>
-            </div>
-            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-              {(getArr ? getArr(bibles) : bibles || []).slice(39, 66).map((b) => (
-                <button
-                  key={b.name}
-                  type="button"
-                  onClick={() => openModal('bibleChapterSelect', b)}
-                  className={`px-3 py-2.5 rounded-xl text-[15px] font-medium ${subSurfaceBg} ${textMain} hover:bg-[#3182F6]/10 hover:text-[#3182F6] transition-colors truncate cursor-pointer text-center`}
-                >
-                  {getKoName(b.name)}
-                </button>
-              ))}
-            </div>
-          </section>
+          {/* 구약 & 신약 66권 목차 (PC에서 2단 나란히 / 모바일 세로 스택) */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6">
+            <section className={`lg:col-span-7 ${surfaceBg} rounded-2xl border ${borderClass} p-5 space-y-3.5`}>
+              <div className="flex items-center justify-between">
+                <h3 className={`text-[17px] font-bold ${textMain}`}>구약 성경</h3>
+                <span className={`text-[12px] font-bold px-2 py-0.5 rounded-md ${amberPillClass}`}>39권</span>
+              </div>
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+                {(getArr ? getArr(bibles) : bibles || []).slice(0, 39).map((b) => (
+                  <button
+                    key={b.name}
+                    type="button"
+                    onClick={() => openModal('bibleChapterSelect', b)}
+                    className={`px-2.5 py-2.5 rounded-xl text-[14px] font-medium ${subSurfaceBg} ${textMain} hover:bg-[#2563EB]/10 hover:text-[#2563EB] transition-colors truncate cursor-pointer text-center`}
+                  >
+                    {getKoName(b.name)}
+                  </button>
+                ))}
+              </div>
+            </section>
+
+            <section className={`lg:col-span-5 ${surfaceBg} rounded-2xl border ${borderClass} p-5 space-y-3.5`}>
+              <div className="flex items-center justify-between">
+                <h3 className={`text-[17px] font-bold ${textMain}`}>신약 성경</h3>
+                <span className={`text-[12px] font-bold px-2 py-0.5 rounded-md ${sagePillClass}`}>27권</span>
+              </div>
+              <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-3 gap-2">
+                {(getArr ? getArr(bibles) : bibles || []).slice(39, 66).map((b) => (
+                  <button
+                    key={b.name}
+                    type="button"
+                    onClick={() => openModal('bibleChapterSelect', b)}
+                    className={`px-2.5 py-2.5 rounded-xl text-[14px] font-medium ${subSurfaceBg} ${textMain} hover:bg-[#0D9488]/10 hover:text-[#0D9488] transition-colors truncate cursor-pointer text-center`}
+                  >
+                    {getKoName(b.name)}
+                  </button>
+                ))}
+              </div>
+            </section>
+          </div>
         </div>
       ) : (
         // ===============================================================
-        // 2. 성경 본문 읽기 & 2단 필사 뷰포트 (표준 가독성 규격 & 모바일 최적화)
+        // 2. 성경 본문 읽기 & 2단 필사 뷰포트 (모바일 풀폭 / PC·태블릿 2단 와이드)
         // ===============================================================
         <div className="flex-1 flex flex-col h-full pointer-events-auto relative z-10 overflow-hidden">
           <div className="pt-1">
@@ -2002,9 +1995,17 @@ export default function Bible({
             />
           </div>
 
+          {/* 능동형 장 읽음 진행률 바 */}
+          <div className={`w-full h-[2px] ${subSurfaceBg} shrink-0`}>
+            <div
+              className="h-full bg-gradient-to-r from-[#0D9488] to-[#2563EB] transition-all duration-300"
+              style={{ width: `${chapterProgressPercent}%` }}
+            />
+          </div>
+
           {/* 상단 역본 및 보기 모드 컨트롤 바 */}
-          <div className={`${surfaceBg} px-4 py-2.5 border-b ${borderClass} flex items-center justify-between gap-2 overflow-x-auto hide-scrollbar shrink-0`}>
-            <div className={`flex p-0.5 rounded-xl text-[12px] font-bold ${subSurfaceBg} shrink-0`}>
+          <div className={`${surfaceBg} px-3 sm:px-6 py-2.5 border-b ${borderClass} flex items-center justify-between gap-2 overflow-x-auto hide-scrollbar shrink-0`}>
+            <div className={`flex p-0.5 rounded-lg text-[12px] font-bold ${subSurfaceBg} shrink-0`}>
               {[
                 { id: 'krv', label: '개역개정' },
                 { id: 'easy', label: '쉬운성경' },
@@ -2015,8 +2016,8 @@ export default function Bible({
                   key={ver.id}
                   type="button"
                   onClick={() => handleVersionChange(ver.id)}
-                  className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer whitespace-nowrap ${
-                    bibleVersion === ver.id ? 'bg-[#3182F6] text-white' : textSub
+                  className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer whitespace-nowrap ${
+                    bibleVersion === ver.id ? 'bg-[#2563EB] text-white' : textSub
                   }`}
                 >
                   {ver.label}
@@ -2024,39 +2025,44 @@ export default function Bible({
               ))}
             </div>
 
-            <div className={`flex p-0.5 rounded-xl text-[12px] font-bold ${subSurfaceBg} shrink-0`}>
-              <button
-                type="button"
-                onClick={() => setViewMode('single')}
-                className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer whitespace-nowrap ${
-                  viewMode === 'single' ? (isDark ? 'bg-[#181B20] text-white' : 'bg-white text-[#191F28]') : textSub
-                }`}
-              >
-                읽기 모드
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode('split')}
-                className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer whitespace-nowrap flex items-center gap-1 ${
-                  viewMode === 'split' ? 'bg-[#3182F6] text-white' : textSub
-                }`}
-              >
-                <PenLine className="w-3 h-3" />
-                <span>2단 필사</span>
-              </button>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className={`hidden sm:inline-block text-[12px] font-bold px-2 py-0.5 rounded-md ${sagePillClass}`}>
+                이 장 {chapterProgressPercent}% 읽음
+              </span>
+              <div className={`flex p-0.5 rounded-lg text-[12px] font-bold ${subSurfaceBg}`}>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('single')}
+                  className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer whitespace-nowrap ${
+                    viewMode === 'single' ? (isDark ? 'bg-[#171A21] text-white' : 'bg-white text-[#191F28]') : textSub
+                  }`}
+                >
+                  읽기 모드
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('split')}
+                  className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer whitespace-nowrap flex items-center gap-1 ${
+                    viewMode === 'split' ? 'bg-[#0D9488] text-white' : textSub
+                  }`}
+                >
+                  <PenLine className="w-3 h-3" />
+                  <span>2단 필사</span>
+                </button>
+              </div>
             </div>
           </div>
 
           {/* 본문 & 필사 영역 */}
           <div
-            className={`flex-1 px-3 sm:px-5 pt-3 pb-2 grid gap-4 h-full relative z-10 overflow-hidden ${
-              viewMode === 'split' ? 'grid-cols-1 md:grid-cols-2 max-w-[1400px]' : 'grid-cols-1 max-w-[760px]'
+            className={`flex-1 px-2 sm:px-5 lg:px-8 pt-3 pb-2 grid gap-4 lg:gap-6 h-full relative z-10 overflow-hidden ${
+              viewMode === 'split' ? 'grid-cols-1 lg:grid-cols-12 max-w-[1380px]' : 'grid-cols-1 max-w-[820px]'
             } mx-auto w-full`}
           >
             {/* 성경 본문 리스트 영역 */}
-            <div className="flex flex-col relative z-[45] pointer-events-auto h-full overflow-hidden">
+            <div className={`${viewMode === 'split' ? 'lg:col-span-7' : ''} flex flex-col relative z-[45] pointer-events-auto h-full overflow-hidden`}>
               <div className="flex-1 overflow-y-auto hide-scrollbar pb-3" data-live-web-tick={liveWebTick}>
-                <div className={`${surfaceBg} rounded-3xl border ${borderClass} px-4 sm:px-6 py-4 divide-y ${dividerClass}`}>
+                <div className={`${surfaceBg} rounded-2xl border ${borderClass} px-4 sm:px-6 py-4 divide-y ${dividerClass}`}>
                   {cVs.length > 0 ? (
                     (getArr ? getArr(cVs) : cVs).map((verse, idx) => {
                       const vNum = idx + 1;
@@ -2096,17 +2102,16 @@ export default function Bible({
                           }}
                           className={`py-3 transition-colors cursor-pointer ${
                             isSel
-                              ? 'bg-[#3182F6]/10 rounded-xl px-2'
+                              ? 'bg-[#0D9488]/10 rounded-xl px-2'
                               : isR && (!hColor || hColor === 'transparent')
                               ? 'opacity-45'
                               : ''
                           }`}
                           style={hColor && hColor !== 'transparent' ? { backgroundColor: `${hColor}33`, borderRadius: '10px', paddingLeft: '8px', paddingRight: '8px' } : {}}
                         >
-                          {/* 단락 소제목 */}
                           {pericope && (
                             <div className="mb-2 pt-1">
-                              <span className="text-[12px] font-bold text-[#3182F6] bg-[#3182F6]/10 px-2.5 py-1 rounded-lg inline-block">
+                              <span className={`text-[12px] font-bold px-2.5 py-1 rounded-md inline-block ${amberPillClass}`}>
                                 {pericope}
                               </span>
                             </div>
@@ -2119,7 +2124,7 @@ export default function Bible({
                                 e.stopPropagation();
                                 openVerseInspector(currentChapterNum, vNum, displayVerseText);
                               }}
-                              className="text-[12px] font-bold text-[#3182F6] mt-1 min-w-[22px] text-right shrink-0 cursor-pointer hover:underline"
+                              className="text-[12px] font-bold text-[#D97706] mt-1 min-w-[22px] text-right shrink-0 cursor-pointer hover:underline"
                               title="원어 강해 보기"
                             >
                               {vNum}
@@ -2152,12 +2157,12 @@ export default function Bible({
                                 <div className="space-y-1.5">
                                   <p>{displayVerseText}</p>
                                   {easyText && (
-                                    <p className={`text-[15px] ${textSub} pl-2.5 border-l-2 border-[#3182F6]/40`}>
+                                    <p className={`text-[14.5px] ${textSub} pl-2.5 border-l-2 border-[#0D9488]/50`}>
                                       {easyText}
                                     </p>
                                   )}
                                   {webText && (
-                                    <p className={`text-[15px] ${textSub} pl-2.5 border-l-2 border-[#8B95A1]/40`}>
+                                    <p className={`text-[14.5px] ${textSub} pl-2.5 border-l-2 border-[#2563EB]/40`}>
                                       {webText}
                                     </p>
                                   )}
@@ -2171,7 +2176,7 @@ export default function Bible({
                                     e.stopPropagation();
                                     setSelectedSermonVerse(matchedKey);
                                   }}
-                                  className="inline-flex items-center gap-1 ml-2 px-2 py-0.5 rounded-md text-[12px] font-bold bg-[#3182F6]/10 text-[#3182F6] hover:bg-[#3182F6]/20 align-middle cursor-pointer"
+                                  className={`inline-flex items-center gap-1 ml-2 px-2 py-0.5 rounded-md text-[12px] font-bold align-middle cursor-pointer ${amberPillClass}`}
                                 >
                                   <Mic className="w-3 h-3" />
                                   <span>설교</span>
@@ -2194,7 +2199,7 @@ export default function Bible({
                   type="button"
                   disabled={!hasPrevChapter}
                   onClick={() => hasPrevChapter && setCurrentChapId(`${sBk}-${currentChapterNum - 1}`)}
-                  className={`h-11 px-3.5 ${surfaceBg} border ${borderClass} rounded-2xl font-bold text-[15px] ${textMain} flex items-center justify-center gap-1 cursor-pointer disabled:opacity-30 shrink-0`}
+                  className={`h-11 px-3.5 ${surfaceBg} border ${borderClass} rounded-xl font-bold text-[14px] ${textMain} flex items-center justify-center gap-1 cursor-pointer disabled:opacity-30 shrink-0`}
                 >
                   <ChevronLeft className="w-4 h-4" />
                   <span className="hidden sm:inline">이전</span>
@@ -2203,10 +2208,10 @@ export default function Bible({
                 <button
                   type="button"
                   onClick={handleToggleWholeChapter}
-                  className={`flex-1 h-11 rounded-2xl font-bold text-[15px] transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
+                  className={`flex-1 h-11 rounded-xl font-bold text-[15px] transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
                     isAllR
-                      ? `${subSurfaceBg} text-[#3182F6] border ${borderClass}`
-                      : 'bg-[#3182F6] text-white'
+                      ? `${subSurfaceBg} text-[#0D9488] border ${borderClass}`
+                      : 'bg-[#0D9488] text-white'
                   }`}
                 >
                   <Check className="w-4 h-4 shrink-0" />
@@ -2217,7 +2222,7 @@ export default function Bible({
                   <button
                     type="button"
                     onClick={() => setCurrentChapId(nextPlanChapter.id)}
-                    className="h-11 px-3.5 bg-[#3182F6]/10 text-[#3182F6] rounded-2xl font-bold text-[12px] flex items-center justify-center gap-1 cursor-pointer shrink-0"
+                    className={`h-11 px-3.5 rounded-xl font-bold text-[12px] flex items-center justify-center gap-1 cursor-pointer shrink-0 ${bluePillClass}`}
                     title="오늘의 통독 플랜 다음 장"
                   >
                     <span>플랜 {nextPlanChapter.chapter}장</span>
@@ -2228,7 +2233,7 @@ export default function Bible({
                     type="button"
                     disabled={!hasNextChapter}
                     onClick={() => hasNextChapter && setCurrentChapId(`${sBk}-${currentChapterNum + 1}`)}
-                    className={`h-11 px-3.5 ${surfaceBg} border ${borderClass} rounded-2xl font-bold text-[15px] ${textMain} flex items-center justify-center gap-1 cursor-pointer disabled:opacity-30 shrink-0`}
+                    className={`h-11 px-3.5 ${surfaceBg} border ${borderClass} rounded-xl font-bold text-[14px] ${textMain} flex items-center justify-center gap-1 cursor-pointer disabled:opacity-30 shrink-0`}
                   >
                     <span className="hidden sm:inline">다음</span>
                     <ChevronRight className="w-4 h-4" />
@@ -2239,7 +2244,7 @@ export default function Bible({
 
             {/* 우측: 2단 필사 노트 패널 */}
             {viewMode === 'split' && (
-              <div className="flex flex-col h-full relative z-[45] pointer-events-auto min-h-[420px]">
+              <div className="lg:col-span-5 flex flex-col h-full relative z-[45] pointer-events-auto min-h-[420px]">
                 <BibleTranscriptionNotePanel
                   currentChapId={currentChapId}
                   chapterTitle={`${currentBookMeta.ko} ${sCh}장`}
@@ -2257,10 +2262,10 @@ export default function Bible({
       {/* 선택 구절 하단 플로팅 형광펜 & 필사 담기 바 */}
       {selVerses.length > 0 && bibleViewMode === 'read' && (
         <div
-          className={`fixed bottom-20 left-1/2 -translate-x-1/2 ${surfaceBg} border ${borderClass} rounded-2xl px-4 py-2.5 flex items-center gap-2.5 z-[100] pointer-events-auto shadow-lg`}
+          className={`fixed bottom-20 left-1/2 -translate-x-1/2 ${surfaceBg} border ${borderClass} rounded-xl px-4 py-2.5 flex items-center gap-2.5 z-[100] pointer-events-auto shadow-lg`}
         >
-          <Highlighter className="w-4 h-4 text-[#3182F6]" />
-          {['transparent', '#93C5FD', '#FDE047', '#BBF7D0'].map((c) => (
+          <Highlighter className="w-4 h-4 text-[#0D9488]" />
+          {['transparent', '#93C5FD', '#FDE047', '#99F6E4'].map((c) => (
             <button
               key={c}
               type="button"
@@ -2284,7 +2289,7 @@ export default function Bible({
             </button>
           ))}
 
-          <div className={`w-[1px] h-4 ${isDark ? 'bg-[#262A32]' : 'bg-[#E5E8EB]'}`} />
+          <div className={`w-[1px] h-4 ${isDark ? 'bg-[#262B36]' : 'bg-[#E5E8EC]'}`} />
 
           <button
             type="button"
@@ -2310,14 +2315,14 @@ export default function Bible({
               setViewMode('split');
               setSelVerses([]);
             }}
-            className="bg-[#3182F6] text-white text-[12px] font-bold px-3 py-1.5 rounded-xl whitespace-nowrap cursor-pointer"
+            className="bg-[#0D9488] text-white text-[12px] font-bold px-3 py-1.5 rounded-lg whitespace-nowrap cursor-pointer"
           >
             필사 노트로 담기
           </button>
         </div>
       )}
 
-      {/* 원어 연구 인스펙터 모달 (토스식 깔끔한 시트 디자인 · 이모지 0%) */}
+      {/* 원어 연구 인스펙터 모달 (3색 조화 팔레트 · 이모지 0%) */}
       {inspectorTarget && (
         <div
           className="fixed inset-0 z-[999999] bg-black/65 flex items-end sm:items-center justify-center p-0 sm:p-4 select-none"
@@ -2325,11 +2330,11 @@ export default function Bible({
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className={`w-full sm:max-w-2xl rounded-t-3xl sm:rounded-3xl border ${borderClass} ${surfaceClass} ${textMain} p-5 flex flex-col max-h-[88vh] overflow-hidden`}
+            className={`w-full sm:max-w-2xl rounded-t-3xl sm:rounded-2xl border ${borderClass} ${surfaceBg} ${textMain} p-5 flex flex-col max-h-[88vh] overflow-hidden`}
           >
             <div className={`border-b ${borderClass} pb-3 shrink-0 space-y-3`}>
               <div className="flex justify-between items-center gap-2">
-                <span className="text-[15px] font-bold text-[#3182F6]">
+                <span className="text-[15px] font-bold text-[#2563EB]">
                   {inspectorTarget.book} {inspectorTarget.chapter}장 {inspectorTarget.verse}절 원어 분석
                 </span>
 
@@ -2337,14 +2342,14 @@ export default function Bible({
                   <button
                     type="button"
                     onClick={handleJumpToInterlinearStudio}
-                    className={`px-3 py-1.5 rounded-xl text-[12px] font-bold ${subSurfaceBg} ${textMain} cursor-pointer`}
+                    className={`px-3 py-1.5 rounded-lg text-[12px] font-bold ${subSurfaceBg} ${textMain} cursor-pointer`}
                   >
                     원어 연구실 이동
                   </button>
                   <button
                     type="button"
                     onClick={() => setInspectorTarget(null)}
-                    className={`w-8 h-8 rounded-xl flex items-center justify-center ${subSurfaceBg} ${textMain} cursor-pointer`}
+                    className={`w-8 h-8 rounded-lg flex items-center justify-center ${subSurfaceBg} ${textMain} cursor-pointer`}
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -2352,7 +2357,7 @@ export default function Bible({
               </div>
 
               {selectedWordDetail && (
-                <div className={`grid grid-cols-2 gap-3 p-3.5 rounded-2xl ${subSurfaceBg}`}>
+                <div className={`grid grid-cols-2 gap-3 p-3.5 rounded-xl ${subSurfaceBg}`}>
                   <div className="space-y-1 text-left">
                     <span className={`text-[12px] font-medium ${textSub} block`}>본문 어형</span>
                     <div className="flex items-baseline gap-2 flex-wrap">
@@ -2361,9 +2366,7 @@ export default function Bible({
                       </span>
                       <span className={`text-[12px] ${textSub}`}>{selectedWordDetail.pron}</span>
                     </div>
-                    <p className="text-[12px] font-bold text-[#3182F6]">
-                      {selectedWordDetail.korContextual}
-                    </p>
+                    <p className="text-[12px] font-bold text-[#2563EB]">{selectedWordDetail.korContextual}</p>
                     <p className={`text-[12px] ${textSub}`}>{selectedWordDetail.grammarDecoded}</p>
                   </div>
 
@@ -2373,11 +2376,11 @@ export default function Bible({
                       <span style={originalFontStyle(inspectorTarget.isOT)} className="text-[20px] font-bold">
                         {cleanTypography(selectedWordDetail.lemma, inspectorTarget.isOT)}
                       </span>
-                      <span className="text-[12px] font-bold px-2 py-0.5 rounded-md bg-[#3182F6]/10 text-[#3182F6]">
+                      <span className={`text-[12px] font-bold px-2 py-0.5 rounded-md ${amberPillClass}`}>
                         {selectedWordDetail.strongs}
                       </span>
                     </div>
-                    <p className="text-[12px] font-bold">기본뜻: {selectedWordDetail.korLemma}</p>
+                    <p className="text-[12px] font-bold text-[#0D9488]">기본뜻: {selectedWordDetail.korLemma}</p>
                   </div>
                 </div>
               )}
@@ -2385,8 +2388,7 @@ export default function Bible({
               <p className={`text-[15px] leading-relaxed ${textMain}`}>{inspectorTarget.text}</p>
             </div>
 
-            {/* 탭 선택 */}
-            <div className={`flex gap-1 p-1 rounded-2xl ${subSurfaceBg} my-3 shrink-0`}>
+            <div className={`flex gap-1 p-1 rounded-xl ${subSurfaceBg} my-3 shrink-0`}>
               {[
                 { id: 'scholarly', label: '주석 및 사료' },
                 { id: 'concordance', label: `전권 용례 (${concordanceTotalCount}회)` },
@@ -2396,8 +2398,8 @@ export default function Bible({
                   key={tab.id}
                   type="button"
                   onClick={() => setModalTab(tab.id)}
-                  className={`flex-1 py-2 rounded-xl text-[12px] font-bold cursor-pointer transition-colors ${
-                    modalTab === tab.id ? 'bg-[#3182F6] text-white' : textSub
+                  className={`flex-1 py-2 rounded-lg text-[12px] font-bold cursor-pointer transition-colors ${
+                    modalTab === tab.id ? 'bg-[#2563EB] text-white' : textSub
                   }`}
                 >
                   {tab.label}
@@ -2405,9 +2407,8 @@ export default function Bible({
               ))}
             </div>
 
-            {/* 본문 스크롤 */}
             <div className="overflow-y-auto hide-scrollbar space-y-3 flex-1 text-left">
-              <div className={`p-3.5 rounded-2xl ${subSurfaceBg}`}>
+              <div className={`p-3.5 rounded-xl ${subSurfaceBg}`}>
                 <span className={`text-[12px] font-medium ${textSub} block mb-2`}>어절 선택</span>
                 {isInspectorLoading ? (
                   <div className={`py-3 text-center text-[12px] ${textSub}`}>어휘를 불러오는 중입니다...</div>
@@ -2421,9 +2422,9 @@ export default function Bible({
                         key={w.id}
                         onClick={() => handleSelectInspectorWord(w)}
                         style={originalFontStyle(inspectorTarget.isOT)}
-                        className={`text-[18px] font-bold px-2 py-1 rounded-xl cursor-pointer transition-colors ${
+                        className={`text-[18px] font-bold px-2 py-1 rounded-lg cursor-pointer transition-colors ${
                           selectedWordDetail?.order === w.order
-                            ? 'bg-[#3182F6] text-white'
+                            ? 'bg-[#2563EB] text-white'
                             : isDark
                             ? 'text-white hover:bg-white/10'
                             : 'text-[#191F28] hover:bg-black/5'
@@ -2439,13 +2440,13 @@ export default function Bible({
               {modalTab === 'scholarly' && (
                 <div className="space-y-3">
                   {crossRefs.length > 0 && (
-                    <div className={`p-3.5 rounded-2xl border ${borderClass}`}>
-                      <span className="font-bold text-[12px] text-[#3182F6] block mb-2">
+                    <div className={`p-3.5 rounded-xl border ${borderClass}`}>
+                      <span className="font-bold text-[12px] text-[#D97706] block mb-2">
                         교차참조 ({crossRefs.length}구절)
                       </span>
                       <div className="flex flex-wrap gap-1.5">
                         {crossRefs.map((ref, idx) => (
-                          <span key={idx} className={`px-2 py-1 rounded-lg text-[12px] font-medium ${subSurfaceBg} ${textMain}`}>
+                          <span key={idx} className={`px-2 py-1 rounded-md text-[12px] font-medium ${subSurfaceBg} ${textMain}`}>
                             {ref.label}
                           </span>
                         ))}
@@ -2454,15 +2455,15 @@ export default function Bible({
                   )}
 
                   {currentCommentary && (
-                    <div className={`p-4 rounded-2xl border ${borderClass} space-y-2`}>
+                    <div className={`p-4 rounded-xl border ${borderClass} space-y-2`}>
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-[12px] text-[#3182F6]">
+                        <span className="font-bold text-[12px] text-[#2563EB]">
                           학술 주석 ({currentCommentary.commentator})
                         </span>
                         <button
                           type="button"
                           onClick={() => handleTranslateScholarlyBlock(`comm_${currentKey}`, currentCommentary.exegesis)}
-                          className="px-2.5 py-1 rounded-lg bg-[#3182F6]/10 text-[#3182F6] text-[12px] font-bold cursor-pointer"
+                          className={`px-2.5 py-1 rounded-md text-[12px] font-bold cursor-pointer ${bluePillClass}`}
                         >
                           {translatingKey === `comm_${currentKey}`
                             ? '번역 중...'
@@ -2478,13 +2479,13 @@ export default function Bible({
                   )}
 
                   {currentMatthewHenry && (
-                    <div className={`p-4 rounded-2xl border ${borderClass} space-y-2`}>
+                    <div className={`p-4 rounded-xl border ${borderClass} space-y-2`}>
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-[12px] text-[#3182F6]">매튜 헨리 묵상 강해</span>
+                        <span className="font-bold text-[12px] text-[#0D9488]">매튜 헨리 묵상 강해</span>
                         <button
                           type="button"
                           onClick={() => handleTranslateScholarlyBlock(`mh_${currentKey}`, currentMatthewHenry.devotionalExegesis)}
-                          className="px-2.5 py-1 rounded-lg bg-[#3182F6]/10 text-[#3182F6] text-[12px] font-bold cursor-pointer"
+                          className={`px-2.5 py-1 rounded-md text-[12px] font-bold cursor-pointer ${sagePillClass}`}
                         >
                           {translatingKey === `mh_${currentKey}`
                             ? '번역 중...'
@@ -2500,8 +2501,8 @@ export default function Bible({
                   )}
 
                   {currentNetNote && (
-                    <div className={`p-4 rounded-2xl border ${borderClass} space-y-1`}>
-                      <span className="font-bold text-[12px] text-[#3182F6] block">
+                    <div className={`p-4 rounded-xl border ${borderClass} space-y-1`}>
+                      <span className="font-bold text-[12px] text-[#D97706] block">
                         비평 각주: {decodeHtmlEntities(currentNetNote.title)}
                       </span>
                       <p className={`text-[15px] leading-relaxed ${textMain}`}>{decodeHtmlEntities(currentNetNote.note)}</p>
@@ -2511,10 +2512,10 @@ export default function Bible({
               )}
 
               {modalTab === 'concordance' && (
-                <div className={`divide-y ${dividerClass} border ${borderClass} rounded-2xl overflow-hidden`}>
+                <div className={`divide-y ${dividerClass} border ${borderClass} rounded-xl overflow-hidden`}>
                   {concordanceList.map((item, idx) => (
                     <div key={idx} className="p-3 flex items-center justify-between gap-2">
-                      <span className="text-[12px] font-bold text-[#3182F6] min-w-[74px]">
+                      <span className="text-[12px] font-bold text-[#2563EB] min-w-[74px]">
                         {item.book} {item.chapter}:{item.verse}
                       </span>
                       <span style={originalFontStyle(inspectorTarget.isOT)} className="font-bold text-[15px]">
@@ -2546,13 +2547,12 @@ export default function Bible({
               )}
             </div>
 
-            {/* 하단 액션 바 */}
             {selectedWordDetail && (
               <div className={`pt-3 mt-2 border-t ${borderClass} flex gap-2 shrink-0`}>
                 <button
                   type="button"
                   onClick={() => handleInsertWordToFreeNote(selectedWordDetail)}
-                  className="flex-1 py-3 rounded-2xl bg-[#3182F6] text-white font-bold text-[15px] flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="flex-1 py-3 rounded-xl bg-[#0D9488] text-white font-bold text-[15px] flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <PenLine className="w-4 h-4" />
                   <span>필사 노트에 삽입</span>
@@ -2560,9 +2560,9 @@ export default function Bible({
                 <button
                   type="button"
                   onClick={() => speakOriginalAudio(selectedWordDetail.inflected, inspectorTarget.isOT)}
-                  className={`px-4 py-3 rounded-2xl font-bold text-[15px] flex items-center gap-1.5 cursor-pointer ${subSurfaceBg} ${textMain}`}
+                  className={`px-4 py-3 rounded-xl font-bold text-[15px] flex items-center gap-1.5 cursor-pointer ${subSurfaceBg} ${textMain}`}
                 >
-                  <Volume2 className="w-4 h-4 text-[#3182F6]" />
+                  <Volume2 className="w-4 h-4 text-[#2563EB]" />
                   <span>낭독</span>
                 </button>
               </div>
