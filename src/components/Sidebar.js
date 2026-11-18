@@ -4,6 +4,34 @@ import { supabase } from '../lib/supabase';
 import CryptoJS from 'crypto-js';
 import PositionLab from './sanctuary/PositionLab';
 import MissionReceiverModal from './sanctuary/MissionReceiverModal';
+import ChurchSketchIcon from './ChurchSketchIcon';
+import {
+  BookOpen,
+  ChevronRight,
+  ChevronsUpDown,
+  Clock,
+  Compass,
+  FileText,
+  Flame,
+  Globe,
+  HandHeart,
+  Heart,
+  Home,
+  KeyRound,
+  Layers,
+  LogOut,
+  MessageCircle,
+  Moon,
+  PenLine,
+  Phone,
+  PieChart,
+  Shield,
+  Sparkles,
+  Sun,
+  Target,
+  TrendingUp,
+  Users
+} from 'lucide-react';
 
 // =====================================================================
 // 🔐 [AES-256 종단간 암호화 유틸리티] 시크릿 제어센터 전용
@@ -73,42 +101,41 @@ const IconBigHeart = ({ onClick }) => (
   </svg>
 );
 
-// 🌟 [업데이트] BIBLE / STUDY 그룹에 '성경 지식 은하계 (galaxy)' 정식 추가
 const MENU_GROUPS = [
   { title: 'HOME', items: [
-    { id: 'home', icon: IconHome, label: 'Home' }, 
-    { id: 'fiveSetMenu', icon: IconLayers, label: '영적 5종 세트' }, 
-    { id: 'dailyRoutine', icon: IconClock, label: '하루 신앙 루틴' } 
+    { id: 'home', sketch: 'home', icon: Home, label: 'Home' }, 
+    { id: 'fiveSetMenu', sketch: 'star', icon: Sparkles, label: '영적 5종 세트' }, 
+    { id: 'dailyRoutine', sketch: 'clock', icon: Clock, label: '하루 신앙 루틴' } 
   ] },
   { title: 'WORSHIP', items: [
-    { id: 'meditationPilgrimage', icon: IconFlame, label: '오늘의 묵상 여정' }, 
-    { id: 'qt', icon: IconFlame, label: '매일 QT' }, 
-    { id: 'mcheyne', icon: IconBookOpen, label: '맥체인 읽기' }, 
-    { id: 'sermon', icon: IconFileText, label: '예배 노트' }, 
-    { id: 'cell', icon: IconUsers, label: '목장 나눔' }, 
-    { id: 'familySelect', icon: IconHome, label: '가정 예배' }
+    { id: 'meditationPilgrimage', sketch: 'compass', icon: Compass, label: '오늘의 묵상 여정' }, 
+    { id: 'qt', sketch: 'qt', icon: Flame, label: '매일 QT' }, 
+    { id: 'mcheyne', sketch: 'mcheyne', icon: BookOpen, label: '맥체인 읽기' }, 
+    { id: 'sermon', sketch: 'sermon', icon: FileText, label: '예배 노트' }, 
+    { id: 'cell', sketch: 'cell', icon: Users, label: '목장 나눔' }, 
+    { id: 'familySelect', sketch: 'family', icon: Home, label: '가정 예배' }
   ] },
   { title: 'BIBLE / STUDY', items: [
-    { id: 'bible', icon: IconBookOpen, label: '365 성경통독' }, 
-    { id: 'interlinear', icon: IconCode, label: '원어성경' }, 
-    { id: 'galaxy', icon: IconGalaxy, label: '성경 지식 은하계' },
-    { id: 'bibleWikiAdvanced', icon: IconMap, label: '성경 위키' }, 
-    { id: 'qtArchiveDetail', icon: IconPieChart, label: 'QT 심층 분석' }, 
-    { id: 'sermonAnalysis', icon: IconChart, label: '설교 분석' }, 
-    { id: 'sermonArchiveAdvanced', icon: IconArchive, label: '삶의 적용과 실천' }, 
-    { id: 'applyTracker', icon: IconTarget, label: '적용 질문 트래커' }, 
-    { id: 'trainingCurriculum', icon: IconLayers, label: '양육 커리큘럼' },
-    { id: 'trainingSubPages', icon: IconBookOpen, label: '4주 심화 워크북' } 
+    { id: 'bible', sketch: 'bible', icon: BookOpen, label: '365 성경통독' }, 
+    { id: 'interlinear', sketch: 'interlinear', icon: FileText, label: '원어성경' }, 
+    { id: 'galaxy', sketch: 'galaxy', icon: Globe, label: '성경 지식 은하계' },
+    { id: 'bibleWikiAdvanced', sketch: 'wiki', icon: Compass, label: '성경 위키' }, 
+    { id: 'qtArchiveDetail', sketch: 'qtAnalytics', icon: PieChart, label: 'QT 심층 분석' }, 
+    { id: 'sermonAnalysis', sketch: 'sermonAnalytics', icon: TrendingUp, label: '설교 분석' }, 
+    { id: 'sermonArchiveAdvanced', sketch: 'practice', icon: Layers, label: '삶의 적용과 실천' }, 
+    { id: 'applyTracker', sketch: 'tracker', icon: Target, label: '적용 질문 트래커' }, 
+    { id: 'trainingCurriculum', sketch: 'curriculum', icon: Layers, label: '양육 커리큘럼' },
+    { id: 'trainingSubPages', sketch: 'workbook', icon: BookOpen, label: '4주 심화 워크북' } 
   ] },
   { title: 'COMMUNITY', items: [
-    { id: 'generalNote', icon: IconFileText, label: '자유 노트' }, 
-    { id: 'board', icon: IconMessage, label: '공동체 감사/기도' }, 
-    { id: 'diary', icon: IconHeart, label: '나의 감사/간증' }, 
-    { id: 'prayer', icon: IconHands, label: '기도 보관함' }, 
-    { id: 'jericho', icon: IconMap, label: '여리고 땅밟기' }
+    { id: 'generalNote', sketch: 'note', icon: PenLine, label: '자유 노트' }, 
+    { id: 'board', sketch: 'board', icon: MessageCircle, label: '공동체 감사/기도' }, 
+    { id: 'diary', sketch: 'diary', icon: Heart, label: '나의 감사/간증' }, 
+    { id: 'prayer', sketch: 'prayer', icon: HandHeart, label: '기도 보관함' }, 
+    { id: 'jericho', sketch: 'jericho', icon: Globe, label: '여리고 땅밟기' }
   ] },
   { title: 'MEDIA & DIGITAL', items: [
-    { id: 'reelsStudio', icon: IconLayers, label: 'Reels Studio (Pro)' }
+    { id: 'reelsStudio', sketch: 'microphone', icon: Layers, label: 'Reels Studio (Pro)' }
   ] }
 ];
 
@@ -259,7 +286,14 @@ export default function Sidebar({
     "허리 깊숙이 숙이고 내 앞에 무릎 꿇어. 네 안 가장 깊은 끝까지 내 걸로 거칠게 박아 넣어서 아무 생각도 못 하게 만들어줄게.",
     "오늘 밤 네 몸의 주인은 오직 나야. 머리부터 발끝까지 내 흔적과 내 열기로 빈틈없이 채워줄 테니까, 지금 당장 다 벗고 기다려."
   ];
-
+  // 🔥 [신규 추가] 5단계: 노골적 본능 직설 서약 프리셋
+  const RAW_INSTINCT_DIALOGS = [
+    "하나야, 지금 당장 옷 다 벗고 이불 속에 들어가 있어. 5분 뒤에 들어가서 네 보지가 얼마나 젖었는지 직접 확인할 거야.",
+    "오늘 밤은 말로 안 해. 네가 울든 애원하든 내 자지가 네 안에서 만족할 때까지 절대 안 빼줄 거니까 마음의 준비 해.",
+    "다른 생각 절대 하지 마. 지금 이 순간에도 내 머릿속은 네 보지를 어떻게 거칠게 쑤셔 박을까 그 생각뿐이니까.",
+    "스스로 네 손가락으로 만지면서 내가 너를 어떻게 만져줬는지 떠올려봐. 내가 갈 때까지 절대 혼자 가기 없기야.",
+    "오늘 밤 네 몸과 마음, 숨소리까지 전부 다 내 거야. 지금 당장 나한테 와서 온전히 안겨."
+  ];
   // 🔥 [신규 추가] 시크릿 체위 연구소 전용: 원터치 실전 플레이 & 체위 지령 5대 프리셋
   const FANTASY_MISSION_PRESETS = [
     {
@@ -1917,11 +1951,13 @@ export default function Sidebar({
       <div className={`fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[140] md:hidden transition-opacity duration-300 ${isSidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`} onClick={() => setIsSidebarOpen(false)} />
       <aside className={`fixed inset-y-0 left-0 z-[150] h-full flex flex-col transition-all duration-300 ease-in-out border-r md:relative ${ui.bg} ${ui.border} ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'} ${isSlim ? 'w-[72px]' : 'w-[220px] md:w-[260px]'}`}>
         <button onClick={() => setIsSlim(!isSlim)} className={`hidden md:flex absolute top-5 -right-3 w-6 h-6 rounded-full border shadow-sm items-center justify-center z-[160] transition-transform ${isDark ? 'bg-[#1C1C1E] border-white/10 text-white' : 'bg-white border-slate-200 text-slate-700'}`}>
-          <IconChevronRight className={`w-3.5 h-3.5 transition-transform ${!isSlim ? 'rotate-180' : ''}`} />
+          <ChevronRight className={`w-3.5 h-3.5 transition-transform ${!isSlim ? 'rotate-180' : ''}`} />
         </button>
 
         <div onClick={handleLogoClick} className={`shrink-0 h-[64px] flex items-center gap-3 px-4 border-b ${ui.border} cursor-pointer transition-colors ${ui.hoverBg} select-none`}>
-          <div className={`w-8 h-8 rounded-lg flex shrink-0 items-center justify-center font-bold text-[13px] shadow-sm transition-all ${isEventSparkle ? 'bg-rose-500 text-white shadow-[0_0_20px_rgba(244,63,94,0.9)]' : isOriginalSparkle ? 'bg-sky-400 text-white shadow-[0_0_15px_rgba(56,189,248,0.8)]' : (isDark ? 'bg-black/30 border border-white/10 text-white' : 'bg-white border-slate-200 text-slate-800')}`}>좋</div>
+          <div className={`w-8 h-8 rounded-lg flex shrink-0 items-center justify-center font-bold text-[13px] shadow-sm transition-all ${isEventSparkle ? 'bg-rose-500 text-white shadow-[0_0_20px_rgba(244,63,94,0.9)]' : isOriginalSparkle ? 'bg-sky-400 text-white shadow-[0_0_15px_rgba(56,189,248,0.8)]' : (isDark ? 'bg-black/30 border border-white/10 text-white' : 'bg-white border-slate-200 text-slate-800')}`}>
+            <ChurchSketchIcon name="church" fallback={Home} className="w-4 h-4" isDarkMode={isDark} invertOnActive={isEventSparkle || isOriginalSparkle} />
+          </div>
           {!isSlim && (
             <>
               <div className="flex flex-col flex-1 overflow-hidden justify-center">
@@ -1931,7 +1967,7 @@ export default function Sidebar({
                   <span className={`w-1.5 h-1.5 rounded-full ${isEventSparkle ? 'bg-rose-500 animate-pulse' : (isOriginalSparkle ? 'bg-sky-400 animate-pulse' : 'bg-emerald-500')}`}></span>
                 </div>
               </div>
-              <IconChevronUpDown className={`w-4 h-4 shrink-0 ${ui.iconBase}`} />
+              <ChevronsUpDown className={`w-4 h-4 shrink-0 ${ui.iconBase}`} />
             </>
           )}
         </div>
@@ -1948,11 +1984,23 @@ export default function Sidebar({
                   <nav className="overflow-hidden space-y-0.5">
                     {group.items.map(item => {
                       const isActive = activeScreen === item.id;
-                      const Icon = item.icon;
+                      const FallbackIcon = item.icon;
                       return (
-                        <button key={item.id} onClick={() => { setActiveScreen(item.id); if (window.innerWidth < 768) setIsSidebarOpen(false); }} title={isSlim ? item.label : undefined} className={`w-full flex items-center gap-3 rounded-xl text-[14px] font-medium transition-colors duration-200 focus:outline-none cursor-pointer ${isSlim ? 'justify-center p-3' : 'px-3 py-2.5'} ${isActive ? `${ui.activeBg} ${ui.activeText} shadow-xs font-bold` : `${ui.textPrimary} ${ui.hoverBg}`}`}>
-                          <Icon className={`shrink-0 w-[18px] h-[18px] ${isActive ? ui.activeText : ui.iconBase}`} />
-                          {!isSlim && <span className={`truncate`}>{item.label}</span>}
+                        <button
+                          key={item.id}
+                          onClick={() => { setActiveScreen(item.id); if (window.innerWidth < 768) setIsSidebarOpen(false); }}
+                          title={isSlim ? item.label : undefined}
+                          className={`w-full flex items-center gap-3 rounded-xl text-[14px] font-medium transition-colors duration-200 focus:outline-none cursor-pointer ${isSlim ? 'justify-center p-3' : 'px-3 py-2.5'} ${isActive ? `${ui.activeBg} ${ui.activeText} shadow-xs font-bold` : `${ui.textPrimary} ${ui.hoverBg}`}`}
+                        >
+                          <div className={`shrink-0 w-6 h-6 rounded-lg flex items-center justify-center ${isActive ? 'bg-[#3182F6]/15' : ''}`}>
+                            <ChurchSketchIcon
+                              name={item.sketch}
+                              fallback={FallbackIcon}
+                              className="w-[18px] h-[18px]"
+                              isDarkMode={isDark}
+                            />
+                          </div>
+                          {!isSlim && <span className="truncate">{item.label}</span>}
                         </button>
                       );
                     })}
@@ -1967,31 +2015,33 @@ export default function Sidebar({
           {canAccessAdmin && (
             <button 
               onClick={() => { setActiveScreen('adminConsole'); if (window.innerWidth < 768) setIsSidebarOpen(false); }} 
-              className={`w-full flex items-center gap-2.5 rounded-xl text-[14px] font-medium transition-colors duration-200 cursor-pointer ${isSlim ? 'justify-center p-3' : 'px-3 py-2.5'} ${activeScreen === 'adminConsole' ? `${ui.activeBg}${ui.activeText} shadow-xs font-bold` : `${ui.textPrimary}${ui.hoverBg}`}`}
+              className={`w-full flex items-center gap-2.5 rounded-xl text-[14px] font-medium transition-colors duration-200 cursor-pointer ${isSlim ? 'justify-center p-3' : 'px-3 py-2.5'} ${activeScreen === 'adminConsole' ? `${ui.activeBg} ${ui.activeText} shadow-xs font-bold` : `${ui.textPrimary} ${ui.hoverBg}`}`}
             >
-              <IconShieldAdmin className={`shrink-0 w-[18px] h-[18px] ${activeScreen === 'adminConsole' ? ui.activeText : 'text-indigo-400'}`} />
+              <ChurchSketchIcon name="shield" fallback={Shield} className="shrink-0 w-[18px] h-[18px]" isDarkMode={isDark} />
               {!isSlim && <span className="font-bold">관리자 페이지</span>}
             </button>
           )}
 
           <button 
             onClick={() => { setActiveScreen('guidebook'); if (window.innerWidth < 768) setIsSidebarOpen(false); }} 
-            className={`w-full flex items-center gap-2.5 rounded-xl text-[14px] font-medium transition-colors duration-200 cursor-pointer ${isSlim ? 'justify-center p-3' : 'px-3 py-2.5'} ${activeScreen === 'guidebook' ? `${ui.activeBg} ${ui.activeText} shadow-xs font-bold` : `${ui.textPrimary}${ui.hoverBg}`}`}
+            className={`w-full flex items-center gap-2.5 rounded-xl text-[14px] font-medium transition-colors duration-200 cursor-pointer ${isSlim ? 'justify-center p-3' : 'px-3 py-2.5'} ${activeScreen === 'guidebook' ? `${ui.activeBg} ${ui.activeText} shadow-xs font-bold` : `${ui.textPrimary} ${ui.hoverBg}`}`}
           >
-            <IconBookGuide className={`shrink-0 w-[18px] h-[18px] ${activeScreen === 'guidebook' ? ui.activeText : ui.iconBase}`} />
+            <ChurchSketchIcon name="workbook" fallback={BookOpen} className="shrink-0 w-[18px] h-[18px]" isDarkMode={isDark} />
             {!isSlim && <span>가이드북</span>}
           </button>
 
           {setIsDarkMode && (
-            <div className={`flex justify-center mb-1`}>
+            <div className="flex justify-center mb-1">
                <button onClick={() => setIsDarkMode(!isDarkMode)} title="다크 모드 변경" className={`relative w-16 h-8 rounded-full shadow-inner flex items-center cursor-pointer transition-colors duration-300 ${isDark ? 'bg-black/30 border border-white/10' : 'bg-slate-200/70 border border-slate-300'}`}>
-                 <div className={`absolute w-6 h-6 rounded-full flex items-center justify-center shadow-sm transition-transform duration-300 ${isDark ? 'translate-x-9 bg-[#2A3441]' : 'translate-x-1 bg-white'}`}>{isDark ? <IconMoon /> : <IconSun />}</div>
+                 <div className={`absolute w-6 h-6 rounded-full flex items-center justify-center shadow-sm transition-transform duration-300 ${isDark ? 'translate-x-9 bg-[#2A3441]' : 'translate-x-1 bg-white'}`}>
+                   {isDark ? <Moon className="w-3.5 h-3.5 text-[#818CF8]" /> : <Sun className="w-3.5 h-3.5 text-[#EAB308]" />}
+                 </div>
                </button>
             </div>
           )}
           
           <button onClick={() => { if (window.confirm('로그아웃 하시겠습니까?')) { if (handleLogout) handleLogout(); setActiveScreen('login'); setIsSidebarOpen(false); } }} title={isSlim ? '로그아웃' : undefined} className={`w-full flex items-center gap-2.5 rounded-xl text-[13.5px] font-bold transition-colors cursor-pointer ${isSlim ? 'justify-center p-3' : 'px-3 py-2.5'} ${isDark ? 'text-rose-400 hover:bg-rose-500/10' : 'text-rose-500 hover:bg-rose-50'}`}>
-            <IconLogOut className="shrink-0 w-[16px] h-[16px]" />{!isSlim && <span>로그아웃</span>}
+            <LogOut className="shrink-0 w-[16px] h-[16px]" />{!isSlim && <span>로그아웃</span>}
           </button>
         </div>
       </aside>
@@ -2448,6 +2498,12 @@ export default function Sidebar({
                           >
                             🔞 4단계 (구속·복종 판타지)
                           </button>
+                          <button 
+    onClick={() => setEventDialogs([...RAW_INSTINCT_DIALOGS])}
+    className="text-[10.5px] font-black text-rose-200 hover:text-white px-2.5 py-1 rounded-lg bg-rose-700/70 hover:bg-rose-600 transition-colors border border-rose-400/60 cursor-pointer shadow-[0_0_12px_rgba(244,63,94,0.6)]"
+  >
+    🔥 5단계 (노골적 본능)
+  </button>
                         </div>
                       </div>
                       

@@ -34,6 +34,7 @@ import { supabase } from './lib/supabase';
 import BibleWiki from './pages/BibleWiki';
 import SermonArchive from './components/SermonArchive';
 import ApplyTracker from './components/ApplyTracker';
+import ChurchSketchIcon from './components/ChurchSketchIcon';
 import SermonArchiveAdvanced from './components/SermonArchiveAdvanced';
 import BibleWikiAdvanced from './pages/BibleWikiAdvanced';
 import Bible from './pages/Bible';
@@ -213,47 +214,174 @@ export const logUserAction = async (userName, page, actionType = 'view', detailT
 };
 
 // 토스 스타일 미디어 가로 리스트 카루셀
+// 멜론뮤직 · 애플뮤직 스타일 3D 커버플로우 슬라이드 (선택 카드 최상단 중앙 배치 · 불필요한 뱃지 제거)
 const CoverCarousel = ({ items, isDarkMode }) => {
+  const [activeIdx, setActiveIdx] = useState(0);
+  const touchStartXRef = useRef(null);
+
   if (!items || items.length === 0) return null;
 
+  const total = items.length;
+  const safeActiveIdx = activeIdx % total;
+
+  const handlePrev = (e) => {
+    if (e) e.stopPropagation();
+    setActiveIdx((prev) => (prev - 1 + total) % total);
+  };
+
+  const handleNext = (e) => {
+    if (e) e.stopPropagation();
+    setActiveIdx((prev) => (prev + 1) % total);
+  };
+
+  const onTouchStart = (e) => {
+    touchStartXRef.current = e.touches[0].clientX;
+  };
+
+  const onTouchEnd = (e) => {
+    if (touchStartXRef.current === null) return;
+    const diff = e.changedTouches[0].clientX - touchStartXRef.current;
+    touchStartXRef.current = null;
+    if (Math.abs(diff) < 32) return;
+    if (diff < 0) {
+      setActiveIdx((prev) => (prev + 1) % total);
+    } else {
+      setActiveIdx((prev) => (prev - 1 + total) % total);
+    }
+  };
+
   return (
-    <div className="w-full overflow-x-auto hide-scrollbar py-1">
-      <div className="flex items-stretch gap-3 w-max">
-        {items.map((item, idx) => (
-          <div
-            key={idx}
-            onClick={() => window.open(item.url, '_blank')}
-            className={`w-[220px] sm:w-[240px] rounded-2xl overflow-hidden border transition-colors cursor-pointer flex flex-col justify-between ${
-              isDarkMode
-                ? 'bg-[#181B20] border-[#262A32] hover:border-[#3182F6]'
-                : 'bg-white border-[#E5E8EB] hover:border-[#3182F6]'
-            }`}
-          >
-            <div className="relative w-full aspect-[16/9] bg-slate-200 overflow-hidden">
-              <img
-                src={item.bg}
-                alt={item.title}
-                className="w-full h-full object-cover"
-                crossOrigin="anonymous"
-              />
-              <div className="absolute inset-0 bg-black/25 flex items-center justify-center">
-                <div className="w-9 h-9 rounded-full bg-white/95 text-[#191F28] flex items-center justify-center shadow-sm">
-                  <Play className="w-4 h-4 fill-current ml-0.5" />
+    <div
+      className="relative w-full select-none py-1"
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+    >
+      {/* 3D 스택 카드 스테이지 */}
+      <div className="relative w-full h-[215px] sm:h-[245px] flex items-center justify-center overflow-hidden">
+        {items.map((item, idx) => {
+          // 순환 거리 계산 (-2, -1, 0, +1, +2)
+          let offset = idx - safeActiveIdx;
+          if (offset > Math.floor(total / 2)) offset -= total;
+          if (offset < -Math.floor(total / 2)) offset += total;
+
+          const absOffset = Math.abs(offset);
+          if (absOffset > 2) return null;
+
+          const isCenter = offset === 0;
+          const translateX = offset * 52; // 좌우 겹침 간격 (%)
+          const scale = isCenter ? 1 : absOffset === 1 ? 0.84 : 0.68;
+          const zIndex = isCenter ? 30 : absOffset === 1 ? 20 : 10;
+          const opacity = isCenter ? 1 : absOffset === 1 ? 0.65 : 0.3;
+
+          return (
+            <div
+              key={idx}
+              onClick={() => {
+                if (isCenter) {
+                  window.open(item.url, '_blank');
+                } else {
+                  setActiveIdx(idx);
+                }
+              }}
+              style={{
+                transform: `translateX(${translateX}%) scale(${scale})`,
+                zIndex,
+                opacity
+              }}
+              className={`absolute w-[74%] max-w-[310px] sm:max-w-[350px] rounded-2xl overflow-hidden border transition-all duration-300 ease-out cursor-pointer ${
+                isCenter
+                  ? isDarkMode
+                    ? 'bg-[#181B20] border-[#3182F6]/60 shadow-[0_14px_34px_rgba(0,0,0,0.65)]'
+                    : 'bg-white border-[#D0D7DE] shadow-[0_14px_30px_rgba(25,31,40,0.14)]'
+                  : isDarkMode
+                  ? 'bg-[#181B20] border-[#262A32]'
+                  : 'bg-white border-[#E5E8EB]'
+              }`}
+            >
+              <div className="relative w-full aspect-[16/9] bg-slate-900 overflow-hidden">
+                <img
+                  src={item.bg}
+                  alt={item.title}
+                  className="w-full h-full object-cover"
+                  crossOrigin="anonymous"
+                />
+                <div className={`absolute inset-0 transition-opacity ${isCenter ? 'bg-black/20' : 'bg-black/45'} flex items-center justify-center`}>
+                  {isCenter && (
+                    <div className="w-11 h-11 rounded-full bg-white/95 text-[#191F28] flex items-center justify-center shadow-md transition-transform active:scale-95">
+                      <Play className="w-5 h-5 fill-current ml-0.5" />
+                    </div>
+                  )}
                 </div>
               </div>
-              <span className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-md bg-black/65 text-white text-[12px] font-medium">
-                채널 {idx + 1}
-              </span>
+
+              <div className="px-4 py-3 flex items-center justify-between gap-2">
+                <span
+                  className={`text-[14.5px] sm:text-[15px] font-bold leading-snug truncate ${
+                    isDarkMode ? 'text-white' : 'text-[#191F28]'
+                  }`}
+                >
+                  {item.title}
+                </span>
+                {isCenter && <ChevronRight className="w-4 h-4 text-[#3182F6] shrink-0" />}
+              </div>
             </div>
-            <div className="p-3.5 flex items-center justify-between gap-2">
-              <span className={`text-[15px] font-bold leading-snug truncate ${isDarkMode ? 'text-white' : 'text-[#191F28]'}`}>
-                {item.title}
-              </span>
-              <ChevronRight className="w-4 h-4 text-[#8B95A1] shrink-0" />
-            </div>
-          </div>
-        ))}
+          );
+        })}
+
+        {/* 좌우 슬라이드 네비게이션 버튼 */}
+        {total > 1 && (
+          <>
+            <button
+              type="button"
+              onClick={handlePrev}
+              aria-label="이전 항목"
+              className={`absolute left-1 sm:left-2 z-40 w-8 h-8 rounded-full flex items-center justify-center border shadow-sm cursor-pointer transition-colors ${
+                isDarkMode
+                  ? 'bg-[#181B20]/90 border-[#262A32] text-white hover:bg-[#22262E]'
+                  : 'bg-white/90 border-[#E5E8EB] text-[#191F28] hover:bg-[#F2F4F6]'
+              }`}
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={handleNext}
+              aria-label="다음 항목"
+              className={`absolute right-1 sm:right-2 z-40 w-8 h-8 rounded-full flex items-center justify-center border shadow-sm cursor-pointer transition-colors ${
+                isDarkMode
+                  ? 'bg-[#181B20]/90 border-[#262A32] text-white hover:bg-[#22262E]'
+                  : 'bg-white/90 border-[#E5E8EB] text-[#191F28] hover:bg-[#F2F4F6]'
+              }`}
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </>
+        )}
       </div>
+
+      {/* 하단 미니멀 페이지 인디케이터 */}
+      {total > 1 && (
+        <div className="flex items-center justify-center gap-1.5 mt-2">
+          {items.map((_, idx) => {
+            const active = idx === safeActiveIdx;
+            return (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => setActiveIdx(idx)}
+                aria-label={`${idx + 1}번째 항목으로 이동`}
+                className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                  active
+                    ? 'w-4 bg-[#3182F6]'
+                    : isDarkMode
+                    ? 'w-1.5 bg-[#2E333D]'
+                    : 'w-1.5 bg-[#D1D6DB]'
+                }`}
+              />
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };
@@ -348,19 +476,19 @@ export function Home({
   // Lucide 아이콘만 사용한 정돈된 메뉴 목록
   const MASTER_MENUS = useMemo(
     () => [
-      { id: 'sermonArchiveAdvanced', icon: Church, title: '삶의 적용과 실천', desc: '말씀 적용 기록' },
-      { id: 'galaxy', icon: Globe, title: '지식 은하계', desc: '구속사 흐름 탐색' },
-      { id: 'qtArchiveDetail', icon: Flame, title: '큐티 심층 분석', desc: '본문 배경과 적용' },
-      { id: 'sermonAnalysis', icon: BarChart3, title: '설교 분석', desc: '전체 설교 아카이브' },
-      { id: 'applyTracker', icon: Check, title: '적용 트래커', desc: '신앙 결단 점검' },
-      { id: 'bibleWikiAdvanced', icon: Compass, title: '성경 위키', desc: '인물·지명 백과' },
-      { id: 'interlinear', icon: FileText, title: '원어 성경', desc: '히브리어·헬라어 대조' },
-      { id: 'trainingCurriculum', icon: BookOpen, title: '양육 커리큘럼', desc: '단계별 제자 훈련' },
-      { id: 'youthCurriculum', icon: Users, title: '청소년 10주 양육', desc: '다음세대 성경 돌봄' },
-      { id: 'trainingSubPages', icon: PenLine, title: '4주 심화 워크북', desc: '소그룹 훈련 교재' },
-      { id: 'prayer', icon: HandHeart, title: '기도 보관함', desc: '개인 및 중보 기도' },
-      { id: 'jericho', icon: Footprints, title: '여리고 땅밟기', desc: '지역과 열방 기도' },
-      { id: 'virtualChurch', icon: Building2, title: '가상교회 투어', desc: '층별 예배 공간 안내' }
+      { id: 'sermonArchiveAdvanced', sketch: 'practice', icon: Church, title: '삶의 적용과 실천', desc: '말씀 적용 기록' },
+      { id: 'galaxy', sketch: 'galaxy', icon: Globe, title: '지식 은하계', desc: '구속사 흐름 탐색' },
+      { id: 'qtArchiveDetail', sketch: 'qtAnalytics', icon: Flame, title: '큐티 심층 분석', desc: '본문 배경과 적용' },
+      { id: 'sermonAnalysis', sketch: 'sermonAnalytics', icon: BarChart3, title: '설교 분석', desc: '전체 설교 아카이브' },
+      { id: 'applyTracker', sketch: 'tracker', icon: Check, title: '적용 트래커', desc: '신앙 결단 점검' },
+      { id: 'bibleWikiAdvanced', sketch: 'wiki', icon: Compass, title: '성경 위키', desc: '인물·지명 백과' },
+      { id: 'interlinear', sketch: 'interlinear', icon: FileText, title: '원어 성경', desc: '히브리어·헬라어 대조' },
+      { id: 'trainingCurriculum', sketch: 'curriculum', icon: BookOpen, title: '양육 커리큘럼', desc: '단계별 제자 훈련' },
+      { id: 'youthCurriculum', sketch: 'youth', icon: Users, title: '청소년 10주 양육', desc: '다음세대 성경 돌봄' },
+      { id: 'trainingSubPages', sketch: 'workbook', icon: PenLine, title: '4주 심화 워크북', desc: '소그룹 훈련 교재' },
+      { id: 'prayer', sketch: 'prayer', icon: HandHeart, title: '기도 보관함', desc: '개인 및 중보 기도' },
+      { id: 'jericho', sketch: 'jericho', icon: Footprints, title: '여리고 땅밟기', desc: '지역과 열방 기도' },
+      { id: 'virtualChurch', sketch: 'tour', icon: Building2, title: '가상교회 투어', desc: '층별 예배 공간 안내' }
     ],
     []
   );
@@ -435,11 +563,11 @@ export function Home({
   };
 
   const fiveRoutineItems = [
-    { id: '감사', label: '감사', icon: Heart },
-    { id: '성경읽기', label: '성경', icon: BookOpen },
-    { id: 'QTin', label: '큐티', icon: Flame },
-    { id: '기도하기', label: '기도', icon: HandHeart },
-    { id: '가정예배', label: '가정예배', icon: Smile }
+    { id: '감사', label: '감사', sketch: 'thanks', icon: Heart },
+    { id: '성경읽기', label: '성경', sketch: 'bible', icon: BookOpen },
+    { id: 'QTin', label: '큐티', sketch: 'qt', icon: Flame },
+    { id: '기도하기', label: '기도', sketch: 'prayer', icon: HandHeart },
+    { id: '가정예배', label: '가정예배', sketch: 'family', icon: Smile }
   ];
 
   const completedFiveCount = fiveRoutineItems.filter((item) => currentChecks[item.id]).length;
@@ -506,43 +634,42 @@ export function Home({
           </button>
 
           <div
-  className={`relative inline-flex items-center gap-1.5 px-3 h-9 rounded-xl cursor-pointer ${
-    isDarkMode ? 'bg-[#1C1F26] text-white' : 'bg-white text-[#191F28]'
-  } border ${borderClass}`}
->
-  <Calendar className="w-4 h-4 text-[#3182F6] shrink-0" />
-  <input
-    type="date"
-    value={date}
-    onChange={(e) => setDate(e.target.value)}
-    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-40"
-  />
-  {/* 🌟 핵심 수정: whitespace-nowrap 추가 및 글자 크기를 모바일에 맞게 13.5px로 살짝 조정 */}
-  <span className="font-bold text-[13.5px] tracking-tight pointer-events-none whitespace-nowrap">
-    {new Date(date).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })} (
-    {['일', '월', '화', '수', '목', '금', '토'][new Date(date).getDay()]})
-  </span>
-</div>
+            className={`relative inline-flex items-center gap-1.5 px-3 h-9 rounded-xl cursor-pointer ${
+              isDarkMode ? 'bg-[#1C1F26] text-white' : 'bg-white text-[#191F28]'
+            } border ${borderClass}`}
+          >
+            <ChurchSketchIcon name="calendar" fallback={Calendar} className="w-4 h-4 shrink-0" isDarkMode={isDarkMode} />
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-40"
+            />
+            <span className="font-bold text-[13.5px] tracking-tight pointer-events-none whitespace-nowrap">
+              {new Date(date).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })} (
+              {['일', '월', '화', '수', '목', '금', '토'][new Date(date).getDay()]})
+            </span>
+          </div>
         </div>
 
-       <div className="flex items-center gap-1 shrink-0">
-  <button 
-    onClick={() => { setActiveScreen('board'); setHasNewBoardPost(false); }} 
-    className={`h-8 px-2 rounded-xl text-[11px] font-extrabold flex items-center justify-center gap-1 active:scale-95 transition-all border whitespace-nowrap ${isDarkMode ? 'bg-[#FF375F]/15 border-[#FF375F]/30 text-[#FF375F]' : 'bg-rose-50 border-rose-200/80 text-[#FF2D55]'} relative`}
-  >
-    <Heart className="w-3.5 h-3.5 shrink-0" />
-    <span>공동체감사</span>
-    {hasNewBoardPost && <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-[#FF2D55] rounded-full animate-ping" />}
-  </button>
-  
-  <button 
-    onClick={() => { setActiveScreen('board'); setHasNewBoardPost(false); }} 
-    className={`h-8 px-2 rounded-xl text-[11px] font-extrabold flex items-center justify-center gap-1 active:scale-95 transition-all border whitespace-nowrap ${isDarkMode ? 'bg-[#30D158]/15 border-[#30D158]/30 text-[#30D158]' : 'bg-emerald-50 border-emerald-200/80 text-[#34C759]'}`}
-  >
-    <HandHeart className="w-3.5 h-3.5 shrink-0" />
-    <span>공동체기도</span>
-  </button>
-</div>
+        <div className="flex items-center gap-1 shrink-0">
+          <button 
+            onClick={() => { setActiveScreen('board'); setHasNewBoardPost(false); }} 
+            className={`h-8 px-2 rounded-xl text-[11px] font-extrabold flex items-center justify-center gap-1 active:scale-95 transition-all border whitespace-nowrap ${isDarkMode ? 'bg-[#FF375F]/15 border-[#FF375F]/30 text-[#FF375F]' : 'bg-rose-50 border-rose-200/80 text-[#FF2D55]'} relative`}
+          >
+            <ChurchSketchIcon name="communityThanks" fallback={Heart} className="w-3.5 h-3.5 shrink-0" isDarkMode={isDarkMode} />
+            <span>공동체감사</span>
+            {hasNewBoardPost && <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-[#FF2D55] rounded-full animate-ping" />}
+          </button>
+          
+          <button 
+            onClick={() => { setActiveScreen('board'); setHasNewBoardPost(false); }} 
+            className={`h-8 px-2 rounded-xl text-[11px] font-extrabold flex items-center justify-center gap-1 active:scale-95 transition-all border whitespace-nowrap ${isDarkMode ? 'bg-[#30D158]/15 border-[#30D158]/30 text-[#30D158]' : 'bg-emerald-50 border-emerald-200/80 text-[#34C759]'}`}
+          >
+            <ChurchSketchIcon name="communityPrayer" fallback={HandHeart} className="w-3.5 h-3.5 shrink-0" isDarkMode={isDarkMode} />
+            <span>공동체기도</span>
+          </button>
+        </div>
       </header>
 
       {/* 메인 콘텐츠 컨테이너 */}
@@ -629,7 +756,13 @@ export function Home({
                         isChecked ? 'bg-[#3182F6] text-white' : mutedChipClass
                       }`}
                     >
-                      <IconComp className="w-5 h-5" />
+                      <ChurchSketchIcon
+                        name={item.sketch}
+                        fallback={IconComp}
+                        className="w-6 h-6"
+                        isDarkMode={isDarkMode}
+                        invertOnActive={isChecked}
+                      />
                       {isChecked && (
                         <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[#191F28] text-white flex items-center justify-center">
                           <Check className="w-2.5 h-2.5 stroke-[3]" />
@@ -692,21 +825,23 @@ export function Home({
 
           <div className={`divide-y ${dividerClass}`}>
             {[
-              { id: 'qt', icon: Flame, title: '매일 큐티', desc: '오늘의 묵상 본문과 질문 기록' },
-              { id: 'mcheyne', icon: BookOpen, title: '맥체인 성경읽기', desc: '365일 성경 통독 진도 관리' },
-              { id: 'sermon', icon: FileText, title: '예배 노트 작성', desc: '주일·수요 설교 말씀 필기 및 요약' },
-              { id: 'generalNote', icon: PenLine, title: '자유 말씀 노트', desc: '성경 구절 자동 첨부 및 자유 기록' },
-              { id: 'familySelect', icon: Smile, title: '가정 예배 시작', desc: '온 가족이 함께 나누는 예배 순서지' },
-              { id: 'diary', icon: Heart, title: '감사 및 간증 일기', desc: '일상의 감사 제목과 은혜 기록' },
-              { id: 'prayer', icon: HandHeart, title: '나의 기도함', desc: '개인 기도 제목과 응답 관리' },
+              { id: 'qt', sketch: 'qt', icon: Flame, title: '매일 큐티', desc: '오늘의 묵상 본문과 질문 기록' },
+              { id: 'mcheyne', sketch: 'mcheyne', icon: BookOpen, title: '맥체인 성경읽기', desc: '365일 성경 통독 진도 관리' },
+              { id: 'sermon', sketch: 'sermon', icon: FileText, title: '예배 노트 작성', desc: '주일·수요 설교 말씀 필기 및 요약' },
+              { id: 'generalNote', sketch: 'note', icon: PenLine, title: '자유 말씀 노트', desc: '성경 구절 자동 첨부 및 자유 기록' },
+              { id: 'familySelect', sketch: 'family', icon: Smile, title: '가정 예배 시작', desc: '온 가족이 함께 나누는 예배 순서지' },
+              { id: 'diary', sketch: 'diary', icon: Heart, title: '감사 및 간증 일기', desc: '일상의 감사 제목과 은혜 기록' },
+              { id: 'prayer', sketch: 'prayer', icon: HandHeart, title: '나의 기도함', desc: '개인 기도 제목과 응답 관리' },
               {
                 id: 'cell',
+                sketch: 'cell',
                 icon: Users,
                 title: '목장 나눔',
                 desc: authUser?.role === 'admin' ? '목장 보고서 및 나눔 관리 (관리자)' : '주간 목장 말씀·감사·기도 나눔'
               },
               {
                 id: 'board',
+                sketch: 'board',
                 icon: Sparkles,
                 title: '공동체 게시판',
                 desc: '전교인 기도와 감사 실시간 나눔',
@@ -723,7 +858,7 @@ export function Home({
                 >
                   <div className="flex items-center gap-3.5 min-w-0">
                     <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${mutedChipClass}`}>
-                      <IconComp className="w-5 h-5 text-[#3182F6]" />
+                      <ChurchSketchIcon name={row.sketch} fallback={IconComp} className="w-5 h-5" isDarkMode={isDarkMode} />
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
@@ -741,22 +876,20 @@ export function Home({
         </section>
 
         {/* 섹션 3: 예배 및 말씀 영상 */}
-        <section className="space-y-3">
+        <section className="space-y-2.5">
           <div className="flex items-center justify-between px-1">
             <h2 className={`text-[18px] font-bold ${t.textMain} tracking-tight`}>예배 및 말씀 영상</h2>
-            <span className={`text-[12px] font-medium ${t.textSub}`}>가로로 넘겨 선택</span>
           </div>
           <CoverCarousel items={worshipVideos} isDarkMode={isDarkMode} />
         </section>
 
         {/* 섹션 4: 추천 찬양 채널 */}
-        <section className="space-y-3">
+        <section className="space-y-2.5">
           <div className="flex items-center justify-between px-1">
             <h2 className={`text-[18px] font-bold ${t.textMain} tracking-tight flex items-center gap-2`}>
               <Headphones className="w-5 h-5 text-[#3182F6]" />
               <span>추천 찬양 채널</span>
             </h2>
-            <span className={`text-[12px] font-medium ${t.textSub}`}>유튜브 바로 연결</span>
           </div>
           <CoverCarousel items={praiseChannels} isDarkMode={isDarkMode} />
         </section>
@@ -830,7 +963,12 @@ export function Home({
                 >
                   <div className="flex items-center gap-3 min-w-0 pointer-events-none">
                     <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${mutedChipClass}`}>
-                      <IconComp className="w-4 h-4 text-[#3182F6]" />
+                      <ChurchSketchIcon
+                        name={item.sketch}
+                        fallback={IconComp}
+                        className="w-5 h-5"
+                        isDarkMode={isDarkMode}
+                      />
                     </div>
                     <div className="min-w-0">
                       <span className={`text-[15px] font-bold ${t.textMain} block truncate`}>{item.title}</span>
@@ -3265,11 +3403,11 @@ export default function CompleteQtApp() {
               >
                 <div className="grid grid-cols-5 h-full items-center px-1">
                   {[
-                    { id: 'home', label: '홈', icon: Church },
-                    { id: 'diary', label: '감사·간증', icon: Heart },
-                    { id: 'cell', label: '목장모임', icon: Users },
-                    { id: 'bible', label: '성경통독', icon: BookOpen },
-                    { id: 'dailyRoutine', label: '루틴', icon: Flame }
+                    { id: 'home', label: '홈', sketch: 'home', icon: Church },
+                    { id: 'diary', label: '감사·간증', sketch: 'diary', icon: Heart },
+                    { id: 'cell', label: '목장모임', sketch: 'cell', icon: Users },
+                    { id: 'bible', label: '성경통독', sketch: 'bible', icon: BookOpen },
+                    { id: 'dailyRoutine', label: '루틴', sketch: 'qt', icon: Flame }
                   ].map((tabItem) => {
                     const isActive = activeScreen === tabItem.id;
                     const TabIcon = tabItem.icon;
@@ -3280,8 +3418,10 @@ export default function CompleteQtApp() {
                         onClick={() => setActiveScreen(tabItem.id)}
                         className="flex flex-col items-center justify-center h-full cursor-pointer select-none"
                       >
-                        <TabIcon className={`w-5 h-5 ${isActive ? 'text-[#3182F6]' : 'text-[#8B95A1]'}`} />
-                        <span className={`text-[12px] font-bold mt-1 ${isActive ? 'text-[#3182F6]' : 'text-[#8B95A1]'}`}>
+                        <div className={`p-1 rounded-xl transition-colors ${isActive ? 'bg-[#3182F6]/15' : ''}`}>
+                          <ChurchSketchIcon name={tabItem.sketch} fallback={TabIcon} className="w-5 h-5" isDarkMode={isDarkMode} />
+                        </div>
+                        <span className={`text-[11.5px] font-bold mt-0.5 ${isActive ? 'text-[#3182F6]' : 'text-[#8B95A1]'}`}>
                           {tabItem.label}
                         </span>
                       </button>
