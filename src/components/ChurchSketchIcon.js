@@ -68,7 +68,7 @@ export const SKETCH_ICON_FILES = {
 export default function ChurchSketchIcon({
   name,
   fallback: FallbackIcon,
-  className = 'w-5 h-5',
+  className = 'w-7 h-7',
   isDarkMode = false,
   invertOnActive = false
 }) {

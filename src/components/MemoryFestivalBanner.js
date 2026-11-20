@@ -69,22 +69,39 @@ const memoryVerses = [
   { id: 40, category: '기도', num: '20', title: '중보', ref: '딤전 2:1-2', text: '그러므로 내가 첫째로 권하노니 모든 사람을 위하여 간구와 기도와 도고와 감사를 하되 임금들과 높은 지위에 있는 모든 사람을 위하여 하라 이는 우리가 모든 경건과 단정함으로 고요하고 평안한 생활을 하려 함이라' }
 ];
 
-export default function MemoryFestivalBanner({ isDarkMode = false }) {
-  const [isOpen, setIsOpen] = useState(false);
+export default function MemoryFestivalBanner({
+  isDarkMode = false,
+  externalOpen = false,
+  onExternalClose = null,
+  hideBanner = false,
+  onCompleteCheck = null
+}) {
+  // [추가 1] 내부 클릭 열기 + 외부(Home '암송 열기') 열기 통합
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isOpen = Boolean(internalOpen || externalOpen);
+
+  // [추가 2] 팝업 닫기 시 외부 콜백 동기화
+  const handleCloseModal = () => {
+    setInternalOpen(false);
+    if (typeof onExternalClose === 'function') {
+      onExternalClose();
+    }
+  };
+
   const [currentIndex, setCurrentIndex] = useState(0);
   const [mode, setMode] = useState('리스트'); // 리스트 | 카드 | 암송 | 퀴즈 | 음성
-  
+
   const [favorites, setFavorites] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('bibleFavs')) || []; } 
+    try { return JSON.parse(localStorage.getItem('bibleFavs')) || []; }
     catch { return []; }
   });
-  
-  useEffect(() => { 
-    localStorage.setItem('bibleFavs', JSON.stringify(favorites)); 
+
+  useEffect(() => {
+    localStorage.setItem('bibleFavs', JSON.stringify(favorites));
   }, [favorites]);
 
   const currentVerse = memoryVerses[currentIndex] || memoryVerses[0];
-  
+
   const [isFlipped, setIsFlipped] = useState(false);
   const [memorizeLevel, setMemorizeLevel] = useState(0);
   const [quizData, setQuizData] = useState(null);
@@ -93,7 +110,7 @@ export default function MemoryFestivalBanner({ isDarkMode = false }) {
   const [voiceState, setVoiceState] = useState('idle');
   const [transcript, setTranscript] = useState('');
   const [accuracy, setAccuracy] = useState(null);
-  
+
   const recognitionRef = useRef(null);
   const transcriptRef = useRef('');
 
@@ -104,7 +121,7 @@ export default function MemoryFestivalBanner({ isDarkMode = false }) {
     setAccuracy(null);
     setTranscript('');
     transcriptRef.current = '';
-    
+
     if (mode === '퀴즈') {
       const words = currentVerse.text.split(' ').filter(w => w.length > 1);
       if (words.length > 0) {
@@ -154,29 +171,29 @@ export default function MemoryFestivalBanner({ isDarkMode = false }) {
       setVoiceState('done');
       return;
     }
-    
+
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) return alert("현재 브라우저는 음성 인식을 지원하지 않습니다. (크롬 권장)");
-    
+
     recognitionRef.current = new SpeechRecognition();
     recognitionRef.current.lang = 'ko-KR';
     recognitionRef.current.interimResults = true;
     recognitionRef.current.continuous = true;
-    
+
     recognitionRef.current.onresult = (event) => {
       let currentTranscript = '';
       for (let i = 0; i < event.results.length; i++) {
         currentTranscript += event.results[i][0].transcript;
       }
       setTranscript(currentTranscript);
-      transcriptRef.current = currentTranscript; 
+      transcriptRef.current = currentTranscript;
     };
 
     recognitionRef.current.onend = () => {
       setVoiceState('done');
       const originalWords = currentVerse.text.split(' ').filter(w => w.length > 0);
       const spokenFullText = (transcriptRef.current || '').replace(/[^가-힣0-9a-zA-Z\s]/g, '');
-      
+
       if (spokenFullText.trim() === '') {
         setAccuracy(0);
         return;
@@ -184,14 +201,17 @@ export default function MemoryFestivalBanner({ isDarkMode = false }) {
 
       let correctWords = 0;
       originalWords.forEach(word => {
-        const cleanOrig = word.replace(/[^가-힣0-9a-zA-Z]/g, ''); 
+        const cleanOrig = word.replace(/[^가-힣0-9a-zA-Z]/g, '');
         if (cleanOrig && spokenFullText.includes(cleanOrig)) {
           correctWords++;
         }
       });
-      
+
       const score = Math.min(100, Math.round((correctWords / originalWords.length) * 100));
       setAccuracy(score);
+      if (score >= 70 && typeof onCompleteCheck === 'function') {
+        onCompleteCheck();
+      }
     };
 
     setTranscript('');
@@ -203,7 +223,7 @@ export default function MemoryFestivalBanner({ isDarkMode = false }) {
 
   const groupedVerses = useMemo(() => {
     return memoryVerses.reduce((acc, verse) => {
-      if(!acc[verse.category]) acc[verse.category] = [];
+      if (!acc[verse.category]) acc[verse.category] = [];
       acc[verse.category].push(verse);
       return acc;
     }, {});
@@ -211,66 +231,65 @@ export default function MemoryFestivalBanner({ isDarkMode = false }) {
 
   return (
     <>
-      {/* 💡 [첨부 사진 스타일] 딥 우드 + 웜 앰버 네온사인 슬림 배너 바 */}
-      <div 
-        onClick={() => setIsOpen(true)}
-        className="w-full relative overflow-hidden rounded-2xl cursor-pointer p-3 sm:py-3.5 sm:px-4 flex items-center justify-between border transition-all hover:scale-[1.005] active:scale-[0.99] select-none"
-        style={{
-          background: 'linear-gradient(135deg, #1A1311 0%, #2A1C16 50%, #150F0D 100%)',
-          borderColor: 'rgba(255, 170, 50, 0.35)',
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)'
-        }}
-      >
-        {/* 네온 백그라운드 앰버 글로우 */}
-        <div className="absolute -left-6 top-1/2 -translate-y-1/2 w-28 h-28 rounded-full bg-amber-500/20 blur-2xl pointer-events-none" />
+      {/* [추가 3] 홈 화면 하단 배너 라인 숨김 옵션(!hideBanner) */}
+      {!hideBanner && (
+        <div
+          onClick={() => setInternalOpen(true)}
+          className="w-full relative overflow-hidden rounded-2xl cursor-pointer p-3 sm:py-3.5 sm:px-4 flex items-center justify-between border transition-all hover:scale-[1.005] active:scale-[0.99] select-none"
+          style={{
+            background: 'linear-gradient(135deg, #1A1311 0%, #2A1C16 50%, #150F0D 100%)',
+            borderColor: 'rgba(255, 170, 50, 0.35)',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)'
+          }}
+        >
+          <div className="absolute -left-6 top-1/2 -translate-y-1/2 w-28 h-28 rounded-full bg-amber-500/20 blur-2xl pointer-events-none" />
 
-        {/* 좌측: 타이틀 & 네온 텍스트 */}
-        <div className="flex items-center gap-3 relative z-10 min-w-0 pr-2">
-          <div 
-            className="px-2.5 py-1 rounded-lg flex items-center gap-1 font-black text-[11px] tracking-wider shrink-0 uppercase"
-            style={{
-              backgroundColor: 'rgba(255, 160, 40, 0.15)',
-              border: '1px solid rgba(255, 180, 50, 0.6)',
-              color: '#FFB84D',
-              textShadow: '0 0 10px rgba(255, 184, 77, 0.8)'
-            }}
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse shadow-[0_0_6px_#FFB84D]" />
-            GTC
-          </div>
+          <div className="flex items-center gap-3 relative z-10 min-w-0 pr-2">
+            <div
+              className="px-2.5 py-1 rounded-lg flex items-center gap-1 font-black text-[11px] tracking-wider shrink-0 uppercase"
+              style={{
+                backgroundColor: 'rgba(255, 160, 40, 0.15)',
+                border: '1px solid rgba(255, 180, 50, 0.6)',
+                color: '#FFB84D',
+                textShadow: '0 0 10px rgba(255, 184, 77, 0.8)'
+              }}
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse shadow-[0_0_6px_#FFB84D]" />
+              GTC
+            </div>
 
-          <div className="flex flex-col min-w-0">
-            <div className="flex items-center gap-2 truncate">
-              <span 
-                className="text-[13.5px] sm:text-[14.5px] font-black tracking-tight"
-                style={{
-                  color: '#FFE2B8',
-                  textShadow: '0 0 14px rgba(255, 190, 100, 0.5)'
-                }}
-              >
-                말씀 암송 페스티벌 40구절
-              </span>
-              <span className="text-[11px] font-bold text-amber-200/60 truncate hidden sm:inline">
-                | {currentVerse.ref} ({currentVerse.title})
+            <div className="flex flex-col min-w-0">
+              <div className="flex items-center gap-2 truncate">
+                <span
+                  className="text-[13.5px] sm:text-[14.5px] font-black tracking-tight"
+                  style={{
+                    color: '#FFE2B8',
+                    textShadow: '0 0 14px rgba(255, 190, 100, 0.5)'
+                  }}
+                >
+                  말씀 암송 페스티벌 40구절
+                </span>
+                <span className="text-[11px] font-bold text-amber-200/60 truncate hidden sm:inline">
+                  | {currentVerse.ref} ({currentVerse.title})
+                </span>
+              </div>
+              <span className="text-[11px] text-amber-100/70 font-medium truncate mt-0.5">
+                "{currentVerse.text.substring(0, 32)}..."
               </span>
             </div>
-            <span className="text-[11px] text-amber-100/70 font-medium truncate mt-0.5">
-              "{currentVerse.text.substring(0, 32)}..."
-            </span>
+          </div>
+
+          <div className="relative z-10 shrink-0 flex items-center gap-1 text-[11px] font-black text-amber-400/90 pl-2">
+            <span>열기</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5"><polyline points="9 18 15 12 9 6" /></svg>
           </div>
         </div>
+      )}
 
-        {/* 우측: 열기 버튼 */}
-        <div className="relative z-10 shrink-0 flex items-center gap-1 text-[11px] font-black text-amber-400/90 pl-2">
-          <span>열기</span>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5"><polyline points="9 18 15 12 9 6" /></svg>
-        </div>
-      </div>
-
-      {/* 💡 [통합 트레이닝 모달] 40구절 & 5대 모드 100% 탑재 */}
+      {/* 통합 트레이닝 모달 */}
       {isOpen && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-md animate-fade-in select-none" onClick={() => setIsOpen(false)}>
-          <div 
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-md animate-fade-in select-none" onClick={handleCloseModal}>
+          <div
             onClick={e => e.stopPropagation()}
             className="relative w-full max-w-[380px] h-[640px] max-h-[92vh] rounded-[28px] border shadow-2xl overflow-hidden flex flex-col"
             style={{
@@ -279,10 +298,8 @@ export default function MemoryFestivalBanner({ isDarkMode = false }) {
               boxShadow: '0 0 50px rgba(255, 150, 30, 0.2)'
             }}
           >
-            {/* 상단 앰버 네온 글로우 */}
             <div className="absolute -top-12 -left-12 w-48 h-48 rounded-full bg-amber-500/20 blur-3xl pointer-events-none" />
 
-            {/* 헤더 바 */}
             <div className="px-4 py-3.5 border-b border-amber-500/20 flex justify-between items-center shrink-0 relative z-10">
               <div>
                 <span className="text-[10px] font-black text-amber-300 tracking-wider bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30">
@@ -290,20 +307,19 @@ export default function MemoryFestivalBanner({ isDarkMode = false }) {
                 </span>
                 <h2 className="text-[16px] font-black text-amber-100 tracking-tight mt-1">말씀 암기 트레이닝</h2>
               </div>
-              <button onClick={() => setIsOpen(false)} className="text-amber-200/60 hover:text-white p-1 transition-colors cursor-pointer">
+              <button onClick={handleCloseModal} className="text-amber-200/60 hover:text-white p-1 transition-colors cursor-pointer">
                 <IconClose />
               </button>
             </div>
 
-            {/* 5대 모드 탭 바 */}
             <div className="flex overflow-x-auto hide-scrollbar border-b border-amber-500/20 text-[12px] font-black text-amber-200/60 shrink-0 bg-black/30 relative z-10">
               {['리스트', '카드', '암송', '퀴즈', '음성'].map(m => (
-                <button 
-                  key={m} 
+                <button
+                  key={m}
                   onClick={() => setMode(m)}
                   className={`flex-1 min-w-[64px] py-2.5 text-center transition-all cursor-pointer ${
-                    mode === m 
-                      ? 'border-b-2 border-amber-400 text-amber-300 bg-amber-500/10' 
+                    mode === m
+                      ? 'border-b-2 border-amber-400 text-amber-300 bg-amber-500/10'
                       : 'hover:text-amber-100'
                   }`}
                 >
@@ -312,12 +328,11 @@ export default function MemoryFestivalBanner({ isDarkMode = false }) {
               ))}
             </div>
 
-            {/* 파트 선택 드롭다운 & 프로그레스 바 */}
             {mode !== '리스트' && (
               <div className="px-4 pt-3 pb-1 shrink-0 relative z-10">
                 <div className="flex justify-between text-[11px] text-amber-200/60 font-bold items-center mb-1.5">
                   <span className="text-amber-300">{currentVerse.category} 파트</span>
-                  <select 
+                  <select
                     value={currentVerse.id}
                     onChange={(e) => setCurrentIndex(memoryVerses.findIndex(v => v.id === Number(e.target.value)))}
                     className="bg-black/50 border border-amber-500/30 text-amber-200 text-[11px] rounded-lg px-2 py-1 outline-none font-bold cursor-pointer"
@@ -337,10 +352,7 @@ export default function MemoryFestivalBanner({ isDarkMode = false }) {
               </div>
             )}
 
-            {/* 본문 트레이닝 영역 */}
             <div className="flex-1 p-4 overflow-y-auto hide-scrollbar relative z-10">
-              
-              {/* 1. 리스트 모드 */}
               {mode === '리스트' && (
                 <div className="space-y-4">
                   {Object.entries(groupedVerses).map(([category, verses]) => (
@@ -350,15 +362,15 @@ export default function MemoryFestivalBanner({ isDarkMode = false }) {
                         {verses.map(v => {
                           const isFav = favorites.includes(v.id);
                           return (
-                            <div 
-                              key={v.id} 
+                            <div
+                              key={v.id}
                               onClick={() => {
                                 setCurrentIndex(memoryVerses.findIndex(x => x.id === v.id));
-                                setMode('카드'); 
+                                setMode('카드');
                               }}
                               className={`p-2.5 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
-                                currentVerse.id === v.id 
-                                  ? 'bg-amber-500/20 border-amber-400 shadow-sm' 
+                                currentVerse.id === v.id
+                                  ? 'bg-amber-500/20 border-amber-400 shadow-sm'
                                   : 'bg-black/30 border-amber-500/10 hover:border-amber-500/40'
                               }`}
                             >
@@ -377,9 +389,8 @@ export default function MemoryFestivalBanner({ isDarkMode = false }) {
                 </div>
               )}
 
-              {/* 2. 카드 모드 (3D 플립) */}
               {mode === '카드' && (
-                <div 
+                <div
                   onClick={() => setIsFlipped(!isFlipped)}
                   className="h-full min-h-[260px] bg-black/40 border border-amber-500/30 rounded-2xl p-6 flex flex-col justify-center items-center text-center cursor-pointer relative shadow-inner hover:border-amber-500/60 transition-all"
                 >
@@ -404,7 +415,6 @@ export default function MemoryFestivalBanner({ isDarkMode = false }) {
                 </div>
               )}
 
-              {/* 3. 암송 모드 (3단계 블라인드) */}
               {mode === '암송' && (
                 <div className="h-full flex flex-col">
                   <div className="flex items-center gap-2 mb-2.5">
@@ -422,7 +432,6 @@ export default function MemoryFestivalBanner({ isDarkMode = false }) {
                 </div>
               )}
 
-              {/* 4. 퀴즈 모드 (4지선다 빈칸 채우기) */}
               {mode === '퀴즈' && quizData && (
                 <div className="h-full flex flex-col">
                   <div className="text-[11px] font-bold text-amber-300/70 mb-1.5">빈칸에 들어갈 알맞은 단어는?</div>
@@ -435,11 +444,15 @@ export default function MemoryFestivalBanner({ isDarkMode = false }) {
                   </div>
                   <div className="grid grid-cols-2 gap-2 mt-auto shrink-0">
                     {quizData.options.map((opt, i) => (
-                      <button 
+                      <button
                         key={i}
                         onClick={() => {
-                          if(opt === quizData.targetWord) setQuizData({...quizData, result: true});
-                          else setQuizData({...quizData, result: false});
+                          if (opt === quizData.targetWord) {
+                            setQuizData({ ...quizData, result: true });
+                            if (typeof onCompleteCheck === 'function') onCompleteCheck();
+                          } else {
+                            setQuizData({ ...quizData, result: false });
+                          }
                         }}
                         disabled={quizData.result === true}
                         className="p-2.5 bg-white/5 border border-amber-500/30 rounded-xl font-bold text-[12.5px] text-amber-200 hover:border-amber-400 hover:text-amber-100 transition-colors disabled:opacity-40 cursor-pointer"
@@ -456,7 +469,6 @@ export default function MemoryFestivalBanner({ isDarkMode = false }) {
                 </div>
               )}
 
-              {/* 5. 음성 모드 (STT 인식 및 정확도 채점) */}
               {mode === '음성' && (
                 <div className="h-full flex flex-col justify-center relative">
                   {voiceState === 'idle' && (
@@ -464,7 +476,7 @@ export default function MemoryFestivalBanner({ isDarkMode = false }) {
                       <div className="bg-amber-500/20 text-amber-300 border border-amber-500/40 px-3 py-1 rounded-lg text-xs font-black mb-3">No. {currentVerse.id}</div>
                       <h3 className="text-[26px] font-black text-amber-100 mb-1 tracking-tight">{currentVerse.ref}</h3>
                       <p className="text-[12px] text-amber-200/50 font-medium mb-6">이 말씀코드를 보고 암송해보세요</p>
-                      
+
                       <button onClick={toggleRecording} className="w-[72px] h-[72px] bg-gradient-to-tr from-amber-600 to-amber-500 text-white rounded-full flex items-center justify-center shadow-lg hover:scale-105 transition-transform border-4 border-amber-400/30 cursor-pointer">
                         <MicIcon />
                       </button>
@@ -494,16 +506,16 @@ export default function MemoryFestivalBanner({ isDarkMode = false }) {
                           정확도: {accuracy}%
                         </span>
                       </div>
-                      
+
                       <div className="w-full bg-black/40 rounded-xl p-3 border border-amber-500/20 h-[80px] overflow-y-auto text-[12.5px] leading-relaxed font-medium text-amber-200/80 mb-2.5 break-keep">
                         {transcript || '녹음된 음성이 없습니다.'}
                       </div>
-                      
+
                       <div className="text-[12.5px] font-bold text-amber-100 border-t border-amber-500/20 pt-2 leading-relaxed break-keep flex-1 overflow-y-auto text-left">
                         <span className="text-amber-400 mr-1.5 block font-black text-[11px]">정답지:</span>
                         {currentVerse.text}
                       </div>
-                      
+
                       <button onClick={() => setVoiceState('idle')} className="mt-2.5 py-2.5 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-xl font-bold text-[12px] w-full hover:bg-amber-500/30 transition-colors cursor-pointer">
                         ↻ 이 구절 다시 시도하기
                       </button>
@@ -513,26 +525,25 @@ export default function MemoryFestivalBanner({ isDarkMode = false }) {
               )}
             </div>
 
-            {/* 하단 네비게이션 & 즐겨찾기 바 */}
             {mode !== '리스트' && (
               <div className="p-3 border-t border-amber-500/20 bg-black/40 flex justify-between items-center shrink-0 relative z-10">
-                <button 
+                <button
                   onClick={() => toggleFavorite(currentVerse.id)}
                   className="text-xl hover:scale-110 transition-transform cursor-pointer"
                   title="즐겨찾기"
                 >
                   {favorites.includes(currentVerse.id) ? '⭐' : '☆'}
                 </button>
-                
+
                 <div className="flex gap-2">
-                  <button 
-                    onClick={handlePrevInPart} 
+                  <button
+                    onClick={handlePrevInPart}
                     className="bg-white/10 text-amber-200 hover:bg-white/20 px-3.5 py-2 rounded-xl text-[11.5px] font-black transition-all cursor-pointer"
                   >
                     ◀ 이전
                   </button>
-                  <button 
-                    onClick={handleNextInPart} 
+                  <button
+                    onClick={handleNextInPart}
                     className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black px-4 py-2 rounded-xl text-[11.5px] font-black shadow-md transition-all cursor-pointer"
                   >
                     다음 ▶

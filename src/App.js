@@ -4,6 +4,7 @@ import html2canvas from 'html2canvas';
 import {
   Menu,
   ChevronRight,
+  ChevronDown,
   Heart,
   Flame,
   BookOpen,
@@ -16,7 +17,6 @@ import {
   Download,
   Users,
   BarChart3,
-  User,
   PenLine,
   ArrowLeft,
   Calendar,
@@ -25,7 +25,9 @@ import {
   Globe,
   HandHeart,
   Footprints,
-  Building2
+  Building2,
+  X,
+  ExternalLink
 } from 'lucide-react';
 import RadioPopup from './components/RadioPopup';
 import { getMcheynePlan } from './mcheyneData';
@@ -86,6 +88,216 @@ if (typeof window !== 'undefined' && typeof Event !== 'undefined') {
   };
 }
 
+const TESTIMONY_TEMPLATE = `1. 제목 (한 문장으로) : \n\n2. 오늘 받은 말씀 : \n\n3. 사건 (무슨 일이 있었는가?) : \n\n4. 내 죄와 우상 (왜 그렇게 반응했는가?) : \n\n5. 말씀으로 받은 깨달음 : \n\n6. 적용 (구체적으로 무엇을 순종할 일인가?) : \n\n7. 하나님이 주신 열매 : \n\n8. 감사 : `;
+
+const getArr = (val, def = []) => (Array.isArray(val) ? val : def);
+const safeParse = (key, def) => {
+  try {
+    const val = localStorage.getItem(key);
+    if (!val) return def;
+    const parsed = JSON.parse(val);
+    return parsed !== null ? parsed : def;
+  } catch (e) {
+    return def;
+  }
+};
+const safeSetItem = (key, value) => {
+  try {
+    localStorage.setItem(key, value);
+  } catch (e) {
+    console.warn(`[용량 초과 방어] ${key} 저장 실패`);
+  }
+};
+
+const bibles =
+  typeof bibleData !== 'undefined' && bibleData.length > 0
+    ? bibleData
+    : [{ name: 'Genesis', chapters: [['태초에 하나님이 천지를 창조하시니라']] }];
+
+const bookNamesKo = {
+  Genesis: '창세기', Exodus: '출애굽기', Leviticus: '레위기', Numbers: '민수기', Deuteronomy: '신명기',
+  Joshua: '여호수아', Judges: '사사기', Ruth: '룻기', '1 Samuel': '사무엘상', '2 Samuel': '사무엘하',
+  '1 Kings': '열왕기상', '2 Kings': '열왕기하', '1 Chronicles': '역대상', '2 Chronicles': '역대하',
+  Ezra: '에스라', Nehemiah: '느헤미야', Esther: '에스더', Job: '욥기', Psalms: '시편',
+  Proverbs: '잠언', Ecclesiastes: '전도서', 'Song of Solomon': '아가', Isaiah: '이사야', Jeremiah: '예레미야',
+  Lamentations: '예레미야애가', Ezekiel: '에스겔', Daniel: '다니엘', Hosea: '호세아', Joel: '요엘',
+  Amos: '아모스', Obadiah: '오바댜', Jonah: '요나', Micah: '미가', Nahum: '나훔',
+  Habakkuk: '하박국', Zephaniah: '스바냐', Haggai: '학개', Zechariah: '스가랴', Malachi: '말라기',
+  Matthew: '마태복음', Mark: '마가복음', Luke: '누가복음', John: '요한복음', Acts: '사도행전',
+  Romans: '로마서', '1 Corinthians': '고린도전서', '2 Corinthians': '고린도후서', Galatians: '갈라디아서',
+  Ephesians: '에베소서', Philippians: '빌립보서', Colossians: '골로새서', '1 Thessalonians': '데살로니가전서',
+  '2 Thessalonians': '데살로니가후서', '1 Timothy': '디모데전서', '2 Timothy': '디모데후서', Titus: '디도서',
+  Philemon: '빌레몬서', Hebrews: '히브리서', James: '야고보서', '1 Peter': '베드로전서',
+  '2 Peter': '베드로후서', '1 John': '요한일서', '2 John': '요한이서', '3 John': '요한삼서',
+  Jude: '유다서', Revelation: '요한계시록'
+};
+const getKoName = (n) => bookNamesKo[n] || n;
+
+const FULL_BIBLE_MAP = {
+  창: 'Genesis', 창세기: 'Genesis', 출: 'Exodus', 출애굽기: 'Exodus', 레: 'Leviticus', 레위기: 'Leviticus',
+  민: 'Numbers', 민수기: 'Numbers', 신: 'Deuteronomy', 신명기: 'Deuteronomy', 수: 'Joshua', 여호수아: 'Joshua',
+  삿: 'Judges', 사사기: 'Judges', 룻: 'Ruth', 룻기: 'Ruth', 삼상: '1 Samuel', 사무엘상: '1 Samuel',
+  삼하: '2 Samuel', 사무엘하: '2 Samuel', 왕상: '1 Kings', 열왕기상: '1 Kings', 왕하: '2 Kings', 열왕기하: '2 Kings',
+  대상: '1 Chronicles', 역대상: '1 Chronicles', 대하: '2 Chronicles', 역대하: '2 Chronicles', 스: 'Ezra', 에스라: 'Ezra',
+  느: 'Nehemiah', 느헤미야: 'Nehemiah', 에: 'Esther', 에스더: 'Esther', 욥: 'Job', 욥기: 'Job',
+  시: 'Psalms', 시편: 'Psalms', 잠: 'Proverbs', 잠언: 'Proverbs', 전: 'Ecclesiastes', 전도서: 'Ecclesiastes',
+  아: 'Song of Solomon', 아가: 'Song of Solomon', 사: 'Isaiah', 이사야: 'Isaiah', 렘: 'Jeremiah', 예레미야: 'Jeremiah',
+  애: 'Lamentations', 예레미야애가: 'Lamentations', 겔: 'Ezekiel', 에스겔: 'Ezekiel', 단: 'Daniel', 다니엘: 'Daniel',
+  호: 'Hosea', 호세아: 'Hosea', 욜: 'Joel', 요엘: 'Joel', 암: 'Amos', 아모스: 'Amos',
+  옵: 'Obadiah', 오바댜: 'Obadiah', 욘: 'Jonah', 요나: 'Jonah', 미: 'Micah', 미가: 'Micah',
+  나: 'Nahum', 나훔: 'Nahum', 합: 'Habakkuk', 하박국: 'Habakkuk', 습: 'Zephaniah', 스바냐: 'Zephaniah',
+  학: 'Haggai', 학개: 'Haggai', 슥: 'Zechariah', 스가랴: 'Zechariah', 말: 'Malachi', 말라기: 'Malachi',
+  마: 'Matthew', 마태: 'Matthew', 마태복음: 'Matthew', 마탭복음: 'Matthew', 막: 'Mark', 마가: 'Mark', 마가복음: 'Mark',
+  눅: 'Luke', 누가: 'Luke', 누가복음: 'Luke', 요: 'John', 요한: 'John', 요한복음: 'John',
+  행: 'Acts', 사도행전: 'Acts', 롬: 'Romans', 로마서: 'Romans', 고전: '1 Corinthians', 고린도전서: '1 Corinthians',
+  고후: '2 Corinthians', 고린도후서: '2 Corinthians', 갈: 'Galatians', 갈라디아서: 'Galatians', 엡: 'Ephesians', 에베소서: 'Ephesians',
+  빌: 'Philippians', 빌립보서: 'Philippians', 골: 'Colossians', 골로새서: 'Colossians', 살전: '1 Thessalonians', 데살로니가전서: '1 Thessalonians',
+  살후: '2 Thessalonians', 데살로니가후서: '2 Thessalonians', 딤전: '1 Timothy', 디모데전서: '1 Timothy',
+  딤후: '2 Timothy', 디모데후서: '2 Timothy', 딛: 'Titus', 디도서: 'Titus', 몬: 'Philemon', 빌레몬서: 'Philemon',
+  히: 'Hebrews', 히브리서: 'Hebrews', 약: 'James', 야고보서: 'James', 벧전: '1 Peter', 베드로전서: '1 Peter',
+  벧후: '2 Peter', 베드로후서: '2 Peter', 요일: '1 John', 요한일서: '1 John', 요이: '2 John', 요한이서: '2 John',
+  요삼: '3 John', 요한삼서: '3 John', 유: 'Jude', 유다서: 'Jude', 계: 'Revelation', 요한계시록: 'Revelation'
+};
+
+const getLocalToday = () => {
+  const o = new Date().getTimezoneOffset() * 60000;
+  return new Date(Date.now() - o).toISOString().split('T')[0];
+};
+
+const cleanText = (t) => {
+  if (!t) return '';
+  let str = typeof t === 'object' ? t.text || t.content || JSON.stringify(t) : String(t);
+  return str
+    .replace(/&#x27;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/['\x1B]|\(가정\d*\)|\(개인\d*\)|\(개인\)/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+};
+
+const parseBibleRefExt = (r) => {
+  if (!r) return null;
+  const normalized = r.replace(/\s+/g, '');
+  const m = normalized.match(/([가-힣0-9]+?)(\d+)(?:장|:)(\d+)(?:절)?(?:~|-)(?:(\d+)(?:장|:))?(\d+)(?:절)?/);
+  const mSimple = normalized.match(/([가-힣0-9]+?)(\d+)(?:장|:)(?:(\d+)(?:절)?)?/);
+
+  let eb, c1, v1, c2, v2, kb;
+
+  if (m) {
+    eb = FULL_BIBLE_MAP[m[1]] || bookNamesKo[m[1]];
+    if (!eb) return null;
+    c1 = parseInt(m[2]);
+    v1 = parseInt(m[3]);
+    c2 = m[4] ? parseInt(m[4]) : c1;
+    v2 = parseInt(m[5]);
+    kb = bookNamesKo[eb] || m[1];
+  } else if (mSimple) {
+    eb = FULL_BIBLE_MAP[mSimple[1]] || bookNamesKo[mSimple[1]];
+    if (!eb) return null;
+    c1 = parseInt(mSimple[2]);
+    v1 = mSimple[3] ? parseInt(mSimple[3]) : 1;
+    c2 = c1;
+    v2 = mSimple[3] ? v1 : 999;
+    kb = bookNamesKo[eb] || mSimple[1];
+  } else {
+    return null;
+  }
+
+  return { eb, c1, v1, c2, v2, kb };
+};
+
+const getSeededVerse = (d, type) => {
+  const h =
+    d
+      .replace(/-/g, '')
+      .split('')
+      .reduce((a, c) => a + parseInt(c || 0), 0) + parseInt(d.slice(-2));
+  return type === 'family' ? familyVerseCards[h % familyVerseCards.length] : newYearVerseCards[h % newYearVerseCards.length];
+};
+
+const formatVerseText = (ft) => {
+  if (!ft || typeof ft !== 'string') return { text: '말씀을 불러오는 중입니다...', ref: '' };
+  const match = ft.match(/(.*?)\s*(\([^)]+\))$/);
+  return match ? { text: match[1], ref: match[2] } : { text: ft, ref: '' };
+};
+
+const extractVideoId = (url) => {
+  if (!url || typeof url !== 'string') return null;
+  const cleanUrl = url.trim();
+  const regExp = /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|live\/|shorts\/|watch\?(?:.*&)?v=))([a-zA-Z0-9_-]{11})/;
+  const match = cleanUrl.match(regExp);
+  return match ? match[1] : cleanUrl.length === 11 ? cleanUrl : null;
+};
+
+const isGisangogi = (d) => {
+  const dObj = new Date(d);
+  const m = dObj.getMonth() + 1;
+  const dt = dObj.getDate();
+  return (
+    (m === 9 && dt >= 7 && dt <= 11) ||
+    (m === 10 && dt >= 12 && dt <= 16) ||
+    (m === 11 && dt >= 2 && dt <= 6) ||
+    (m === 11 && dt >= 30) ||
+    (m === 12 && dt <= 4)
+  );
+};
+
+const warmBgIds = [
+  '1493246507139-91e8fad9978e',
+  '1504052434569-70ad5836ab65',
+  '1470252649378-9c29740c9fa8',
+  '1518837695005-2083093ee35b',
+  '1464822759023-fed622ff2c3b',
+  '1502481851512-e9e2529bfbf9',
+  '1534447677768-be436bb09401',
+  '1447752875215-b2761acb3c5d',
+  '1451187580459-43490279c0fa',
+  '1448375240586-882707db888b',
+  '1456513080510-7bf3a84b82f8',
+  '1455390582262-044cdead277a',
+  '1511497584788-876760111969',
+  '1507525428034-b723cf961d3e',
+  '1432405972823-1d20071da05d',
+  '1446329813274-7c9036bb9a8f',
+  '1476820865390-c52aeebb9891',
+  '1505144808419-1957a94ca61e',
+  '1490730141103-6cac27aaab94',
+  '1469474968028-56623f02e42e'
+];
+const watercolorBgs = Array.from(
+  { length: 100 },
+  (_, i) => `https://images.unsplash.com/photo-${warmBgIds[i % warmBgIds.length]}?auto=format&fit=crop&w=1080&q=80`
+);
+
+const useTheme = (isD) =>
+  useMemo(
+    () => ({
+      appBg: isD ? 'bg-[#101216]' : 'bg-[#F4F6FA]',
+      pageBg: isD ? 'bg-[#101216]' : 'bg-[#F4F6FA]',
+      cardBg: isD ? 'bg-[#181B20] border-[#262A32]' : 'bg-white border-[#E5E8EB]',
+      bgBody: isD ? 'bg-[#101216]' : 'bg-[#F4F6FA]',
+      bgElevated: isD ? 'bg-[#22262E]' : 'bg-[#F2F4F6]',
+      bgInput: isD ? 'bg-[#22262E] text-white border-[#2E333D]' : 'bg-[#F2F4F6] text-[#191F28] border-transparent',
+      btnPrimary: 'bg-gradient-to-r from-[#3B82F6] to-[#4F46E5] text-white',
+      btnSecondary: isD ? 'bg-[#22262E] text-[#E5E8EB]' : 'bg-[#F2F4F6] text-[#4E5968]',
+      btnGhost: isD ? 'hover:bg-white/10' : 'hover:bg-black/5',
+      textMain: isD ? 'text-[#F9FAFB]' : 'text-[#191F28]',
+      textSub: isD ? 'text-[#9BA3B0]' : 'text-[#6B7684]',
+      inputBg: isD ? 'bg-[#22262E] text-[#F9FAFB] border-[#2E333D]' : 'bg-[#F2F4F6] text-[#191F28] border-transparent',
+      tabBar: isD ? 'bg-[#181B20]/95 border-[#262A32]' : 'bg-white/95 border-[#E5E8EB]',
+      border: isD ? 'border-[#262A32]' : 'border-[#E5E8EB]',
+      iconDarkBg: isD ? 'bg-[#22262E]' : 'bg-[#F2F4F6]',
+      primaryBg: 'bg-[#3B82F6]',
+      primaryText: 'text-[#3B82F6]',
+      pinkText: 'text-[#3B82F6]',
+      yellowText: 'text-[#3B82F6]',
+      greenText: 'text-[#3B82F6]',
+      purpleText: 'text-[#3B82F6]',
+      highlight: isD ? 'bg-[#22262E]' : 'bg-[#E5E8EB]'
+    }),
+    [isD]
+  );
+
 // 앱 크래시 방어선
 class AppErrorBoundary extends React.Component {
   constructor(props) {
@@ -110,7 +322,7 @@ class AppErrorBoundary extends React.Component {
               localStorage.removeItem('home_menu_order_ids_v2');
               window.location.reload(true);
             }}
-            className="px-6 py-3 bg-[#3182F6] text-white rounded-2xl font-bold text-[15px] cursor-pointer"
+            className="px-6 py-3 bg-[#3B82F6] text-white rounded-2xl font-bold text-[15px] cursor-pointer"
           >
             앱 다시 시작하기
           </button>
@@ -213,173 +425,359 @@ export const logUserAction = async (userName, page, actionType = 'view', detailT
   } catch (e) {}
 };
 
-// 토스 스타일 미디어 가로 리스트 카루셀
-// 멜론뮤직 · 애플뮤직 스타일 3D 커버플로우 슬라이드 (선택 카드 최상단 중앙 배치 · 불필요한 뱃지 제거)
-const CoverCarousel = ({ items, isDarkMode }) => {
+// =====================================================================
+// 1안: 다크 3D 커버플로우 시어터 + 시네마 플레이어 모달
+// =====================================================================
+const MediaTheaterModal = ({
+  isOpen,
+  onClose,
+  worshipVideos,
+  praiseChannels,
+  currDay,
+  setActiveScreen
+}) => {
+  const [mediaTab, setMediaTab] = useState('worship'); // 'worship' | 'praise'
   const [activeIdx, setActiveIdx] = useState(0);
+  const [playerItem, setPlayerItem] = useState(null);
+  const [playerSubTab, setPlayerSubTab] = useState('summary'); // 'summary' | 'note'
   const touchStartXRef = useRef(null);
 
-  if (!items || items.length === 0) return null;
+  const items = mediaTab === 'worship' ? worshipVideos : praiseChannels;
+  const total = items?.length || 0;
+  const safeIdx = total > 0 ? ((activeIdx % total) + total) % total : 0;
 
-  const total = items.length;
-  const safeActiveIdx = activeIdx % total;
+  useEffect(() => {
+    setActiveIdx(0);
+  }, [mediaTab]);
 
-  const handlePrev = (e) => {
-    if (e) e.stopPropagation();
-    setActiveIdx((prev) => (prev - 1 + total) % total);
-  };
+  if (!isOpen || total === 0) return null;
 
-  const handleNext = (e) => {
-    if (e) e.stopPropagation();
-    setActiveIdx((prev) => (prev + 1) % total);
-  };
+  const currentCenterItem = items[safeIdx];
 
-  const onTouchStart = (e) => {
+  const handleTouchStart = (e) => {
     touchStartXRef.current = e.touches[0].clientX;
   };
-
-  const onTouchEnd = (e) => {
+  const handleTouchEnd = (e) => {
     if (touchStartXRef.current === null) return;
     const diff = e.changedTouches[0].clientX - touchStartXRef.current;
     touchStartXRef.current = null;
-    if (Math.abs(diff) < 32) return;
-    if (diff < 0) {
-      setActiveIdx((prev) => (prev + 1) % total);
-    } else {
-      setActiveIdx((prev) => (prev - 1 + total) % total);
-    }
+    if (Math.abs(diff) < 30) return;
+    setActiveIdx((prev) => (diff < 0 ? (prev + 1) % total : (prev - 1 + total) % total));
   };
+
+  const openCinemaPlayer = (item) => {
+    const vidId = extractVideoId(item.url);
+    setPlayerItem({
+      ...item,
+      videoId: vidId,
+      categoryLabel: mediaTab === 'worship' ? '예배 · 말씀' : '찬양 채널'
+    });
+    setPlayerSubTab('summary');
+  };
+
+  const savedNotePreview =
+    mediaTab === 'worship'
+      ? (currDay?.sermonNotes || '').replace(/<[^>]*>?/gm, '').trim() ||
+        (currDay?.qtMeditation || '').trim() ||
+        '아직 작성된 예배·큐티 노트가 없습니다.'
+      : (currDay?.thanksText || '').trim() || '찬양을 들으며 떠오른 감사와 은혜를 기록해 보세요.';
 
   return (
     <div
-      className="relative w-full select-none py-1"
-      onTouchStart={onTouchStart}
-      onTouchEnd={onTouchEnd}
+      className="fixed inset-0 z-[360] bg-[#0B0E14]/95 backdrop-blur-xl flex flex-col justify-between text-white select-none overflow-hidden"
+      onClick={onClose}
     >
-      {/* 3D 스택 카드 스테이지 */}
-      <div className="relative w-full h-[215px] sm:h-[245px] flex items-center justify-center overflow-hidden">
-        {items.map((item, idx) => {
-          // 순환 거리 계산 (-2, -1, 0, +1, +2)
-          let offset = idx - safeActiveIdx;
-          if (offset > Math.floor(total / 2)) offset -= total;
-          if (offset < -Math.floor(total / 2)) offset += total;
+      {/* 상단 시어터 헤더 */}
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-[760px] mx-auto px-4 sm:px-6 pt-5 pb-3 flex items-center justify-between gap-3 shrink-0"
+      >
+        <div className="flex items-center gap-1 p-1 rounded-2xl bg-white/10 border border-white/10">
+          <button
+            type="button"
+            onClick={() => setMediaTab('worship')}
+            className={`px-3.5 py-1.5 rounded-xl text-[13px] font-bold transition-all cursor-pointer ${
+              mediaTab === 'worship'
+                ? 'bg-gradient-to-r from-[#3B82F6] to-[#4F46E5] text-white shadow-sm'
+                : 'text-white/65 hover:text-white'
+            }`}
+          >
+            예배 · 말씀
+          </button>
+          <button
+            type="button"
+            onClick={() => setMediaTab('praise')}
+            className={`px-3.5 py-1.5 rounded-xl text-[13px] font-bold transition-all cursor-pointer ${
+              mediaTab === 'praise'
+                ? 'bg-gradient-to-r from-[#3B82F6] to-[#4F46E5] text-white shadow-sm'
+                : 'text-white/65 hover:text-white'
+            }`}
+          >
+            찬양 채널
+          </button>
+        </div>
 
-          const absOffset = Math.abs(offset);
-          if (absOffset > 2) return null;
+        <button
+          type="button"
+          onClick={onClose}
+          className="h-9 px-3.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 text-[12.5px] font-bold flex items-center gap-1.5 cursor-pointer"
+        >
+          <X className="w-4 h-4" />
+          <span>닫기</span>
+        </button>
+      </div>
 
-          const isCenter = offset === 0;
-          const translateX = offset * 52; // 좌우 겹침 간격 (%)
-          const scale = isCenter ? 1 : absOffset === 1 ? 0.84 : 0.68;
-          const zIndex = isCenter ? 30 : absOffset === 1 ? 20 : 10;
-          const opacity = isCenter ? 1 : absOffset === 1 ? 0.65 : 0.3;
+      {/* 중앙 3D 커버플로우 스테이지 */}
+      <div
+        onClick={(e) => e.stopPropagation()}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        className="flex-1 flex flex-col items-center justify-center relative w-full max-w-[820px] mx-auto px-3"
+      >
+        <div className="relative w-full h-[310px] sm:h-[360px] flex items-center justify-center overflow-hidden">
+          {items.map((item, idx) => {
+            let offset = idx - safeIdx;
+            if (offset > Math.floor(total / 2)) offset -= total;
+            if (offset < -Math.floor(total / 2)) offset += total;
+            const absOffset = Math.abs(offset);
+            if (absOffset > 2) return null;
 
-          return (
-            <div
-              key={idx}
-              onClick={() => {
-                if (isCenter) {
-                  window.open(item.url, '_blank');
-                } else {
-                  setActiveIdx(idx);
-                }
-              }}
-              style={{
-                transform: `translateX(${translateX}%) scale(${scale})`,
-                zIndex,
-                opacity
-              }}
-              className={`absolute w-[74%] max-w-[310px] sm:max-w-[350px] rounded-2xl overflow-hidden border transition-all duration-300 ease-out cursor-pointer ${
-                isCenter
-                  ? isDarkMode
-                    ? 'bg-[#181B20] border-[#3182F6]/60 shadow-[0_14px_34px_rgba(0,0,0,0.65)]'
-                    : 'bg-white border-[#D0D7DE] shadow-[0_14px_30px_rgba(25,31,40,0.14)]'
-                  : isDarkMode
-                  ? 'bg-[#181B20] border-[#262A32]'
-                  : 'bg-white border-[#E5E8EB]'
-              }`}
-            >
-              <div className="relative w-full aspect-[16/9] bg-slate-900 overflow-hidden">
-                <img
-                  src={item.bg}
-                  alt={item.title}
-                  className="w-full h-full object-cover"
-                  crossOrigin="anonymous"
-                />
-                <div className={`absolute inset-0 transition-opacity ${isCenter ? 'bg-black/20' : 'bg-black/45'} flex items-center justify-center`}>
+            const isCenter = offset === 0;
+            const translateX = offset * 56;
+            const scale = isCenter ? 1 : absOffset === 1 ? 0.82 : 0.66;
+            const zIndex = isCenter ? 30 : absOffset === 1 ? 20 : 10;
+            const opacity = isCenter ? 1 : absOffset === 1 ? 0.55 : 0.22;
+
+            return (
+              <div
+                key={item.id || idx}
+                onClick={() => (isCenter ? openCinemaPlayer(item) : setActiveIdx(idx))}
+                style={{
+                  transform: `translateX(${translateX}%) scale(${scale})`,
+                  zIndex,
+                  opacity
+                }}
+                className={`absolute w-[74%] max-w-[280px] sm:max-w-[320px] rounded-[26px] overflow-hidden border transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] cursor-pointer ${
+                  isCenter
+                    ? 'border-white/30 bg-[#151923] shadow-[0_24px_60px_rgba(0,0,0,0.75)]'
+                    : 'border-white/10 bg-[#12151E]'
+                }`}
+              >
+                <div className="relative w-full aspect-[4/3] overflow-hidden bg-slate-900">
+                  <img
+                    src={item.bg}
+                    alt={item.title}
+                    className="w-full h-full object-cover"
+                    crossOrigin="anonymous"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#151923] via-black/20 to-transparent" />
                   {isCenter && (
-                    <div className="w-11 h-11 rounded-full bg-white/95 text-[#191F28] flex items-center justify-center shadow-md transition-transform active:scale-95">
-                      <Play className="w-5 h-5 fill-current ml-0.5" />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="px-4 py-2 rounded-full bg-black/65 backdrop-blur-md border border-white/25 text-white text-[13px] font-bold flex items-center gap-1.5 shadow-lg">
+                        <Play className="w-3.5 h-3.5 fill-current" />
+                        <span>시어터 재생</span>
+                      </span>
                     </div>
                   )}
                 </div>
+
+                <div className="px-4 py-3.5 text-center space-y-1">
+                  <h3 className="text-[16px] font-bold text-white truncate">{item.title}</h3>
+                  <p className="text-[12px] text-white/60 font-medium">
+                    {mediaTab === 'worship' ? '말씀 · 유튜브 연동' : '추천 찬양 · 유튜브 채널'}
+                  </p>
+                </div>
               </div>
-
-              <div className="px-4 py-3 flex items-center justify-between gap-2">
-                <span
-                  className={`text-[14.5px] sm:text-[15px] font-bold leading-snug truncate ${
-                    isDarkMode ? 'text-white' : 'text-[#191F28]'
-                  }`}
-                >
-                  {item.title}
-                </span>
-                {isCenter && <ChevronRight className="w-4 h-4 text-[#3182F6] shrink-0" />}
-              </div>
-            </div>
-          );
-        })}
-
-        {/* 좌우 슬라이드 네비게이션 버튼 */}
-        {total > 1 && (
-          <>
-            <button
-              type="button"
-              onClick={handlePrev}
-              aria-label="이전 항목"
-              className={`absolute left-1 sm:left-2 z-40 w-8 h-8 rounded-full flex items-center justify-center border shadow-sm cursor-pointer transition-colors ${
-                isDarkMode
-                  ? 'bg-[#181B20]/90 border-[#262A32] text-white hover:bg-[#22262E]'
-                  : 'bg-white/90 border-[#E5E8EB] text-[#191F28] hover:bg-[#F2F4F6]'
-              }`}
-            >
-              <ArrowLeft className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              onClick={handleNext}
-              aria-label="다음 항목"
-              className={`absolute right-1 sm:right-2 z-40 w-8 h-8 rounded-full flex items-center justify-center border shadow-sm cursor-pointer transition-colors ${
-                isDarkMode
-                  ? 'bg-[#181B20]/90 border-[#262A32] text-white hover:bg-[#22262E]'
-                  : 'bg-white/90 border-[#E5E8EB] text-[#191F28] hover:bg-[#F2F4F6]'
-              }`}
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </>
-        )}
-      </div>
-
-      {/* 하단 미니멀 페이지 인디케이터 */}
-      {total > 1 && (
-        <div className="flex items-center justify-center gap-1.5 mt-2">
-          {items.map((_, idx) => {
-            const active = idx === safeActiveIdx;
-            return (
-              <button
-                key={idx}
-                type="button"
-                onClick={() => setActiveIdx(idx)}
-                aria-label={`${idx + 1}번째 항목으로 이동`}
-                className={`h-1.5 rounded-full transition-all cursor-pointer ${
-                  active
-                    ? 'w-4 bg-[#3182F6]'
-                    : isDarkMode
-                    ? 'w-1.5 bg-[#2E333D]'
-                    : 'w-1.5 bg-[#D1D6DB]'
-                }`}
-              />
             );
           })}
+
+          {total > 1 && (
+            <>
+              <button
+                type="button"
+                onClick={() => setActiveIdx((p) => (p - 1 + total) % total)}
+                aria-label="이전"
+                className="absolute left-2 sm:left-4 z-40 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 flex items-center justify-center text-white cursor-pointer"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveIdx((p) => (p + 1) % total)}
+                aria-label="다음"
+                className="absolute right-2 sm:right-4 z-40 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 flex items-center justify-center text-white cursor-pointer"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </>
+          )}
+        </div>
+
+        {/* 인디케이터 */}
+        <div className="flex items-center justify-center gap-1.5 mt-2">
+          {items.map((_, idx) => (
+            <button
+              key={idx}
+              type="button"
+              onClick={() => setActiveIdx(idx)}
+              className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                idx === safeIdx ? 'w-5 bg-[#60A5FA]' : 'w-1.5 bg-white/25'
+              }`}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* 하단 빠른 액션 바 */}
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-[460px] mx-auto px-5 pb-7 pt-2 flex items-center gap-2.5 shrink-0"
+      >
+        <button
+          type="button"
+          onClick={() => openCinemaPlayer(currentCenterItem)}
+          className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-[#3B82F6] to-[#4F46E5] text-white text-[14px] font-bold flex items-center justify-center gap-2 cursor-pointer shadow-lg"
+        >
+          <Play className="w-4 h-4 fill-current" />
+          <span>지금 재생하기</span>
+        </button>
+        <a
+          href={currentCenterItem.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white text-[13px] font-bold flex items-center gap-1.5"
+        >
+          <span>YouTube</span>
+          <ExternalLink className="w-3.5 h-3.5" />
+        </a>
+      </div>
+
+      {/* 2번 캡처 스타일: 다크 시네마 플레이어 모달 */}
+      {playerItem && (
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="fixed inset-0 z-[380] bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-5"
+        >
+          <div className="w-full max-w-[520px] rounded-[28px] bg-[#13161F] border border-white/15 overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+            <div className="px-5 py-3.5 flex items-center justify-between border-b border-white/10">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-rose-500" />
+                <span className="text-[12px] font-bold tracking-wider text-white/80 uppercase">
+                  {playerItem.categoryLabel} · YOUTUBE
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPlayerItem(null)}
+                className="px-3 py-1 rounded-full bg-white/10 hover:bg-white/20 text-[12px] font-bold text-white flex items-center gap-1 cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+                <span>닫기</span>
+              </button>
+            </div>
+
+            <div className="p-4 sm:p-5 space-y-4 overflow-y-auto hide-scrollbar">
+              <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-black border border-white/10">
+                {playerItem.videoId ? (
+                  <iframe
+                    width="100%"
+                    height="100%"
+                    src={`https://www.youtube.com/embed/${playerItem.videoId}?autoplay=1&rel=0&playsinline=1`}
+                    title={playerItem.title}
+                    frameBorder="0"
+                    allow="autoplay; encrypted-media; picture-in-picture"
+                    allowFullScreen
+                    className="absolute inset-0 w-full h-full"
+                  />
+                ) : (
+                  <>
+                    <img
+                      src={playerItem.bg}
+                      alt={playerItem.title}
+                      className="w-full h-full object-cover opacity-70"
+                      crossOrigin="anonymous"
+                    />
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/35 gap-3">
+                      <a
+                        href={playerItem.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-5 py-2.5 rounded-full bg-gradient-to-r from-[#3B82F6] to-[#4F46E5] text-white text-[13.5px] font-bold flex items-center gap-2 shadow-lg"
+                      >
+                        <Play className="w-4 h-4 fill-current" />
+                        <span>유튜브에서 바로 재생</span>
+                      </a>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h3 className="text-[18px] font-bold text-white truncate">{playerItem.title}</h3>
+                  <p className="text-[12.5px] text-white/60 mt-0.5">
+                    좋은나무교회 말씀 · 찬양 큐레이션
+                  </p>
+                </div>
+                <a
+                  href={playerItem.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="shrink-0 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-[12px] font-bold text-sky-300 flex items-center gap-1"
+                >
+                  <span>새 창</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              </div>
+
+              {/* 요약 · 내 노트 전환 */}
+              <div className="grid grid-cols-2 p-1 rounded-xl bg-white/10 text-[12.5px] font-bold">
+                <button
+                  type="button"
+                  onClick={() => setPlayerSubTab('summary')}
+                  className={`py-2 rounded-lg cursor-pointer transition-colors ${
+                    playerSubTab === 'summary' ? 'bg-white text-[#13161F]' : 'text-white/70'
+                  }`}
+                >
+                  말씀 안내
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPlayerSubTab('note')}
+                  className={`py-2 rounded-lg cursor-pointer transition-colors ${
+                    playerSubTab === 'note' ? 'bg-white text-[#13161F]' : 'text-white/70'
+                  }`}
+                >
+                  내 노트 연동
+                </button>
+              </div>
+
+              {playerSubTab === 'summary' ? (
+                <div className="p-4 rounded-2xl bg-white/5 border border-white/10 text-[13.5px] text-white/80 leading-relaxed">
+                  {mediaTab === 'worship'
+                    ? '선택하신 예배 및 말씀 영상을 시청하신 뒤, 예배 노트나 매일 큐티 화면에서 받은 은혜와 적용 질문을 바로 이어서 기록하실 수 있습니다.'
+                    : '선택하신 찬양 채널로 이동해 오늘의 묵상과 기도에 어울리는 찬양을 함께 들으실 수 있습니다.'}
+                </div>
+              ) : (
+                <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-3">
+                  <p className="text-[13.5px] text-white/80 leading-relaxed line-clamp-4 whitespace-pre-wrap">
+                    {savedNotePreview}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPlayerItem(null);
+                      onClose();
+                      setActiveScreen(mediaTab === 'worship' ? 'sermon' : 'diary');
+                    }}
+                    className="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#3B82F6] to-[#4F46E5] text-white text-[13px] font-bold cursor-pointer"
+                  >
+                    {mediaTab === 'worship' ? '예배 노트 작성하러 가기' : '감사·간증 일기 기록하기'}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -387,7 +785,7 @@ const CoverCarousel = ({ items, isDarkMode }) => {
 };
 
 // =====================================================================
-// 토스 스타일 미니멀 메인 홈 화면 (3단계 타이포 · 단일 블루 포인트 · 리스트 중심)
+// 메인 대문 홈 화면 (1안 다크 미디어 바 · 부드러운 슬라이드 덮기 · 실시간 카운터)
 // =====================================================================
 export function Home({
   t,
@@ -397,7 +795,12 @@ export function Home({
   setIsSidebarOpen,
   openModal,
   bibleProgress,
+  readChapsCount,
   currDay,
+  dailyData,
+  generalNotes,
+  globalPrayers,
+  globalCellData,
   readChallengeStart,
   date,
   setDate,
@@ -414,7 +817,16 @@ export function Home({
   authUser,
   streak5
 }) {
-  const [showTuesdayPopup, setShowTuesdayPopup] = useState(false);
+  const [drawerTab, setDrawerTab] = useState('records'); // 'records' | 'study'
+  const [isSheetExpanded, setIsSheetExpanded] = useState(false);
+  const [isMemoryFestivalOpen, setIsMemoryFestivalOpen] = useState(false);
+  const [isTheaterOpen, setIsTheaterOpen] = useState(false);
+  const [dragOffsetY, setDragOffsetY] = useState(0);
+  const [isDraggingSheet, setIsDraggingSheet] = useState(false);
+
+  const sheetTouchStartYRef = useRef(null);
+  const sheetTouchStartXRef = useRef(null);
+  const scrollContainerRef = useRef(null);
 
   const savedStart = localStorage.getItem('readChallengeStart') || readChallengeStart || '2026-01-01';
   const startD = new Date(`${savedStart}T00:00:00`);
@@ -422,80 +834,143 @@ export function Home({
   const dDay = Math.max(1, Math.floor((todayD.getTime() - startD.getTime()) / 86400000) + 1);
   const safeVerse = formatVerse || { text: '오늘의 말씀을 불러오는 중입니다.', ref: '' };
   const currentChecks = currDay && currDay.checks ? currDay.checks : {};
+  const activeBgUrl = currentBgUrl || watercolorBgs[dateHash % watercolorBgs.length];
 
-  // 유튜브 링크 및 구조 현행 100% 유지
-  const worshipVideos = [
-    {
-      title: isWknd ? '우리들교회 주일예배' : '김양재 목사 큐티노트',
-      url: `https://www.youtube.com/results?search_query=${isWknd ? '우리들교회+주일예배' : '김양재+목사+큐티노트'}+${ymdStr}`,
-      bg: 'https://images.unsplash.com/photo-1438232992991-995b7058bbb3?auto=format&fit=crop&w=800&q=80'
-    },
-    {
-      title: '맥체인 듣기 (부산신성교회)',
-      url: `https://www.youtube.com/results?search_query=부산신성교회+맥체인+성경읽기+${ymdStr}`,
-      bg: 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=800&q=80'
-    },
-    {
-      title: '맥체인 해설 (부산신성교회)',
-      url: `https://www.youtube.com/results?search_query=부산신성교회+맥체인+성경+해설+${ymdStr}`,
-      bg: 'https://images.unsplash.com/photo-1455390582262-044cdead277a?auto=format&fit=crop&w=800&q=80'
-    },
-    {
-      title: '좋은나무교회 새벽기도회',
-      url: `https://www.youtube.com/results?search_query=김포좋은나무교회+새벽기도회+${ymdStr}`,
-      bg: 'https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?auto=format&fit=crop&w=800&q=80'
-    },
-    {
-      title: '좋은나무교회 1분 설교',
-      url: `https://www.youtube.com/results?search_query=김포좋은나무교회+1분설교+${ymdStr}`,
-      bg: 'https://images.unsplash.com/photo-1548625149-fc4a29cf7092?auto=format&fit=crop&w=800&q=80'
-    }
-  ];
+  // 유튜브 링크 현행 100% 유지
+  const worshipVideos = useMemo(
+    () => [
+      {
+        title: isWknd ? '우리들교회 주일예배' : '김양재 목사 큐티노트',
+        url: `https://www.youtube.com/results?search_query=${isWknd ? '우리들교회+주일예배' : '김양재+목사+큐티노트'}+${ymdStr}`,
+        bg: 'https://images.unsplash.com/photo-1438232992991-995b7058bbb3?auto=format&fit=crop&w=800&q=80'
+      },
+      {
+        title: '맥체인 듣기 (부산신성교회)',
+        url: `https://www.youtube.com/results?search_query=부산신성교회+맥체인+성경읽기+${ymdStr}`,
+        bg: 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=800&q=80'
+      },
+      {
+        title: '맥체인 해설 (부산신성교회)',
+        url: `https://www.youtube.com/results?search_query=부산신성교회+맥체인+성경+해설+${ymdStr}`,
+        bg: 'https://images.unsplash.com/photo-1455390582262-044cdead277a?auto=format&fit=crop&w=800&q=80'
+      },
+      {
+        title: '좋은나무교회 새벽기도회',
+        url: `https://www.youtube.com/results?search_query=김포좋은나무교회+새벽기도회+${ymdStr}`,
+        bg: 'https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?auto=format&fit=crop&w=800&q=80'
+      },
+      {
+        title: '좋은나무교회 1분 설교',
+        url: `https://www.youtube.com/results?search_query=김포좋은나무교회+1분설교+${ymdStr}`,
+        bg: 'https://images.unsplash.com/photo-1548625149-fc4a29cf7092?auto=format&fit=crop&w=800&q=80'
+      }
+    ],
+    [isWknd, ymdStr]
+  );
 
-  const verseCardRef = useRef(null);
-  const handleSaveVerseImage = async (e) => {
-    e.stopPropagation();
-    if (!verseCardRef.current) return;
-    try {
-      const canvas = await html2canvas(verseCardRef.current, {
-        scale: 3,
-        useCORS: true,
-        backgroundColor: null,
-        logging: false
-      });
-      const url = canvas.toDataURL('image/png');
-      const link = document.createElement('a');
-      link.download = `오늘의_말씀카드_${ymdStr}.png`;
-      link.href = url;
-      link.click();
-    } catch (error) {
-      alert('말씀카드 저장 중 오류가 발생했습니다.');
-    }
-  };
+  // 실시간 작성/누적 내역 계산
+  const statsSummary = useMemo(() => {
+    const qtTitle = (currDay?.qtTitle || '').trim();
+    const qtReference = (currDay?.qtReference || '').trim();
+    const qtDone = Boolean(
+      currentChecks['QTin'] || qtTitle || qtReference || (currDay?.qtMeditation || '').trim()
+    );
+    const qtSubLabel = [qtTitle, qtReference].filter(Boolean).join(' · ') || '오늘 묵상 작성하기';
 
-  // Lucide 아이콘만 사용한 정돈된 메뉴 목록
+    const genNotesArr = Array.isArray(generalNotes) ? generalNotes : [];
+    const genNotesCount = genNotesArr.length;
+
+    const entries = Object.entries(dailyData || {});
+    const sermonCount = entries.filter(
+      ([_, d]) => d && ((d.sermonTitle || '').trim() || (d.sermonNotes || '').replace(/<[^>]*>?/gm, '').trim())
+    ).length;
+    const sermonTodayLabel = [currDay?.sermonTitle, currDay?.sermonReference].filter(Boolean).join(' · ');
+
+    const diaryCount = entries.filter(
+      ([_, d]) =>
+        d &&
+        (((d.testimony || '').replace(TESTIMONY_TEMPLATE.trim(), '').trim().length > 0) ||
+          (d.thanksText || '').trim().length > 0)
+    ).length;
+
+    const prayerList = Array.isArray(globalPrayers) ? globalPrayers.filter((p) => p && (p.text || '').trim()) : [];
+    const answeredPrayersCount = prayerList.filter((p) => p.status === 'answered').length;
+    const prayerBadge =
+      answeredPrayersCount > 0
+        ? `응답 ${answeredPrayersCount}`
+        : prayerList.length > 0
+        ? `${prayerList.length}건`
+        : null;
+
+    const cellSubmissionsCount = Array.isArray(globalCellData?.submissions) ? globalCellData.submissions.length : 0;
+    const cellPrayersCount = Array.isArray(globalCellData?.groupPrayers) ? globalCellData.groupPrayers.length : 0;
+    const cellBadge =
+      cellSubmissionsCount > 0
+        ? `새 글 ${cellSubmissionsCount}`
+        : cellPrayersCount > 0
+        ? `${cellPrayersCount}건`
+        : null;
+
+    const familyHasRecord = Boolean(
+      (currDay?.attendees && currDay.attendees.trim()) ||
+        (currDay?.meditate && currDay.meditate.trim()) ||
+        (currDay?.prayer && currDay.prayer.trim())
+    );
+
+    const galaxyNotesCount = genNotesArr.filter(
+      (n) => (n?.title || '').includes('은하계') || (n?.content || '').includes('은하계')
+    ).length;
+    const wikiNotesCount = genNotesArr.filter(
+      (n) => (n?.title || '').includes('위키') || (n?.content || '').includes('위키')
+    ).length;
+    const interlinearNotesCount = genNotesArr.filter(
+      (n) => (n?.title || '').includes('원어') || (n?.content || '').includes('원어')
+    ).length;
+    const trainingNotesCount = genNotesArr.filter(
+      (n) => (n?.title || '').includes('양육') || (n?.title || '').includes('워크북')
+    ).length;
+    const jerichoCount = entries.filter(([_, d]) => d && (d.jerichoWalk || (d.checks && d.checks['여리고']))).length;
+
+    return {
+      qtDone,
+      qtSubLabel,
+      genNotesCount,
+      sermonCount,
+      sermonTodayLabel,
+      diaryCount,
+      prayerBadge,
+      cellBadge,
+      familyHasRecord,
+      galaxyNotesCount,
+      wikiNotesCount,
+      interlinearNotesCount,
+      trainingNotesCount,
+      jerichoCount
+    };
+  }, [currentChecks, currDay, generalNotes, dailyData, globalPrayers, globalCellData]);
+
+  // 성경 연구 및 훈련 13개 메뉴 원본 100% 유지 + 순서편집 지원
   const MASTER_MENUS = useMemo(
     () => [
-      { id: 'sermonArchiveAdvanced', sketch: 'practice', icon: Church, title: '삶의 적용과 실천', desc: '말씀 적용 기록' },
-      { id: 'galaxy', sketch: 'galaxy', icon: Globe, title: '지식 은하계', desc: '구속사 흐름 탐색' },
-      { id: 'qtArchiveDetail', sketch: 'qtAnalytics', icon: Flame, title: '큐티 심층 분석', desc: '본문 배경과 적용' },
-      { id: 'sermonAnalysis', sketch: 'sermonAnalytics', icon: BarChart3, title: '설교 분석', desc: '전체 설교 아카이브' },
-      { id: 'applyTracker', sketch: 'tracker', icon: Check, title: '적용 트래커', desc: '신앙 결단 점검' },
-      { id: 'bibleWikiAdvanced', sketch: 'wiki', icon: Compass, title: '성경 위키', desc: '인물·지명 백과' },
-      { id: 'interlinear', sketch: 'interlinear', icon: FileText, title: '원어 성경', desc: '히브리어·헬라어 대조' },
-      { id: 'trainingCurriculum', sketch: 'curriculum', icon: BookOpen, title: '양육 커리큘럼', desc: '단계별 제자 훈련' },
-      { id: 'youthCurriculum', sketch: 'youth', icon: Users, title: '청소년 10주 양육', desc: '다음세대 성경 돌봄' },
-      { id: 'trainingSubPages', sketch: 'workbook', icon: PenLine, title: '4주 심화 워크북', desc: '소그룹 훈련 교재' },
-      { id: 'prayer', sketch: 'prayer', icon: HandHeart, title: '기도 보관함', desc: '개인 및 중보 기도' },
-      { id: 'jericho', sketch: 'jericho', icon: Footprints, title: '여리고 땅밟기', desc: '지역과 열방 기도' },
-      { id: 'virtualChurch', sketch: 'tour', icon: Building2, title: '가상교회 투어', desc: '층별 예배 공간 안내' }
+      { id: 'sermonArchiveAdvanced', sketch: 'practice', icon: Church, title: '삶의 적용과 실천', desc: '말씀 적용 기록', badgeText: statsSummary.sermonCount > 0 ? `${statsSummary.sermonCount}건` : null },
+      { id: 'galaxy', sketch: 'galaxy', icon: Globe, title: '지식 은하계', desc: '구속사 흐름 탐색', badgeText: statsSummary.galaxyNotesCount > 0 ? `${statsSummary.galaxyNotesCount}건` : null },
+      { id: 'qtArchiveDetail', sketch: 'qtAnalytics', icon: Flame, title: '큐티 심층 분석', desc: '본문 배경과 적용', badgeText: statsSummary.qtDone ? '기록됨' : null },
+      { id: 'sermonAnalysis', sketch: 'sermonAnalytics', icon: BarChart3, title: '설교 분석', desc: '전체 설교 아카이브', badgeText: statsSummary.sermonCount > 0 ? `${statsSummary.sermonCount}편` : null },
+      { id: 'applyTracker', sketch: 'tracker', icon: Check, title: '적용 트래커', desc: '신앙 결단 점검', badgeText: `${streak5 || 0}일` },
+      { id: 'bibleWikiAdvanced', sketch: 'wiki', icon: Compass, title: '성경 위키', desc: '인물·지명 백과', badgeText: statsSummary.wikiNotesCount > 0 ? `${statsSummary.wikiNotesCount}건` : null },
+      { id: 'interlinear', sketch: 'interlinear', icon: FileText, title: '원어 성경', desc: '히브리어·헬라어 대조', badgeText: statsSummary.interlinearNotesCount > 0 ? `${statsSummary.interlinearNotesCount}건` : null },
+      { id: 'trainingCurriculum', sketch: 'curriculum', icon: BookOpen, title: '양육 커리큘럼', desc: '단계별 제자 훈련', badgeText: statsSummary.trainingNotesCount > 0 ? `${statsSummary.trainingNotesCount}건` : null },
+      { id: 'youthCurriculum', sketch: 'youth', icon: Users, title: '청소년 10주 양육', desc: '다음세대 성경 돌봄', badgeText: null },
+      { id: 'trainingSubPages', sketch: 'workbook', icon: PenLine, title: '4주 심화 워크북', desc: '소그룹 훈련 교재', badgeText: statsSummary.trainingNotesCount > 0 ? `${statsSummary.trainingNotesCount}권` : null },
+      { id: 'prayer', sketch: 'prayer', icon: HandHeart, title: '기도 보관함', desc: '개인 및 중보 기도', badgeText: statsSummary.prayerBadge },
+      { id: 'jericho', sketch: 'jericho', icon: Footprints, title: '여리고 땅밟기', desc: '지역과 열방 기도', badgeText: statsSummary.jerichoCount > 0 ? `${statsSummary.jerichoCount}회` : null },
+      { id: 'virtualChurch', sketch: 'tour', icon: Building2, title: '가상교회 투어', desc: '층별 예배 공간 안내', badgeText: null }
     ],
-    []
+    [statsSummary, streak5]
   );
 
   const [menuOrderIds, setMenuOrderIds] = useState(() => {
     try {
-      localStorage.removeItem('home_menu_order');
       const savedIds = JSON.parse(localStorage.getItem('home_menu_order_ids') || 'null');
       if (Array.isArray(savedIds) && savedIds.length > 0) {
         const allIds = MASTER_MENUS.map((m) => m.id);
@@ -512,8 +987,6 @@ export function Home({
   }, [menuOrderIds, MASTER_MENUS]);
 
   const [isEditMode, setIsEditMode] = useState(false);
-  const [draggedIdx, setDraggedIdx] = useState(null);
-  const longPressTimerRef = useRef(null);
 
   const saveNewOrder = useCallback((nextIds) => {
     setMenuOrderIds(nextIds);
@@ -530,44 +1003,90 @@ export function Home({
     saveNewOrder(copy);
   };
 
-  const handleTouchStartCard = (idx) => {
-    clearTimeout(longPressTimerRef.current);
-    longPressTimerRef.current = setTimeout(() => {
-      setIsEditMode(true);
-      setDraggedIdx(idx);
-      if (navigator.vibrate) navigator.vibrate(35);
-    }, 480);
+  // 부드러운 상하 슬라이드 덮기 + 좌우 스와이프 핸들러
+  const handleSheetTouchStart = (e) => {
+    sheetTouchStartYRef.current = e.touches[0].clientY;
+    sheetTouchStartXRef.current = e.touches[0].clientX;
+    setIsDraggingSheet(true);
   };
 
-  const handleTouchEndCard = () => {
-    clearTimeout(longPressTimerRef.current);
-    setDraggedIdx(null);
+  const handleSheetTouchMove = (e) => {
+    if (sheetTouchStartYRef.current === null) return;
+    const deltaY = e.touches[0].clientY - sheetTouchStartYRef.current;
+    const deltaX = e.touches[0].clientX - sheetTouchStartXRef.current;
+    if (Math.abs(deltaY) > Math.abs(deltaX)) {
+      const clamped = isSheetExpanded
+        ? Math.max(0, Math.min(180, deltaY))
+        : Math.max(-180, Math.min(40, deltaY));
+      setDragOffsetY(clamped);
+    }
   };
 
-  const handleTouchMoveGrid = (e) => {
-    if (!isEditMode || draggedIdx === null) {
-      clearTimeout(longPressTimerRef.current);
+  const handleSheetTouchEnd = (e) => {
+    if (sheetTouchStartYRef.current === null) return;
+    const deltaY = e.changedTouches[0].clientY - sheetTouchStartYRef.current;
+    const deltaX = e.changedTouches[0].clientX - sheetTouchStartXRef.current;
+    sheetTouchStartYRef.current = null;
+    sheetTouchStartXRef.current = null;
+    setIsDraggingSheet(false);
+    setDragOffsetY(0);
+
+    if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY)) {
+      setDrawerTab(deltaX < 0 ? 'study' : 'records');
       return;
     }
-    const touch = e.touches?.[0];
-    if (!touch) return;
-    const targetEl = document.elementFromPoint(touch.clientX, touch.clientY);
-    const cardEl = targetEl?.closest?.('[data-menu-idx]');
-    if (cardEl) {
-      const overIdx = Number(cardEl.getAttribute('data-menu-idx'));
-      if (!Number.isNaN(overIdx) && overIdx !== draggedIdx) {
-        handleSwapMenuOrder(draggedIdx, overIdx);
-        setDraggedIdx(overIdx);
-      }
+
+    if (!isSheetExpanded && deltaY < -40) {
+      setIsSheetExpanded(true);
+      scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (isSheetExpanded && deltaY > 40) {
+      setIsSheetExpanded(false);
+      scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
+  // 영적5종세트 차별화된 부드러운 포인트 컬러
   const fiveRoutineItems = [
-    { id: '감사', label: '감사', sketch: 'thanks', icon: Heart },
-    { id: '성경읽기', label: '성경', sketch: 'bible', icon: BookOpen },
-    { id: 'QTin', label: '큐티', sketch: 'qt', icon: Flame },
-    { id: '기도하기', label: '기도', sketch: 'prayer', icon: HandHeart },
-    { id: '가정예배', label: '가정예배', sketch: 'family', icon: Smile }
+    {
+      id: '감사',
+      label: '감사',
+      sketch: 'thanks',
+      icon: Heart,
+      activeStyle: 'bg-gradient-to-br from-[#F43F5E] to-[#E11D48] text-white shadow-xs',
+      textStyle: 'text-[#E11D48] dark:text-[#FB7185]'
+    },
+    {
+      id: '성경읽기',
+      label: '성경',
+      sketch: 'bible',
+      icon: BookOpen,
+      activeStyle: 'bg-gradient-to-br from-[#3B82F6] to-[#4F46E5] text-white shadow-xs',
+      textStyle: 'text-[#3B82F6] dark:text-[#60A5FA]'
+    },
+    {
+      id: 'QTin',
+      label: '큐티',
+      sketch: 'qt',
+      icon: Flame,
+      activeStyle: 'bg-gradient-to-br from-[#F59E0B] to-[#EA580C] text-white shadow-xs',
+      textStyle: 'text-[#EA580C] dark:text-[#FBBF24]'
+    },
+    {
+      id: '기도하기',
+      label: '기도',
+      sketch: 'prayer',
+      icon: HandHeart,
+      activeStyle: 'bg-gradient-to-br from-[#0EA5E9] to-[#2563EB] text-white shadow-xs',
+      textStyle: 'text-[#2563EB] dark:text-[#38BDF8]'
+    },
+    {
+      id: '가정예배',
+      label: '가정예배',
+      sketch: 'family',
+      icon: Smile,
+      activeStyle: 'bg-gradient-to-br from-[#6366F1] to-[#7C3AED] text-white shadow-xs',
+      textStyle: 'text-[#4F46E5] dark:text-[#818CF8]'
+    }
   ];
 
   const completedFiveCount = fiveRoutineItems.filter((item) => currentChecks[item.id]).length;
@@ -577,55 +1096,105 @@ export function Home({
   const borderClass = isDarkMode ? 'border-[#262A32]' : 'border-[#E5E8EB]';
   const mutedChipClass = isDarkMode ? 'bg-[#22262E] text-[#9BA3B0]' : 'bg-[#F2F4F6] text-[#4E5968]';
 
+  const recordSections = [
+    {
+      heading: '묵상',
+      rows: [
+        {
+          id: 'mcheyne',
+          sketch: 'mcheyne',
+          icon: BookOpen,
+          title: '맥체인 성경읽기',
+          sub: null,
+          statusText: `${readChapsCount || 0}장 · ${dDay}일차`
+        },
+        {
+          id: 'generalNote',
+          sketch: 'note',
+          icon: PenLine,
+          title: '자유 말씀 노트',
+          sub: null,
+          statusText: `${statsSummary.genNotesCount}개`
+        }
+      ]
+    },
+    {
+      heading: '예배',
+      rows: [
+        {
+          id: 'sermon',
+          sketch: 'sermon',
+          icon: FileText,
+          title: '예배 노트 작성',
+          sub: statsSummary.sermonTodayLabel || null,
+          statusText: statsSummary.sermonCount > 0 ? `${statsSummary.sermonCount}건` : null
+        },
+        {
+          id: 'familySelect',
+          sketch: 'family',
+          icon: Smile,
+          title: '가정 예배 시작',
+          sub: null,
+          statusText: statsSummary.familyHasRecord ? '기록됨' : null
+        }
+      ]
+    },
+    {
+      heading: '기록과 나눔',
+      rows: [
+        {
+          id: 'diary',
+          sketch: 'diary',
+          icon: Heart,
+          title: '감사 및 간증 일기',
+          sub: null,
+          statusText: `${statsSummary.diaryCount}건`
+        },
+        {
+          id: 'prayer',
+          sketch: 'prayer',
+          icon: HandHeart,
+          title: '나의 기도함',
+          sub: null,
+          statusText: statsSummary.prayerBadge
+        },
+        {
+          id: 'cell',
+          sketch: 'cell',
+          icon: Users,
+          title: '목장 나눔',
+          sub: authUser?.role === 'admin' ? '관리자 모드' : null,
+          statusText: statsSummary.cellBadge
+        },
+        {
+          id: 'board',
+          sketch: 'board',
+          icon: Sparkles,
+          title: '공동체 게시판',
+          sub: null,
+          statusText: hasNewBoardPost ? '새 글' : null
+        }
+      ]
+    }
+  ];
+
   return (
     <div
+      ref={scrollContainerRef}
       className={`flex-1 flex flex-col h-full w-full max-w-full overflow-x-hidden touch-pan-y ${
-        isDarkMode ? 'bg-[#101216]' : 'bg-[#F4F6FA]'
-      } overflow-y-auto pb-[120px] hide-scrollbar pointer-events-auto relative`}
+        isDarkMode ? 'bg-[#101216]' : 'bg-[#F4F5F7]'
+      } overflow-y-auto pb-[105px] hide-scrollbar pointer-events-auto relative`}
     >
-      {/* 라이브 팝업 */}
-      {showTuesdayPopup && (
-        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/50">
-          <div className={`${surfaceClass} p-6 rounded-3xl max-w-sm w-full border ${borderClass} text-center space-y-4`}>
-            <div className={`w-12 h-12 rounded-2xl ${mutedChipClass} flex items-center justify-center mx-auto`}>
-              <Play className="w-6 h-6 text-[#3182F6] fill-current ml-0.5" />
-            </div>
-            <h3 className={`text-[18px] font-bold ${t.textMain}`}>터치유 더치유 라이브</h3>
-            <p className={`text-[15px] ${t.textSub} leading-relaxed`}>
-              매달 첫째 주 화요일은 실시간 방송일입니다.
-              <br />
-              은혜로운 말씀과 교제를 함께 나누세요.
-            </p>
-            <div className="flex gap-2 pt-2">
-              <a
-                href="https://www.youtube.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 py-3 bg-[#3182F6] text-white font-bold rounded-2xl text-[15px] flex items-center justify-center"
-              >
-                방송 보기
-              </a>
-              <button
-                onClick={() => setShowTuesdayPopup(false)}
-                className={`px-5 py-3 ${mutedChipClass} font-bold rounded-2xl text-[15px] cursor-pointer`}
-              >
-                닫기
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* 상단 고정 네비게이션 바 */}
       <header
-        className={`w-full shrink-0 flex items-center justify-between gap-2 px-4 sm:px-6 h-14 z-[45] sticky top-0 border-b ${borderClass} ${
-          isDarkMode ? 'bg-[#101216]/95' : 'bg-[#F4F6FA]/95'
+        className={`w-full shrink-0 flex items-center justify-between gap-2 px-3.5 sm:px-6 h-14 z-[45] sticky top-0 border-b ${borderClass} ${
+          isDarkMode ? 'bg-[#101216]/95' : 'bg-[#F4F5F7]/95'
         } backdrop-blur-md`}
       >
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className={`w-9 h-9 flex items-center justify-center rounded-xl transition-colors ${
+            className={`w-9 h-9 flex items-center justify-center rounded-xl transition-colors cursor-pointer ${
               isDarkMode ? 'hover:bg-white/10 text-white' : 'hover:bg-black/5 text-[#191F28]'
             }`}
             aria-label="메뉴 열기"
@@ -638,7 +1207,7 @@ export function Home({
               isDarkMode ? 'bg-[#1C1F26] text-white' : 'bg-white text-[#191F28]'
             } border ${borderClass}`}
           >
-            <ChurchSketchIcon name="calendar" fallback={Calendar} className="w-4 h-4 shrink-0" isDarkMode={isDarkMode} />
+            <ChurchSketchIcon name="calendar" fallback={Calendar} className="w-5 h-5 shrink-0" isDarkMode={isDarkMode} />
             <input
               type="date"
               value={date}
@@ -652,733 +1221,468 @@ export function Home({
           </div>
         </div>
 
-        <div className="flex items-center gap-1 shrink-0">
-          <button 
-            onClick={() => { setActiveScreen('board'); setHasNewBoardPost(false); }} 
-            className={`h-8 px-2 rounded-xl text-[11px] font-extrabold flex items-center justify-center gap-1 active:scale-95 transition-all border whitespace-nowrap ${isDarkMode ? 'bg-[#FF375F]/15 border-[#FF375F]/30 text-[#FF375F]' : 'bg-rose-50 border-rose-200/80 text-[#FF2D55]'} relative`}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            onClick={() => {
+              setActiveScreen('board');
+              setHasNewBoardPost(false);
+            }}
+            className={`h-8 px-3 rounded-full text-[12px] font-bold flex items-center justify-center gap-1 active:scale-95 transition-all whitespace-nowrap cursor-pointer relative ${
+              isDarkMode ? 'bg-[#FF375F]/20 text-[#FF6B88]' : 'bg-[#FFE5EA] text-[#E11D48]'
+            }`}
           >
-            <ChurchSketchIcon name="communityThanks" fallback={Heart} className="w-3.5 h-3.5 shrink-0" isDarkMode={isDarkMode} />
             <span>공동체감사</span>
-            {hasNewBoardPost && <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-[#FF2D55] rounded-full animate-ping" />}
+            {hasNewBoardPost && <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-[#E11D48] rounded-full" />}
           </button>
-          
-          <button 
-            onClick={() => { setActiveScreen('board'); setHasNewBoardPost(false); }} 
-            className={`h-8 px-2 rounded-xl text-[11px] font-extrabold flex items-center justify-center gap-1 active:scale-95 transition-all border whitespace-nowrap ${isDarkMode ? 'bg-[#30D158]/15 border-[#30D158]/30 text-[#30D158]' : 'bg-emerald-50 border-emerald-200/80 text-[#34C759]'}`}
+
+          <button
+            onClick={() => {
+              setActiveScreen('board');
+              setHasNewBoardPost(false);
+            }}
+            className={`h-8 px-3 rounded-full text-[12px] font-bold flex items-center justify-center gap-1 active:scale-95 transition-all whitespace-nowrap cursor-pointer ${
+              isDarkMode ? 'bg-[#10B981]/20 text-[#6EE7B7]' : 'bg-[#DCFCE7] text-[#15803D]'
+            }`}
           >
-            <ChurchSketchIcon name="communityPrayer" fallback={HandHeart} className="w-3.5 h-3.5 shrink-0" isDarkMode={isDarkMode} />
             <span>공동체기도</span>
           </button>
         </div>
       </header>
 
-      {/* 메인 콘텐츠 컨테이너 */}
-      <div className="px-4 sm:px-6 pt-4 pb-8 max-w-[760px] mx-auto w-full space-y-6">
-        {/* 암송 배너 */}
-        <MemoryFestivalBanner
-          isDarkMode={isDarkMode}
-          currDay={currDay}
-          date={date}
-          onCompleteCheck={() => {
-            if (updateDay) {
-              updateDay({ checks: { ...(currDay?.checks || {}), 암송: true } });
-            }
-          }}
-        />
-
-        {/* 히어로: 오늘의 말씀 */}
-        <section
-          ref={verseCardRef}
-          onClick={() => openModal('fullVerse', { text: `${safeVerse.text} ${safeVerse.ref}`, bgHash: dateHash })}
-          className={`relative rounded-3xl overflow-hidden cursor-pointer border ${borderClass} ${surfaceClass}`}
-        >
-          <div className="relative h-[196px] sm:h-[210px] w-full flex flex-col justify-between p-5 sm:p-6">
-            <div
-              className="absolute inset-0 bg-cover bg-center"
-              style={{ backgroundImage: `url(${currentBgUrl})` }}
-              crossOrigin="anonymous"
-            />
-            <div className="absolute inset-0 bg-black/55" />
-
-            <div className="relative z-10 flex items-center justify-between">
-              <span className="text-[12px] font-bold text-white/90 bg-white/15 px-2.5 py-1 rounded-lg">
-                오늘의 말씀
+      {/* 슬라이드 확장 시 부드럽게 나타나는 '오늘의 말씀' 한 줄 고정 바 */}
+      <div
+        className={`sticky top-14 z-[44] grid transition-[grid-template-rows,opacity] duration-400 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+          isSheetExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0 pointer-events-none'
+        }`}
+      >
+        <div className="overflow-hidden">
+          <div
+            onClick={() => setIsSheetExpanded(false)}
+            className={`px-3.5 sm:px-6 py-1.5 ${
+              isDarkMode ? 'bg-[#101216]/95' : 'bg-[#F4F5F7]/95'
+            } backdrop-blur-md cursor-pointer`}
+          >
+            <div className="max-w-[760px] mx-auto bg-gradient-to-r from-[#2563EB] to-[#4F46E5] text-white rounded-2xl px-4 py-2.5 flex items-center justify-between shadow-sm">
+              <span className="text-[13.5px] font-bold truncate">
+                {safeVerse.text} ({safeVerse.ref.replace(/[()]/g, '')})
               </span>
-              <span className="text-[12px] font-medium text-white/80">전체 보기</span>
-            </div>
-
-            <div className="relative z-10 space-y-1.5 my-auto">
-              <p className="text-[18px] sm:text-[20px] text-white font-bold leading-relaxed break-keep">
-                {safeVerse.text}
-              </p>
-              <p className="text-[12px] text-white/85 font-medium">{safeVerse.ref}</p>
-            </div>
-
-            <div className="relative z-10 flex justify-end">
-              <button
-                onClick={handleSaveVerseImage}
-                data-html2canvas-ignore="true"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-white text-[12px] font-bold cursor-pointer"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>이미지 저장</span>
-              </button>
+              <span className="text-[11.5px] font-semibold text-white/85 shrink-0 ml-3 flex items-center gap-1">
+                <span>루틴 {completedFiveCount}/5</span>
+                <ChevronDown className="w-3.5 h-3.5" />
+              </span>
             </div>
           </div>
-        </section>
+        </div>
+      </div>
 
-        {/* 섹션 1: 오늘의 신앙 루틴 (박스 중첩 배제 -> 단일 표면 + 구분선 통합) */}
-        <section className={`${surfaceClass} rounded-3xl border ${borderClass} overflow-hidden`}>
-          <div className="p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className={`text-[18px] font-bold ${t.textMain} tracking-tight`}>오늘의 신앙 루틴</h2>
-              <span className="text-[12px] font-bold text-[#3182F6] bg-[#3182F6]/10 px-2.5 py-1 rounded-lg">
-                {completedFiveCount} / 5 완료
-              </span>
-            </div>
+      {/* 메인 콘텐츠 컨테이너 */}
+      <div className="px-3.5 sm:px-6 pt-2.5 pb-6 max-w-[760px] mx-auto w-full flex-1 flex flex-col">
+        {/* 상단 카드 영역: 시트가 올라오면 부드럽게 축소·덮임 */}
+        <div
+          className={`grid transition-[grid-template-rows,opacity,transform] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] origin-top ${
+            isSheetExpanded
+              ? 'grid-rows-[0fr] opacity-0 scale-[0.96] -translate-y-2 pointer-events-none'
+              : 'grid-rows-[1fr] opacity-100 scale-100 translate-y-0 mb-3'
+          }`}
+        >
+          <div className="overflow-hidden">
+            <div className="space-y-3">
+              {/* 1. 최상단 2분할 카드: 가상 교회 투어(배경 이미지) + 오늘의 말씀(배경 이미지 & 암송 열기) */}
+              <div className="grid grid-cols-12 gap-2.5 items-stretch">
+                <button
+                  type="button"
+                  onClick={() => setActiveScreen('virtualChurch')}
+                  style={{
+                    backgroundImage: `url('/images/virtual-church-card.jpg')`
+                  }}
+                  className="col-span-5 relative rounded-3xl overflow-hidden bg-gradient-to-br from-[#2563EB] via-[#3B82F6] to-[#4F46E5] bg-cover bg-center text-white p-3.5 flex flex-col justify-between text-left cursor-pointer min-h-[144px] shadow-xs border border-white/15"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-black/15 pointer-events-none" />
+                  <div className="relative z-10 w-8 h-8 rounded-xl bg-white/20 backdrop-blur-xs flex items-center justify-center">
+                    <ChurchSketchIcon name="tour" fallback={Church} className="w-5 h-5 brightness-0 invert" isDarkMode={true} />
+                  </div>
+                  <div className="relative z-10 space-y-0.5 mt-4">
+                    <span className="text-[15.5px] font-bold leading-snug block drop-shadow-xs">가상 교회 투어</span>
+                    <span className="text-[11.5px] text-white/85 font-medium block">둘러보기</span>
+                  </div>
+                </button>
 
-            <div className="grid grid-cols-5 gap-2">
-              {fiveRoutineItems.map((item) => {
-                const isChecked = Boolean(currentChecks[item.id]);
-                const IconComp = item.icon;
-                return (
+                <div
+                  onClick={() =>
+                    openModal('fullVerse', {
+                      text: `${safeVerse.text} ${safeVerse.ref}`,
+                      bgHash: dateHash,
+                      bgUrl: activeBgUrl
+                    })
+                  }
+                  style={{ backgroundImage: `url(${activeBgUrl})` }}
+                  className="col-span-7 relative rounded-3xl overflow-hidden flex flex-col justify-between text-left cursor-pointer min-h-[144px] p-3.5 bg-cover bg-center border border-white/15 shadow-xs"
+                >
+                  <div className="absolute inset-0 bg-black/55 pointer-events-none" />
+
+                  <div className="relative z-10 flex items-center justify-between gap-2">
+                    <span className="text-[12px] font-bold text-sky-200">오늘의 말씀</span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsMemoryFestivalOpen(true);
+                      }}
+                      className="px-2.5 py-1 rounded-lg bg-white/20 hover:bg-white/30 text-[11.5px] font-bold text-white cursor-pointer backdrop-blur-xs"
+                    >
+                      암송 열기
+                    </button>
+                  </div>
+
+                  <p className="relative z-10 text-[14.5px] font-bold leading-snug line-clamp-3 my-1.5 break-keep text-white">
+                    {safeVerse.text}
+                  </p>
+
+                  <span className="relative z-10 text-[11.5px] font-medium text-white/85">
+                    {safeVerse.ref.replace(/[()]/g, '')}
+                  </span>
+                </div>
+              </div>
+
+              {/* 2. 영적5종세트 + 연속 실천일수 + 성경 365 통독 */}
+              <section className={`${surfaceClass} rounded-3xl border ${borderClass} overflow-hidden`}>
+                <div className="px-3.5 py-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <h2 className={`text-[15.5px] font-bold ${t.textMain} tracking-tight`}>영적5종세트</h2>
+                    <span className="text-[11.5px] font-bold text-[#3B82F6] bg-[#3B82F6]/10 px-2.5 py-0.5 rounded-lg">
+                      {completedFiveCount} / 5 완료
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-5 gap-1">
+                    {fiveRoutineItems.map((item) => {
+                      const isChecked = Boolean(currentChecks[item.id]);
+                      const IconComp = item.icon;
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => {
+                            updateDay({ checks: { ...currentChecks, [item.id]: !isChecked } });
+                            if (!isChecked) triggerConfetti();
+                          }}
+                          className="flex flex-col items-center py-0.5 rounded-2xl transition-transform active:scale-95 cursor-pointer"
+                        >
+                          <div
+                            className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-all relative ${
+                              isChecked ? item.activeStyle : mutedChipClass
+                            }`}
+                          >
+                            <ChurchSketchIcon
+                              name={item.sketch}
+                              fallback={IconComp}
+                              className="w-6 h-6"
+                              isDarkMode={isDarkMode}
+                              invertOnActive={isChecked}
+                            />
+                          </div>
+                          <span className={`text-[11.5px] mt-1 font-bold ${isChecked ? item.textStyle : t.textSub}`}>
+                            {item.label}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className={`grid grid-cols-2 border-t ${borderClass} divide-x ${borderClass}`}>
                   <button
-                    key={item.id}
+                    type="button"
+                    onClick={() => setActiveScreen('fiveSetMenu')}
+                    className="px-3.5 py-2.5 flex items-center justify-between text-left hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors cursor-pointer"
+                  >
+                    <div>
+                      <span className={`text-[11.5px] font-medium ${t.textSub} block`}>연속 실천일수</span>
+                      <span className={`text-[16px] font-bold ${t.textMain} mt-0.5 block`}>{streak5 || 0}일째</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-[#8B95A1]" />
+                  </button>
+
+                  <button
                     type="button"
                     onClick={() => {
-                      updateDay({ checks: { ...currentChecks, [item.id]: !isChecked } });
-                      if (!isChecked) triggerConfetti();
+                      setActiveScreen('bible');
+                      openModal('bibleChallenge');
                     }}
-                    className="flex flex-col items-center py-2 rounded-2xl transition-colors cursor-pointer"
+                    className="px-3.5 py-2.5 flex flex-col justify-between text-left hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors cursor-pointer"
                   >
-                    <div
-                      className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors relative ${
-                        isChecked ? 'bg-[#3182F6] text-white' : mutedChipClass
-                      }`}
-                    >
-                      <ChurchSketchIcon
-                        name={item.sketch}
-                        fallback={IconComp}
-                        className="w-6 h-6"
-                        isDarkMode={isDarkMode}
-                        invertOnActive={isChecked}
-                      />
-                      {isChecked && (
-                        <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[#191F28] text-white flex items-center justify-center">
-                          <Check className="w-2.5 h-2.5 stroke-[3]" />
-                        </span>
-                      )}
+                    <div className="flex items-center justify-between w-full">
+                      <span className={`text-[11.5px] font-medium ${t.textSub}`}>성경 365 통독</span>
+                      <span className="text-[11.5px] font-bold text-[#3B82F6]">{bibleProgress}%</span>
                     </div>
-                    <span className={`text-[12px] mt-2 font-bold ${isChecked ? 'text-[#3182F6]' : t.textSub}`}>
-                      {item.label}
+                    <span className={`text-[16px] font-bold ${t.textMain} mt-0.5 block`}>
+                      {dDay > 0 ? `${dDay}일차` : '시작 전'}
                     </span>
+                    <div className={`w-full ${isDarkMode ? 'bg-[#262A32]' : 'bg-[#E5E8EB]'} rounded-full h-1.5 mt-1 overflow-hidden`}>
+                      <div
+                        className="bg-gradient-to-r from-[#3B82F6] to-[#6366F1] h-full rounded-full"
+                        style={{ width: `${bibleProgress}%` }}
+                      />
+                    </div>
                   </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* 구분선으로 연결된 핵심 지표 요약 행 */}
-          <div className={`grid grid-cols-2 border-t ${borderClass} divide-x ${borderClass}`}>
-            <button
-              type="button"
-              onClick={() => setActiveScreen('fiveSetMenu')}
-              className="p-4 flex items-center justify-between text-left hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors cursor-pointer"
-            >
-              <div>
-                <span className={`text-[12px] font-medium ${t.textSub} block`}>연속 실천일수</span>
-                <span className={`text-[18px] font-bold ${t.textMain} mt-0.5 block`}>{streak5 || 0}일째</span>
-              </div>
-              <ChevronRight className="w-4 h-4 text-[#8B95A1]" />
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setActiveScreen('bible');
-                openModal('bibleChallenge');
-              }}
-              className="p-4 flex items-center justify-between text-left hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors cursor-pointer"
-            >
-              <div className="flex-1 pr-3">
-                <div className="flex items-center justify-between">
-                  <span className={`text-[12px] font-medium ${t.textSub}`}>성경 365 통독</span>
-                  <span className="text-[12px] font-bold text-[#3182F6]">{bibleProgress}%</span>
                 </div>
-                <span className={`text-[18px] font-bold ${t.textMain} mt-0.5 block`}>
-                  {dDay > 0 ? `${dDay}일차` : '시작 전'}
-                </span>
-                <div className={`w-full ${isDarkMode ? 'bg-[#262A32]' : 'bg-[#E5E8EB]'} rounded-full h-1.5 mt-2 overflow-hidden`}>
-                  <div className="bg-[#3182F6] h-full rounded-full" style={{ width: `${bibleProgress}%` }} />
-                </div>
-              </div>
-              <ChevronRight className="w-4 h-4 text-[#8B95A1] shrink-0" />
-            </button>
-          </div>
-        </section>
+              </section>
 
-        {/* 섹션 2: 말씀과 기록 (토스식 리스트 & 구분선 구조) */}
-        <section className={`${surfaceClass} rounded-3xl border ${borderClass} overflow-hidden`}>
-          <div className="px-5 pt-5 pb-2">
-            <h2 className={`text-[18px] font-bold ${t.textMain} tracking-tight`}>말씀과 기록</h2>
-          </div>
-
-          <div className={`divide-y ${dividerClass}`}>
-            {[
-              { id: 'qt', sketch: 'qt', icon: Flame, title: '매일 큐티', desc: '오늘의 묵상 본문과 질문 기록' },
-              { id: 'mcheyne', sketch: 'mcheyne', icon: BookOpen, title: '맥체인 성경읽기', desc: '365일 성경 통독 진도 관리' },
-              { id: 'sermon', sketch: 'sermon', icon: FileText, title: '예배 노트 작성', desc: '주일·수요 설교 말씀 필기 및 요약' },
-              { id: 'generalNote', sketch: 'note', icon: PenLine, title: '자유 말씀 노트', desc: '성경 구절 자동 첨부 및 자유 기록' },
-              { id: 'familySelect', sketch: 'family', icon: Smile, title: '가정 예배 시작', desc: '온 가족이 함께 나누는 예배 순서지' },
-              { id: 'diary', sketch: 'diary', icon: Heart, title: '감사 및 간증 일기', desc: '일상의 감사 제목과 은혜 기록' },
-              { id: 'prayer', sketch: 'prayer', icon: HandHeart, title: '나의 기도함', desc: '개인 기도 제목과 응답 관리' },
-              {
-                id: 'cell',
-                sketch: 'cell',
-                icon: Users,
-                title: '목장 나눔',
-                desc: authUser?.role === 'admin' ? '목장 보고서 및 나눔 관리 (관리자)' : '주간 목장 말씀·감사·기도 나눔'
-              },
-              {
-                id: 'board',
-                sketch: 'board',
-                icon: Sparkles,
-                title: '공동체 게시판',
-                desc: '전교인 기도와 감사 실시간 나눔',
-                badge: hasNewBoardPost
-              }
-            ].map((row) => {
-              const IconComp = row.icon;
-              return (
-                <button
-                  key={row.id}
-                  type="button"
-                  onClick={() => setActiveScreen(row.id)}
-                  className="w-full px-5 py-4 flex items-center justify-between gap-3 text-left hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors cursor-pointer"
-                >
-                  <div className="flex items-center gap-3.5 min-w-0">
-                    <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${mutedChipClass}`}>
-                      <ChurchSketchIcon name={row.sketch} fallback={IconComp} className="w-5 h-5" isDarkMode={isDarkMode} />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className={`text-[15px] font-bold ${t.textMain} block`}>{row.title}</span>
-                        {row.badge && <span className="w-1.5 h-1.5 rounded-full bg-[#3182F6]" />}
-                      </div>
-                      <span className={`text-[12px] font-medium ${t.textSub} block mt-0.5 truncate`}>{row.desc}</span>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-[#8B95A1] shrink-0" />
-                </button>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* 섹션 3: 예배 및 말씀 영상 */}
-        <section className="space-y-2.5">
-          <div className="flex items-center justify-between px-1">
-            <h2 className={`text-[18px] font-bold ${t.textMain} tracking-tight`}>예배 및 말씀 영상</h2>
-          </div>
-          <CoverCarousel items={worshipVideos} isDarkMode={isDarkMode} />
-        </section>
-
-        {/* 섹션 4: 추천 찬양 채널 */}
-        <section className="space-y-2.5">
-          <div className="flex items-center justify-between px-1">
-            <h2 className={`text-[18px] font-bold ${t.textMain} tracking-tight flex items-center gap-2`}>
-              <Headphones className="w-5 h-5 text-[#3182F6]" />
-              <span>추천 찬양 채널</span>
-            </h2>
-          </div>
-          <CoverCarousel items={praiseChannels} isDarkMode={isDarkMode} />
-        </section>
-
-        {/* 섹션 5: 성경 연구 및 훈련 도구 */}
-        <section className={`${surfaceClass} rounded-3xl border ${borderClass} overflow-hidden`}>
-          <div className="px-5 pt-5 pb-3 flex items-center justify-between">
-            <div>
-              <h2 className={`text-[18px] font-bold ${t.textMain} tracking-tight`}>성경 연구 및 훈련</h2>
-              <p className={`text-[12px] font-medium ${t.textSub} mt-0.5`}>
-                {isEditMode ? '순서를 이동한 뒤 완료를 눌러주세요' : '길게 누르거나 순서편집으로 배치 변경'}
-              </p>
-            </div>
-            <div className="flex items-center gap-1.5 shrink-0">
-              {isEditMode && (
-                <button
-                  type="button"
-                  onClick={() => saveNewOrder(MASTER_MENUS.map((m) => m.id))}
-                  className={`px-2.5 py-1.5 rounded-xl text-[12px] font-bold ${mutedChipClass} cursor-pointer`}
-                >
-                  초기화
-                </button>
-              )}
+              {/* 3. 1안: 슬림 다크 미디어 바 (클릭 시 3D 커버플로우 시어터 + 시네마 플레이어 오픈) */}
               <button
                 type="button"
-                onClick={() => setIsEditMode(!isEditMode)}
-                className={`px-3 py-1.5 rounded-xl text-[12px] font-bold cursor-pointer ${
-                  isEditMode ? 'bg-[#3182F6] text-white' : mutedChipClass
-                }`}
+                onClick={() => setIsTheaterOpen(true)}
+                className="w-full h-[52px] px-4 rounded-2xl bg-gradient-to-r from-[#141824] via-[#1C2333] to-[#171C2B] border border-white/10 text-white flex items-center justify-between gap-3 shadow-sm hover:brightness-110 active:scale-[0.99] transition-all cursor-pointer"
               >
-                {isEditMode ? '완료' : '순서편집'}
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className="w-7 h-7 rounded-full bg-gradient-to-br from-[#3B82F6] to-[#6366F1] flex items-center justify-center shrink-0 shadow-xs">
+                    <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                  </span>
+                  <div className="flex items-center gap-1.5 min-w-0 truncate">
+                    <span className="text-[12.5px] font-bold text-sky-300 shrink-0">예배·찬양 시어터</span>
+                    <span className="text-white/35 text-[11px]">·</span>
+                    <span className="text-[13px] font-semibold text-white/90 truncate">
+                      {worshipVideos[0]?.title || '오늘의 예배 영상'}
+                    </span>
+                  </div>
+                </div>
+                <span className="flex items-center gap-1 text-[11.5px] font-bold text-white/75 shrink-0">
+                  <Headphones className="w-3.5 h-3.5 text-sky-300" />
+                  <span>열기</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </span>
               </button>
             </div>
           </div>
+        </div>
 
+        {/* 4. 단일 하단 슬라이드 시트 (상하 부드러운 덮기 + 좌우 탭 스와이프) */}
+        <section
+          style={{
+            transform: dragOffsetY !== 0 ? `translateY(${dragOffsetY * 0.45}px)` : 'translateY(0px)',
+            transition: isDraggingSheet
+              ? 'none'
+              : 'transform 380ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 380ms ease'
+          }}
+          className={`${surfaceClass} rounded-3xl border ${borderClass} overflow-hidden flex-1 flex flex-col ${
+            isSheetExpanded ? 'shadow-[0_-12px_36px_rgba(15,23,42,0.12)]' : 'shadow-2xs'
+          }`}
+        >
+          {/* 드래그 핸들 바 */}
           <div
-            onTouchMove={handleTouchMoveGrid}
-            className={`grid grid-cols-1 sm:grid-cols-2 border-t ${borderClass} divide-y ${dividerClass}`}
+            onTouchStart={handleSheetTouchStart}
+            onTouchMove={handleSheetTouchMove}
+            onTouchEnd={handleSheetTouchEnd}
+            onClick={() => setIsSheetExpanded((prev) => !prev)}
+            className="pt-2.5 pb-1.5 flex flex-col items-center justify-center cursor-grab active:cursor-grabbing touch-none"
+            title={isSheetExpanded ? '아래로 내리기' : '위로 올려 전체 메뉴 보기'}
           >
-            {orderedMenus.map((item, index) => {
-              const IconComp = item.icon;
-              return (
-                <div
-                  key={item.id}
-                  data-menu-idx={index}
-                  draggable={isEditMode}
-                  onDragStart={() => setDraggedIdx(index)}
-                  onDragEnter={() => {
-                    if (draggedIdx !== null && draggedIdx !== index) {
-                      handleSwapMenuOrder(draggedIdx, index);
-                      setDraggedIdx(index);
-                    }
-                  }}
-                  onDragEnd={() => setDraggedIdx(null)}
-                  onDragOver={(e) => e.preventDefault()}
-                  onTouchStart={() => handleTouchStartCard(index)}
-                  onTouchEnd={handleTouchEndCard}
-                  onContextMenu={(e) => {
-                    e.preventDefault();
-                    setIsEditMode(true);
-                  }}
-                  onClick={() => {
-                    if (isEditMode) return;
-                    setActiveScreen(item.id);
-                  }}
-                  className={`px-5 py-3.5 flex items-center justify-between gap-3 select-none transition-colors ${
-                    isEditMode
-                      ? 'bg-[#3182F6]/5 cursor-grab'
-                      : 'hover:bg-black/[0.02] dark:hover:bg-white/[0.02] cursor-pointer'
-                  } ${draggedIdx === index ? 'opacity-50' : 'opacity-100'}`}
-                >
-                  <div className="flex items-center gap-3 min-w-0 pointer-events-none">
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${mutedChipClass}`}>
-                      <ChurchSketchIcon
-                        name={item.sketch}
-                        fallback={IconComp}
-                        className="w-5 h-5"
-                        isDarkMode={isDarkMode}
-                      />
-                    </div>
-                    <div className="min-w-0">
-                      <span className={`text-[15px] font-bold ${t.textMain} block truncate`}>{item.title}</span>
-                      <span className={`text-[12px] font-medium ${t.textSub} block truncate`}>{item.desc}</span>
-                    </div>
-                  </div>
-
-                  {isEditMode ? (
-                    <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        type="button"
-                        onClick={() => handleSwapMenuOrder(index, index - 1)}
-                        disabled={index === 0}
-                        className={`w-7 h-7 rounded-lg ${mutedChipClass} text-[12px] font-bold flex items-center justify-center disabled:opacity-30 cursor-pointer`}
-                      >
-                        이전
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleSwapMenuOrder(index, index + 1)}
-                        disabled={index === orderedMenus.length - 1}
-                        className={`w-7 h-7 rounded-lg ${mutedChipClass} text-[12px] font-bold flex items-center justify-center disabled:opacity-30 cursor-pointer`}
-                      >
-                        다음
-                      </button>
-                    </div>
-                  ) : (
-                    <ChevronRight className="w-4 h-4 text-[#8B95A1] shrink-0" />
-                  )}
-                </div>
-              );
-            })}
+            <span className={`w-10 h-1 rounded-full ${isDarkMode ? 'bg-[#3A4150]' : 'bg-[#D1D5DB]'}`} />
           </div>
+
+          {/* 세그먼트 탭 바 (좌우 스와이프 대응) */}
+          <div
+            onTouchStart={handleSheetTouchStart}
+            onTouchMove={handleSheetTouchMove}
+            onTouchEnd={handleSheetTouchEnd}
+            className={`mx-4 mb-2 p-1 rounded-2xl ${mutedChipClass} grid grid-cols-2 gap-1`}
+          >
+            <button
+              type="button"
+              onClick={() => setDrawerTab('records')}
+              className={`py-2 rounded-xl text-[13.5px] font-bold transition-all cursor-pointer ${
+                drawerTab === 'records' ? `${surfaceClass} ${t.textMain} shadow-2xs` : t.textSub
+              }`}
+            >
+              말씀과 기록
+            </button>
+            <button
+              type="button"
+              onClick={() => setDrawerTab('study')}
+              className={`py-2 rounded-xl text-[13.5px] font-bold transition-all cursor-pointer ${
+                drawerTab === 'study' ? `${surfaceClass} ${t.textMain} shadow-2xs` : t.textSub
+              }`}
+            >
+              성경 연구 및 훈련
+            </button>
+          </div>
+
+          {drawerTab === 'records' ? (
+            <div className="px-4 pb-5 pt-1 space-y-3">
+              {/* 매일 큐티 하이라이트 카드 */}
+              <div
+                onClick={() => setActiveScreen('qt')}
+                className={`p-3.5 rounded-2xl flex items-center justify-between gap-3 cursor-pointer transition-colors ${
+                  isDarkMode ? 'bg-[#3B82F6]/15 hover:bg-[#3B82F6]/20' : 'bg-[#EBF3FF] hover:bg-[#E0ECFF]'
+                }`}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-2xl bg-[#3B82F6]/15 text-[#3B82F6] flex items-center justify-center shrink-0">
+                    <ChurchSketchIcon name="qt" fallback={Flame} className="w-6 h-6" isDarkMode={isDarkMode} />
+                  </div>
+                  <div className="min-w-0">
+                    <span className={`text-[15px] font-bold ${t.textMain} block`}>매일 큐티</span>
+                    <span className={`text-[12px] ${t.textSub} block truncate mt-0.5`}>{statsSummary.qtSubLabel}</span>
+                  </div>
+                </div>
+                <span className="px-3 py-1 rounded-full bg-white text-[#3B82F6] text-[12px] font-bold shrink-0 shadow-2xs">
+                  {statsSummary.qtDone ? '완료' : '작성'}
+                </span>
+              </div>
+
+              {/* 그룹별 리스트 */}
+              {recordSections.map((sec) => (
+                <div key={sec.heading} className="space-y-0.5">
+                  <span className={`text-[11.5px] font-semibold ${t.textSub} px-1 block`}>{sec.heading}</span>
+                  <div className={`divide-y ${dividerClass}`}>
+                    {sec.rows.map((row) => {
+                      const IconComp = row.icon;
+                      return (
+                        <button
+                          key={row.id}
+                          type="button"
+                          onClick={() => setActiveScreen(row.id)}
+                          className="w-full py-3 px-1 flex items-center justify-between gap-3 text-left hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors cursor-pointer"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0">
+                              <ChurchSketchIcon name={row.sketch} fallback={IconComp} className="w-6 h-6" isDarkMode={isDarkMode} />
+                            </div>
+                            <div className="min-w-0">
+                              <span className={`text-[14.5px] font-bold ${t.textMain} block truncate`}>{row.title}</span>
+                              {row.sub && (
+                                <span className={`text-[11.5px] ${t.textSub} block truncate`}>{row.sub}</span>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            {row.statusText && (
+                              <span className="text-[12.5px] font-bold text-[#3B82F6]">{row.statusText}</span>
+                            )}
+                            <ChevronRight className="w-4 h-4 text-[#8B95A1]" />
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col">
+              <div className="px-4 pb-2 flex items-center justify-between">
+                <span className={`text-[12px] font-medium ${t.textSub}`}>
+                  {isEditMode ? '순서를 이동한 뒤 완료를 눌러주세요' : '13개 성경 연구 및 훈련 도구'}
+                </span>
+                <div className="flex items-center gap-1.5">
+                  {isEditMode && (
+                    <button
+                      type="button"
+                      onClick={() => saveNewOrder(MASTER_MENUS.map((m) => m.id))}
+                      className={`px-2.5 py-1 rounded-lg text-[11.5px] font-bold ${mutedChipClass} cursor-pointer`}
+                    >
+                      초기화
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setIsEditMode((v) => !v)}
+                    className={`px-2.5 py-1 rounded-lg text-[11.5px] font-bold cursor-pointer ${
+                      isEditMode ? 'bg-[#3B82F6] text-white' : mutedChipClass
+                    }`}
+                  >
+                    {isEditMode ? '완료' : '순서편집'}
+                  </button>
+                </div>
+              </div>
+
+              <div className={`divide-y ${dividerClass} border-t ${borderClass}`}>
+                {orderedMenus.map((item, index) => {
+                  const IconComp = item.icon;
+                  return (
+                    <div
+                      key={item.id}
+                      onClick={() => {
+                        if (isEditMode) return;
+                        setActiveScreen(item.id);
+                      }}
+                      className="w-full px-4 py-3 flex items-center justify-between gap-3 text-left hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors cursor-pointer"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${mutedChipClass}`}>
+                          <ChurchSketchIcon name={item.sketch} fallback={IconComp} className="w-6 h-6" isDarkMode={isDarkMode} />
+                        </div>
+                        <div className="min-w-0">
+                          <span className={`text-[14.5px] font-bold ${t.textMain} block truncate`}>{item.title}</span>
+                          <span className={`text-[11.5px] ${t.textSub} block truncate`}>{item.desc}</span>
+                        </div>
+                      </div>
+
+                      {isEditMode ? (
+                        <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            type="button"
+                            onClick={() => handleSwapMenuOrder(index, index - 1)}
+                            disabled={index === 0}
+                            className={`px-2 py-1 rounded-lg ${mutedChipClass} text-[11px] font-bold disabled:opacity-30 cursor-pointer`}
+                          >
+                            위
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleSwapMenuOrder(index, index + 1)}
+                            disabled={index === orderedMenus.length - 1}
+                            className={`px-2 py-1 rounded-lg ${mutedChipClass} text-[11px] font-bold disabled:opacity-30 cursor-pointer`}
+                          >
+                            아래
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 shrink-0">
+                          {item.badgeText && (
+                            <span className="text-[12px] font-bold text-[#3B82F6]">{item.badgeText}</span>
+                          )}
+                          <ChevronRight className="w-4 h-4 text-[#8B95A1]" />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </section>
       </div>
+
+      {/* 암송 열기 전용 40구절 팝업 (하단 배너 라인 숨김) */}
+      <MemoryFestivalBanner
+        isDarkMode={isDarkMode}
+        currDay={currDay}
+        date={date}
+        externalOpen={isMemoryFestivalOpen}
+        onExternalClose={() => setIsMemoryFestivalOpen(false)}
+        hideBanner={true}
+        onCompleteCheck={() => {
+          if (updateDay) {
+            updateDay({ checks: { ...(currDay?.checks || {}), 암송: true } });
+          }
+        }}
+      />
+
+      {/* 1안 다크 3D 커버플로우 시어터 + 시네마 플레이어 */}
+      <MediaTheaterModal
+        isOpen={isTheaterOpen}
+        onClose={() => setIsTheaterOpen(false)}
+        worshipVideos={worshipVideos}
+        praiseChannels={praiseChannels}
+        currDay={currDay}
+        setActiveScreen={setActiveScreen}
+      />
     </div>
   );
 }
-
-const getArr = (val, def = []) => (Array.isArray(val) ? val : def);
-const safeParse = (key, def) => {
-  try {
-    const val = localStorage.getItem(key);
-    if (!val) return def;
-    const parsed = JSON.parse(val);
-    return parsed !== null ? parsed : def;
-  } catch (e) {
-    return def;
-  }
-};
-const safeSetItem = (key, value) => {
-  try {
-    localStorage.setItem(key, value);
-  } catch (e) {
-    console.warn(`[용량 초과 방어] ${key} 저장 실패`);
-  }
-};
-
-const bibles =
-  typeof bibleData !== 'undefined' && bibleData.length > 0
-    ? bibleData
-    : [{ name: 'Genesis', chapters: [['태초에 하나님이 천지를 창조하시니라']] }];
-const bookNamesKo = {
-  Genesis: '창세기',
-  Exodus: '출애굽기',
-  Leviticus: '레위기',
-  Numbers: '민수기',
-  Deuteronomy: '신명기',
-  Joshua: '여호수아',
-  Judges: '사사기',
-  Ruth: '룻기',
-  '1 Samuel': '사무엘상',
-  '2 Samuel': '사무엘하',
-  '1 Kings': '열왕기상',
-  '2 Kings': '열왕기하',
-  '1 Chronicles': '역대상',
-  '2 Chronicles': '역대하',
-  Ezra: '에스라',
-  Nehemiah: '느헤미야',
-  Esther: '에스더',
-  Job: '욥기',
-  Psalms: '시편',
-  Proverbs: '잠언',
-  Ecclesiastes: '전도서',
-  'Song of Solomon': '아가',
-  Isaiah: '이사야',
-  Jeremiah: '예레미야',
-  Lamentations: '예레미야애가',
-  Ezekiel: '에스겔',
-  Daniel: '다니엘',
-  Hosea: '호세아',
-  Joel: '요엘',
-  Amos: '아모스',
-  Obadiah: '오바댜',
-  Jonah: '요나',
-  Micah: '미가',
-  Nahum: '나훔',
-  Habakkuk: '하박국',
-  Zephaniah: '스바냐',
-  Haggai: '학개',
-  Zechariah: '스가랴',
-  Malachi: '말라기',
-  Matthew: '마태복음',
-  Mark: '마가복음',
-  Luke: '누가복음',
-  John: '요한복음',
-  Acts: '사도행전',
-  Romans: '로마서',
-  '1 Corinthians': '고린도전서',
-  '2 Corinthians': '고린도후서',
-  Galatians: '갈라디아서',
-  Ephesians: '에베소서',
-  Philippians: '빌립보서',
-  Colossians: '골로새서',
-  '1 Thessalonians': '데살로니가전서',
-  '2 Thessalonians': '데살로니가후서',
-  '1 Timothy': '디모데전서',
-  '2 Timothy': '디모데후서',
-  Titus: '디도서',
-  Philemon: '빌레몬서',
-  Hebrews: '히브리서',
-  James: '야고보서',
-  '1 Peter': '베드로전서',
-  '2 Peter': '베드로후서',
-  '1 John': '요한일서',
-  '2 John': '요한이서',
-  '3 John': '요한삼서',
-  Jude: '유다서',
-  Revelation: '요한계시록'
-};
-const getKoName = (n) => bookNamesKo[n] || n;
-
-const FULL_BIBLE_MAP = {
-  창: 'Genesis',
-  창세기: 'Genesis',
-  출: 'Exodus',
-  출애굽기: 'Exodus',
-  레: 'Leviticus',
-  레위기: 'Leviticus',
-  민: 'Numbers',
-  민수기: 'Numbers',
-  신: 'Deuteronomy',
-  신명기: 'Deuteronomy',
-  수: 'Joshua',
-  여호수아: 'Joshua',
-  삿: 'Judges',
-  사사기: 'Judges',
-  룻: 'Ruth',
-  룻기: 'Ruth',
-  삼상: '1 Samuel',
-  사무엘상: '1 Samuel',
-  삼하: '2 Samuel',
-  사무엘하: '2 Samuel',
-  왕상: '1 Kings',
-  열왕기상: '1 Kings',
-  왕하: '2 Kings',
-  열왕기하: '2 Kings',
-  대상: '1 Chronicles',
-  역대상: '1 Chronicles',
-  대하: '2 Chronicles',
-  역대하: '2 Chronicles',
-  스: 'Ezra',
-  에스라: 'Ezra',
-  느: 'Nehemiah',
-  느헤미야: 'Nehemiah',
-  에: 'Esther',
-  에스더: 'Esther',
-  욥: 'Job',
-  욥기: 'Job',
-  시: 'Psalms',
-  시편: 'Psalms',
-  잠: 'Proverbs',
-  잠언: 'Proverbs',
-  전: 'Ecclesiastes',
-  전도서: 'Ecclesiastes',
-  아: 'Song of Solomon',
-  아가: 'Song of Solomon',
-  사: 'Isaiah',
-  이사야: 'Isaiah',
-  렘: 'Jeremiah',
-  예레미야: 'Jeremiah',
-  애: 'Lamentations',
-  예레미야애가: 'Lamentations',
-  겔: 'Ezekiel',
-  에스겔: 'Ezekiel',
-  단: 'Daniel',
-  다니엘: 'Daniel',
-  호: 'Hosea',
-  호세아: 'Hosea',
-  욜: 'Joel',
-  요엘: 'Joel',
-  암: 'Amos',
-  아모스: 'Amos',
-  옵: 'Obadiah',
-  오바댜: 'Obadiah',
-  욘: 'Jonah',
-  요나: 'Jonah',
-  미: 'Micah',
-  미가: 'Micah',
-  나: 'Nahum',
-  나훔: 'Nahum',
-  합: 'Habakkuk',
-  하박국: 'Habakkuk',
-  습: 'Zephaniah',
-  스바냐: 'Zephaniah',
-  학: 'Haggai',
-  학개: 'Haggai',
-  슥: 'Zechariah',
-  스가랴: 'Zechariah',
-  말: 'Malachi',
-  말라기: 'Malachi',
-  마: 'Matthew',
-  마태: 'Matthew',
-  마태복음: 'Matthew',
-  마탭복음: 'Matthew',
-  막: 'Mark',
-  마가: 'Mark',
-  마가복음: 'Mark',
-  눅: 'Luke',
-  누가: 'Luke',
-  누가복음: 'Luke',
-  요: 'John',
-  요한: 'John',
-  요한복음: 'John',
-  행: 'Acts',
-  사도행전: 'Acts',
-  롬: 'Romans',
-  로마서: 'Romans',
-  고전: '1 Corinthians',
-  고린도전서: '1 Corinthians',
-  고후: '2 Corinthians',
-  고린도후서: '2 Corinthians',
-  갈: 'Galatians',
-  갈라디아서: 'Galatians',
-  엡: 'Ephesians',
-  에베소서: 'Ephesians',
-  빌: 'Philippians',
-  빌립보서: 'Philippians',
-  골: 'Colossians',
-  골로새서: 'Colossians',
-  살전: '1 Thessalonians',
-  데살로니가전서: '1 Thessalonians',
-  살후: '2 Thessalonians',
-  데살로니가후서: '2 Thessalonians',
-  딤전: '1 Timothy',
-  디모데전서: '1 Timothy',
-  딤후: '2 Timothy',
-  디모데후서: '2 Timothy',
-  딛: 'Titus',
-  디도서: 'Titus',
-  몬: 'Philemon',
-  빌레몬서: 'Philemon',
-  히: 'Hebrews',
-  히브리서: 'Hebrews',
-  약: 'James',
-  야고보서: 'James',
-  벧전: '1 Peter',
-  베드로전서: '1 Peter',
-  벧후: '2 Peter',
-  베드로후서: '2 Peter',
-  요일: '1 John',
-  요한일서: '1 John',
-  요이: '2 John',
-  요한이서: '2 John',
-  요삼: '3 John',
-  요한삼서: '3 John',
-  유: 'Jude',
-  유다서: 'Jude',
-  계: 'Revelation',
-  요한계시록: 'Revelation'
-};
-
-const getLocalToday = () => {
-  const o = new Date().getTimezoneOffset() * 60000;
-  return new Date(Date.now() - o).toISOString().split('T')[0];
-};
-
-const cleanText = (t) => {
-  if (!t) return '';
-  let str = typeof t === 'object' ? t.text || t.content || JSON.stringify(t) : String(t);
-  return str
-    .replace(/&#x27;/g, "'")
-    .replace(/&quot;/g, '"')
-    .replace(/['\x1B]|\(가정\d*\)|\(개인\d*\)|\(개인\)/gi, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-};
-
-const parseBibleRefExt = (r) => {
-  if (!r) return null;
-  const normalized = r.replace(/\s+/g, '');
-  const m = normalized.match(/([가-힣0-9]+?)(\d+)(?:장|:)(\d+)(?:절)?(?:~|-)(?:(\d+)(?:장|:))?(\d+)(?:절)?/);
-  const mSimple = normalized.match(/([가-힣0-9]+?)(\d+)(?:장|:)(?:(\d+)(?:절)?)?/);
-
-  let eb, c1, v1, c2, v2, kb;
-
-  if (m) {
-    eb = FULL_BIBLE_MAP[m[1]] || bookNamesKo[m[1]];
-    if (!eb) return null;
-    c1 = parseInt(m[2]);
-    v1 = parseInt(m[3]);
-    c2 = m[4] ? parseInt(m[4]) : c1;
-    v2 = parseInt(m[5]);
-    kb = bookNamesKo[eb] || m[1];
-  } else if (mSimple) {
-    eb = FULL_BIBLE_MAP[mSimple[1]] || bookNamesKo[mSimple[1]];
-    if (!eb) return null;
-    c1 = parseInt(mSimple[2]);
-    v1 = mSimple[3] ? parseInt(mSimple[3]) : 1;
-    c2 = c1;
-    v2 = mSimple[3] ? v1 : 999;
-    kb = bookNamesKo[eb] || mSimple[1];
-  } else {
-    return null;
-  }
-
-  return { eb, c1, v1, c2, v2, kb };
-};
-
-const getSeededVerse = (d, type) => {
-  const h =
-    d
-      .replace(/-/g, '')
-      .split('')
-      .reduce((a, c) => a + parseInt(c || 0), 0) + parseInt(d.slice(-2));
-  return type === 'family' ? familyVerseCards[h % familyVerseCards.length] : newYearVerseCards[h % newYearVerseCards.length];
-};
-const formatVerseText = (ft) => {
-  if (!ft || typeof ft !== 'string') return { text: '말씀을 불러오는 중입니다...', ref: '' };
-  const match = ft.match(/(.*?)\s*(\([^)]+\))$/);
-  return match ? { text: match[1], ref: match[2] } : { text: ft, ref: '' };
-};
-
-const extractVideoId = (url) => {
-  if (!url || typeof url !== 'string') return null;
-  const cleanUrl = url.trim();
-  const regExp = /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|live\/|shorts\/|watch\?(?:.*&)?v=))([a-zA-Z0-9_-]{11})/;
-  const match = cleanUrl.match(regExp);
-  return match ? match[1] : cleanUrl.length === 11 ? cleanUrl : null;
-};
-
-const isGisangogi = (d) => {
-  const dObj = new Date(d);
-  const m = dObj.getMonth() + 1;
-  const dt = dObj.getDate();
-  return (
-    (m === 9 && dt >= 7 && dt <= 11) ||
-    (m === 10 && dt >= 12 && dt <= 16) ||
-    (m === 11 && dt >= 2 && dt <= 6) ||
-    (m === 11 && dt >= 30) ||
-    (m === 12 && dt <= 4)
-  );
-};
-
-// 토스식 단일 포인트 컬러(#3182F6) 및 오프화이트/다크그레이 토큰
-const useTheme = (isD) =>
-  useMemo(
-    () => ({
-      appBg: isD ? 'bg-[#101216]' : 'bg-[#F4F6FA]',
-      pageBg: isD ? 'bg-[#101216]' : 'bg-[#F4F6FA]',
-      cardBg: isD ? 'bg-[#181B20] border-[#262A32]' : 'bg-white border-[#E5E8EB]',
-      bgBody: isD ? 'bg-[#101216]' : 'bg-[#F4F6FA]',
-      bgElevated: isD ? 'bg-[#22262E]' : 'bg-[#F2F4F6]',
-      bgInput: isD ? 'bg-[#22262E] text-white border-[#2E333D]' : 'bg-[#F2F4F6] text-[#191F28] border-transparent',
-      btnPrimary: 'bg-[#3182F6] text-white',
-      btnSecondary: isD ? 'bg-[#22262E] text-[#E5E8EB]' : 'bg-[#F2F4F6] text-[#4E5968]',
-      btnGhost: isD ? 'hover:bg-white/10' : 'hover:bg-black/5',
-      textMain: isD ? 'text-[#F9FAFB]' : 'text-[#191F28]',
-      textSub: isD ? 'text-[#9BA3B0]' : 'text-[#6B7684]',
-      inputBg: isD ? 'bg-[#22262E] text-[#F9FAFB] border-[#2E333D]' : 'bg-[#F2F4F6] text-[#191F28] border-transparent',
-      tabBar: isD ? 'bg-[#181B20]/95 border-[#262A32]' : 'bg-white/95 border-[#E5E8EB]',
-      border: isD ? 'border-[#262A32]' : 'border-[#E5E8EB]',
-      iconDarkBg: isD ? 'bg-[#22262E]' : 'bg-[#F2F4F6]',
-      primaryBg: 'bg-[#3182F6]',
-      primaryText: 'text-[#3182F6]',
-      pinkText: 'text-[#3182F6]',
-      yellowText: 'text-[#3182F6]',
-      greenText: 'text-[#3182F6]',
-      purpleText: 'text-[#3182F6]',
-      highlight: isD ? 'bg-[#22262E]' : 'bg-[#E5E8EB]'
-    }),
-    [isD]
-  );
-
-const warmBgIds = [
-  '1493246507139-91e8fad9978e',
-  '1504052434569-70ad5836ab65',
-  '1470252649378-9c29740c9fa8',
-  '1518837695005-2083093ee35b',
-  '1464822759023-fed622ff2c3b',
-  '1502481851512-e9e2529bfbf9',
-  '1534447677768-be436bb09401',
-  '1447752875215-b2761acb3c5d',
-  '1451187580459-43490279c0fa',
-  '1448375240586-882707db888b',
-  '1456513080510-7bf3a84b82f8',
-  '1455390582262-044cdead277a',
-  '1511497584788-876760111969',
-  '1507525428034-b723cf961d3e',
-  '1432405972823-1d20071da05d',
-  '1446329813274-7c9036bb9a8f',
-  '1476820865390-c52aeebb9891',
-  '1505144808419-1957a94ca61e',
-  '1490730141103-6cac27aaab94',
-  '1469474968028-56623f02e42e'
-];
-const watercolorBgs = Array.from(
-  { length: 100 },
-  (_, i) => `https://images.unsplash.com/photo-${warmBgIds[i % warmBgIds.length]}?auto=format&fit=crop&w=1080&q=80`
-);
+/// ==================== PART 2 시작 ====================
 
 // 정자체 폰트(Pretendard / Noto Sans KR / 맑은 고딕) 통일 스타일
 const GlobalStyles = () => (
@@ -1437,7 +1741,7 @@ const Confetti = () => {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
     const particles = [];
-    const colors = ['#3182F6', '#60A5FA', '#93C5FD', '#1D4ED8', '#CBD5E1'];
+    const colors = ['#3B82F6', '#6366F1', '#818CF8', '#2563EB', '#CBD5E1'];
     for (let i = 0; i < 120; i++)
       particles.push({
         x: Math.random() * canvas.width,
@@ -1531,7 +1835,7 @@ const RichTextEditor = React.forwardRef(({ value, onChange, placeholder, t, isSp
                   const eIdx = c === p.c2 ? (p.v2 === 999 ? getArr(chD).length - 1 : p.v2 - 1) : getArr(chD).length - 1;
                   for (let i = sIdx; i <= eIdx; i++) {
                     if (chD[i])
-                      vsHtml += `<div style="display:flex; gap:12px; padding:12px; border-radius:12px; margin-bottom:4px; background:rgba(49, 130, 246, 0.06);"><span style="font-weight:700; color:#3182F6; min-width:24px;">${i + 1}</span><span style="color:inherit;">${cleanText(chD[i])}</span></div>`;
+                      vsHtml += `<div style="display:flex; gap:12px; padding:12px; border-radius:12px; margin-bottom:4px; background:rgba(59, 130, 246, 0.06);"><span style="font-weight:700; color:#3B82F6; min-width:24px;">${i + 1}</span><span style="color:inherit;">${cleanText(chD[i])}</span></div>`;
                   }
                 }
                 if (vsHtml) {
@@ -1543,7 +1847,7 @@ const RichTextEditor = React.forwardRef(({ value, onChange, placeholder, t, isSp
                   sel.removeAllRanges();
                   sel.addRange(newRange);
                   const blockBorder = isSp ? '#E5E8EB' : '#262A32';
-                  const blockHtml = `<div class="bible-block" contenteditable="false" style="display: inline-block; width: fit-content; max-width: 100%; margin: 6px 0; position: relative; border: 1px solid ${blockBorder}; border-radius: 12px; padding: 6px 8px; background: rgba(49, 130, 246, 0.04); font-size: 14px; line-height: 1.4;"><button class="delete-bible-btn" style="position: absolute; top: 4px; right: 4px; background: #4E5968; color: #FFF; border: none; border-radius: 6px; padding: 2px 6px; font-size: 10px; cursor: pointer; font-weight: bold; z-index: 10;">삭제</button><div style="font-weight: 700; color: inherit; margin-bottom: 4px; padding-left: 4px; font-size: 12px;">${getKoName(p.eb)} ${p.c1}장</div>${vsHtml}</div><p><br></p>`;
+                  const blockHtml = `<div class="bible-block" contenteditable="false" style="display: inline-block; width: fit-content; max-width: 100%; margin: 6px 0; position: relative; border: 1px solid ${blockBorder}; border-radius: 12px; padding: 6px 8px; background: rgba(59, 130, 246, 0.04); font-size: 14px; line-height: 1.4;"><button class="delete-bible-btn" style="position: absolute; top: 4px; right: 4px; background: #4E5968; color: #FFF; border: none; border-radius: 6px; padding: 2px 6px; font-size: 10px; cursor: pointer; font-weight: bold; z-index: 10;">삭제</button><div style="font-weight: 700; color: inherit; margin-bottom: 4px; padding-left: 4px; font-size: 12px;">${getKoName(p.eb)} ${p.c1}장</div>${vsHtml}</div><p><br></p>`;
                   document.execCommand('insertHTML', false, blockHtml);
                 }
               }
@@ -1577,7 +1881,7 @@ const RichTextEditor = React.forwardRef(({ value, onChange, placeholder, t, isSp
 const SubPageHeader = ({ title, onBack, t, isSp = false, spTitle = '', spDesc = '', toggleSidebar }) => {
   if (isSp)
     return (
-      <div className="px-5 py-4 z-[60] shrink-0 flex items-center justify-between relative bg-[#3182F6] pointer-events-auto">
+      <div className="px-5 py-4 z-[60] shrink-0 flex items-center justify-between relative bg-gradient-to-r from-[#2563EB] to-[#4F46E5] pointer-events-auto">
         <div className="flex items-center gap-3">
           <button onClick={onBack} className="text-white hover:opacity-80 transition-opacity cursor-pointer">
             <ArrowLeft className="w-5 h-5" />
@@ -1611,9 +1915,7 @@ const SubPageHeader = ({ title, onBack, t, isSp = false, spTitle = '', spDesc = 
   );
 };
 
-// =====================================================================
-// 2단계 마스터 보안 로그인 컴포넌트 (한글 통일 & 단일 포인트)
-// =====================================================================
+// 2단계 마스터 보안 로그인 컴포넌트
 const StandaloneLogin = ({ supabase, setAuthUser, setActiveScreen }) => {
   const [loginName, setLoginName] = useState('');
   const [loginPw, setLoginPw] = useState('');
@@ -1733,7 +2035,7 @@ const StandaloneLogin = ({ supabase, setAuthUser, setActiveScreen }) => {
       }
 
       if (typeof setAuthUser === 'function') setAuthUser(authData);
-      if (typeof setActiveScreen === 'function') setActiveScreen('meditationPilgrimage');
+      if (typeof setActiveScreen === 'function') setActiveScreen('home');
     } catch (err) {
       console.error(err);
       alert('로그인 인증 중 오류가 발생했습니다.');
@@ -1778,7 +2080,7 @@ const StandaloneLogin = ({ supabase, setAuthUser, setActiveScreen }) => {
 
       localStorage.setItem('church_auth_user', JSON.stringify(authData));
       if (typeof setAuthUser === 'function') setAuthUser(authData);
-      if (typeof setActiveScreen === 'function') setActiveScreen('meditationPilgrimage');
+      if (typeof setActiveScreen === 'function') setActiveScreen('home');
     } catch (e) {
       alert('비밀번호 변경 실패: ' + e.message);
     } finally {
@@ -1791,7 +2093,7 @@ const StandaloneLogin = ({ supabase, setAuthUser, setActiveScreen }) => {
       {isPasswordChangeRequired ? (
         <div className="w-full max-w-[400px] rounded-3xl p-7 flex flex-col gap-5 bg-white border border-[#E5E8EB] shadow-sm">
           <div className="flex flex-col gap-1">
-            <span className="text-[12px] font-bold text-[#3182F6] bg-[#3182F6]/10 px-2.5 py-1 rounded-lg w-max">
+            <span className="text-[12px] font-bold text-[#3B82F6] bg-[#3B82F6]/10 px-2.5 py-1 rounded-lg w-max">
               보안 비밀번호 변경
             </span>
             <h2 className="text-[18px] font-bold text-[#191F28] mt-2">비밀번호 변경이 필요합니다</h2>
@@ -1806,7 +2108,7 @@ const StandaloneLogin = ({ supabase, setAuthUser, setActiveScreen }) => {
               value={newPasswordInput}
               onChange={(e) => setNewPasswordInput(e.target.value)}
               placeholder="새 비밀번호 입력 (4자리 이상)"
-              className="w-full py-3.5 px-4 rounded-2xl text-[15px] font-medium bg-[#F2F4F6] text-[#191F28] outline-none focus:ring-2 focus:ring-[#3182F6]"
+              className="w-full py-3.5 px-4 rounded-2xl text-[15px] font-medium bg-[#F2F4F6] text-[#191F28] outline-none focus:ring-2 focus:ring-[#3B82F6]"
               autoFocus
             />
             <input
@@ -1815,7 +2117,7 @@ const StandaloneLogin = ({ supabase, setAuthUser, setActiveScreen }) => {
               onChange={(e) => setConfirmPasswordInput(e.target.value)}
               placeholder="새 비밀번호 확인"
               onKeyDown={(e) => e.key === 'Enter' && handleExecutePasswordChange()}
-              className="w-full py-3.5 px-4 rounded-2xl text-[15px] font-medium bg-[#F2F4F6] text-[#191F28] outline-none focus:ring-2 focus:ring-[#3182F6]"
+              className="w-full py-3.5 px-4 rounded-2xl text-[15px] font-medium bg-[#F2F4F6] text-[#191F28] outline-none focus:ring-2 focus:ring-[#3B82F6]"
             />
           </div>
 
@@ -1823,7 +2125,7 @@ const StandaloneLogin = ({ supabase, setAuthUser, setActiveScreen }) => {
             type="button"
             onClick={handleExecutePasswordChange}
             disabled={isLoading}
-            className="w-full py-3.5 rounded-2xl bg-[#3182F6] text-white font-bold text-[15px] cursor-pointer mt-1"
+            className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-[#2563EB] to-[#4F46E5] text-white font-bold text-[15px] cursor-pointer mt-1"
           >
             {isLoading ? '변경 처리 중...' : '비밀번호 변경 후 시작하기'}
           </button>
@@ -1831,7 +2133,7 @@ const StandaloneLogin = ({ supabase, setAuthUser, setActiveScreen }) => {
       ) : (
         <div className="w-full max-w-[400px] rounded-3xl p-7 flex flex-col gap-6 bg-white border border-[#E5E8EB] shadow-sm">
           <div className="flex flex-col gap-1.5">
-            <span className="text-[12px] font-bold text-[#3182F6] bg-[#3182F6]/10 px-2.5 py-1 rounded-lg w-max">
+            <span className="text-[12px] font-bold text-[#3B82F6] bg-[#3B82F6]/10 px-2.5 py-1 rounded-lg w-max">
               좋은나무교회 말씀 동행
             </span>
             <h1 className="text-[18px] font-bold text-[#191F28] tracking-tight mt-2">
@@ -1851,7 +2153,7 @@ const StandaloneLogin = ({ supabase, setAuthUser, setActiveScreen }) => {
                 onChange={(e) => setLoginName(e.target.value)}
                 placeholder="이름을 입력하세요"
                 onKeyDown={(e) => e.key === 'Enter' && submitDirectLogin()}
-                className="w-full py-3.5 px-4 rounded-2xl text-[15px] font-medium bg-[#F2F4F6] text-[#191F28] placeholder-[#8B95A1] outline-none focus:ring-2 focus:ring-[#3182F6]"
+                className="w-full py-3.5 px-4 rounded-2xl text-[15px] font-medium bg-[#F2F4F6] text-[#191F28] placeholder-[#8B95A1] outline-none focus:ring-2 focus:ring-[#3B82F6]"
               />
             </div>
 
@@ -1863,21 +2165,21 @@ const StandaloneLogin = ({ supabase, setAuthUser, setActiveScreen }) => {
                 onChange={(e) => setLoginPw(e.target.value)}
                 placeholder="비밀번호 입력 (최초: 1004)"
                 onKeyDown={(e) => e.key === 'Enter' && submitDirectLogin()}
-                className="w-full py-3.5 px-4 rounded-2xl text-[15px] font-medium bg-[#F2F4F6] text-[#191F28] placeholder-[#8B95A1] outline-none focus:ring-2 focus:ring-[#3182F6]"
+                className="w-full py-3.5 px-4 rounded-2xl text-[15px] font-medium bg-[#F2F4F6] text-[#191F28] placeholder-[#8B95A1] outline-none focus:ring-2 focus:ring-[#3B82F6]"
               />
             </div>
 
             {isSuperStepActive && (
               <div className="p-4 rounded-2xl bg-[#F2F4F6] flex flex-col gap-3 mt-1">
                 <div className="flex items-center justify-between cursor-pointer" onClick={() => setAdminModeToggle(!adminModeToggle)}>
-                  <span className="text-[12px] font-bold text-[#3182F6]">
+                  <span className="text-[12px] font-bold text-[#3B82F6]">
                     운영자 인증 모드 (터치하여 활성화)
                   </span>
                   <input
                     type="checkbox"
                     checked={adminModeToggle}
                     onChange={(e) => setAdminModeToggle(e.target.checked)}
-                    className="w-4 h-4 accent-[#3182F6] cursor-pointer"
+                    className="w-4 h-4 accent-[#3B82F6] cursor-pointer"
                   />
                 </div>
 
@@ -1890,7 +2192,7 @@ const StandaloneLogin = ({ supabase, setAuthUser, setActiveScreen }) => {
                       onChange={(e) => setSecondaryAdminPw(e.target.value)}
                       placeholder="보안코드 4자리 입력"
                       onKeyDown={(e) => e.key === 'Enter' && submitDirectLogin()}
-                      className="w-full py-2.5 px-3.5 rounded-xl text-[15px] bg-white border border-[#E5E8EB] text-[#191F28] outline-none focus:border-[#3182F6]"
+                      className="w-full py-2.5 px-3.5 rounded-xl text-[15px] bg-white border border-[#E5E8EB] text-[#191F28] outline-none focus:border-[#3B82F6]"
                       autoFocus
                     />
                   </div>
@@ -1903,7 +2205,7 @@ const StandaloneLogin = ({ supabase, setAuthUser, setActiveScreen }) => {
             type="button"
             onClick={submitDirectLogin}
             disabled={isLoading}
-            className="w-full py-3.5 rounded-2xl bg-[#3182F6] hover:bg-[#1B64DA] text-white font-bold text-[15px] transition-colors cursor-pointer"
+            className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-[#2563EB] to-[#4F46E5] text-white font-bold text-[15px] transition-colors cursor-pointer"
           >
             {isLoading ? '인증 중...' : '로그인하기'}
           </button>
@@ -1924,7 +2226,7 @@ export default function CompleteQtApp() {
 
   useEffect(() => {
     if (!store.activeScreen) {
-      store.setActiveScreen('meditationPilgrimage');
+      store.setActiveScreen('home');
     }
   }, [store.activeScreen]);
 
@@ -2041,41 +2343,18 @@ export default function CompleteQtApp() {
   };
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-
   const [tool, setTool] = useState('hand');
-  const [color, setColor] = useState('#3182F6');
+  const [color, setColor] = useState('#3B82F6');
   const [size, setSize] = useState(4);
   const [date, setDate] = useState(getLocalToday());
   const [showConfetti, setShowConfetti] = useState(false);
 
   const currDay = dailyData[date] || {
-    checks: {},
-    thanksText: '',
-    memos: [],
-    stickers: [],
-    testimony: '',
-    qtTitle: '',
-    qtReference: '',
-    qtVideoUrl: '',
-    qtVideoId: '',
-    qtAppQuestion: '',
-    qtMeditation: '',
-    qtApplication: '',
-    sermonTitle: '',
-    sermonPreacher: '',
-    sermonReference: '',
-    sermonNotes: '',
-    sermonVideoUrl: '',
-    sermonVideoId: '',
-    thanksDeclarations: ['', ''],
-    applyQuestions: [],
-    wordShare: '',
-    thanksShare: '',
-    prayerReq: '',
-    familyName: '',
-    attendees: '',
-    meditate: '',
-    prayer: ''
+    checks: {}, thanksText: '', memos: [], stickers: [], testimony: '', qtTitle: '', qtReference: '',
+    qtVideoUrl: '', qtVideoId: '', qtAppQuestion: '', qtMeditation: '', qtApplication: '', sermonTitle: '',
+    sermonPreacher: '', sermonReference: '', sermonNotes: '', sermonVideoUrl: '', sermonVideoId: '',
+    thanksDeclarations: ['', ''], applyQuestions: [], wordShare: '', thanksShare: '', prayerReq: '',
+    familyName: '', attendees: '', meditate: '', prayer: ''
   };
   const updateDay = (d) => storeUpdateDay(date, d);
 
@@ -2099,10 +2378,10 @@ export default function CompleteQtApp() {
     safeSetItem('global_cell_data', JSON.stringify(globalCellData));
     safeSetItem('global_shared_qt', JSON.stringify(globalSharedQt));
   }, [globalCellData, globalSharedQt]);
+
   const [boardPosts, setBoardPosts] = useState([]);
   const [hasNewBoardPost, setHasNewBoardPost] = useState(false);
   const [currentGenNoteId, setCurrentGenNoteId] = useState(null);
-
   const [familyHistory, setFamilyHistory] = useState(() => safeParse('familyHistory', []));
   const [cellHistory, setCellHistory] = useState(() => safeParse('cellHistory', []));
 
@@ -2320,8 +2599,6 @@ export default function CompleteQtApp() {
     rec.start();
   };
 
-  const TESTIMONY_TEMPLATE = `1. 제목 (한 문장으로) : \n\n2. 오늘 받은 말씀 : \n\n3. 사건 (무슨 일이 있었는가?) : \n\n4. 내 죄와 우상 (왜 그렇게 반응했는가?) : \n\n5. 말씀으로 받은 깨달음 : \n\n6. 적용 (구체적으로 무엇을 순종할 일인가?) : \n\n7. 하나님이 주신 열매 : \n\n8. 감사 : `;
-
   const dateObj = new Date(date);
   const ymdStr = `${dateObj.getFullYear()}년${dateObj.getMonth() + 1}월${dateObj.getDate()}일`;
   const isWknd = dateObj.getDay() % 6 === 0;
@@ -2372,7 +2649,7 @@ export default function CompleteQtApp() {
     return currentStreak;
   }, [dailyData]);
 
-  // 추천 찬양 채널 유튜브 링크 현행 유지
+  // 추천 찬양 채널 유튜브 링크 100% 유지
   const praiseChannels = [
     { id: 1, title: '예람워십', url: 'https://youtube.com/@yeramworship', bg: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80' },
     { id: 2, title: 'FIA 워십', url: 'https://youtube.com/@fiaworship', bg: 'https://images.unsplash.com/photo-1511497584788-876760111969?auto=format&fit=crop&w=800&q=80' },
@@ -2444,7 +2721,7 @@ export default function CompleteQtApp() {
       getArr(arr)
         .map((q) => (q && !(q || '').startsWith('[음성]') ? `<li>${q}</li>` : ''))
         .join('');
-    const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><title>예배노트_${date}</title></head><body style="font-family: 'Malgun Gothic', sans-serif;"><h1 style="color: #3182F6;">예배 노트 (${date})</h1><table border="1" cellpadding="10" cellspacing="0" style="width:100%; border-collapse: collapse; margin-bottom: 20px;"><tr><th style="background:#F2F4F6; width:20%;">설교자</th><td>${currDay.sermonPreacher || ''}</td><th style="background:#F2F4F6; width:20%;">본문</th><td>${currDay.sermonReference || ''}</td></tr><tr><th style="background:#F2F4F6;">설교 제목</th><td colspan="3">${currDay.sermonTitle || ''}</td></tr></table><h3>나의 감사 선포</h3><ul>${formatArr(getArr(currDay.thanksDeclarations, ['', ''])) || '<li>없음</li>'}</ul><h3>나의 적용 질문</h3><ul>${formatArr(getArr(currDay.applyQuestions)) || '<li>없음</li>'}</ul><h3>말씀 노트</h3><div style="line-height: 1.6; font-size: 11pt;">${currDay.sermonNotes || ''}</div></body></html>`;
+    const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><title>예배노트_${date}</title></head><body style="font-family: 'Malgun Gothic', sans-serif;"><h1 style="color: #3B82F6;">예배 노트 (${date})</h1><table border="1" cellpadding="10" cellspacing="0" style="width:100%; border-collapse: collapse; margin-bottom: 20px;"><tr><th style="background:#F2F4F6; width:20%;">설교자</th><td>${currDay.sermonPreacher || ''}</td><th style="background:#F2F4F6; width:20%;">본문</th><td>${currDay.sermonReference || ''}</td></tr><tr><th style="background:#F2F4F6;">설교 제목</th><td colspan="3">${currDay.sermonTitle || ''}</td></tr></table><h3>나의 감사 선포</h3><ul>${formatArr(getArr(currDay.thanksDeclarations, ['', ''])) || '<li>없음</li>'}</ul><h3>나의 적용 질문</h3><ul>${formatArr(getArr(currDay.applyQuestions)) || '<li>없음</li>'}</ul><h3>말씀 노트</h3><div style="line-height: 1.6; font-size: 11pt;">${currDay.sermonNotes || ''}</div></body></html>`;
     const blob = new Blob(['\ufeff' + html], { type: 'application/msword;charset=utf-8' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
@@ -2515,7 +2792,7 @@ export default function CompleteQtApp() {
     else if (type === 'testimony') initial = { text: currDay.testimony || TESTIMONY_TEMPLATE };
     else if (type === 'thanks') initial = { thanksText: currDay.thanksText || '' };
     else if (type === 'bibleChapterSelect') initial = { book: data || {} };
-    else if (type === 'fullVerse') initial = { text: data?.text || '', bgHash: data?.bgHash || 0 };
+    else if (type === 'fullVerse') initial = { text: data?.text || '', bgHash: data?.bgHash || 0, bgUrl: data?.bgUrl || '' };
     else if (type === 'bibleNoteCreate') initial = { verses: [...getArr(data?.verses)], note: data?.note || '' };
     else if (type === 'strongsDic') initial = { word: data || {} };
     else if (type === 'bibleChallenge') initial = {};
@@ -2604,7 +2881,7 @@ export default function CompleteQtApp() {
           </select>
           <button
             onClick={() => editorRef?.current?.insertTable()}
-            className={`h-7 px-2.5 text-[12px] font-bold ${t.primaryText} rounded-lg hover:bg-[#3182F6]/10 whitespace-nowrap cursor-pointer`}
+            className={`h-7 px-2.5 text-[12px] font-bold ${t.primaryText} rounded-lg hover:bg-[#3B82F6]/10 whitespace-nowrap cursor-pointer`}
           >
             표 삽입
           </button>
@@ -2613,7 +2890,7 @@ export default function CompleteQtApp() {
 
       {handleStkAdd && (
         <div className={`flex items-center shrink-0 border-r pr-2 ${t.border} mr-1`}>
-          <label className="h-7 px-2.5 flex items-center justify-center rounded-lg bg-[#3182F6]/10 text-[#3182F6] text-[12px] font-bold hover:bg-[#3182F6]/20 cursor-pointer whitespace-nowrap">
+          <label className="h-7 px-2.5 flex items-center justify-center rounded-lg bg-[#3B82F6]/10 text-[#3B82F6] text-[12px] font-bold hover:bg-[#3B82F6]/20 cursor-pointer whitespace-nowrap">
             사진 첨부
             <input
               type="file"
@@ -2634,11 +2911,11 @@ export default function CompleteQtApp() {
           max="20"
           value={size || 3}
           onChange={(e) => setSize && setSize(Number(e.target.value))}
-          className="w-12 sm:w-16 accent-[#3182F6]"
+          className="w-12 sm:w-16 accent-[#3B82F6]"
         />
         <input
           type="color"
-          value={color || '#3182F6'}
+          value={color || '#3B82F6'}
           onChange={(e) => setColor && setColor(e.target.value)}
           className={`w-7 h-7 rounded-lg cursor-pointer border ${t.border} p-0`}
         />
@@ -2658,7 +2935,7 @@ export default function CompleteQtApp() {
             key={item.id}
             onClick={() => setTool && setTool(item.id)}
             className={`px-2.5 h-7 flex items-center justify-center rounded-lg text-[12px] font-bold whitespace-nowrap transition-colors cursor-pointer ${
-              tool === item.id ? 'bg-[#3182F6] text-white' : `${t.textSub} ${t.btnGhost}`
+              tool === item.id ? 'bg-gradient-to-r from-[#2563EB] to-[#4F46E5] text-white' : `${t.textSub} ${t.btnGhost}`
             }`}
           >
             {item.label}
@@ -2747,6 +3024,7 @@ export default function CompleteQtApp() {
             setTargetVerse={setTargetVerse}
           />
         );
+
       case 'bibleSecondBrain':
         return (
           <BibleSecondBrain3D
@@ -2819,8 +3097,11 @@ export default function CompleteQtApp() {
             bibleProgress={bibleProgress}
             readChapsCount={readChapsCount}
             currDay={currDay}
+            dailyData={dailyData}
+            generalNotes={generalNotes}
+            globalPrayers={globalPrayers}
+            globalCellData={globalCellData}
             readChallengeStart={readChallengeStart}
-            supabase={supabase}
             date={date}
             setDate={setDate}
             hasNewBoardPost={hasNewBoardPost}
@@ -3108,7 +3389,7 @@ export default function CompleteQtApp() {
                   <ArrowLeft className="w-5 h-5" />
                 </button>
                 <h2 className={`text-[18px] font-bold tracking-tight ${t.textMain} flex items-center gap-2`}>
-                  <Compass className="w-5 h-5 text-[#3182F6]" /> 입체 성경 지도
+                  <Compass className="w-5 h-5 text-[#3B82F6]" /> 입체 성경 지도
                 </h2>
               </div>
             </div>
@@ -3310,13 +3591,35 @@ export default function CompleteQtApp() {
 
       default:
         return (
-          <MeditationPilgrimage
-            setActiveScreen={setActiveScreen}
+          <Home
+            t={t}
             isDarkMode={isDarkMode}
-            authUser={authUser}
-            logUserAction={logUserAction}
-            bibles={bibles}
+            setActiveScreen={setActiveScreen}
+            isSidebarOpen={isSidebarOpen}
+            setIsSidebarOpen={setIsSidebarOpen}
+            openModal={openModal}
+            bibleProgress={bibleProgress}
+            readChapsCount={readChapsCount}
+            currDay={currDay}
+            dailyData={dailyData}
+            generalNotes={generalNotes}
+            globalPrayers={globalPrayers}
+            globalCellData={globalCellData}
+            readChallengeStart={readChallengeStart}
             date={date}
+            setDate={setDate}
+            hasNewBoardPost={hasNewBoardPost}
+            setHasNewBoardPost={setHasNewBoardPost}
+            formatVerse={formatVerse}
+            dateHash={dateHash}
+            currentBgUrl={currentBgUrl}
+            updateDay={updateDay}
+            triggerConfetti={triggerConfetti}
+            isWknd={isWknd}
+            ymdStr={ymdStr}
+            praiseChannels={praiseChannels}
+            authUser={authUser}
+            streak5={streak5}
           />
         );
     }
@@ -3368,7 +3671,7 @@ export default function CompleteQtApp() {
           >
             <div className="flex-1 overflow-hidden relative z-10 w-full h-full pointer-events-auto">{renderScreen()}</div>
 
-            {/* 하단 모바일 탭 바 (토스식 단일 포인트 컬러 & Lucide 아이콘) */}
+            {/* 모바일·태블릿 하단 플로팅 바 (5번째 '루틴' 복원 + 터치 확대 효과) */}
             {![
               'login',
               'adminConsole',
@@ -3397,7 +3700,7 @@ export default function CompleteQtApp() {
               'mcheyne'
             ].includes(activeScreen) && (
               <nav
-                className={`md:hidden fixed bottom-4 left-1/2 -translate-x-1/2 w-[92%] max-w-[400px] h-[60px] z-[90] pointer-events-auto rounded-2xl border transition-colors ${
+                className={`lg:hidden fixed bottom-4 left-1/2 -translate-x-1/2 w-[94%] max-w-[420px] h-[64px] z-[90] pointer-events-auto rounded-2xl border transition-colors ${
                   isDarkMode ? 'bg-[#181B20]/95 border-[#262A32]' : 'bg-white/95 border-[#E5E8EB]'
                 } backdrop-blur-xl shadow-lg`}
               >
@@ -3416,12 +3719,21 @@ export default function CompleteQtApp() {
                         key={tabItem.id}
                         type="button"
                         onClick={() => setActiveScreen(tabItem.id)}
-                        className="flex flex-col items-center justify-center h-full cursor-pointer select-none"
+                        className="flex flex-col items-center justify-center h-full cursor-pointer select-none group active:scale-110 transition-transform duration-150"
                       >
-                        <div className={`p-1 rounded-xl transition-colors ${isActive ? 'bg-[#3182F6]/15' : ''}`}>
-                          <ChurchSketchIcon name={tabItem.sketch} fallback={TabIcon} className="w-5 h-5" isDarkMode={isDarkMode} />
+                        <div
+                          className={`p-1 rounded-xl transition-transform duration-150 group-active:scale-125 ${
+                            isActive ? 'bg-[#3B82F6]/15 scale-110' : ''
+                          }`}
+                        >
+                          <ChurchSketchIcon
+                            name={tabItem.sketch}
+                            fallback={TabIcon}
+                            className="w-7 h-7"
+                            isDarkMode={isDarkMode}
+                          />
                         </div>
-                        <span className={`text-[11.5px] font-bold mt-0.5 ${isActive ? 'text-[#3182F6]' : 'text-[#8B95A1]'}`}>
+                        <span className={`text-[11.5px] font-bold mt-0.5 ${isActive ? 'text-[#3B82F6]' : 'text-[#8B95A1]'}`}>
                           {tabItem.label}
                         </span>
                       </button>
@@ -3565,7 +3877,7 @@ export default function CompleteQtApp() {
                     <div className={`flex flex-col gap-2 border-b ${t.border} pb-4`}>
                       <div className="flex justify-between items-start">
                         <h2 className={`text-[18px] font-bold ${t.textMain} leading-snug`}>{mLocal.event}</h2>
-                        <span className="text-[12px] font-bold text-[#3182F6] bg-[#3182F6]/10 px-2.5 py-1 rounded-lg whitespace-nowrap ml-2">
+                        <span className="text-[12px] font-bold text-[#3B82F6] bg-[#3B82F6]/10 px-2.5 py-1 rounded-lg whitespace-nowrap ml-2">
                           {mLocal.verse}
                         </span>
                       </div>
@@ -3582,7 +3894,7 @@ export default function CompleteQtApp() {
                           setActiveScreen('bible');
                           openModal('bibleRef', { title: '성경 본문', verses: [{ ref: mLocal.verse, text: mLocal.desc }] });
                         }}
-                        className="flex-1 bg-[#3182F6] text-white py-3.5 rounded-2xl font-bold text-[15px] cursor-pointer"
+                        className="flex-1 bg-gradient-to-r from-[#2563EB] to-[#4F46E5] text-white py-3.5 rounded-2xl font-bold text-[15px] cursor-pointer"
                       >
                         전체 장 읽기
                       </button>
@@ -3601,23 +3913,26 @@ export default function CompleteQtApp() {
               ) : modal.type === 'fullVerse' ? (
                 <div
                   className={`relative rounded-t-3xl sm:rounded-3xl overflow-hidden flex flex-col justify-center border ${t.border} bg-cover bg-center h-[80vh] sm:h-[70vh] w-full max-w-[480px] mx-auto absolute bottom-0 sm:static`}
-                  style={{ backgroundImage: `url(${watercolorBgs[mLocal.bgHash % watercolorBgs.length]})` }}
+                  style={{ backgroundImage: `url(${mLocal.bgUrl || watercolorBgs[(mLocal.bgHash || 0) % watercolorBgs.length]})` }}
                 >
                   <div className="absolute inset-0 bg-black/55" />
                   <div className="relative z-10 p-8 text-center flex flex-col items-center justify-center h-full">
                     <span className="text-[12px] font-bold text-white/90 mb-5 bg-white/15 px-3 py-1.5 rounded-lg">오늘의 말씀 카드</span>
                     <span className="text-[18px] sm:text-[20px] text-white font-bold leading-relaxed break-keep">
-                      {mLocal.text.replace(/\([^)]+\)$/, '')}
+                      {(mLocal.text || '').replace(/\([^)]+\)$/, '')}
                     </span>
                     <span className="block mt-6 text-[15px] text-white/85 font-medium">
-                      {mLocal.text.match(/\(([^)]+)\)$/)?.[0] || ''}
+                      {(mLocal.text || '').match(/\(([^)]+)\)$/)?.[0] || ''}
                     </span>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        downloadWallpaper(mLocal.text, watercolorBgs[mLocal.bgHash % watercolorBgs.length]);
+                        downloadWallpaper(
+                          mLocal.text,
+                          mLocal.bgUrl || watercolorBgs[(mLocal.bgHash || 0) % watercolorBgs.length]
+                        );
                       }}
-                      className="mt-10 bg-[#3182F6] text-white font-bold text-[15px] px-6 py-3 rounded-2xl flex items-center gap-2 cursor-pointer"
+                      className="mt-10 bg-gradient-to-r from-[#2563EB] to-[#4F46E5] text-white font-bold text-[15px] px-6 py-3 rounded-2xl flex items-center gap-2 cursor-pointer"
                     >
                       <Download className="w-4 h-4" /> 이미지로 저장하기
                     </button>
@@ -3679,8 +3994,8 @@ export default function CompleteQtApp() {
                           </div>
                         </div>
                         <div className="p-5 flex-1 flex flex-col relative pointer-events-auto">
-                          <div className="bg-[#3182F6]/10 p-4 rounded-2xl mb-4 shrink-0">
-                            <span className="text-[12px] font-bold text-[#3182F6]">
+                          <div className="bg-[#3B82F6]/10 p-4 rounded-2xl mb-4 shrink-0">
+                            <span className="text-[12px] font-bold text-[#3B82F6]">
                               일상의 감사를 편하게 적어보세요. (엔터 시 번호 자동생성)
                             </span>
                           </div>
@@ -3742,7 +4057,7 @@ export default function CompleteQtApp() {
                           <span className={`text-[12px] font-bold ${t.textSub}`}>간증문 작성 가이드 및 질문</span>
                           <button
                             onClick={() => setShowGuide(!showGuide)}
-                            className={`px-3 py-1.5 rounded-xl text-[12px] font-bold ${t.bgElevated} text-[#3182F6] cursor-pointer`}
+                            className={`px-3 py-1.5 rounded-xl text-[12px] font-bold ${t.bgElevated} text-[#3B82F6] cursor-pointer`}
                           >
                             {showGuide ? '가이드 숨기기' : '가이드 보기'}
                           </button>
@@ -3796,7 +4111,7 @@ export default function CompleteQtApp() {
                                 className={`${t.cardBg} p-5 rounded-2xl border ${t.border} cursor-pointer flex flex-col gap-1.5`}
                               >
                                 <div className="flex justify-between items-center">
-                                  <span className="text-[12px] font-bold text-[#3182F6]">{dKey}</span>
+                                  <span className="text-[12px] font-bold text-[#3B82F6]">{dKey}</span>
                                   <span className={`text-[12px] font-medium ${t.textSub}`}>설교자: {dVal.sermonPreacher || '미입력'}</span>
                                 </div>
                                 <h3 className={`text-[15px] font-bold ${t.textMain}`}>{dVal.sermonTitle || '제목 없는 예배 노트'}</h3>
@@ -3830,7 +4145,7 @@ export default function CompleteQtApp() {
                                     u.lang = 'en-US';
                                     window.speechSynthesis.speak(u);
                                   }}
-                                  className="absolute top-4 right-4 bg-[#3182F6]/10 text-[#3182F6] px-3 py-1.5 rounded-xl text-[12px] font-bold cursor-pointer"
+                                  className="absolute top-4 right-4 bg-[#3B82F6]/10 text-[#3B82F6] px-3 py-1.5 rounded-xl text-[12px] font-bold cursor-pointer"
                                 >
                                   발음 듣기
                                 </button>
@@ -3839,7 +4154,7 @@ export default function CompleteQtApp() {
                                 </span>
                                 <span className={`text-[15px] ${t.textSub} font-bold mb-4`}>[{w.pronunciation || w.pron}]</span>
                                 <div className="flex flex-wrap gap-2 justify-center items-center">
-                                  <span className="bg-[#3182F6] text-white px-4 py-1.5 rounded-xl text-[12px] font-bold">
+                                  <span className="bg-gradient-to-r from-[#2563EB] to-[#4F46E5] text-white px-4 py-1.5 rounded-xl text-[12px] font-bold">
                                     스트롱 코드 {w.strongs_id || w.strongs}
                                   </span>
                                   {w.grammar && (
@@ -3874,8 +4189,8 @@ export default function CompleteQtApp() {
 
                     {modal.type === 'bibleRef' && (
                       <div className="flex flex-col h-full gap-4 p-5 pointer-events-auto">
-                        <div className="bg-[#3182F6]/10 p-4 rounded-2xl">
-                          <span className="text-[12px] font-bold text-[#3182F6] block">
+                        <div className="bg-[#3B82F6]/10 p-4 rounded-2xl">
+                          <span className="text-[12px] font-bold text-[#3B82F6] block">
                             복사 버튼을 눌러 복사한 뒤 원하는 노트에 붙여넣으세요.
                           </span>
                         </div>
@@ -3895,7 +4210,7 @@ export default function CompleteQtApp() {
                                   복사
                                 </button>
                                 <p className="flex-1 pt-0.5">
-                                  <span className="text-[#3182F6] font-bold mr-2">{v.ref?.split(' ')[1] || v.vIdx}</span>
+                                  <span className="text-[#3B82F6] font-bold mr-2">{v.ref?.split(' ')[1] || v.vIdx}</span>
                                   {cleanText(v.text || v)}
                                 </p>
                               </div>
@@ -3933,7 +4248,7 @@ export default function CompleteQtApp() {
                                 updateDay({ thanksDeclarations: next, checks: { ...(currDay.checks || {}), 감사: true } });
                               }}
                               onInput={handleAutoResize}
-                              className={`w-full p-4 rounded-2xl ${t.bgInput} ${t.textMain} min-h-[80px] resize-none overflow-hidden border outline-none text-[15px] whitespace-pre-wrap focus:border-[#3182F6]`}
+                              className={`w-full p-4 rounded-2xl ${t.bgInput} ${t.textMain} min-h-[80px] resize-none overflow-hidden border outline-none text-[15px] whitespace-pre-wrap focus:border-[#3B82F6]`}
                               placeholder="나는 ~를 감사합니다."
                               onPointerDown={(e) => e.stopPropagation()}
                             />
@@ -3969,7 +4284,7 @@ export default function CompleteQtApp() {
                                 updateDay({ applyQuestions: n });
                               }}
                               onInput={handleAutoResize}
-                              className={`flex-1 min-h-[60px] p-4 rounded-2xl ${t.bgInput} ${t.textMain} border outline-none resize-none overflow-hidden text-[15px] whitespace-pre-wrap focus:border-[#3182F6]`}
+                              className={`flex-1 min-h-[60px] p-4 rounded-2xl ${t.bgInput} ${t.textMain} border outline-none resize-none overflow-hidden text-[15px] whitespace-pre-wrap focus:border-[#3B82F6]`}
                               onPointerDown={(e) => e.stopPropagation()}
                             />
                             <button
@@ -3991,7 +4306,7 @@ export default function CompleteQtApp() {
                             setMLocal({ ...mLocal, applyQuestions: n });
                             updateDay({ applyQuestions: n });
                           }}
-                          className={`w-full py-3.5 border border-dashed ${t.border} ${t.textSub} font-bold rounded-2xl text-[15px] hover:border-[#3182F6] hover:text-[#3182F6] cursor-pointer`}
+                          className={`w-full py-3.5 border border-dashed ${t.border} ${t.textSub} font-bold rounded-2xl text-[15px] hover:border-[#3B82F6] hover:text-[#3B82F6] cursor-pointer`}
                         >
                           + 질문 추가
                         </button>
@@ -4024,7 +4339,7 @@ export default function CompleteQtApp() {
 
                         <div className="flex-1 overflow-y-auto p-5 space-y-5 hide-scrollbar">
                           <div className="flex flex-col gap-3">
-                            <span className="text-[12px] font-bold text-[#3182F6] px-1">
+                            <span className="text-[12px] font-bold text-[#3B82F6] px-1">
                               기도 중인 제목 ({getArr(mLocal).filter((p) => p.status === 'praying').length})
                             </span>
 
@@ -4059,7 +4374,7 @@ export default function CompleteQtApp() {
                                             alert('전송 중 오류가 발생했습니다.');
                                           }
                                         }}
-                                        className="px-3 py-1.5 bg-[#3182F6]/10 text-[#3182F6] rounded-xl text-[12px] font-bold cursor-pointer"
+                                        className="px-3 py-1.5 bg-[#3B82F6]/10 text-[#3B82F6] rounded-xl text-[12px] font-bold cursor-pointer"
                                       >
                                         목장으로
                                       </button>
@@ -4079,7 +4394,7 @@ export default function CompleteQtApp() {
                                 setMLocal([...getArr(mLocal), { id: Date.now(), text: '', status: 'praying' }]);
                                 updateDay({ checks: { ...(currDay.checks || {}), 기도하기: true } });
                               }}
-                              className={`w-full py-3.5 rounded-2xl border border-dashed ${t.border} text-[15px] font-bold text-[#3182F6] cursor-pointer`}
+                              className={`w-full py-3.5 rounded-2xl border border-dashed ${t.border} text-[15px] font-bold text-[#3B82F6] cursor-pointer`}
                             >
                               + 새로운 기도제목 추가
                             </button>
@@ -4135,7 +4450,7 @@ export default function CompleteQtApp() {
 
                         <div className="flex-1 overflow-y-auto p-5 space-y-5 hide-scrollbar">
                           <div className="flex flex-col gap-3">
-                            <span className="text-[12px] font-bold text-[#3182F6] px-1">
+                            <span className="text-[12px] font-bold text-[#3B82F6] px-1">
                               중보 중인 제목 ({getArr(mLocal).filter((p) => p.status === 'praying').length})
                             </span>
 
@@ -4167,7 +4482,7 @@ export default function CompleteQtApp() {
                                 setMLocal([...getArr(mLocal), { id: Date.now(), text: '', status: 'praying' }]);
                                 updateDay({ checks: { ...(currDay.checks || {}), 기도하기: true } });
                               }}
-                              className={`w-full py-3.5 rounded-2xl border border-dashed ${t.border} text-[15px] font-bold text-[#3182F6] cursor-pointer`}
+                              className={`w-full py-3.5 rounded-2xl border border-dashed ${t.border} text-[15px] font-bold text-[#3B82F6] cursor-pointer`}
                             >
                               + 새로운 중보기도 추가
                             </button>
@@ -4210,7 +4525,7 @@ export default function CompleteQtApp() {
                               <div className="flex items-center justify-center gap-3">
                                 <span className={`text-[12px] font-bold ${t.textSub}`}>전체 통독 진행률</span>
                                 <div className={`flex items-center ${t.bgElevated} px-3 py-1.5 rounded-xl`}>
-                                  <span className="text-[12px] font-bold text-[#3182F6] mr-2">시작일</span>
+                                  <span className="text-[12px] font-bold text-[#3B82F6] mr-2">시작일</span>
                                   <input
                                     type="date"
                                     value={startDate}
@@ -4218,17 +4533,17 @@ export default function CompleteQtApp() {
                                       setReadChallengeStart(e.target.value);
                                       localStorage.setItem('readChallengeStart', e.target.value);
                                     }}
-                                    className="bg-transparent text-[12px] font-bold text-[#3182F6] outline-none cursor-pointer"
+                                    className="bg-transparent text-[12px] font-bold text-[#3B82F6] outline-none cursor-pointer"
                                   />
                                 </div>
                               </div>
-                              <span className="text-[18px] font-bold text-[#3182F6]">{dDay > 0 ? `${dDay}일차` : '시작 전'}</span>
+                              <span className="text-[18px] font-bold text-[#3B82F6]">{dDay > 0 ? `${dDay}일차` : '시작 전'}</span>
                               <div className={`w-full ${t.bgElevated} rounded-full h-3 overflow-hidden mt-1`}>
-                                <div className="bg-[#3182F6] h-full transition-all duration-700" style={{ width: `${bibleProgress}%` }} />
+                                <div className="bg-gradient-to-r from-[#2563EB] to-[#4F46E5] h-full transition-all duration-700" style={{ width: `${bibleProgress}%` }} />
                               </div>
                               <div className={`flex justify-between text-[12px] font-bold ${t.textMain} px-1`}>
                                 <span>완독: {readChapsCount}장</span>
-                                <span className="text-[#3182F6]">진행도 {bibleProgress}%</span>
+                                <span className="text-[#3B82F6]">진행도 {bibleProgress}%</span>
                               </div>
                             </div>
 
@@ -4245,7 +4560,7 @@ export default function CompleteQtApp() {
                               return (
                                 <div
                                   key={b.name}
-                                  className={`p-5 rounded-2xl border ${read === total ? 'border-2 border-[#3182F6]' : `${t.border} ${t.cardBg}`} text-left`}
+                                  className={`p-5 rounded-2xl border ${read === total ? 'border-2 border-[#3B82F6]' : `${t.border} ${t.cardBg}`} text-left`}
                                 >
                                   <div className="flex justify-between items-center mb-3">
                                     <h4 className={`font-bold ${t.textMain} text-[15px]`}>
@@ -4255,7 +4570,7 @@ export default function CompleteQtApp() {
                                       </span>
                                     </h4>
                                     {read === total && (
-                                      <span className="text-[12px] font-bold text-[#3182F6] bg-[#3182F6]/10 px-2.5 py-1 rounded-lg">완독</span>
+                                      <span className="text-[12px] font-bold text-[#3B82F6] bg-[#3B82F6]/10 px-2.5 py-1 rounded-lg">완독</span>
                                     )}
                                   </div>
                                   <div className="flex flex-wrap gap-2">
@@ -4269,7 +4584,7 @@ export default function CompleteQtApp() {
                                           closeModal();
                                         }}
                                         className={`w-10 h-10 rounded-xl flex items-center justify-center text-[12px] font-bold border transition-colors cursor-pointer ${
-                                          c.isRead ? 'bg-[#3182F6] border-[#3182F6] text-white' : `${t.bgElevated} ${t.textMain} border-transparent`
+                                          c.isRead ? 'bg-gradient-to-r from-[#2563EB] to-[#4F46E5] border-[#3B82F6] text-white' : `${t.bgElevated} ${t.textMain} border-transparent`
                                         }`}
                                       >
                                         {c.chNum}
@@ -4302,7 +4617,7 @@ export default function CompleteQtApp() {
                                       closeModal();
                                     }}
                                     className={`aspect-square rounded-2xl text-[15px] font-bold transition-colors cursor-pointer ${
-                                      isRead ? 'bg-[#3182F6] text-white' : `${t.cardBg} ${t.textMain} border ${t.border}`
+                                      isRead ? 'bg-gradient-to-r from-[#2563EB] to-[#4F46E5] text-white' : `${t.cardBg} ${t.textMain} border ${t.border}`
                                     }`}
                                   >
                                     {i + 1}장
@@ -4320,7 +4635,7 @@ export default function CompleteQtApp() {
                           <h4 className={`font-bold ${t.textMain} mb-2 text-[12px]`}>선택한 말씀</h4>
                           {getArr(mLocal.verses).map((v, i) => (
                             <p key={i} className={`text-[15px] ${t.textMain} mb-2 leading-relaxed`}>
-                              <span className="font-bold text-[#3182F6] mr-2">{v.ref}</span> {v.text}
+                              <span className="font-bold text-[#3B82F6] mr-2">{v.ref}</span> {v.text}
                             </p>
                           ))}
                         </div>
@@ -4329,7 +4644,7 @@ export default function CompleteQtApp() {
                           <textarea
                             value={mLocal.note || ''}
                             onChange={(e) => setMLocal({ ...mLocal, note: e.target.value })}
-                            className={`w-full flex-1 p-5 rounded-2xl ${t.bgInput} ${t.textMain} border ${t.border} outline-none resize-none leading-relaxed text-[15px] focus:border-[#3182F6]`}
+                            className={`w-full flex-1 p-5 rounded-2xl ${t.bgInput} ${t.textMain} border ${t.border} outline-none resize-none leading-relaxed text-[15px] focus:border-[#3B82F6]`}
                             placeholder="이 말씀을 통해 깨달은 은혜와 묵상을 자유롭게 기록하세요..."
                             onPointerDown={(e) => e.stopPropagation()}
                           />
@@ -4365,7 +4680,7 @@ export default function CompleteQtApp() {
                               <div className={`${t.cardBg} rounded-2xl border ${t.border} p-5 mb-3`}>
                                 {getArr(n.verses).map((v, i) => (
                                   <p key={i} className={`mb-2 last:mb-0 text-[15px] leading-relaxed ${t.textMain}`}>
-                                    <span className="font-bold text-[#3182F6] mr-2">{v.ref}</span>
+                                    <span className="font-bold text-[#3B82F6] mr-2">{v.ref}</span>
                                     {v.text}
                                   </p>
                                 ))}
@@ -4401,7 +4716,7 @@ export default function CompleteQtApp() {
                               { step: '4단계 · 나눔', title: '공동체 나눔과 확장', desc: '혼자만의 묵상에 머물지 않고 실천한 은혜를 목장 모임과 게시판에 나눕니다.' }
                             ].map((s, idx) => (
                               <div key={idx} className="py-4 space-y-1">
-                                <span className="text-[12px] font-bold text-[#3182F6] block">{s.step}</span>
+                                <span className="text-[12px] font-bold text-[#3B82F6] block">{s.step}</span>
                                 <h3 className={`text-[15px] font-bold ${t.textMain}`}>{s.title}</h3>
                                 <p className={`text-[15px] ${t.textSub} leading-relaxed break-keep`}>{s.desc}</p>
                               </div>
