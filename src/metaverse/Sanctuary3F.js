@@ -5,6 +5,7 @@ import { PerspectiveCamera, OrbitControls, RoundedBox, ContactShadows, Billboard
 import * as THREE from 'three';
 import { useAppStore } from '../store/useAppStore';
 import { supabase } from '../lib/supabase';
+import BlenderChibiAvatar from './BlenderChibiAvatar';
 
 // =====================================================================
 // 축도(Benediction) 권한을 가진 우리 교회 3대 목사님 명단
