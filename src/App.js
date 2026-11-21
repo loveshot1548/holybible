@@ -428,19 +428,57 @@ export const logUserAction = async (userName, page, actionType = 'view', detailT
 // =====================================================================
 // 1안: 다크 3D 커버플로우 시어터 + 시네마 플레이어 모달
 // =====================================================================
+const getYoutubeEmbedUrl = (url) => {
+  if (!url || typeof url !== 'string') return null;
+  const clean = url.trim();
+
+  // 1) 개별 영상 / 라이브 / 쇼츠
+  const vidId = extractVideoId(clean);
+  if (vidId) {
+    return `https://www.youtube.com/embed/${vidId}?autoplay=1&rel=0&playsinline=1`;
+  }
+
+  // 2) 재생목록 (?list=...)
+  const listMatch = clean.match(/[?&]list=([a-zA-Z0-9_-]+)/);
+  if (listMatch) {
+    return `https://www.youtube.com/embed/videoseries?list=${listMatch[1]}&autoplay=1&rel=0&playsinline=1`;
+  }
+
+  // 3) 채널 ID (UC... -> UU... 전체 업로드 재생목록 자동 변환)
+  const channelMatch = clean.match(/youtube\.com\/channel\/(UC[a-zA-Z0-9_-]+)/);
+  if (channelMatch) {
+    const uploadsPlaylistId = 'UU' + channelMatch[1].slice(2);
+    return `https://www.youtube.com/embed/videoseries?list=${uploadsPlaylistId}&autoplay=1&rel=0&playsinline=1`;
+  }
+
+  return null;
+};
+
 const MediaTheaterModal = ({
   isOpen,
   onClose,
   worshipVideos,
   praiseChannels,
   currDay,
+  updateDay,
   setActiveScreen
 }) => {
-  const [mediaTab, setMediaTab] = useState('worship'); // 'worship' | 'praise'
+  const [mediaTab, setMediaTab] = useState('worship');
   const [activeIdx, setActiveIdx] = useState(0);
   const [playerItem, setPlayerItem] = useState(null);
-  const [playerSubTab, setPlayerSubTab] = useState('summary'); // 'summary' | 'note'
+  const [playerSubTab, setPlayerSubTab] = useState('note');
+  const [customUrlInput, setCustomUrlInput] = useState('');
+  const [quickMemo, setQuickMemo] = useState('');
+  const [savedToast, setSavedToast] = useState(false);
   const touchStartXRef = useRef(null);
+
+  const [customUrlMap, setCustomUrlMap] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('theater_custom_urls_v1') || '{}');
+    } catch {
+      return {};
+    }
+  });
 
   const items = mediaTab === 'worship' ? worshipVideos : praiseChannels;
   const total = items?.length || 0;
@@ -449,6 +487,15 @@ const MediaTheaterModal = ({
   useEffect(() => {
     setActiveIdx(0);
   }, [mediaTab]);
+
+  useEffect(() => {
+    if (!playerItem) return;
+    const initialNote =
+      mediaTab === 'worship'
+        ? (currDay?.sermonNotes || '').replace(/<[^>]*>?/gm, '').trim()
+        : (currDay?.thanksText || '').trim();
+    setQuickMemo(initialNote);
+  }, [playerItem, mediaTab, currDay]);
 
   if (!isOpen || total === 0) return null;
 
@@ -466,21 +513,48 @@ const MediaTheaterModal = ({
   };
 
   const openCinemaPlayer = (item) => {
-    const vidId = extractVideoId(item.url);
+    const itemKey = `${mediaTab}_${item.title}`;
+    const resolvedUrl = customUrlMap[itemKey] || item.url;
+    const embedUrl = getYoutubeEmbedUrl(resolvedUrl);
+    setCustomUrlInput(customUrlMap[itemKey] || '');
     setPlayerItem({
       ...item,
-      videoId: vidId,
+      itemKey,
+      resolvedUrl,
+      embedUrl,
       categoryLabel: mediaTab === 'worship' ? '예배 · 말씀' : '찬양 채널'
     });
-    setPlayerSubTab('summary');
+    setPlayerSubTab('note');
   };
 
-  const savedNotePreview =
-    mediaTab === 'worship'
-      ? (currDay?.sermonNotes || '').replace(/<[^>]*>?/gm, '').trim() ||
-        (currDay?.qtMeditation || '').trim() ||
-        '아직 작성된 예배·큐티 노트가 없습니다.'
-      : (currDay?.thanksText || '').trim() || '찬양을 들으며 떠오른 감사와 은혜를 기록해 보세요.';
+  const handleApplyCustomUrl = () => {
+    const embedUrl = getYoutubeEmbedUrl(customUrlInput);
+    if (!embedUrl) {
+      alert('재생 가능한 유튜브 영상, 라이브, 또는 재생목록 링크를 붙여넣어 주세요.');
+      return;
+    }
+    const nextMap = { ...customUrlMap, [playerItem.itemKey]: customUrlInput.trim() };
+    setCustomUrlMap(nextMap);
+    try {
+      localStorage.setItem('theater_custom_urls_v1', JSON.stringify(nextMap));
+    } catch (_) {}
+    setPlayerItem((prev) => ({
+      ...prev,
+      resolvedUrl: customUrlInput.trim(),
+      embedUrl
+    }));
+  };
+
+  const handleSaveQuickMemo = () => {
+    if (!updateDay) return;
+    if (mediaTab === 'worship') {
+      updateDay({ sermonNotes: quickMemo, sermonTitle: currDay?.sermonTitle || playerItem?.title || '' });
+    } else {
+      updateDay({ thanksText: quickMemo, checks: { ...(currDay?.checks || {}), 감사: true } });
+    }
+    setSavedToast(true);
+    setTimeout(() => setSavedToast(false), 1800);
+  };
 
   return (
     <div
@@ -564,12 +638,7 @@ const MediaTheaterModal = ({
                 }`}
               >
                 <div className="relative w-full aspect-[4/3] overflow-hidden bg-slate-900">
-                  <img
-                    src={item.bg}
-                    alt={item.title}
-                    className="w-full h-full object-cover"
-                    crossOrigin="anonymous"
-                  />
+                  <img src={item.bg} alt={item.title} className="w-full h-full object-cover" crossOrigin="anonymous" />
                   <div className="absolute inset-0 bg-gradient-to-t from-[#151923] via-black/20 to-transparent" />
                   {isCenter && (
                     <div className="absolute inset-0 flex items-center justify-center">
@@ -613,7 +682,6 @@ const MediaTheaterModal = ({
           )}
         </div>
 
-        {/* 인디케이터 */}
         <div className="flex items-center justify-center gap-1.5 mt-2">
           {items.map((_, idx) => (
             <button
@@ -652,14 +720,14 @@ const MediaTheaterModal = ({
         </a>
       </div>
 
-      {/* 2번 캡처 스타일: 다크 시네마 플레이어 모달 */}
+      {/* 넷플릭스형 시네마 플레이어 + 실시간 메모 모달 */}
       {playerItem && (
         <div
           onClick={(e) => e.stopPropagation()}
           className="fixed inset-0 z-[380] bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-5"
         >
-          <div className="w-full max-w-[520px] rounded-[28px] bg-[#13161F] border border-white/15 overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
-            <div className="px-5 py-3.5 flex items-center justify-between border-b border-white/10">
+          <div className="w-full max-w-[540px] rounded-[28px] bg-[#13161F] border border-white/15 overflow-hidden shadow-2xl flex flex-col max-h-[92vh]">
+            <div className="px-5 py-3.5 flex items-center justify-between border-b border-white/10 shrink-0">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-rose-500" />
                 <span className="text-[12px] font-bold tracking-wider text-white/80 uppercase">
@@ -676,16 +744,17 @@ const MediaTheaterModal = ({
               </button>
             </div>
 
-            <div className="p-4 sm:p-5 space-y-4 overflow-y-auto hide-scrollbar">
+            <div className="p-4 sm:p-5 space-y-3.5 overflow-y-auto hide-scrollbar">
+              {/* 영상 프레임 */}
               <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-black border border-white/10">
-                {playerItem.videoId ? (
+                {playerItem.embedUrl ? (
                   <iframe
                     width="100%"
                     height="100%"
-                    src={`https://www.youtube.com/embed/${playerItem.videoId}?autoplay=1&rel=0&playsinline=1`}
+                    src={playerItem.embedUrl}
                     title={playerItem.title}
                     frameBorder="0"
-                    allow="autoplay; encrypted-media; picture-in-picture"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowFullScreen
                     className="absolute inset-0 w-full h-full"
                   />
@@ -694,33 +763,35 @@ const MediaTheaterModal = ({
                     <img
                       src={playerItem.bg}
                       alt={playerItem.title}
-                      className="w-full h-full object-cover opacity-70"
+                      className="w-full h-full object-cover opacity-65"
                       crossOrigin="anonymous"
                     />
-                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/35 gap-3">
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/45 gap-2.5 p-4 text-center">
                       <a
-                        href={playerItem.url}
+                        href={playerItem.resolvedUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="px-5 py-2.5 rounded-full bg-gradient-to-r from-[#3B82F6] to-[#4F46E5] text-white text-[13.5px] font-bold flex items-center gap-2 shadow-lg"
                       >
                         <Play className="w-4 h-4 fill-current" />
-                        <span>유튜브에서 바로 재생</span>
+                        <span>유튜브에서 영상 찾기</span>
                       </a>
+                      <span className="text-[11.5px] text-white/75">
+                        영상 링크를 복사해 아래에 붙여넣으면 이 화면에서 바로 재생됩니다
+                      </span>
                     </div>
                   </>
                 )}
               </div>
 
+              {/* 제목 & 새창 */}
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <h3 className="text-[18px] font-bold text-white truncate">{playerItem.title}</h3>
-                  <p className="text-[12.5px] text-white/60 mt-0.5">
-                    좋은나무교회 말씀 · 찬양 큐레이션
-                  </p>
+                  <h3 className="text-[17px] font-bold text-white truncate">{playerItem.title}</h3>
+                  <p className="text-[12px] text-white/55 mt-0.5">좋은나무교회 말씀 · 찬양 시어터</p>
                 </div>
                 <a
-                  href={playerItem.url}
+                  href={playerItem.resolvedUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="shrink-0 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-[12px] font-bold text-sky-300 flex items-center gap-1"
@@ -730,17 +801,8 @@ const MediaTheaterModal = ({
                 </a>
               </div>
 
-              {/* 요약 · 내 노트 전환 */}
+              {/* 탭 전환: 실시간 노트 | 영상 링크 연결 */}
               <div className="grid grid-cols-2 p-1 rounded-xl bg-white/10 text-[12.5px] font-bold">
-                <button
-                  type="button"
-                  onClick={() => setPlayerSubTab('summary')}
-                  className={`py-2 rounded-lg cursor-pointer transition-colors ${
-                    playerSubTab === 'summary' ? 'bg-white text-[#13161F]' : 'text-white/70'
-                  }`}
-                >
-                  말씀 안내
-                </button>
                 <button
                   type="button"
                   onClick={() => setPlayerSubTab('note')}
@@ -748,32 +810,75 @@ const MediaTheaterModal = ({
                     playerSubTab === 'note' ? 'bg-white text-[#13161F]' : 'text-white/70'
                   }`}
                 >
-                  내 노트 연동
+                  실시간 묵상 노트
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPlayerSubTab('link')}
+                  className={`py-2 rounded-lg cursor-pointer transition-colors ${
+                    playerSubTab === 'link' ? 'bg-white text-[#13161F]' : 'text-white/70'
+                  }`}
+                >
+                  영상 링크 바로 연결
                 </button>
               </div>
 
-              {playerSubTab === 'summary' ? (
-                <div className="p-4 rounded-2xl bg-white/5 border border-white/10 text-[13.5px] text-white/80 leading-relaxed">
-                  {mediaTab === 'worship'
-                    ? '선택하신 예배 및 말씀 영상을 시청하신 뒤, 예배 노트나 매일 큐티 화면에서 받은 은혜와 적용 질문을 바로 이어서 기록하실 수 있습니다.'
-                    : '선택하신 찬양 채널로 이동해 오늘의 묵상과 기도에 어울리는 찬양을 함께 들으실 수 있습니다.'}
+              {playerSubTab === 'note' ? (
+                <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 space-y-2.5">
+                  <textarea
+                    rows={4}
+                    value={quickMemo}
+                    onChange={(e) => setQuickMemo(e.target.value)}
+                    placeholder={
+                      mediaTab === 'worship'
+                        ? '영상을 보며 받은 은혜와 적용점을 바로 기록하세요...'
+                        : '찬양을 들으며 떠오른 감사와 기도를 바로 기록하세요...'
+                    }
+                    className="w-full p-3 rounded-xl bg-black/40 border border-white/10 text-[13.5px] text-white placeholder:text-white/40 outline-none focus:border-[#60A5FA] resize-none leading-relaxed select-text"
+                  />
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleSaveQuickMemo}
+                      className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#3B82F6] to-[#4F46E5] text-white text-[13px] font-bold cursor-pointer"
+                    >
+                      {savedToast ? '저장 완료!' : '노트에 바로 저장'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleSaveQuickMemo();
+                        setPlayerItem(null);
+                        onClose();
+                        setActiveScreen(mediaTab === 'worship' ? 'sermon' : 'diary');
+                      }}
+                      className="px-3.5 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white text-[12.5px] font-bold cursor-pointer shrink-0"
+                    >
+                      전체 노트 열기
+                    </button>
+                  </div>
                 </div>
               ) : (
-                <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-3">
-                  <p className="text-[13.5px] text-white/80 leading-relaxed line-clamp-4 whitespace-pre-wrap">
-                    {savedNotePreview}
+                <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 space-y-2.5">
+                  <p className="text-[12px] text-white/70 leading-relaxed">
+                    유튜브 영상·라이브·재생목록 주소를 붙여넣으면 이 시어터 프레임 안에서 바로 재생됩니다.
                   </p>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPlayerItem(null);
-                      onClose();
-                      setActiveScreen(mediaTab === 'worship' ? 'sermon' : 'diary');
-                    }}
-                    className="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#3B82F6] to-[#4F46E5] text-white text-[13px] font-bold cursor-pointer"
-                  >
-                    {mediaTab === 'worship' ? '예배 노트 작성하러 가기' : '감사·간증 일기 기록하기'}
-                  </button>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={customUrlInput}
+                      onChange={(e) => setCustomUrlInput(e.target.value)}
+                      placeholder="https://youtu.be/... 또는 재생목록 링크"
+                      className="flex-1 min-w-0 px-3 py-2 rounded-xl bg-black/40 border border-white/15 text-[12.5px] text-white placeholder:text-white/40 outline-none focus:border-[#60A5FA] select-text"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleApplyCustomUrl}
+                      className="px-3.5 py-2 rounded-xl bg-[#3B82F6] text-white text-[12.5px] font-bold cursor-pointer shrink-0"
+                    >
+                      적용
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -1677,6 +1782,7 @@ export function Home({
         worshipVideos={worshipVideos}
         praiseChannels={praiseChannels}
         currDay={currDay}
+        updateDay={updateDay}
         setActiveScreen={setActiveScreen}
       />
     </div>

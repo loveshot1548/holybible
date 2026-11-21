@@ -279,12 +279,16 @@ export default function ReelsStudio({ setActiveScreen = () => {} }) {
     showToast('⏮ 0초로 이동했습니다.');
   }, [setIsPlaying, setPlayhead, showToast]);
 
-  // 데스크톱 단축키 체계
+  // 데스크톱 프로 NLE 단축키 단일 엔진 (J·K·L 셔틀, 프레임 이동, 분할, 실행취소)
   useEffect(() => {
     const handleKeyDown = (e) => {
-      const isInput = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable;
+      const tag = document.activeElement?.tagName?.toLowerCase();
+      const isInput = tag === 'input' || tag === 'textarea' || document.activeElement?.isContentEditable;
       const isModalOpen = showMagicModal || showDuckingModal || showGridWallModal || showCaptionModal;
       if (isInput || isModalOpen) return;
+
+      const state = useNLEStore.getState();
+      const key = e.key.toLowerCase();
 
       if (e.code === 'Space' || e.key === ' ') {
         e.preventDefault();
@@ -292,32 +296,72 @@ export default function ReelsStudio({ setActiveScreen = () => {} }) {
         return;
       }
 
-      if (e.key === 'Delete' || e.key === 'Backspace') {
-        const cur = useNLEStore.getState().selectedClipId;
-        if (cur) {
-          e.preventDefault();
-          deleteClip(cur);
-          showToast('클립이 삭제되었습니다.');
-        }
+      // J · K · L 프로 셔틀 (다빈치/프리미어 규격)
+      if (key === 'k') {
+        e.preventDefault();
+        setIsPlaying(false);
+        state.setPlaybackRate(1.0);
+        return;
+      }
+      if (key === 'l') {
+        e.preventDefault();
+        const nextRate = !state.isPlaying || state.playbackRate < 0 ? 1.0 : Math.min(4.0, state.playbackRate * 2);
+        state.setPlaybackRate(nextRate);
+        setIsPlaying(true);
+        showToast(`▶ ${nextRate}x 재생`);
+        return;
+      }
+      if (key === 'j') {
+        e.preventDefault();
+        const nextRate = !state.isPlaying || state.playbackRate > 0 ? -1.0 : Math.max(-4.0, state.playbackRate * 2);
+        state.setPlaybackRate(nextRate);
+        setIsPlaying(true);
+        showToast(`◀ ${Math.abs(nextRate)}x 역재생`);
+        return;
       }
 
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+      // 1프레임 정밀 이동 (← / →)
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        e.preventDefault();
+        const step = e.shiftKey ? 10 / 30 : 1 / 30;
+        const nextHead = e.key === 'ArrowRight'
+          ? Math.min(state.projectDuration || 10, state.playhead + step)
+          : Math.max(0, state.playhead - step);
+        setIsPlaying(false);
+        setPlayhead(Number(nextHead.toFixed(3)));
+        return;
+      }
+
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (state.selectedClipId) {
+          e.preventDefault();
+          deleteClip(state.selectedClipId);
+          showToast('클립이 삭제되었습니다.');
+        }
+        return;
+      }
+
+      if ((e.ctrlKey || e.metaKey) && key === 's') {
         e.preventDefault();
         ProjectSerializer.exportProject();
         showToast('💾 프로젝트가 저장되었습니다.');
+        return;
       }
 
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+      if ((e.ctrlKey || e.metaKey) && key === 'z') {
         e.preventDefault();
-        if (e.shiftKey) redo(); else undo();
+        if (e.shiftKey) redo();
+        else undo();
+        return;
       }
 
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+      if ((e.ctrlKey || e.metaKey) && key === 'y') {
         e.preventDefault();
         redo();
+        return;
       }
 
-      if (e.key.toLowerCase() === 'b') {
+      if (key === 'b') {
         e.preventDefault();
         handleSmartSplit();
       }
@@ -325,8 +369,8 @@ export default function ReelsStudio({ setActiveScreen = () => {} }) {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [deleteClip, undo, redo, handleSmartSplit, handleTogglePlay, showMagicModal, showDuckingModal, showGridWallModal, showCaptionModal, showToast]);
-
+  }, [deleteClip, undo, redo, handleSmartSplit, handleTogglePlay, setIsPlaying, setPlayhead, showMagicModal, showDuckingModal, showGridWallModal, showCaptionModal, showToast]);
+  
   const selectedClip = selectedClipId ? entities.clips[selectedClipId] : null;
 
   // 파일 업로드 핸들러

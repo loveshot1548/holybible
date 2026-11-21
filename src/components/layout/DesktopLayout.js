@@ -48,17 +48,22 @@ export default function DesktopLayout({
   handleRewindToStart,
   handleAutoSequenceAllClips
 }) {
-  const { 
-    playhead, 
-    setPlayhead, 
-    isPlaying, 
-    setIsPlaying, 
-    projectDuration = 10, 
-    addClipToTrack, 
-    addTrack, 
+  const {
+    playhead,
+    setPlayhead,
+    isPlaying,
+    setIsPlaying,
+    projectDuration = 10,
+    addClipToTrack,
+    addTrack,
+    addAdjustmentLayer,
+    setKeyframe,
+    removeKeyframe,
     entities,
     selectClip
   } = useNLEStore();
+
+  const [keyframeEasing, setKeyframeEasing] = useState('easeInOut');
 
   // 우측 인스펙터 마스터 6대 탭: [속성 | 그리드 | 색보정 | 효과 | 자막 | 오디오]
   const [activeInspectorTab, setActiveInspectorTab] = useState('properties');
@@ -266,61 +271,28 @@ export default function DesktopLayout({
       updateClip(selectedClipId, { opacity: value });
     }
   };
+  
+  const localTimeOfSelected = selectedClip ? Math.max(0, Number((playhead - (selectedClip.start || 0)).toFixed(2))) : 0;
+
+  const hasKeyframeAtNow = (prop) => {
+    const list = selectedClip?.keyframes?.[prop] || [];
+    return list.some((k) => Math.abs(k.time - localTimeOfSelected) < 0.05);
+  };
+
+  const toggleKeyframeAtNow = (prop, currentVal) => {
+    if (!selectedClipId || !selectedClip) return;
+    if (hasKeyframeAtNow(prop)) {
+      removeKeyframe(selectedClipId, prop, localTimeOfSelected);
+    } else {
+      setKeyframe(selectedClipId, prop, localTimeOfSelected, currentVal, keyframeEasing);
+    }
+  };
 
   const filteredMediaPool = useMemo(() => {
     if (!mediaPool) return [];
     if (mediaFilterType === 'all') return mediaPool;
     return mediaPool.filter(m => m.type === mediaFilterType);
   }, [mediaPool, mediaFilterType]);
-
-  // 🌟 [핵심 개선] 입력 필드 포커스 시 단축키 동작 100% 억제 및 분할(Split) 액션 보완
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      // 텍스트 인풋, 텍스트에어리어, contenteditable 등 타이핑 중엔 무조건 억제
-      const tag = document.activeElement?.tagName?.toLowerCase();
-      const isInputFocused = tag === 'input' || tag === 'textarea' || document.activeElement?.isContentEditable;
-      
-      if (isInputFocused) return;
-
-      if (e.code === 'Space' || e.key === ' ') {
-        e.preventDefault();
-        handleTogglePlay();
-        return;
-      }
-
-      if (e.key === 'Delete' || e.key === 'Backspace') {
-        const storeState = useNLEStore.getState();
-        if (storeState.selectedClipId && typeof deleteClip === 'function') {
-          e.preventDefault();
-          deleteClip(storeState.selectedClipId);
-          if (typeof selectClip === 'function') selectClip(null);
-        }
-      }
-
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
-        e.preventDefault();
-        ProjectSerializer.exportProject();
-      }
-
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
-        e.preventDefault();
-        if (e.shiftKey) redo(); else undo();
-      }
-
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
-        e.preventDefault();
-        redo();
-      }
-
-      if (e.key.toLowerCase() === 'b' || e.key.toLowerCase() === 's') {
-        e.preventDefault();
-        if (typeof splitClip === 'function') splitClip();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [deleteClip, undo, redo, handleTogglePlay, splitClip, selectClip]);
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-[#0B0C0E] text-zinc-100 text-sm font-sans select-none relative">
@@ -685,64 +657,128 @@ export default function DesktopLayout({
                   <>
                     {(selectedClip.type === 'video' || selectedClip.type === 'image') && (
                       <div className="bg-[#151821] p-3.5 rounded-xl border border-white/10 space-y-3">
-                        <span className="text-xs font-black text-white block pb-1 border-b border-white/10">📐 정밀 트랜스폼</span>
-                        
+                        <div className="flex items-center justify-between pb-1.5 border-b border-white/10">
+                          <span className="text-xs font-black text-white">📐 정밀 트랜스폼 · 키프레임</span>
+                          <select
+                            value={keyframeEasing}
+                            onChange={(e) => setKeyframeEasing(e.target.value)}
+                            className="bg-black border border-white/15 rounded px-1.5 py-0.5 text-[10px] font-mono text-[#00E5FF] outline-none cursor-pointer"
+                            title="키프레임 이징 커브"
+                          >
+                            <option value="linear">Linear</option>
+                            <option value="easeIn">Ease In</option>
+                            <option value="easeOut">Ease Out</option>
+                            <option value="easeInOut">Ease In-Out</option>
+                            <option value="spring">Spring</option>
+                          </select>
+                        </div>
+
+                        {/* Scale */}
                         <div className="space-y-1">
-                          <div className="flex justify-between text-[11px]">
+                          <div className="flex justify-between items-center text-[11px]">
                             <span className="text-zinc-400 font-bold">확대/축소 (Scale)</span>
-                            <span className="font-mono text-[#00E5FF]">{selectedClip.transform?.scale ?? selectedClip.scale ?? 100}%</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-mono text-[#00E5FF]">{selectedClip.transform?.scale ?? selectedClip.scale ?? 100}%</span>
+                              <button
+                                type="button"
+                                onClick={() => toggleKeyframeAtNow('scale', selectedClip.transform?.scale ?? selectedClip.scale ?? 100)}
+                                className={`text-xs cursor-pointer transition-transform active:scale-125 ${hasKeyframeAtNow('scale') ? 'text-amber-400' : 'text-zinc-600 hover:text-zinc-300'}`}
+                                title="현재 시간에 Scale 키프레임 추가/제거"
+                              >
+                                ◆
+                              </button>
+                            </div>
                           </div>
-                          <input 
+                          <input
                             type="range" min="10" max="300" step="1"
                             value={selectedClip.transform?.scale ?? selectedClip.scale ?? 100}
-                            onChange={e => handleUpdateTransform('scale', Number(e.target.value))}
+                            onChange={(e) => handleUpdateTransform('scale', Number(e.target.value))}
                             className="w-full h-1.5 accent-[#00E5FF] bg-zinc-800 rounded cursor-pointer"
                           />
                         </div>
 
+                        {/* X / Y Position */}
                         <div className="grid grid-cols-2 gap-2 text-[11px]">
                           <div>
-                            <span className="text-zinc-400 block mb-0.5">X축 위치 (px)</span>
-                            <input 
+                            <div className="flex justify-between items-center mb-0.5">
+                              <span className="text-zinc-400">X 위치</span>
+                              <button
+                                type="button"
+                                onClick={() => toggleKeyframeAtNow('x', selectedClip.transform?.x ?? selectedClip.positionX ?? 0)}
+                                className={`text-xs cursor-pointer ${hasKeyframeAtNow('x') ? 'text-amber-400' : 'text-zinc-600 hover:text-zinc-300'}`}
+                              >
+                                ◆
+                              </button>
+                            </div>
+                            <input
                               type="number"
                               value={selectedClip.transform?.x ?? selectedClip.positionX ?? 0}
-                              onChange={e => handleUpdateTransform('positionX', Number(e.target.value))}
+                              onChange={(e) => handleUpdateTransform('positionX', Number(e.target.value))}
                               className="w-full p-1.5 bg-black border border-white/15 rounded text-white font-mono text-center outline-none focus:border-[#00E5FF]"
                             />
                           </div>
                           <div>
-                            <span className="text-zinc-400 block mb-0.5">Y축 위치 (px)</span>
-                            <input 
+                            <div className="flex justify-between items-center mb-0.5">
+                              <span className="text-zinc-400">Y 위치</span>
+                              <button
+                                type="button"
+                                onClick={() => toggleKeyframeAtNow('y', selectedClip.transform?.y ?? selectedClip.positionY ?? 0)}
+                                className={`text-xs cursor-pointer ${hasKeyframeAtNow('y') ? 'text-amber-400' : 'text-zinc-600 hover:text-zinc-300'}`}
+                              >
+                                ◆
+                              </button>
+                            </div>
+                            <input
                               type="number"
                               value={selectedClip.transform?.y ?? selectedClip.positionY ?? 0}
-                              onChange={e => handleUpdateTransform('positionY', Number(e.target.value))}
+                              onChange={(e) => handleUpdateTransform('positionY', Number(e.target.value))}
                               className="w-full p-1.5 bg-black border border-white/15 rounded text-white font-mono text-center outline-none focus:border-[#00E5FF]"
                             />
                           </div>
                         </div>
 
+                        {/* Rotation */}
                         <div className="space-y-1">
-                          <div className="flex justify-between text-[11px]">
+                          <div className="flex justify-between items-center text-[11px]">
                             <span className="text-zinc-400 font-bold">회전 각도 (Rotation)</span>
-                            <span className="font-mono text-[#00E5FF]">{selectedClip.transform?.rotate ?? selectedClip.rotation ?? 0}°</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-mono text-[#00E5FF]">{selectedClip.transform?.rotate ?? selectedClip.rotation ?? 0}°</span>
+                              <button
+                                type="button"
+                                onClick={() => toggleKeyframeAtNow('rotate', selectedClip.transform?.rotate ?? selectedClip.rotation ?? 0)}
+                                className={`text-xs cursor-pointer ${hasKeyframeAtNow('rotate') ? 'text-amber-400' : 'text-zinc-600 hover:text-zinc-300'}`}
+                              >
+                                ◆
+                              </button>
+                            </div>
                           </div>
-                          <input 
+                          <input
                             type="range" min="-180" max="180" step="1"
                             value={selectedClip.transform?.rotate ?? selectedClip.rotation ?? 0}
-                            onChange={e => handleUpdateTransform('rotation', Number(e.target.value))}
+                            onChange={(e) => handleUpdateTransform('rotation', Number(e.target.value))}
                             className="w-full h-1.5 accent-[#00E5FF] bg-zinc-800 rounded cursor-pointer"
                           />
                         </div>
 
+                        {/* Opacity */}
                         <div className="space-y-1">
-                          <div className="flex justify-between text-[11px]">
+                          <div className="flex justify-between items-center text-[11px]">
                             <span className="text-zinc-400 font-bold">불투명도 (Opacity)</span>
-                            <span className="font-mono text-[#00E5FF]">{selectedClip.opacity ?? 100}%</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-mono text-[#00E5FF]">{selectedClip.opacity ?? 100}%</span>
+                              <button
+                                type="button"
+                                onClick={() => toggleKeyframeAtNow('opacity', selectedClip.opacity ?? 100)}
+                                className={`text-xs cursor-pointer ${hasKeyframeAtNow('opacity') ? 'text-amber-400' : 'text-zinc-600 hover:text-zinc-300'}`}
+                              >
+                                ◆
+                              </button>
+                            </div>
                           </div>
-                          <input 
+                          <input
                             type="range" min="0" max="100" step="1"
                             value={selectedClip.opacity ?? 100}
-                            onChange={e => handleUpdateTransform('opacity', Number(e.target.value))}
+                            onChange={(e) => handleUpdateTransform('opacity', Number(e.target.value))}
                             className="w-full h-1.5 accent-[#00E5FF] bg-zinc-800 rounded cursor-pointer"
                           />
                         </div>
@@ -861,7 +897,13 @@ export default function DesktopLayout({
           >
             + 자막 / 성경
           </button>
-
+          <button
+            onClick={() => addAdjustmentLayer(playhead, 5)}
+            className="px-2.5 py-1 rounded-lg bg-purple-950/60 hover:bg-purple-900 border border-purple-500/50 text-purple-300 font-bold text-xs cursor-pointer"
+            title="하위 모든 트랙에 일괄 색보정·필터를 적용하는 조정 레이어 추가"
+          >
+            + 조정 레이어
+          </button>
           <span className="w-px h-3.5 bg-white/10 mx-0.5" />
 
           <button 

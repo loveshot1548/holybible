@@ -39,40 +39,55 @@ const decodePayload = (content) => {
 
 const triggerHaptic = (pattern) => {
   if (typeof window !== 'undefined' && 'vibrate' in navigator) {
-    try { navigator.vibrate(pattern); } catch (e) {}
+    try {
+      navigator.vibrate(pattern);
+    } catch (e) {}
   }
 };
 
 // 고스트 위장 텍스트
-const GHOST_SCRIPTURE = "여호와는 나의 목자시니 내게 부족함이 없으리로다 그가 나를 푸른 풀밭에 누이시며 쉴 만한 물 가로 인도하시는도다 내 영혼을 소생시키시고 자기 이름을 위하여 의의 길로 인도하시는도다";
+const GHOST_SCRIPTURE =
+  '여호와는 나의 목자시니 내게 부족함이 없으리로다 그가 나를 푸른 풀밭에 누이시며 쉴 만한 물 가로 인도하시는도다 내 영혼을 소생시키시고 자기 이름을 위하여 의의 길로 인도하시는도다 ';
 
 // 도발적 원터치 퀵 멘트 프리셋
 const EROTIC_QUICK_CHIPS = [
-  "지금 당장 옷 다 벗고 이불 속에 들어가 있어. 5분 뒤에 들어가서 네 보지가 얼마나 젖었는지 직접 확인할 거야.",
-  "오늘 밤은 말로 안 해. 네가 울든 애원하든 내 자지가 만족할 때까지 절대 안 빼줄 거니까 각오해.",
-  "스스로 네 손가락으로 만지면서 내가 너를 어떻게 만져줬는지 떠올려봐. 허락 전엔 절대 혼자 가지 마.",
-  "지금 당장 침대 위에서 네 몸 찍어서 10초 자폭 사진으로 보내줘. 확인하고 바로 달려갈게."
+  '지금 당장 옷 다 벗고 이불 속에 들어가 있어. 5분 뒤에 들어가서 네 보지가 얼마나 젖었는지 직접 확인할 거야.',
+  '오늘 밤은 말로 안 해. 네가 울든 애원하든 내 자지가 만족할 때까지 절대 안 빼줄 거니까 각오해.',
+  '스스로 네 손가락으로 만지면서 내가 너를 어떻게 만져줬는지 떠올려봐. 허락 전엔 절대 혼자 가지 마.',
+  '지금 당장 침대 위에서 네 몸 찍어서 10초 자폭 사진으로 보내줘. 확인하고 바로 달려갈게.'
 ];
 
 // --- [위장 뷰] 패닉 락 (맥체인 성경 통독표) ---
 function CamouflageBibleView({ onUnlock }) {
   const [clickCount, setClickCount] = useState(0);
+  const resetTimerRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
+    };
+  }, []);
 
   const handleTitleClick = () => {
+    if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
     if (clickCount + 1 >= 3) {
       triggerHaptic([30, 50, 30]);
+      setClickCount(0);
       onUnlock();
     } else {
-      setClickCount(prev => prev + 1);
-      setTimeout(() => setClickCount(0), 1000);
+      setClickCount((prev) => prev + 1);
+      resetTimerRef.current = setTimeout(() => setClickCount(0), 1000);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-[250] bg-[#f8fafc] text-slate-800 flex flex-col font-sans select-none overflow-y-auto">
-      <header className="px-4 py-3 bg-white border-b border-slate-200 flex items-center justify-between shadow-2xs">
+    <div
+      style={{ colorScheme: 'light' }}
+      className="fixed inset-0 z-[250] bg-[#f8fafc] text-slate-800 flex flex-col font-sans select-none overflow-y-auto h-[100dvh]"
+    >
+      <header className="px-4 py-3 pt-[max(12px,env(safe-area-inset-top))] bg-white border-b border-slate-200 flex items-center justify-between shadow-2xs shrink-0">
         <div className="flex items-center gap-2 cursor-pointer" onClick={handleTitleClick}>
-          <span className="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
+          <span className="w-2.5 h-2.5 rounded-full bg-indigo-600" />
           <h2 className="text-[14px] font-black tracking-tight text-slate-900">
             2026 맥체인 성경 통독 묵상표
           </h2>
@@ -123,7 +138,10 @@ function DominationLockOverlay({ lockData, isMeSindong, onUnlockByPassword, onFo
   };
 
   return (
-    <div className="fixed inset-0 z-[380] bg-[#080205]/95 backdrop-blur-2xl flex flex-col items-center justify-center p-5 text-center select-none animate-fade-in">
+    <div
+      style={{ colorScheme: 'dark' }}
+      className="fixed inset-0 z-[380] bg-[#080205]/95 backdrop-blur-2xl flex flex-col items-center justify-center p-5 text-center select-none animate-fade-in h-[100dvh]"
+    >
       <div className="w-full max-w-sm rounded-3xl bg-gradient-to-b from-rose-950/80 via-[#120408] to-black border-2 border-rose-600 p-6 shadow-[0_0_60px_rgba(225,29,72,0.7)] space-y-5">
         <div className="w-16 h-16 mx-auto rounded-full bg-rose-600/20 border border-rose-500 flex items-center justify-center text-3xl animate-pulse shadow-[0_0_25px_rgba(244,63,94,0.6)]">
           ⛓️
@@ -138,8 +156,8 @@ function DominationLockOverlay({ lockData, isMeSindong, onUnlockByPassword, onFo
           </h2>
         </div>
 
-        <div className="p-4 rounded-2xl bg-black/60 border border-rose-500/40 text-[13.5px] font-bold text-rose-100 leading-relaxed whitespace-pre-wrap break-keep">
-          {lockData.command || "지금부터 내 허락이 떨어질 때까지 절대 움직이지 말고 명령에 복종해."}
+        <div className="p-4 rounded-2xl bg-black/60 border border-rose-500/40 text-[13.5px] font-bold text-rose-100 leading-relaxed whitespace-pre-wrap break-keep max-h-[30vh] overflow-y-auto hide-scrollbar">
+          {lockData.command || '지금부터 내 허락이 떨어질 때까지 절대 움직이지 말고 명령에 복종해.'}
         </div>
 
         {!isMeSindong ? (
@@ -147,13 +165,17 @@ function DominationLockOverlay({ lockData, isMeSindong, onUnlockByPassword, onFo
             <input
               type="text"
               value={passInput}
-              onChange={(e) => { setPassInput(e.target.value); setErrorMsg(''); }}
+              onChange={(e) => {
+                setPassInput(e.target.value);
+                setErrorMsg('');
+              }}
               onKeyDown={(e) => e.key === 'Enter' && handleTryUnlock()}
               placeholder="신동이 알려준 해제 암호 입력..."
-              className="w-full px-4 py-3 rounded-xl bg-black border border-rose-500/60 text-center text-white font-bold text-[14px] outline-none focus:border-rose-400"
+              className="w-full px-4 py-3 rounded-xl bg-black border border-rose-500/60 text-center text-white font-bold text-[15px] outline-none focus:border-rose-400 select-text"
             />
             {errorMsg && <p className="text-[11px] font-bold text-amber-400">{errorMsg}</p>}
             <button
+              type="button"
               onClick={handleTryUnlock}
               className="w-full py-3.5 rounded-xl bg-gradient-to-r from-rose-600 to-red-600 text-white font-black text-[13.5px] shadow-[0_0_20px_rgba(244,63,94,0.5)] cursor-pointer active:scale-95 transition-all"
             >
@@ -166,6 +188,7 @@ function DominationLockOverlay({ lockData, isMeSindong, onUnlockByPassword, onFo
               현재 모하나의 화면이 구속 상태입니다 (해제 암호: {lockData.password || '복종'})
             </p>
             <button
+              type="button"
               onClick={onForceUnlockByOwner}
               className="w-full py-3 rounded-xl bg-white text-slate-950 font-black text-[13px] cursor-pointer active:scale-95 transition-all"
             >
@@ -187,31 +210,32 @@ function DopamineNeonPopup({ data, onClose }) {
   }, [onClose]);
 
   return (
-    <div 
+    <div
       onClick={onClose}
       className="fixed inset-0 z-[350] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 cursor-pointer overflow-hidden animate-fade-in select-none"
     >
       <div className="absolute w-[320px] h-[320px] rounded-full bg-rose-600/25 blur-3xl animate-ping pointer-events-none" />
       <div className="absolute w-[450px] h-[450px] rounded-full bg-gradient-to-tr from-rose-900/40 via-fuchsia-900/30 to-amber-600/20 blur-2xl animate-pulse pointer-events-none" />
 
-      <div 
-        onClick={e => e.stopPropagation()} 
-        className="relative z-10 w-full max-w-sm bg-black/95 border-2 border-rose-500 rounded-2xl p-6 text-center space-y-4 shadow-[0_0_50px_rgba(244,63,94,0.6)] transform scale-100 animate-in zoom-in-95 duration-300"
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="relative z-10 w-full max-w-sm bg-black/95 border-2 border-rose-500 rounded-2xl p-6 text-center space-y-4 shadow-[0_0_50px_rgba(244,63,94,0.6)]"
       >
         <div className="inline-block px-3 py-1 rounded-full bg-rose-950 border border-rose-500/60 text-rose-300 font-mono text-[11px] tracking-widest uppercase shadow-[0_0_15px_#f43f5e] animate-pulse">
           ⚡ CLIMAX DOPAMINE RUSH ⚡
         </div>
 
-        <h2 className="text-[23px] sm:text-[25px] font-black text-white tracking-tight drop-shadow-[0_0_20px_#ff0055] leading-tight">
-          {data.title || "너한테 완전히 미쳐버릴 것 같아"}
+        <h2 className="text-[22px] sm:text-[25px] font-black text-white tracking-tight drop-shadow-[0_0_20px_#ff0055] leading-tight break-keep">
+          {data.title || '너한테 완전히 미쳐버릴 것 같아'}
         </h2>
 
-        <p className="text-[13.5px] text-rose-200/90 leading-relaxed font-medium drop-shadow-sm whitespace-pre-wrap">
-          {data.subtitle || "지금 온몸의 감각이 전부 너를 원하고 있어.\n숨소리 하나까지 전부 내 걸로 만들고 싶어."}
+        <p className="text-[13.5px] text-rose-200/90 leading-relaxed font-medium drop-shadow-sm whitespace-pre-wrap break-keep">
+          {data.subtitle || '지금 온몸의 감각이 전부 너를 원하고 있어.\n숨소리 하나까지 전부 내 걸로 만들고 싶어.'}
         </p>
 
         <div className="pt-2">
-          <button 
+          <button
+            type="button"
             onClick={onClose}
             className="w-full py-2.5 bg-gradient-to-r from-rose-700 via-rose-600 to-amber-600 text-white font-bold rounded-xl text-[13px] shadow-[0_0_20px_rgba(225,29,72,0.8)] active:scale-95 transition-all cursor-pointer"
           >
@@ -231,14 +255,21 @@ function InteractiveMissionCardModal({ card, currentUserName, onSubmitAnswer, on
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileRef = useRef(null);
 
+  useEffect(() => {
+    return () => {
+      if (photoPreview) URL.revokeObjectURL(photoPreview);
+    };
+  }, [photoPreview]);
+
   const isMeSindong = currentUserName === '정신동';
   const myDone = isMeSindong ? card.sindongDone : card.hanaDone;
   const peerDone = isMeSindong ? card.hanaDone : card.sindongDone;
   const peerName = isMeSindong ? '하나' : '신동';
 
   const handlePhotoSelect = (e) => {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
     if (!file) return;
+    if (photoPreview) URL.revokeObjectURL(photoPreview);
     setPhotoFile(file);
     setPhotoPreview(URL.createObjectURL(file));
   };
@@ -271,30 +302,35 @@ function InteractiveMissionCardModal({ card, currentUserName, onSubmitAnswer, on
   };
 
   return (
-    <div className="fixed inset-0 z-[360] bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in select-none">
-      <div className="relative w-full max-w-sm bg-[#111116] border-2 border-amber-500/80 rounded-2xl p-5 text-center space-y-4 shadow-[0_0_40px_rgba(245,158,11,0.4)]">
+    <div
+      style={{ colorScheme: 'dark' }}
+      className="fixed inset-0 z-[360] bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in select-none"
+    >
+      <div className="relative w-full max-w-sm bg-[#111116] border-2 border-amber-500/80 rounded-2xl p-5 text-center space-y-4 shadow-[0_0_40px_rgba(245,158,11,0.4)] max-h-[88dvh] overflow-y-auto hide-scrollbar">
         <div className="flex justify-between items-center border-b border-white/10 pb-2">
           <span className="text-[10.5px] font-mono font-black text-amber-300 bg-amber-950/80 border border-amber-500/50 px-2.5 py-0.5 rounded-full animate-pulse">
             🎲 둘만의 즉흥 돌발 미션 🎲
           </span>
-          <button onClick={onClose} className="text-slate-400 hover:text-white font-bold text-sm cursor-pointer">✕</button>
+          <button type="button" onClick={onClose} className="text-slate-400 hover:text-white font-bold text-sm cursor-pointer p-1">
+            ✕
+          </button>
         </div>
 
         <div className="space-y-1.5">
-          <h3 className="text-[18px] font-black text-white drop-shadow-[0_0_10px_#f59e0b] leading-tight">
+          <h3 className="text-[18px] font-black text-white drop-shadow-[0_0_10px_#f59e0b] leading-tight break-keep">
             {card.title}
           </h3>
-          <p className="text-[12.5px] text-amber-100/90 leading-relaxed font-medium">
+          <p className="text-[12.5px] text-amber-100/90 leading-relaxed font-medium break-keep">
             {card.description}
           </p>
         </div>
 
         <div className="grid grid-cols-2 gap-2 p-2.5 rounded-xl bg-black/40 border border-white/10 text-[11px] font-mono">
           <div className={`p-1.5 rounded-lg border ${card.sindongDone ? 'bg-emerald-950/60 border-emerald-500 text-emerald-300 font-bold' : 'bg-white/5 border-white/10 text-slate-400'}`}>
-            <span>정신동: {card.sindongDone ? "완료 ✓" : "대기 중..."}</span>
+            <span>정신동: {card.sindongDone ? '완료 ✓' : '대기 중...'}</span>
           </div>
           <div className={`p-1.5 rounded-lg border ${card.hanaDone ? 'bg-emerald-950/60 border-emerald-500 text-emerald-300 font-bold' : 'bg-white/5 border-white/10 text-slate-400'}`}>
-            <span>모하나: {card.hanaDone ? "완료 ✓" : "대기 중..."}</span>
+            <span>모하나: {card.hanaDone ? '완료 ✓' : '대기 중...'}</span>
           </div>
         </div>
 
@@ -304,18 +340,19 @@ function InteractiveMissionCardModal({ card, currentUserName, onSubmitAnswer, on
               <textarea
                 rows={3}
                 value={textInput}
-                onChange={e => setTextInput(e.target.value)}
+                onChange={(e) => setTextInput(e.target.value)}
                 placeholder="미션에 대한 당신의 솔직한 고백을 적어주세요..."
-                className="w-full p-2.5 rounded-xl bg-[#1c1c24] border border-white/20 text-[13px] text-white outline-none resize-none focus:border-amber-400"
+                className="w-full p-2.5 rounded-xl bg-[#1c1c24] border border-white/20 text-[14px] text-white outline-none resize-none focus:border-amber-400 select-text"
               />
             ) : (
               <div className="space-y-2">
                 <input type="file" ref={fileRef} accept="image/*" className="hidden" onChange={handlePhotoSelect} />
                 <button
+                  type="button"
                   onClick={() => fileRef.current?.click()}
                   className="w-full py-3 border-2 border-dashed border-amber-500/60 rounded-xl bg-white/5 text-[12px] font-bold text-amber-200 hover:bg-white/10 cursor-pointer"
                 >
-                  {photoPreview ? "📷 인증 사진 변경하기" : "📷 인증 사진 촬영 / 첨부하기"}
+                  {photoPreview ? '📷 인증 사진 변경하기' : '📷 인증 사진 촬영 / 첨부하기'}
                 </button>
                 {photoPreview && (
                   <img src={photoPreview} alt="미션 인증" className="w-full h-32 object-cover rounded-xl border border-white/20" />
@@ -324,18 +361,19 @@ function InteractiveMissionCardModal({ card, currentUserName, onSubmitAnswer, on
             )}
 
             <button
+              type="button"
               onClick={handleSubmit}
               disabled={isSubmitting}
               className="w-full py-2.5 bg-gradient-to-r from-amber-600 via-rose-600 to-amber-700 text-white font-bold rounded-xl text-[13px] shadow-[0_0_20px_rgba(245,158,11,0.6)] cursor-pointer active:scale-95 transition-all"
             >
-              {isSubmitting ? "인증 업로드 중..." : "미션 클리어 제출하기"}
+              {isSubmitting ? '인증 업로드 중...' : '미션 클리어 제출하기'}
             </button>
           </div>
         ) : (
           <div className="p-4 rounded-xl bg-emerald-950/40 border border-emerald-500/50 text-emerald-200 text-[12px] font-bold space-y-1 animate-pulse">
             <div>나의 미션 제출 완료! ✓</div>
-            <div className="text-[10.5px] text-slate-400 font-normal">
-              {peerDone ? "두 사람 모두 완료하여 사랑 게이지가 상승했습니다!" : `${peerName}의 응답을 기다리고 있습니다...`}
+            <div className="text-[10.5px] text-slate-400 font-normal break-keep">
+              {peerDone ? '두 사람 모두 완료하여 사랑 게이지가 상승했습니다!' : `${peerName}의 응답을 기다리고 있습니다...`}
             </div>
           </div>
         )}
@@ -370,15 +408,14 @@ function MasterSecretConfigModal({
   const [cardDesc, setCardDesc] = useState('');
   const [cardType, setCardType] = useState('text');
 
-  // 지배자 락 설정 상태
   const [lockCommand, setLockCommand] = useState('지금부터 내 허락이 떨어질 때까지 침대에서 한 발자국도 움직이지 말고 옷 벗은 채로 기다려.');
   const [lockPassword, setLockPassword] = useState('복종');
 
   const handleSaveAll = () => {
-    const kwArr = keywords.split(',').map(s => s.trim()).filter(Boolean);
-    const sArr = sMissionsText.split('\n').map(s => s.trim()).filter(Boolean);
-    const hArr = hMissionsText.split('\n').map(s => s.trim()).filter(Boolean);
-    const wArr = wordsText.split(',').map(s => s.trim()).filter(Boolean);
+    const kwArr = keywords.split(',').map((s) => s.trim()).filter(Boolean);
+    const sArr = sMissionsText.split('\n').map((s) => s.trim()).filter(Boolean);
+    const hArr = hMissionsText.split('\n').map((s) => s.trim()).filter(Boolean);
+    const wArr = wordsText.split(',').map((s) => s.trim()).filter(Boolean);
 
     onSave({
       config: {
@@ -395,56 +432,49 @@ function MasterSecretConfigModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[400] bg-black/85 backdrop-blur-xs flex items-center justify-center p-3 select-none">
-      <div className="w-full max-w-lg bg-[#121217] border border-amber-500/50 rounded-2xl p-5 shadow-2xl text-slate-100 font-sans space-y-4 max-h-[90vh] flex flex-col">
-        <div className="flex justify-between items-center border-b border-white/10 pb-2.5 shrink-0">
-          <div>
-            <h3 className="text-[15px] font-black text-amber-300">신동 전용 시크릿 스튜디오 (Master)</h3>
-            <p className="text-[10px] text-slate-400">하나 폰에는 노출되지 않는 신동님만의 전용 통제실입니다.</p>
+    <div
+      style={{ colorScheme: 'dark' }}
+      className="fixed inset-0 z-[400] bg-black/85 backdrop-blur-xs flex items-center justify-center p-3 select-none"
+    >
+      <div className="w-full max-w-lg bg-[#121217] border border-amber-500/50 rounded-2xl p-4 sm:p-5 shadow-2xl text-slate-100 font-sans space-y-3.5 max-h-[90dvh] flex flex-col">
+        <div className="flex justify-between items-center border-b border-white/10 pb-2.5 shrink-0 gap-2">
+          <div className="min-w-0">
+            <h3 className="text-[14.5px] sm:text-[15px] font-black text-amber-300 truncate">신동 전용 시크릿 스튜디오 (Master)</h3>
+            <p className="text-[10px] text-slate-400 truncate">하나 폰에는 노출되지 않는 신동님만의 전용 통제실입니다.</p>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white font-bold text-base cursor-pointer">✕</button>
+          <button type="button" onClick={onClose} className="text-slate-400 hover:text-white font-bold text-base cursor-pointer p-1 shrink-0">
+            ✕
+          </button>
         </div>
 
         <div className="flex gap-1 p-1 bg-white/5 rounded-xl text-[11px] font-bold shrink-0 overflow-x-auto hide-scrollbar">
-          <button 
-            onClick={() => setActiveTab('lock')} 
-            className={`flex-1 py-1.5 px-2 rounded-lg cursor-pointer whitespace-nowrap ${activeTab === 'lock' ? 'bg-rose-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
-          >
-            ⛓️ 지배자 락
-          </button>
-          <button 
-            onClick={() => setActiveTab('missions')} 
-            className={`flex-1 py-1.5 px-2 rounded-lg cursor-pointer whitespace-nowrap ${activeTab === 'missions' ? 'bg-amber-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
-          >
-            🎲 개별 미션
-          </button>
-          <button 
-            onClick={() => setActiveTab('words')} 
-            className={`flex-1 py-1.5 px-2 rounded-lg cursor-pointer whitespace-nowrap ${activeTab === 'words' ? 'bg-amber-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
-          >
-            📖 단어사전
-          </button>
-          <button 
-            onClick={() => setActiveTab('cards')} 
-            className={`flex-1 py-1.5 px-2 rounded-lg cursor-pointer whitespace-nowrap ${activeTab === 'cards' ? 'bg-amber-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
-          >
-            🃏 미션카드
-          </button>
-          <button 
-            onClick={() => setActiveTab('keywords')} 
-            className={`flex-1 py-1.5 px-2 rounded-lg cursor-pointer whitespace-nowrap ${activeTab === 'keywords' ? 'bg-amber-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
-          >
-            ⚡ 도파민 팝업
-          </button>
+          {[
+            { id: 'lock', label: '⛓️ 지배자 락', activeBg: 'bg-rose-600' },
+            { id: 'missions', label: '🎲 개별 미션', activeBg: 'bg-amber-600' },
+            { id: 'words', label: '📖 단어사전', activeBg: 'bg-amber-600' },
+            { id: 'cards', label: '🃏 미션카드', activeBg: 'bg-amber-600' },
+            { id: 'keywords', label: '⚡ 도파민 팝업', activeBg: 'bg-amber-600' }
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex-1 py-1.5 px-2.5 rounded-lg cursor-pointer whitespace-nowrap shrink-0 ${
+                activeTab === tab.id ? `${tab.activeBg} text-white shadow` : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
 
-        <div className="flex-1 overflow-y-auto space-y-3 text-[11.5px] pr-1 hide-scrollbar">
+        <div className="flex-1 overflow-y-auto space-y-3 text-[12px] pr-0.5 hide-scrollbar">
           {activeTab === 'lock' && (
             <div className="space-y-3 p-3.5 rounded-xl bg-rose-950/30 border border-rose-500/40">
               <span className="font-black text-rose-300 text-[13px] block">
                 ⛓️ 모하나 화면 원격 구속(Lock) 발동
               </span>
-              <p className="text-[11px] text-slate-300 leading-relaxed">
+              <p className="text-[11px] text-slate-300 leading-relaxed break-keep">
                 발동 즉시 모하나의 시크릿 챗 화면이 구속 잠금 화면으로 전환되며, 지정한 해제 암호를 입력하거나 신동님이 직접 풀어줄 때까지 잠금이 유지됩니다.
               </p>
               <div>
@@ -452,8 +482,8 @@ function MasterSecretConfigModal({
                 <textarea
                   rows={3}
                   value={lockCommand}
-                  onChange={e => setLockCommand(e.target.value)}
-                  className="w-full bg-[#1c1c24] border border-white/15 p-2.5 rounded-lg text-white outline-none resize-none"
+                  onChange={(e) => setLockCommand(e.target.value)}
+                  className="w-full bg-[#1c1c24] border border-white/15 p-2.5 rounded-lg text-white outline-none resize-none select-text"
                 />
               </div>
               <div>
@@ -461,11 +491,12 @@ function MasterSecretConfigModal({
                 <input
                   type="text"
                   value={lockPassword}
-                  onChange={e => setLockPassword(e.target.value)}
-                  className="w-full bg-[#1c1c24] border border-white/15 px-3 py-2 rounded-lg text-amber-300 font-bold outline-none"
+                  onChange={(e) => setLockPassword(e.target.value)}
+                  className="w-full bg-[#1c1c24] border border-white/15 px-3 py-2 rounded-lg text-amber-300 font-bold outline-none select-text"
                 />
               </div>
               <button
+                type="button"
                 onClick={() => {
                   onActivateDominationLock({ active: true, command: lockCommand, password: lockPassword });
                   onClose();
@@ -486,8 +517,8 @@ function MasterSecretConfigModal({
                 <textarea
                   rows={4}
                   value={sMissionsText}
-                  onChange={e => setSMissionsText(e.target.value)}
-                  className="w-full bg-[#1c1c24] border border-white/15 p-2.5 rounded-lg text-white outline-none resize-none leading-relaxed"
+                  onChange={(e) => setSMissionsText(e.target.value)}
+                  className="w-full bg-[#1c1c24] border border-white/15 p-2.5 rounded-lg text-white outline-none resize-none leading-relaxed select-text"
                 />
               </div>
               <div>
@@ -497,8 +528,8 @@ function MasterSecretConfigModal({
                 <textarea
                   rows={4}
                   value={hMissionsText}
-                  onChange={e => setHMissionsText(e.target.value)}
-                  className="w-full bg-[#1c1c24] border border-white/15 p-2.5 rounded-lg text-white outline-none resize-none leading-relaxed"
+                  onChange={(e) => setHMissionsText(e.target.value)}
+                  className="w-full bg-[#1c1c24] border border-white/15 p-2.5 rounded-lg text-white outline-none resize-none leading-relaxed select-text"
                 />
               </div>
             </div>
@@ -512,8 +543,8 @@ function MasterSecretConfigModal({
               <textarea
                 rows={5}
                 value={wordsText}
-                onChange={e => setWordsText(e.target.value)}
-                className="w-full bg-[#1c1c24] border border-white/15 p-2.5 rounded-lg text-amber-200 outline-none resize-none leading-relaxed"
+                onChange={(e) => setWordsText(e.target.value)}
+                className="w-full bg-[#1c1c24] border border-white/15 p-2.5 rounded-lg text-amber-200 outline-none resize-none leading-relaxed select-text"
               />
             </div>
           )}
@@ -526,21 +557,21 @@ function MasterSecretConfigModal({
                   type="text"
                   placeholder="미션 제목"
                   value={cardTitle}
-                  onChange={e => setCardTitle(e.target.value)}
-                  className="w-full bg-[#1c1c24] border border-white/15 p-2 rounded-lg text-white outline-none"
+                  onChange={(e) => setCardTitle(e.target.value)}
+                  className="w-full bg-[#1c1c24] border border-white/15 p-2 rounded-lg text-white outline-none select-text"
                 />
                 <textarea
                   rows={2}
                   placeholder="미션 설명"
                   value={cardDesc}
-                  onChange={e => setCardDesc(e.target.value)}
-                  className="w-full bg-[#1c1c24] border border-white/15 p-2 rounded-lg text-white outline-none resize-none"
+                  onChange={(e) => setCardDesc(e.target.value)}
+                  className="w-full bg-[#1c1c24] border border-white/15 p-2 rounded-lg text-white outline-none resize-none select-text"
                 />
                 <div className="flex gap-2 items-center">
                   <span className="text-slate-400 text-[10.5px]">클리어 조건:</span>
-                  <select 
-                    value={cardType} 
-                    onChange={e => setCardType(e.target.value)}
+                  <select
+                    value={cardType}
+                    onChange={(e) => setCardType(e.target.value)}
                     className="bg-[#1c1c24] border border-white/20 px-2 py-1 rounded text-white font-bold"
                   >
                     <option value="text">텍스트 답변 제출</option>
@@ -552,14 +583,15 @@ function MasterSecretConfigModal({
               <div className="space-y-1.5 pt-1">
                 <span className="font-bold text-slate-300 block">등록된 미션 카드 (탭하면 즉시 발동)</span>
                 {missionCards.map((c, i) => (
-                  <div key={c.id || i} className="p-2.5 rounded-lg bg-white/5 border border-white/10 flex justify-between items-center">
-                    <div>
-                      <span className="font-bold text-amber-200 block">{c.title}</span>
+                  <div key={c.id || i} className="p-2.5 rounded-lg bg-white/5 border border-white/10 flex justify-between items-center gap-2">
+                    <div className="min-w-0">
+                      <span className="font-bold text-amber-200 block truncate">{c.title}</span>
                       <span className="text-[9.5px] text-slate-400">{c.requireType === 'photo' ? '📷 사진인증' : '✍️ 텍스트답변'}</span>
                     </div>
                     <button
+                      type="button"
                       onClick={() => onTriggerMissionCard(c)}
-                      className="px-3 py-1 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-lg text-[10.5px] cursor-pointer shadow"
+                      className="px-3 py-1 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-lg text-[10.5px] cursor-pointer shadow shrink-0"
                     >
                       지금 발동 ⚡
                     </button>
@@ -576,8 +608,8 @@ function MasterSecretConfigModal({
                 <input
                   type="text"
                   value={keywords}
-                  onChange={e => setKeywords(e.target.value)}
-                  className="w-full bg-[#1c1c24] border border-white/15 px-3 py-2 rounded-lg text-rose-100 outline-none"
+                  onChange={(e) => setKeywords(e.target.value)}
+                  className="w-full bg-[#1c1c24] border border-white/15 px-3 py-2 rounded-lg text-rose-100 outline-none select-text"
                 />
               </div>
               <div>
@@ -585,8 +617,8 @@ function MasterSecretConfigModal({
                 <input
                   type="text"
                   value={title}
-                  onChange={e => setTitle(e.target.value)}
-                  className="w-full bg-[#1c1c24] border border-white/15 px-3 py-2 rounded-lg text-white font-bold outline-none"
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full bg-[#1c1c24] border border-white/15 px-3 py-2 rounded-lg text-white font-bold outline-none select-text"
                 />
               </div>
               <div>
@@ -594,8 +626,8 @@ function MasterSecretConfigModal({
                 <textarea
                   rows={3}
                   value={subtitle}
-                  onChange={e => setSubtitle(e.target.value)}
-                  className="w-full bg-[#1c1c24] border border-white/15 px-3 py-2 rounded-lg text-slate-200 outline-none resize-none font-normal"
+                  onChange={(e) => setSubtitle(e.target.value)}
+                  className="w-full bg-[#1c1c24] border border-white/15 px-3 py-2 rounded-lg text-slate-200 outline-none resize-none font-normal select-text"
                 />
               </div>
             </div>
@@ -603,10 +635,10 @@ function MasterSecretConfigModal({
         </div>
 
         <div className="flex justify-end gap-2 pt-2 border-t border-white/10 shrink-0">
-          <button onClick={onClose} className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-slate-300 rounded-lg font-bold cursor-pointer">
+          <button type="button" onClick={onClose} className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-slate-300 rounded-lg font-bold cursor-pointer">
             닫기
           </button>
-          <button onClick={handleSaveAll} className="px-4 py-1.5 bg-gradient-to-r from-amber-600 to-rose-600 text-white font-bold rounded-lg shadow-md cursor-pointer">
+          <button type="button" onClick={handleSaveAll} className="px-4 py-1.5 bg-gradient-to-r from-amber-600 to-rose-600 text-white font-bold rounded-lg shadow-md cursor-pointer">
             설정 저장 적용
           </button>
         </div>
@@ -614,6 +646,8 @@ function MasterSecretConfigModal({
     </div>
   );
 }
+// ==================== PART 1 끝 (아래에 PART 2 이어붙이기) ====================
+// ==================== PART 2 시작 ====================
 
 // --- [메인 시크릿챗 룸] ---
 export default function SecretChat({ currentUser, setActiveScreen }) {
@@ -627,7 +661,9 @@ export default function SecretChat({ currentUser, setActiveScreen }) {
     try {
       const saved = localStorage.getItem('secret_love_gauge');
       return saved ? Number(saved) : 69;
-    } catch { return 69; }
+    } catch {
+      return 69;
+    }
   });
 
   const [isWhisperMode, setIsWhisperMode] = useState(false);
@@ -646,7 +682,6 @@ export default function SecretChat({ currentUser, setActiveScreen }) {
   const [bodyTemp, setBodyTemp] = useState(36.5);
   const [isPeerTyping, setIsPeerTyping] = useState(false);
   const [isGhostTyping, setIsGhostTyping] = useState(false);
-  const typingTimeoutRef = useRef(null);
 
   const [activeDopaminePopup, setActiveDopaminePopup] = useState(null);
   const [showMasterConfig, setShowMasterConfig] = useState(false);
@@ -658,6 +693,7 @@ export default function SecretChat({ currentUser, setActiveScreen }) {
   // 2. 실시간 숨소리·보이스 무전기 상태
   const [isVoiceRecording, setIsVoiceRecording] = useState(false);
   const voiceRecorderRef = useRef(null);
+  const voiceStreamRef = useRef(null);
   const voiceChunksRef = useRef([]);
 
   // 3. 도발적 퀵 멘트 바 열림 상태
@@ -670,8 +706,8 @@ export default function SecretChat({ currentUser, setActiveScreen }) {
     } catch (e) {}
     return {
       keywords: ['안아줘', '만져줘', '미치겠어', '침대', '보고싶어', '벗겨줘', '클라이맥스', '젖었어'],
-      title: "너한테 완전히 미쳐버릴 것 같아",
-      subtitle: "지금 온몸의 감각이 전부 너를 원하고 있어.\n숨소리 하나까지 전부 내 걸로 만들고 싶어."
+      title: '너한테 완전히 미쳐버릴 것 같아',
+      subtitle: '지금 온몸의 감각이 전부 너를 원하고 있어.\n숨소리 하나까지 전부 내 걸로 만들고 싶어.'
     };
   });
 
@@ -681,11 +717,11 @@ export default function SecretChat({ currentUser, setActiveScreen }) {
       if (s) return JSON.parse(s);
     } catch (e) {}
     return [
-      "지금 입고 있는 옷 다 벗고 침대 위에서 보지 벌린 채로 10초 자폭 사진 보내줘",
-      "오늘 밤 나랑 둘만 있을 때 가장 당하고 싶은 거 비밀 속삭임으로 야하게 말해봐",
-      "내 자지 뿌리까지 목구멍으로 삼키겠다고 약속해줘",
-      "지금 당장 침대에 누워서 내 생각하면서 손가락으로 만지는 소리 녹음해줘",
-      "숨소리 녹음해서 5초만 보내줄 수 있어?"
+      '지금 입고 있는 옷 다 벗고 침대 위에서 보지 벌린 채로 10초 자폭 사진 보내줘',
+      '오늘 밤 나랑 둘만 있을 때 가장 당하고 싶은 거 비밀 속삭임으로 야하게 말해봐',
+      '내 자지 뿌리까지 목구멍으로 삼키겠다고 약속해줘',
+      '지금 당장 침대에 누워서 내 생각하면서 손가락으로 만지는 소리 녹음해줘',
+      '숨소리 녹음해서 5초만 보내줄 수 있어?'
     ];
   });
 
@@ -695,11 +731,11 @@ export default function SecretChat({ currentUser, setActiveScreen }) {
       if (s) return JSON.parse(s);
     } catch (e) {}
     return [
-      "신동 오빠, 지금 당장 안아주고 박아주고 싶다고 3번 속삭여줘",
-      "오빠 하트 심박동 버튼 5초 동안 꾹 눌러서 전송해봐",
-      "오늘 내가 제일 음란하고 사랑스러웠던 순간 하나만 비밀 글로 보내",
-      "오빠 지금 내 생각하면서 얼마나 섰는지 말해줘",
-      "나만을 위한 뜨거운 고백 한마디 남겨주기"
+      '신동 오빠, 지금 당장 안아주고 박아주고 싶다고 3번 속삭여줘',
+      '오빠 하트 심박동 버튼 5초 동안 꾹 눌러서 전송해봐',
+      '오늘 내가 제일 음란하고 사랑스러웠던 순간 하나만 비밀 글로 보내',
+      '오빠 지금 내 생각하면서 얼마나 섰는지 말해줘',
+      '나만을 위한 뜨거운 고백 한마디 남겨주기'
     ];
   });
 
@@ -719,30 +755,45 @@ export default function SecretChat({ currentUser, setActiveScreen }) {
     return [
       {
         id: 1,
-        title: "🔥 둘만의 침대 위 10초 아이컨택 미션",
-        description: "각자 편안한 곳에 누워 서로의 눈빛을 상상하며 지금 가장 원하는 것을 노골적으로 적어 제출하세요.",
+        title: '🔥 둘만의 침대 위 10초 아이컨택 미션',
+        description: '각자 편안한 곳에 누워 서로의 눈빛을 상상하며 지금 가장 원하는 것을 노골적으로 적어 제출하세요.',
         requireType: 'text'
       },
       {
         id: 2,
-        title: "📷 살결 온도 100% 실시간 인증 미션",
-        description: "지금 손이나 발, 또는 가장 은밀한 침대 위 모습을 사진으로 찍어 서로에게 인증하세요.",
+        title: '📷 살결 온도 100% 실시간 인증 미션',
+        description: '지금 손이나 발, 또는 가장 은밀한 침대 위 모습을 사진으로 찍어 서로에게 인증하세요.',
         requireType: 'photo'
       }
     ];
   });
 
   const recentMsgTimesRef = useRef([]);
+  const typingTimeoutRef = useRef(null);
+  const heartbeatTimeoutRef = useRef(null);
+  const lastTouchBroadcastRef = useRef(0);
   const chatContainerRef = useRef(null);
   const fileInputRef = useRef(null);
   const selfDestructFileInputRef = useRef(null);
   const textareaRef = useRef(null);
   const broadcastChannelRef = useRef(null);
 
-  const isMoHana = currentUser?.name === '모하나';
-  const isJungSinDong = currentUser?.name === '정신동';
-  const currentUserName = currentUser?.name || currentUser || '';
+  const currentUserName = (typeof currentUser === 'object' ? currentUser?.name : currentUser) || '';
+  const cleanUser = String(currentUserName).replace(/\s+/g, '');
+  const isMoHana = cleanUser === '모하나' || cleanUser.startsWith('모하나(');
+  const isJungSinDong = cleanUser === '정신동' || cleanUser.startsWith('정신동(');
   const targetPeerName = isMoHana ? '정신동' : '모하나';
+
+  // 언마운트 시 마이크 스트림 및 모든 타이머 완전 정리
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      if (heartbeatTimeoutRef.current) clearTimeout(heartbeatTimeoutRef.current);
+      if (voiceStreamRef.current) {
+        voiceStreamRef.current.getTracks().forEach((tr) => tr.stop());
+      }
+    };
+  }, []);
 
   const scrollToBottom = useCallback((isInstant = false) => {
     if (!chatContainerRef.current) return;
@@ -751,46 +802,51 @@ export default function SecretChat({ currentUser, setActiveScreen }) {
     else el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
   }, []);
 
-  const triggerAutoIntimacyElevation = useCallback((reason) => {
-    setIntimacyLevel(prevLevel => {
-      let targetLevel = prevLevel;
-      if (reason === 'whisper' && prevLevel < 2) targetLevel = 2;
-      if (reason === 'tempo' && prevLevel < 3) targetLevel = 3;
-      if (reason === 'touch_collision' || reason === 'fever_climax') targetLevel = 3;
+  const triggerAutoIntimacyElevation = useCallback(
+    (reason) => {
+      setIntimacyLevel((prevLevel) => {
+        let targetLevel = prevLevel;
+        if (reason === 'whisper' && prevLevel < 2) targetLevel = 2;
+        if (reason === 'tempo' && prevLevel < 3) targetLevel = 3;
+        if (reason === 'touch_collision' || reason === 'fever_climax') targetLevel = 3;
 
-      if (targetLevel !== prevLevel) {
-        triggerHaptic(targetLevel === 3 ? [60, 80, 120] : [40, 60]);
-        if (broadcastChannelRef.current) {
-          broadcastChannelRef.current.send({
-            type: 'broadcast',
-            event: 'intimacy_level',
-            payload: { user: currentUserName, level: targetLevel }
-          });
+        if (targetLevel !== prevLevel) {
+          triggerHaptic(targetLevel === 3 ? [60, 80, 120] : [40, 60]);
+          if (broadcastChannelRef.current) {
+            broadcastChannelRef.current.send({
+              type: 'broadcast',
+              event: 'intimacy_level',
+              payload: { user: currentUserName, level: targetLevel }
+            });
+          }
         }
-      }
-      return targetLevel;
-    });
-  }, [currentUserName]);
-
-  const triggerDopamineClimax = useCallback((customPayload = null) => {
-    const payload = customPayload || {
-      title: triggerConfig.title,
-      subtitle: triggerConfig.subtitle,
-      from: currentUserName
-    };
-
-    setActiveDopaminePopup(payload);
-
-    if (broadcastChannelRef.current) {
-      broadcastChannelRef.current.send({
-        type: 'broadcast',
-        event: 'dopamine_trigger',
-        payload
+        return targetLevel;
       });
-    }
-  }, [triggerConfig, currentUserName]);
+    },
+    [currentUserName]
+  );
 
-  // 지배자 락 발동 / 해제 핸들러
+  const triggerDopamineClimax = useCallback(
+    (customPayload = null) => {
+      const payload = customPayload || {
+        title: triggerConfig.title,
+        subtitle: triggerConfig.subtitle,
+        from: currentUserName
+      };
+
+      setActiveDopaminePopup(payload);
+
+      if (broadcastChannelRef.current) {
+        broadcastChannelRef.current.send({
+          type: 'broadcast',
+          event: 'dopamine_trigger',
+          payload
+        });
+      }
+    },
+    [triggerConfig, currentUserName]
+  );
+
   const handleActivateDominationLock = useCallback((lockPayload) => {
     setDominationLockData(lockPayload);
     if (broadcastChannelRef.current) {
@@ -838,13 +894,12 @@ export default function SecretChat({ currentUser, setActiveScreen }) {
   const handleAnswerMissionCard = async (answer) => {
     if (!activeMissionCard) return;
 
-    const isSindong = currentUserName === '정신동';
     const updated = {
       ...activeMissionCard,
-      sindongDone: isSindong ? true : activeMissionCard.sindongDone,
-      hanaDone: !isSindong ? true : activeMissionCard.hanaDone,
-      sindongAnswer: isSindong ? answer : activeMissionCard.sindongAnswer,
-      hanaAnswer: !isSindong ? answer : activeMissionCard.hanaAnswer,
+      sindongDone: isJungSinDong ? true : activeMissionCard.sindongDone,
+      hanaDone: !isJungSinDong ? true : activeMissionCard.hanaDone,
+      sindongAnswer: isJungSinDong ? answer : activeMissionCard.sindongAnswer,
+      hanaAnswer: !isJungSinDong ? answer : activeMissionCard.hanaAnswer,
       fromUser: currentUserName
     };
 
@@ -864,7 +919,7 @@ export default function SecretChat({ currentUser, setActiveScreen }) {
       localStorage.setItem('secret_love_gauge', String(nextGauge));
 
       triggerDopamineClimax({
-        title: "🎉 미션 완벽 클리어! 사랑 게이지 상승! 🎉",
+        title: '🎉 미션 완벽 클리어! 사랑 게이지 상승! 🎉',
         subtitle: `두 사람의 마음이 완벽히 통했습니다.\n현재 사랑의 게이지: ${nextGauge}%`
       });
 
@@ -883,14 +938,14 @@ export default function SecretChat({ currentUser, setActiveScreen }) {
     if (isHoldingHand && isPeerHoldingHand) {
       triggerHaptic([30, 40]);
       tempTimer = setInterval(() => {
-        setBodyTemp(prev => {
+        setBodyTemp((prev) => {
           const next = +(prev + 0.15).toFixed(1);
           triggerHaptic(20);
           if (next >= 39.0) {
             triggerAutoIntimacyElevation('fever_climax');
             triggerDopamineClimax({
-              title: "🔥 두 사람의 체온이 39.0°C에 도달했습니다 🔥",
-              subtitle: "살결이 맞닿아 이성이 전부 녹아내렸습니다.\n완전한 열기 속에 서로에게 몰입하세요."
+              title: '🔥 두 사람의 체온이 39.0°C에 도달했습니다 🔥',
+              subtitle: '살결이 맞닿아 이성이 전부 녹아내렸습니다.\n완전한 열기 속에 서로에게 몰입하세요.'
             });
             return 39.0;
           }
@@ -906,25 +961,25 @@ export default function SecretChat({ currentUser, setActiveScreen }) {
   // 자폭 타이머 (DB + 스토리지 파일 영구 소멸)
   useEffect(() => {
     const timer = setInterval(() => {
-      setBurnTimers(prev => {
+      setBurnTimers((prev) => {
         const next = { ...prev };
         let hasChanges = false;
-        Object.keys(next).forEach(msgId => {
+        Object.keys(next).forEach((msgId) => {
           if (next[msgId] > 1) {
             next[msgId] -= 1;
             hasChanges = true;
           } else if (next[msgId] === 1) {
             delete next[msgId];
             hasChanges = true;
-            setMessages(mList => {
-              const targetMsg = mList.find(m => String(m.id) === String(msgId));
+            setMessages((mList) => {
+              const targetMsg = mList.find((m) => String(m.id) === String(msgId));
               if (targetMsg) {
                 const p = decodePayload(targetMsg.content);
                 if (p.storageFileName) {
                   supabase.storage.from('chat_attachments').remove([p.storageFileName]).catch(() => {});
                 }
               }
-              return mList.filter(m => String(m.id) !== String(msgId));
+              return mList.filter((m) => String(m.id) !== String(msgId));
             });
             supabase.from('secret_chat').delete().eq('id', msgId).then();
             triggerHaptic([60, 60]);
@@ -938,7 +993,7 @@ export default function SecretChat({ currentUser, setActiveScreen }) {
 
   useEffect(() => {
     if (!isMoHana && !isJungSinDong) {
-      setActiveScreen('home');
+      if (setActiveScreen) setActiveScreen('home');
       return;
     }
 
@@ -949,15 +1004,16 @@ export default function SecretChat({ currentUser, setActiveScreen }) {
         const { data } = await supabase.from('secret_chat').select('*').order('created_at', { ascending: true });
         if (data && isMounted) {
           setMessages(data);
-          
-          const unreadFromPeer = data.filter(m => m.sender_name !== currentUserName && !m.is_read);
+
+          const unreadFromPeer = data.filter((m) => m.sender_name !== currentUserName && !m.is_read);
           if (unreadFromPeer.length > 0) {
-            const veilIds = new Set(unreadFromPeer.map(m => m.id));
+            const veilIds = new Set(unreadFromPeer.map((m) => m.id));
             setVeiledMessageIds(veilIds);
             setHasVeilBanner(true);
             triggerHaptic([30, 40, 30]);
           } else {
-            supabase.from('secret_chat')
+            supabase
+              .from('secret_chat')
               .update({ is_read: true })
               .neq('sender_name', currentUserName)
               .eq('is_read', false)
@@ -981,7 +1037,7 @@ export default function SecretChat({ currentUser, setActiveScreen }) {
         const state = roomChannel.presenceState();
         setIsPeerOnline(Object.keys(state).includes(targetPeerName));
       })
-      .on('broadcast', { event: 'touch_move' }, payload => {
+      .on('broadcast', { event: 'touch_move' }, (payload) => {
         if (!isMounted || payload.payload.user === currentUserName) return;
         setPeerTouch(payload.payload.coords);
       })
@@ -989,58 +1045,62 @@ export default function SecretChat({ currentUser, setActiveScreen }) {
         if (!isMounted) return;
         setPeerTouch(null);
       })
-      .on('broadcast', { event: 'heartbeat_pulse' }, payload => {
+      .on('broadcast', { event: 'heartbeat_pulse' }, (payload) => {
         if (!isMounted || payload.payload.user === currentUserName) return;
         triggerHaptic([60, 80, 60, 100, 150]);
         setIsHeartbeating(true);
-        setTimeout(() => setIsHeartbeating(false), 900);
+        if (heartbeatTimeoutRef.current) clearTimeout(heartbeatTimeoutRef.current);
+        heartbeatTimeoutRef.current = setTimeout(() => setIsHeartbeating(false), 900);
       })
-      .on('broadcast', { event: 'intimacy_level' }, payload => {
+      .on('broadcast', { event: 'intimacy_level' }, (payload) => {
         if (!isMounted || payload.payload.user === currentUserName) return;
         setIntimacyLevel(payload.payload.level);
         triggerHaptic([80, 50, 80]);
       })
-      .on('broadcast', { event: 'dopamine_trigger' }, payload => {
+      .on('broadcast', { event: 'dopamine_trigger' }, (payload) => {
         if (!isMounted) return;
         setActiveDopaminePopup(payload.payload);
       })
-      .on('broadcast', { event: 'domination_lock' }, payload => {
+      .on('broadcast', { event: 'domination_lock' }, (payload) => {
         if (!isMounted) return;
         setDominationLockData(payload.payload);
       })
-      .on('broadcast', { event: 'hand_holding' }, payload => {
+      .on('broadcast', { event: 'hand_holding' }, (payload) => {
         if (!isMounted || payload.payload.user === currentUserName) return;
         setIsPeerHoldingHand(payload.payload.isHolding);
       })
-      .on('broadcast', { event: 'typing_breath' }, payload => {
+      .on('broadcast', { event: 'typing_breath' }, (payload) => {
         if (!isMounted || payload.payload.user === currentUserName) return;
         setIsPeerTyping(true);
         triggerHaptic(10);
         if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
         typingTimeoutRef.current = setTimeout(() => setIsPeerTyping(false), 2500);
       })
-      .on('broadcast', { event: 'mission_card_start' }, payload => {
+      .on('broadcast', { event: 'mission_card_start' }, (payload) => {
         if (!isMounted) return;
         setActiveMissionCard(payload.payload);
         triggerHaptic([60, 90, 120]);
       })
-      .on('broadcast', { event: 'mission_card_progress' }, payload => {
+      .on('broadcast', { event: 'mission_card_progress' }, (payload) => {
         if (!isMounted) return;
         setActiveMissionCard(payload.payload);
         triggerHaptic([40, 60]);
       })
-      .on('broadcast', { event: 'mission_card_cleared' }, payload => {
+      .on('broadcast', { event: 'mission_card_cleared' }, (payload) => {
         if (!isMounted) return;
         setLoveGauge(payload.payload.loveGauge);
         triggerHaptic([80, 120, 200]);
       })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'secret_chat' }, payload => {
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'secret_chat' }, (payload) => {
         if (!isMounted) return;
-        setMessages(prev => [...prev, payload.new]);
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === payload.new.id)) return prev;
+          return [...prev, payload.new];
+        });
         setTimeout(() => scrollToBottom(), 50);
 
         const now = Date.now();
-        recentMsgTimesRef.current = [...recentMsgTimesRef.current.filter(t => now - t < 30000), now];
+        recentMsgTimesRef.current = [...recentMsgTimesRef.current.filter((t) => now - t < 30000), now];
         if (recentMsgTimesRef.current.length >= 3) {
           triggerAutoIntimacyElevation('tempo');
         }
@@ -1050,9 +1110,9 @@ export default function SecretChat({ currentUser, setActiveScreen }) {
           supabase.from('secret_chat').update({ is_read: true }).eq('id', payload.new.id).then();
         }
       })
-      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'secret_chat' }, payload => {
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'secret_chat' }, (payload) => {
         if (!isMounted) return;
-        setMessages(prev => prev.filter(m => m.id !== payload.old.id));
+        setMessages((prev) => prev.filter((m) => m.id !== payload.old.id));
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
@@ -1064,14 +1124,15 @@ export default function SecretChat({ currentUser, setActiveScreen }) {
       isMounted = false;
       supabase.removeChannel(roomChannel);
     };
-  }, [currentUser, setActiveScreen, isMoHana, isJungSinDong, currentUserName, targetPeerName, scrollToBottom, triggerAutoIntimacyElevation]);
+  }, [isMoHana, isJungSinDong, setActiveScreen, currentUserName, targetPeerName, scrollToBottom, triggerAutoIntimacyElevation]);
 
   const handleUnlockAllVeils = () => {
     triggerHaptic([40, 60, 80]);
     setVeiledMessageIds(new Set());
     setHasVeilBanner(false);
 
-    supabase.from('secret_chat')
+    supabase
+      .from('secret_chat')
       .update({ is_read: true })
       .neq('sender_name', currentUserName)
       .eq('is_read', false)
@@ -1080,7 +1141,7 @@ export default function SecretChat({ currentUser, setActiveScreen }) {
 
   const handleUnlockSingleVeil = (msgId) => {
     triggerHaptic([30, 40]);
-    setVeiledMessageIds(prev => {
+    setVeiledMessageIds((prev) => {
       const next = new Set(prev);
       next.delete(msgId);
       if (next.size === 0) setHasVeilBanner(false);
@@ -1090,12 +1151,16 @@ export default function SecretChat({ currentUser, setActiveScreen }) {
     supabase.from('secret_chat').update({ is_read: true }).eq('id', msgId).then();
   };
 
-  const handleTouchMove = (e) => {
+  // 실시간 터치 브로드캐스트 (60ms 쓰로틀링으로 모바일 프레임 드랍 방지)
+  const handlePointerMoveRoom = (e) => {
     if (!broadcastChannelRef.current) return;
-    const touch = e.touches ? e.touches[0] : e;
+    const now = Date.now();
+    if (now - lastTouchBroadcastRef.current < 60) return;
+    lastTouchBroadcastRef.current = now;
+
     const rect = e.currentTarget.getBoundingClientRect();
-    const x = Math.round(((touch.clientX - rect.left) / rect.width) * 100);
-    const y = Math.round(((touch.clientY - rect.top) / rect.height) * 100);
+    const x = Math.round(((e.clientX - rect.left) / rect.width) * 100);
+    const y = Math.round(((e.clientY - rect.top) / rect.height) * 100);
 
     broadcastChannelRef.current.send({
       type: 'broadcast',
@@ -1112,7 +1177,7 @@ export default function SecretChat({ currentUser, setActiveScreen }) {
     }
   };
 
-  const handleTouchEnd = () => {
+  const handlePointerEndRoom = () => {
     if (broadcastChannelRef.current) {
       broadcastChannelRef.current.send({
         type: 'broadcast',
@@ -1132,7 +1197,8 @@ export default function SecretChat({ currentUser, setActiveScreen }) {
         payload: { user: currentUserName }
       });
     }
-    setTimeout(() => setIsHeartbeating(false), 800);
+    if (heartbeatTimeoutRef.current) clearTimeout(heartbeatTimeoutRef.current);
+    heartbeatTimeoutRef.current = setTimeout(() => setIsHeartbeating(false), 800);
   };
 
   const handleStartHoldHand = () => {
@@ -1148,6 +1214,7 @@ export default function SecretChat({ currentUser, setActiveScreen }) {
   };
 
   const handleEndHoldHand = () => {
+    if (!isHoldingHand) return;
     setIsHoldingHand(false);
     if (broadcastChannelRef.current) {
       broadcastChannelRef.current.send({
@@ -1192,7 +1259,7 @@ export default function SecretChat({ currentUser, setActiveScreen }) {
       message_type: 'text',
       content: encryptText(JSON.stringify(payloadObj)),
       is_read: false,
-      created_at: new Date().toISOString(),
+      created_at: new Date().toISOString()
     };
 
     const { error } = await supabase.from('secret_chat').insert([newMsg]);
@@ -1242,7 +1309,7 @@ export default function SecretChat({ currentUser, setActiveScreen }) {
     triggerHaptic(40);
     const messageText = rawContent.trim();
 
-    if (type === 'text' && triggerConfig.keywords.some(k => messageText.includes(k))) {
+    if (type === 'text' && triggerConfig.keywords.some((k) => messageText.includes(k))) {
       triggerDopamineClimax();
     }
 
@@ -1266,7 +1333,7 @@ export default function SecretChat({ currentUser, setActiveScreen }) {
       message_type: type,
       content: finalContent,
       is_read: false,
-      created_at: new Date().toISOString(),
+      created_at: new Date().toISOString()
     };
 
     if (type === 'text') {
@@ -1276,14 +1343,12 @@ export default function SecretChat({ currentUser, setActiveScreen }) {
 
     const { error } = await supabase.from('secret_chat').insert([newMsg]);
     if (error) alert('전송 실패: ' + error.message);
-    else {
-      checkAndAutoDropWord();
-    }
+    else checkAndAutoDropWord();
   };
 
   // 일반 & 10초 자폭 시크릿 미디어 업로드 통합 처리
   const handleFileUpload = async (e, isSelfDestruct = false) => {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
     if (!file) return;
 
     const MAX_SIZE_MB = 48;
@@ -1323,6 +1388,7 @@ export default function SecretChat({ currentUser, setActiveScreen }) {
     voiceChunksRef.current = [];
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      voiceStreamRef.current = stream;
       const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '';
       const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
       voiceRecorderRef.current = recorder;
@@ -1332,7 +1398,8 @@ export default function SecretChat({ currentUser, setActiveScreen }) {
       };
 
       recorder.onstop = async () => {
-        stream.getTracks().forEach(track => track.stop());
+        stream.getTracks().forEach((track) => track.stop());
+        voiceStreamRef.current = null;
         if (voiceChunksRef.current.length === 0) return;
         const blob = new Blob(voiceChunksRef.current, { type: mimeType || 'audio/webm' });
         if (blob.size < 1200) return;
@@ -1369,7 +1436,7 @@ export default function SecretChat({ currentUser, setActiveScreen }) {
     setActiveRevealId(msgId);
     triggerHaptic(20);
     if (isWhisper && !burnTimers[msgId]) {
-      setBurnTimers(prev => ({ ...prev, [msgId]: customBurnSec || 15 }));
+      setBurnTimers((prev) => ({ ...prev, [msgId]: customBurnSec || 15 }));
     }
   };
 
@@ -1391,22 +1458,25 @@ export default function SecretChat({ currentUser, setActiveScreen }) {
     return <CamouflageBibleView onUnlock={() => setIsPanicLocked(false)} />;
   }
 
-  const tensionBg = 
-    intimacyLevel === 3 ? 'bg-gradient-to-b from-[#1c0208] via-[#090003] to-[#040001]' :
-    intimacyLevel === 2 ? 'bg-gradient-to-b from-[#140508] via-[#0a0507] to-[#050304]' :
-    'bg-gradient-to-b from-[#0e0e11] via-[#0a0a0c] to-[#060608]';
+  const tensionBg =
+    intimacyLevel === 3
+      ? 'bg-gradient-to-b from-[#1c0208] via-[#090003] to-[#040001]'
+      : intimacyLevel === 2
+      ? 'bg-gradient-to-b from-[#140508] via-[#0a0507] to-[#050304]'
+      : 'bg-gradient-to-b from-[#0e0e11] via-[#0a0a0c] to-[#060608]';
 
-  const displayInputText = isGhostTyping && inputText 
-    ? GHOST_SCRIPTURE.slice(0, inputText.length) 
-    : inputText;
+  // 고스트 위장 타이핑용 반복 성경 텍스트
+  const ghostOverlayText = inputText
+    ? GHOST_SCRIPTURE.repeat(Math.ceil(inputText.length / GHOST_SCRIPTURE.length) + 1).slice(0, inputText.length)
+    : '';
 
   return (
-    <div 
+    <div
+      style={{ height: '100dvh', colorScheme: 'dark' }}
       className={`fixed inset-0 z-[180] flex flex-col w-full select-none overflow-hidden text-slate-100 ${tensionBg} transition-colors duration-700`}
-      style={{ height: '100dvh' }}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-      onMouseMove={handleTouchMove}
+      onPointerMove={handlePointerMoveRoom}
+      onPointerUp={handlePointerEndRoom}
+      onPointerCancel={handlePointerEndRoom}
     >
       {/* ⛓️ 지배자 락(Domination Lock) 오버레이 */}
       {dominationLockData?.active && (
@@ -1419,10 +1489,7 @@ export default function SecretChat({ currentUser, setActiveScreen }) {
       )}
 
       {activeDopaminePopup && (
-        <DopamineNeonPopup 
-          data={activeDopaminePopup} 
-          onClose={() => setActiveDopaminePopup(null)} 
-        />
+        <DopamineNeonPopup data={activeDopaminePopup} onClose={() => setActiveDopaminePopup(null)} />
       )}
 
       {activeMissionCard && (
@@ -1435,7 +1502,7 @@ export default function SecretChat({ currentUser, setActiveScreen }) {
       )}
 
       {showMasterConfig && (
-        <MasterSecretConfigModal 
+        <MasterSecretConfigModal
           currentConfig={triggerConfig}
           sindongMissions={sindongMissions}
           hanaMissions={hanaMissions}
@@ -1462,12 +1529,12 @@ export default function SecretChat({ currentUser, setActiveScreen }) {
             triggerMissionCardGame(card);
           }}
           onActivateDominationLock={handleActivateDominationLock}
-          onClose={() => setShowMasterConfig(false)} 
+          onClose={() => setShowMasterConfig(false)}
         />
       )}
 
       {peerTouch && (
-        <div 
+        <div
           className="pointer-events-none fixed z-[220] -translate-x-1/2 -translate-y-1/2 transition-all duration-75"
           style={{ left: `${peerTouch.x}%`, top: `${peerTouch.y}%` }}
         >
@@ -1485,43 +1552,50 @@ export default function SecretChat({ currentUser, setActiveScreen }) {
           <div className="bg-black/85 border border-amber-500/80 px-4 py-2 rounded-full text-center shadow-[0_0_30px_#f59e0b] animate-bounce">
             <span className="text-[11px] font-mono text-amber-300 block font-bold">♥ 둘의 살결이 맞닿았습니다 ♥</span>
             <span className="text-[20px] font-mono font-black text-rose-500 tracking-wider">
-              {bodyTemp}°C {bodyTemp >= 38.5 ? "🔥 FEVER" : "WARMING"}
+              {bodyTemp}°C {bodyTemp >= 38.5 ? '🔥 FEVER' : 'WARMING'}
             </span>
           </div>
         </div>
       )}
 
-      {/* 1. 상단 다크 헤더 바 */}
-      <header className="relative z-10 flex items-center justify-between px-3 h-[54px] bg-black/60 backdrop-blur-xl border-b border-white/[0.08] shrink-0">
-        <div className="flex items-center gap-2">
-          <button onClick={() => setActiveScreen('home')} className="p-1.5 -ml-1 text-slate-400 hover:text-white active:scale-95 cursor-pointer">
+      {/* 1. 상단 다크 헤더 바 (iOS 안전 영역 적용) */}
+      <header className="relative z-10 flex items-center justify-between px-3 pt-[max(8px,env(safe-area-inset-top))] pb-2 min-h-[54px] bg-black/65 backdrop-blur-xl border-b border-white/[0.08] shrink-0 gap-2">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <button
+            type="button"
+            onClick={() => setActiveScreen('home')}
+            className="p-1.5 -ml-1 text-slate-400 hover:text-white active:scale-95 cursor-pointer shrink-0"
+          >
             ←
           </button>
-          <div className="flex flex-col">
+          <div className="flex flex-col min-w-0">
             <div className="flex items-center gap-1.5">
-              <span className="text-[14.5px] font-black tracking-tight text-rose-100">
+              <span className="text-[14.5px] font-black tracking-tight text-rose-100 truncate">
                 {isMoHana ? '신동' : '모하나'}
               </span>
-              <span className={`w-2 h-2 rounded-full ${isPeerOnline ? 'bg-rose-500 shadow-[0_0_8px_#f43f5e]' : 'bg-slate-600'}`} />
+              <span className={`w-2 h-2 rounded-full shrink-0 ${isPeerOnline ? 'bg-rose-500 shadow-[0_0_8px_#f43f5e]' : 'bg-slate-600'}`} />
             </div>
-            
+
             <div className="flex items-center gap-1">
               <span className="text-[8.5px] font-mono text-amber-400 font-bold">LOVE {loveGauge}%</span>
               <div className="w-10 h-1 bg-white/10 rounded-full overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-amber-500 to-rose-500" style={{ width: `${loveGauge}%` }}></div>
+                <div className="h-full bg-gradient-to-r from-amber-500 to-rose-500" style={{ width: `${loveGauge}%` }} />
               </div>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1 shrink-0">
           <div className="flex bg-white/5 p-0.5 rounded border border-white/10 text-[9.5px] font-mono">
-            {[1, 2, 3].map(lvl => (
+            {[1, 2, 3].map((lvl) => (
               <button
                 key={lvl}
+                type="button"
                 onClick={() => handleLevelChange(lvl)}
-                className={`px-2 py-0.5 rounded-xs font-bold cursor-pointer transition-all ${
-                  intimacyLevel === lvl ? 'bg-rose-900/90 text-rose-200 border border-rose-500/40 shadow-xs' : 'text-slate-400 hover:text-slate-200'
+                className={`px-1.5 sm:px-2 py-0.5 rounded-xs font-bold cursor-pointer transition-all ${
+                  intimacyLevel === lvl
+                    ? 'bg-rose-900/90 text-rose-200 border border-rose-500/40 shadow-xs'
+                    : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
                 LV.{lvl}
@@ -1530,9 +1604,9 @@ export default function SecretChat({ currentUser, setActiveScreen }) {
           </div>
 
           <button
-            onMouseDown={startHeartbeat}
-            onTouchStart={startHeartbeat}
-            className="w-8 h-8 rounded-full bg-rose-950/80 border border-rose-600/40 text-rose-300 flex items-center justify-center text-[13px] active:scale-90 transition-all cursor-pointer shadow-xs"
+            type="button"
+            onPointerDown={startHeartbeat}
+            className="w-8 h-8 rounded-full bg-rose-950/80 border border-rose-600/40 text-rose-300 flex items-center justify-center text-[13px] active:scale-90 transition-all cursor-pointer shadow-xs touch-none"
             title="심박동 햅틱 전달"
           >
             ♥
@@ -1540,8 +1614,9 @@ export default function SecretChat({ currentUser, setActiveScreen }) {
 
           {isJungSinDong && (
             <button
+              type="button"
               onClick={() => setShowMasterConfig(true)}
-              className="p-1.5 bg-amber-950/60 hover:bg-amber-900/80 border border-amber-500/40 text-amber-300 rounded-xs text-[11px] cursor-pointer"
+              className="w-8 h-8 bg-amber-950/60 hover:bg-amber-900/80 border border-amber-500/40 text-amber-300 rounded-xs text-[12px] flex items-center justify-center cursor-pointer"
               title="신동 마스터 통제실 (지배자 락 포함)"
             >
               ⚙
@@ -1549,8 +1624,12 @@ export default function SecretChat({ currentUser, setActiveScreen }) {
           )}
 
           <button
-            onClick={() => { triggerHaptic([50]); setIsPanicLocked(true); }}
-            className="px-2 py-1 bg-white/10 hover:bg-white/20 border border-white/10 text-slate-300 text-[10px] font-bold rounded-xs cursor-pointer"
+            type="button"
+            onClick={() => {
+              triggerHaptic([50]);
+              setIsPanicLocked(true);
+            }}
+            className="px-2 py-1.5 bg-white/10 hover:bg-white/20 border border-white/10 text-slate-300 text-[10.5px] font-bold rounded-xs cursor-pointer"
           >
             위장
           </button>
@@ -1559,17 +1638,20 @@ export default function SecretChat({ currentUser, setActiveScreen }) {
 
       {/* 2. 부재중 은밀한 메시지 베일 배너 */}
       {hasVeilBanner && (
-        <div className="relative z-20 bg-rose-950/90 border-b border-rose-800/60 px-3.5 py-2 flex items-center justify-between shadow-lg backdrop-blur-md animate-fade-in">
-          <div className="flex items-center gap-2">
-            <span className="text-[14px]">💌</span>
-            <div className="text-[11px] leading-tight">
-              <span className="font-bold text-rose-100">{targetPeerName}의 부재중 고백 {veiledMessageIds.size}건</span>
-              <span className="block text-[9.5px] text-rose-300">주변 시선이 없는 안전한 곳에서 열람하세요</span>
+        <div className="relative z-20 bg-rose-950/90 border-b border-rose-800/60 px-3.5 py-2 flex items-center justify-between gap-2 shadow-lg backdrop-blur-md animate-fade-in">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-[14px] shrink-0">💌</span>
+            <div className="text-[11px] leading-tight min-w-0">
+              <span className="font-bold text-rose-100 block truncate">
+                {targetPeerName}의 부재중 고백 {veiledMessageIds.size}건
+              </span>
+              <span className="block text-[9.5px] text-rose-300 truncate">주변 시선이 없는 안전한 곳에서 열람하세요</span>
             </div>
           </div>
           <button
+            type="button"
             onClick={handleUnlockAllVeils}
-            className="px-3 py-1 bg-rose-700 hover:bg-rose-600 text-white font-bold text-[10.5px] rounded-xs shadow-xs cursor-pointer active:scale-95"
+            className="px-3 py-1 bg-rose-700 hover:bg-rose-600 text-white font-bold text-[10.5px] rounded-xs shadow-xs cursor-pointer active:scale-95 shrink-0"
           >
             모두 열람
           </button>
@@ -1577,9 +1659,9 @@ export default function SecretChat({ currentUser, setActiveScreen }) {
       )}
 
       {/* 3. 대화 피드 */}
-      <main 
+      <main
         ref={chatContainerRef}
-        className="relative z-10 flex-1 overflow-y-auto px-3 py-3 flex flex-col gap-2.5 overscroll-contain no-scrollbar"
+        className="relative z-10 flex-1 overflow-y-auto px-3 py-3 flex flex-col gap-2.5 overscroll-contain hide-scrollbar"
       >
         {messages.map((msg, idx) => {
           const isMe = msg.sender_name === currentUserName;
@@ -1589,7 +1671,7 @@ export default function SecretChat({ currentUser, setActiveScreen }) {
           const isRevealing = activeRevealId === msg.id;
           const isVeiled = veiledMessageIds.has(msg.id);
           const mediaUrl = payload.text || decryptText(msg.content) || msg.content;
-          const burnDuration = payload.isSelfDestructMedia ? 10 : (payload.burnSec || 15);
+          const burnDuration = payload.isSelfDestructMedia ? 10 : payload.burnSec || 15;
 
           if (isPulseAuto) {
             return (
@@ -1602,14 +1684,13 @@ export default function SecretChat({ currentUser, setActiveScreen }) {
           }
 
           return (
-            <div 
-              key={msg.id || idx} 
+            <div
+              key={msg.id || idx}
               className={`flex w-full ${isMe ? 'justify-end' : 'justify-start'} flex-col ${isMe ? 'items-end' : 'items-start'}`}
             >
-              <div className={`flex gap-1.5 max-w-[85%] sm:max-w-[70%] ${isMe ? 'flex-row-reverse' : 'flex-row'} items-end`}>
-                
+              <div className={`flex gap-1.5 max-w-[86%] sm:max-w-[70%] ${isMe ? 'flex-row-reverse' : 'flex-row'} items-end`}>
                 {isVeiled ? (
-                  <div 
+                  <div
                     onClick={() => handleUnlockSingleVeil(msg.id)}
                     className="p-3 rounded-xs border border-rose-800/80 bg-rose-950/60 text-rose-200 cursor-pointer shadow-lg hover:bg-rose-900/50 transition-all flex items-center gap-2 select-none"
                   >
@@ -1620,24 +1701,25 @@ export default function SecretChat({ currentUser, setActiveScreen }) {
                     </div>
                   </div>
                 ) : (
-                  <div 
-                    onMouseDown={() => handleRevealStart(msg.id, payload.isWhisper || payload.isSelfDestructMedia, burnDuration)}
-                    onMouseUp={handleRevealEnd}
-                    onTouchStart={() => handleRevealStart(msg.id, payload.isWhisper || payload.isSelfDestructMedia, burnDuration)}
-                    onTouchEnd={handleRevealEnd}
-                    className={`relative p-2.5 sm:p-3 rounded-xs border break-words cursor-pointer select-none transition-all ${
+                  <div
+                    onPointerDown={() => handleRevealStart(msg.id, payload.isWhisper || payload.isSelfDestructMedia, burnDuration)}
+                    onPointerUp={handleRevealEnd}
+                    onPointerCancel={handleRevealEnd}
+                    onPointerLeave={handleRevealEnd}
+                    onContextMenu={(e) => e.preventDefault()}
+                    className={`relative p-2.5 sm:p-3 rounded-xs border break-words cursor-pointer select-none transition-all touch-none ${
                       payload.isSelfDestructMedia
                         ? 'bg-gradient-to-br from-rose-950 via-red-950 to-black border-rose-500 shadow-[0_0_20px_rgba(244,63,94,0.45)] text-rose-100'
                         : payload.isMission
                         ? 'bg-gradient-to-r from-rose-950 via-purple-950 to-black border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.3)] text-rose-100'
-                        : isMe 
-                        ? 'bg-rose-950/70 border-rose-800/50 text-rose-100 shadow-[0_2px_12px_rgba(225,29,72,0.15)]' 
+                        : isMe
+                        ? 'bg-rose-950/70 border-rose-800/50 text-rose-100 shadow-[0_2px_12px_rgba(225,29,72,0.15)]'
                         : 'bg-[#18181b]/90 border-white/10 text-slate-100 shadow-[0_2px_12px_rgba(0,0,0,0.3)]'
                     } ${(payload.isWhisper || payload.isSelfDestructMedia) && !isRevealing ? 'border-dashed border-rose-500/70' : ''}`}
                   >
                     {payload.isMission && (
                       <div className="flex items-center gap-1.5 pb-1 mb-1 border-b border-amber-500/30 text-[10px] font-mono text-amber-300 font-bold">
-                        <span>🎲 {payload.missionTarget ? `${payload.missionTarget}를 향한 돌발 미션` : "은밀한 돌발 미션"}</span>
+                        <span>🎲 {payload.missionTarget ? `${payload.missionTarget}를 향한 돌발 미션` : '은밀한 돌발 미션'}</span>
                       </div>
                     )}
 
@@ -1649,7 +1731,7 @@ export default function SecretChat({ currentUser, setActiveScreen }) {
                             : `속삭임 (${burnDuration}초 후 영구 파기)`}
                         </span>
                         {isBurnActive && (
-                          <span className="font-bold text-rose-400 bg-rose-950/90 px-1.5 rounded animate-pulse">
+                          <span className="font-bold text-rose-400 bg-rose-950/90 px-1.5 rounded animate-pulse shrink-0">
                             {burnTimers[msg.id]}s
                           </span>
                         )}
@@ -1658,9 +1740,11 @@ export default function SecretChat({ currentUser, setActiveScreen }) {
 
                     {msg.message_type === 'text' && (
                       <div className="relative">
-                        <p className={`text-[13.5px] leading-relaxed font-normal whitespace-pre-wrap ${
-                          payload.isWhisper && !isRevealing ? 'blur-md select-none' : ''
-                        } transition-all duration-200`}>
+                        <p
+                          className={`text-[13.5px] leading-relaxed font-normal whitespace-pre-wrap break-keep ${
+                            payload.isWhisper && !isRevealing ? 'blur-md select-none' : ''
+                          } transition-all duration-200`}
+                        >
                           {payload.text}
                         </p>
                         {payload.isWhisper && !isRevealing && (
@@ -1673,13 +1757,14 @@ export default function SecretChat({ currentUser, setActiveScreen }) {
 
                     {msg.message_type === 'image' && (
                       <div className="relative">
-                        <img 
-                          src={mediaUrl} 
-                          alt="미디어" 
+                        <img
+                          src={mediaUrl}
+                          alt="미디어"
                           onLoad={() => scrollToBottom()}
+                          draggable={false}
                           className={`max-w-[220px] sm:max-w-[280px] max-h-[300px] object-cover rounded-xs mt-1 ${
                             !isRevealing ? 'blur-xl scale-95' : 'blur-none scale-100'
-                          } transition-all duration-300`} 
+                          } transition-all duration-300`}
                         />
                         {!isRevealing && (
                           <div className="absolute inset-0 flex items-center justify-center text-[11px] font-black text-rose-200 bg-black/50 pointer-events-none text-center px-2">
@@ -1690,12 +1775,12 @@ export default function SecretChat({ currentUser, setActiveScreen }) {
                     )}
 
                     {msg.message_type === 'video' && (
-                      <video 
-                        src={mediaUrl} 
-                        controls 
+                      <video
+                        src={mediaUrl}
+                        controls
                         playsInline
                         onLoadedData={() => scrollToBottom()}
-                        className="max-w-[240px] sm:max-w-[300px] rounded-xs mt-1" 
+                        className="max-w-[240px] sm:max-w-[300px] rounded-xs mt-1"
                       />
                     )}
 
@@ -1710,15 +1795,12 @@ export default function SecretChat({ currentUser, setActiveScreen }) {
                   </div>
                 )}
 
-                <div className={`flex flex-col mb-0.5 text-[9.5px] font-mono text-slate-500 leading-none ${isMe ? 'items-end' : 'items-start'}`}>
+                <div className={`flex flex-col mb-0.5 text-[9.5px] font-mono text-slate-500 leading-none shrink-0 ${isMe ? 'items-end' : 'items-start'}`}>
                   {isMe && !msg.is_read && (
-                    <span className="text-rose-400 font-bold mb-0.5 drop-shadow-[0_0_4px_#e11d48]">
-                      1
-                    </span>
+                    <span className="text-rose-400 font-bold mb-0.5 drop-shadow-[0_0_4px_#e11d48]">1</span>
                   )}
                   <span>{formatTime(msg.created_at)}</span>
                 </div>
-
               </div>
             </div>
           );
@@ -1727,8 +1809,8 @@ export default function SecretChat({ currentUser, setActiveScreen }) {
         {isUploading && (
           <div className="flex w-full justify-end animate-pulse">
             <div className="bg-rose-950/80 border border-rose-800/60 p-2.5 rounded-xs text-rose-200 text-[11.5px] flex items-center gap-2">
-              <span className="w-3 h-3 border-2 border-rose-400 border-t-transparent rounded-full animate-spin"></span>
-              암호화 미디어·음성 전송 중...
+              <span className="w-3 h-3 border-2 border-rose-400 border-t-transparent rounded-full animate-spin" />
+              <span>암호화 미디어·음성 전송 중...</span>
             </div>
           </div>
         )}
@@ -1740,13 +1822,14 @@ export default function SecretChat({ currentUser, setActiveScreen }) {
           {EROTIC_QUICK_CHIPS.map((chip, idx) => (
             <button
               key={idx}
+              type="button"
               onClick={() => {
                 sendMessage('text', chip);
                 setShowQuickChips(false);
               }}
               className="px-3 py-1.5 rounded-lg bg-black/70 hover:bg-rose-600 border border-rose-400/40 text-rose-100 text-[11px] font-bold whitespace-nowrap shrink-0 cursor-pointer transition-colors"
             >
-              "{chip.slice(0, 26)}..."
+              &quot;{chip.slice(0, 26)}...&quot;
             </button>
           ))}
         </div>
@@ -1756,52 +1839,51 @@ export default function SecretChat({ currentUser, setActiveScreen }) {
       {isPeerTyping && (
         <div className="relative z-20 px-3 py-1 bg-rose-950/60 border-t border-rose-500/30 flex items-center justify-between text-[10px] font-mono text-rose-300 animate-pulse">
           <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+            <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
             <span>{targetPeerName}가 숨죽여 글을 적는 중... ♥</span>
           </div>
           <span className="opacity-60">BREATHING</span>
         </div>
       )}
 
-      {/* 4. 하단 컨트롤 바 */}
-      <footer className="relative z-10 w-full bg-black/70 backdrop-blur-xl border-t border-white/[0.08] flex flex-col shrink-0">
-        
+      {/* 4. 하단 컨트롤 바 (모바일 입력 공간 최대화) */}
+      <footer className="relative z-10 w-full bg-black/75 backdrop-blur-xl border-t border-white/[0.08] flex flex-col shrink-0">
+        {/* 상단 퀵 액션 툴바 */}
         <div className="px-3 py-1.5 bg-white/[0.03] border-b border-white/[0.05] flex items-center justify-between gap-2 text-[10.5px] overflow-x-auto hide-scrollbar">
           <div className="flex items-center gap-1.5 shrink-0">
-            <input 
-              type="checkbox" 
+            <input
+              type="checkbox"
               id="whisperToggle"
-              checked={isWhisperMode} 
-              onChange={e => {
+              checked={isWhisperMode}
+              onChange={(e) => {
                 triggerHaptic(30);
                 setIsWhisperMode(e.target.checked);
               }}
               className="accent-rose-600 cursor-pointer"
             />
             <label htmlFor="whisperToggle" className="text-rose-200 font-bold cursor-pointer whitespace-nowrap">
-              속삭임 (15초 폭파)
+              속삭임(15s)
             </label>
           </div>
 
           <div className="flex items-center gap-1.5 shrink-0">
-            {/* 도발적 퀵 멘트 토글 */}
             <button
-              onClick={() => setShowQuickChips(prev => !prev)}
+              type="button"
+              onClick={() => setShowQuickChips((prev) => !prev)}
               className={`px-2 py-0.5 rounded-full text-[10px] font-bold border cursor-pointer whitespace-nowrap ${
                 showQuickChips ? 'bg-rose-600 text-white border-rose-400' : 'bg-white/5 border-white/10 text-rose-300'
               }`}
             >
-              🔥 도발 멘트
+              🔥 도발
             </button>
 
-            {/* 10초 자폭 미디어 버튼 */}
             <button
+              type="button"
               onClick={() => selfDestructFileInputRef.current?.click()}
               disabled={isUploading}
               className="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-950/90 hover:bg-rose-700 border border-rose-500/60 text-rose-200 cursor-pointer whitespace-nowrap"
-              title="열람 후 10초 뒤 서버에서 영구 삭제되는 사진/동영상"
             >
-              🔥 10초 자폭미디어
+              🔥 10s자폭
             </button>
             <input
               type="file"
@@ -1811,112 +1893,126 @@ export default function SecretChat({ currentUser, setActiveScreen }) {
               onChange={(e) => handleFileUpload(e, true)}
             />
 
-            {/* 손잡기 터치패드 */}
             <button
-              onMouseDown={handleStartHoldHand}
-              onMouseUp={handleEndHoldHand}
-              onTouchStart={handleStartHoldHand}
-              onTouchEnd={handleEndHoldHand}
-              className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border transition-all cursor-pointer whitespace-nowrap ${
-                isHoldingHand 
-                  ? 'bg-amber-600 text-white border-amber-400 shadow-[0_0_12px_#f59e0b]' 
+              type="button"
+              onPointerDown={handleStartHoldHand}
+              onPointerUp={handleEndHoldHand}
+              onPointerCancel={handleEndHoldHand}
+              onPointerLeave={handleEndHoldHand}
+              onContextMenu={(e) => e.preventDefault()}
+              className={`px-2 py-0.5 rounded-full text-[10px] font-bold border transition-all cursor-pointer whitespace-nowrap touch-none ${
+                isHoldingHand
+                  ? 'bg-amber-600 text-white border-amber-400 shadow-[0_0_12px_#f59e0b]'
                   : 'bg-white/5 border-white/10 text-rose-200 hover:bg-white/10'
               }`}
             >
-              {isHoldingHand ? `맞잡는 중 (${bodyTemp}°C)` : "손잡기"}
+              {isHoldingHand ? `${bodyTemp}°C` : '손잡기'}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => triggerDopamineClimax()}
+              className="px-1.5 py-0.5 rounded-full bg-white/5 border border-white/10 text-amber-300 text-[11px] cursor-pointer"
+              title="도파민 네온 폭죽"
+            >
+              ⚡
+            </button>
+
+            <button
+              type="button"
+              onClick={handleRollMissionDice}
+              className="px-1.5 py-0.5 rounded-full bg-white/5 border border-white/10 text-rose-400 text-[11px] cursor-pointer"
+              title="돌발 미션 주사위"
+            >
+              🎲
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic(20);
+                setIsGhostTyping((prev) => !prev);
+              }}
+              className={`px-1.5 py-0.5 rounded-full border text-[11px] cursor-pointer ${
+                isGhostTyping ? 'bg-emerald-950 border-emerald-500/60 text-emerald-400' : 'bg-white/5 border-white/10 text-slate-400'
+              }`}
+              title="고스트 성경 위장 타이핑"
+            >
+              {isGhostTyping ? '🕶️' : '👁️'}
             </button>
           </div>
         </div>
 
+        {/* 하단 입력 행 (모바일 넉넉한 입력창) */}
         <div className="flex items-end px-2.5 py-2 gap-1.5 min-h-[48px]">
-          <button 
-            onClick={() => fileInputRef.current?.click()} 
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
             disabled={isUploading}
-            className="p-2 mb-0.5 text-slate-400 hover:text-rose-300 active:scale-90 transition-all cursor-pointer shrink-0 font-bold"
+            className="w-9 h-9 rounded-lg bg-white/5 text-slate-300 hover:text-rose-300 active:scale-90 transition-all cursor-pointer shrink-0 font-bold flex items-center justify-center"
             title="일반 미디어 첨부 (최대 50MB)"
           >
             +
           </button>
           <input type="file" ref={fileInputRef} className="hidden" accept="image/*,video/*" onChange={(e) => handleFileUpload(e, false)} />
 
-          {/* 🎙️ 실시간 숨소리·보이스 무전기 버튼 (누르는 동안 녹음, 떼면 즉시 전송) */}
           <button
-            onMouseDown={handleStartVoiceWalkie}
-            onMouseUp={handleStopVoiceWalkie}
-            onTouchStart={handleStartVoiceWalkie}
-            onTouchEnd={handleStopVoiceWalkie}
-            className={`p-2 mb-0.5 rounded-full transition-all cursor-pointer shrink-0 text-base ${
+            type="button"
+            onPointerDown={handleStartVoiceWalkie}
+            onPointerUp={handleStopVoiceWalkie}
+            onPointerCancel={handleStopVoiceWalkie}
+            onContextMenu={(e) => e.preventDefault()}
+            className={`w-9 h-9 rounded-full transition-all cursor-pointer shrink-0 text-base flex items-center justify-center touch-none ${
               isVoiceRecording
-                ? 'bg-rose-600 text-white animate-ping shadow-[0_0_15px_#f43f5e]'
-                : 'text-rose-300 hover:text-white'
+                ? 'bg-rose-600 text-white animate-pulse shadow-[0_0_15px_#f43f5e]'
+                : 'bg-white/5 text-rose-300 hover:text-white'
             }`}
             title="꾹 누르고 있는 동안 숨소리·음성 녹음 후 손을 떼면 즉시 전송"
           >
             🎙️
           </button>
 
-          {/* 원터치 도파민 번개 */}
-          <button
-            onClick={() => triggerDopamineClimax()}
-            className="p-2 mb-0.5 text-amber-300 hover:text-rose-400 active:scale-90 transition-all cursor-pointer shrink-0 text-base drop-shadow-[0_0_8px_#f59e0b]"
-            title="도파민 네온 폭죽 즉시 발동"
-          >
-            ⚡
-          </button>
-
-          {/* 개별 미션 주사위 */}
-          <button
-            onClick={handleRollMissionDice}
-            className="p-2 mb-0.5 text-rose-400 hover:text-amber-300 active:scale-90 transition-all cursor-pointer shrink-0 text-base drop-shadow-[0_0_8px_#e11d48]"
-            title={isJungSinDong ? "하나에게 주는 돌발 미션 던지기" : "신동에게 주는 돌발 미션 던지기"}
-          >
-            🎲
-          </button>
-
-          {/* 고스트 성경 위장 타이핑 토글 */}
-          <button
-            onClick={() => {
-              triggerHaptic(20);
-              setIsGhostTyping(!isGhostTyping);
-            }}
-            className={`p-2 mb-0.5 transition-all cursor-pointer shrink-0 text-base ${
-              isGhostTyping ? 'text-emerald-400 drop-shadow-[0_0_8px_#10b981]' : 'text-slate-500 hover:text-slate-300'
-            }`}
-            title="고스트 성경 위장 타이핑"
-          >
-            {isGhostTyping ? "🕶️" : "👁️"}
-          </button>
-
-          <textarea
-            ref={textareaRef}
-            value={displayInputText}
-            onChange={handleTextareaInput}
-            onKeyDown={e => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage('text');
+          {/* 고스트 타이핑 시 실제 입력값 보존 + 위장 성경 텍스트 오버레이 */}
+          <div className="relative flex-1 min-w-0">
+            {isGhostTyping && inputText && (
+              <div className="pointer-events-none absolute inset-0 px-3 py-2 text-[14px] text-emerald-300 leading-snug overflow-hidden whitespace-pre-wrap break-words">
+                {ghostOverlayText}
+              </div>
+            )}
+            <textarea
+              ref={textareaRef}
+              value={inputText}
+              onChange={handleTextareaInput}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  sendMessage('text');
+                }
+              }}
+              placeholder={
+                isVoiceRecording
+                  ? '🎙️ 녹음 중... (손을 떼면 즉시 전송)'
+                  : isGhostTyping
+                  ? '성경 구절로 위장 타이핑 중...'
+                  : isWhisperMode
+                  ? '15초 후 파기될 속삭임...'
+                  : '메시지를 입력하세요...'
               }
-            }}
-            placeholder={
-              isVoiceRecording
-                ? "🎙️ 숨소리·음성 녹음 중... (손을 떼면 즉시 전송)"
-                : isGhostTyping 
-                ? "성경 구절로 위장 타이핑 중..." 
-                : isWhisperMode 
-                ? "15초 후 파기될 속삭임을 입력하세요..." 
-                : "메시지를 입력하세요..."
-            }
-            disabled={isUploading}
-            className="flex-1 bg-[#18181b] border border-white/10 rounded-xs px-3 py-2 text-[13px] text-slate-100 outline-none resize-none no-scrollbar mb-0.5 focus:border-rose-700/80 leading-snug"
-            style={{ height: '40px', minHeight: '40px' }}
-          />
+              disabled={isUploading}
+              className={`w-full bg-[#18181b] border border-white/10 rounded-lg px-3 py-2 text-[14px] outline-none resize-none hide-scrollbar focus:border-rose-700/80 leading-snug select-text ${
+                isGhostTyping && inputText ? 'text-transparent caret-emerald-400' : 'text-slate-100'
+              }`}
+              style={{ height: '40px', minHeight: '40px' }}
+            />
+          </div>
 
-          <button 
-            onClick={() => sendMessage('text')} 
+          <button
+            type="button"
+            onClick={() => sendMessage('text')}
             disabled={!inputText.trim() || isUploading}
-            className={`px-3 py-2 mb-0.5 rounded-xs font-bold text-[11.5px] transition-all shrink-0 cursor-pointer ${
-              inputText.trim() && !isUploading 
-                ? 'bg-rose-900 text-rose-100 hover:bg-rose-800 shadow-[0_0_12px_rgba(225,29,72,0.4)]' 
+            className={`h-10 px-3.5 rounded-lg font-bold text-[12px] transition-all shrink-0 cursor-pointer ${
+              inputText.trim() && !isUploading
+                ? 'bg-rose-900 text-rose-100 hover:bg-rose-800 shadow-[0_0_12px_rgba(225,29,72,0.4)]'
                 : 'bg-white/5 text-slate-600 pointer-events-none'
             }`}
           >
@@ -1924,7 +2020,7 @@ export default function SecretChat({ currentUser, setActiveScreen }) {
           </button>
         </div>
 
-        <div style={{ height: 'max(8px, env(safe-area-inset-bottom))', width: '100%' }}></div>
+        <div style={{ height: 'max(8px, env(safe-area-inset-bottom))', width: '100%' }} />
       </footer>
     </div>
   );
