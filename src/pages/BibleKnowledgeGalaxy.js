@@ -638,25 +638,8 @@ export default function BibleKnowledgeGalaxy({
     readVerses = {},
     bibleNotes = [],
     setBibleNotes,
-    generalNotes = [],
-    isDarkMode
+    generalNotes = []
   } = store;
-
-  // iOS 야간 다크모드 자동 감지 + 앱 테마 연동
-  const [systemDark, setSystemDark] = useState(() => {
-    if (typeof window === 'undefined' || !window.matchMedia) return true;
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
-  });
-
-  useEffect(() => {
-    if (typeof window === 'undefined' || !window.matchMedia) return;
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    const onChange = (e) => setSystemDark(e.matches);
-    mq.addEventListener?.('change', onChange);
-    return () => mq.removeEventListener?.('change', onChange);
-  }, []);
-
-  const isAppDark = typeof isDarkMode === 'boolean' ? isDarkMode : systemDark;
 
   const containerRef = useRef(null);
   const canvasRef = useRef(null);
@@ -664,15 +647,8 @@ export default function BibleKnowledgeGalaxy({
 
   // 6대 뷰 모드: 'arc' | '2d' | 'hex' | 'hud' | '3d' | 'list'
   const [viewMode, setViewMode] = useState(initialMode || 'arc');
-  const [currentTheme, setCurrentTheme] = useState(() => (isAppDark ? 'oceano' : 'luz'));
-
-  // 앱 다크/라이트 전환 시 자동 테마 동기화
-  useEffect(() => {
-    setCurrentTheme((prev) => {
-      if (!isAppDark) return 'luz';
-      return prev === 'luz' ? 'oceano' : prev;
-    });
-  }, [isAppDark]);
+  // 우주 은하계 기본 테마는 항상 딥 스페이스(oceano) 고정
+  const [currentTheme, setCurrentTheme] = useState('oceano');
 
   // 4대 역본 ('krv4' | 'easy' | 'web' | 'parallel')
   const [versionMode, setVersionMode] = useState('parallel');
@@ -774,7 +750,7 @@ export default function BibleKnowledgeGalaxy({
     return () => clearInterval(t);
   }, [viewMode]);
 
-  // 4대 역본 비동기 로드 (개역개정4판 최우선)
+  // 4대 역본 비동기 로드
   useEffect(() => {
     ensureKrv4TxtLoaded().then((db) => {
       if (db) setKrv4Db(db);
@@ -1148,22 +1124,18 @@ export default function BibleKnowledgeGalaxy({
     });
   }, [allFullArcs, arcCategoryFilter, arcFromBookFilter, arcFromChapFilter, arcToBookFilter, scrubbedBookKo, searchQuery]);
 
-  // =====================================================================
-  // 5영역 전방위 딥서치 엔진 (구절 · 원어 · 교차아크 · 성경본문 · 내 QT/설교)
-  // =====================================================================
+  // 5영역 전방위 딥서치
   const deepSearchResults = useMemo(() => {
     const q = searchQuery.trim();
     if (!q) return [];
     const lowerQ = q.toLowerCase();
     const hits = [];
 
-    // 1) 구절 주소 직접 파싱
-    const parsedRefs = extractAllBibleRefsFromText(q);
-    parsedRefs.forEach((r) => {
+    extractAllBibleRefsFromText(q).forEach((r) => {
       hits.push({
         id: `ds_ref_${r.bookKo}_${r.chapter}_${r.verse}`,
         badge: '구절 바로가기',
-        color: '#2563EB',
+        color: '#38BDF8',
         title: `${r.bookKo} ${r.chapter}:${r.verse}`,
         sub: '아크 필터 적용 및 4대 역본 본문 바로 열기',
         onSelect: () => {
@@ -1174,7 +1146,6 @@ export default function BibleKnowledgeGalaxy({
       });
     });
 
-    // 2) 히브리어/헬라어 원어 및 스트롱 코드
     ORIGINAL_LANGUAGE_ROOTS.forEach((root) => {
       if (
         root.strongs.toLowerCase().includes(lowerQ) ||
@@ -1186,7 +1157,7 @@ export default function BibleKnowledgeGalaxy({
         hits.push({
           id: `ds_orig_${root.id}`,
           badge: `원어 ${root.strongs}`,
-          color: '#D97706',
+          color: '#FACC15',
           title: `${root.original} [${root.pron}] — ${root.label}`,
           sub: root.meaning,
           onSelect: () => {
@@ -1198,7 +1169,6 @@ export default function BibleKnowledgeGalaxy({
       }
     });
 
-    // 3) 교차참조 아크 매칭
     allFullArcs
       .filter((a) => a.title?.toLowerCase().includes(lowerQ) || a.desc?.toLowerCase().includes(lowerQ))
       .slice(0, 4)
@@ -1206,7 +1176,7 @@ export default function BibleKnowledgeGalaxy({
         hits.push({
           id: `ds_arc_${arc.id}`,
           badge: arc.badgeLabel,
-          color: '#0D9488',
+          color: '#2DD4BF',
           title: arc.title,
           sub: `${arc.fromBook} ${arc.fromChap}:${arc.fromVerse} ➔ ${arc.toBook} ${arc.toChap}:${arc.toVerse}`,
           onSelect: () => {
@@ -1216,7 +1186,6 @@ export default function BibleKnowledgeGalaxy({
         });
       });
 
-    // 4) 내 QT/설교 기록 매칭
     Object.entries(mergedDailyRecords).forEach(([dKey, d]) => {
       if (!d || hits.length >= 10) return;
       const txt = `${d.qtTitle || ''} ${d.sermonTitle || ''} ${d.qtReference || ''} ${d.sermonReference || ''}`;
@@ -1225,7 +1194,7 @@ export default function BibleKnowledgeGalaxy({
         hits.push({
           id: `ds_my_${dKey}`,
           badge: '내 기록',
-          color: '#E11D48',
+          color: '#FB7185',
           title: `[${dKey}] ${d.qtTitle || d.sermonTitle || '묵상 기록'}`,
           sub: refInfo ? `${refInfo.bookKo} ${refInfo.chapter}:${refInfo.verse}` : 'QT / 설교 기록',
           onSelect: () => {
@@ -1269,7 +1238,7 @@ export default function BibleKnowledgeGalaxy({
     applyResponsiveCameraReset(viewMode);
   }, [viewMode, applyResponsiveCameraReset]);
 
-  // 은하계 네트워크 빌더
+  // 은하계 네트워크 빌더 (강해/QT/노트 외곽 링 100% 복구)
   const galaxyData = useMemo(() => {
     const nodes = [];
     const links = [];
@@ -1286,17 +1255,13 @@ export default function BibleKnowledgeGalaxy({
 
     nodes.push({
       id: 'core',
-      label: '예수 그리스도 (LOGOS)',
+      label: '예수 그리스도 (LOGOS CORE)',
       level: 0,
       radius: 0,
       angle: 0,
-      xHex: 0,
-      yHex: 0,
-      x3d: 0,
-      y3d: 0,
-      z3d: 0,
-      size: 20,
-      color: '#0D9488',
+      xHex: 0, yHex: 0, x3d: 0, y3d: 0, z3d: 0,
+      size: 21,
+      color: '#00F5D4',
       type: 'core',
       desc: '성경 66권(1,189장)과 신구약 구속사 아크, 4대 역본·원어·설교·QT가 수렴하는 중심 코어입니다.'
     });
@@ -1326,7 +1291,7 @@ export default function BibleKnowledgeGalaxy({
         x3d: 125 * Math.cos(secRad),
         y3d: ((sIdx % 3) - 1) * 45,
         z3d: 125 * Math.sin(secRad),
-        size: 11,
+        size: 11.5,
         color: sec.color,
         type: 'sector',
         sectorId: sec.id,
@@ -1400,6 +1365,127 @@ export default function BibleKnowledgeGalaxy({
       links.push({ source: srcId, target: tgtId, color: CATEGORY_META[cat]?.color || '#FACC15', alpha: 0.16, isCrossRefLink: true });
     });
 
+    // 외곽 강해/QT/노트 버킷 복구
+    const outerBuckets = {};
+    CANON_SECTORS.forEach((s) => { outerBuckets[s.id] = []; });
+
+    let sTotal = 0;
+    const seenSermonKeys = new Set();
+    const pushSermonStar = (sermon, fallbackRef = '') => {
+      if (!sermon || typeof sermon !== 'object' || sTotal >= 200) return;
+      const refInfo = extractBibleRefInfo(sermon.verse || sermon.reference || sermon.ref || fallbackRef || sermon.title || '');
+      if (!refInfo) return;
+      const targetBookId = BOOK_NODE_MAP[refInfo.bookKo];
+      const sec = BOOK_SECTOR_MAP[refInfo.bookKo];
+      if (!targetBookId || !sec) return;
+      const sTitle = (sermon.title || sermon.sermonTitle || `${refInfo.bookKo} ${refInfo.chapter}장 강해`).trim();
+      const dedupKey = `${sermon.date || ''}_${sTitle}_${refInfo.bookKo}_${refInfo.chapter}`;
+      if (seenSermonKeys.has(dedupKey)) return;
+      seenSermonKeys.add(dedupKey);
+      sTotal++;
+      outerBuckets[sec.id].push({
+        id: `sermon_${sTotal}`,
+        label: sTitle,
+        date: sermon.date || '',
+        ref: `${refInfo.bookKo} ${refInfo.chapter}:${refInfo.verse}`,
+        bookName: refInfo.bookKo,
+        chapter: refInfo.chapter,
+        verse: refInfo.verse,
+        summary: sermon.summary || sermon.oneLineSummary || sermon.content || '성경 본문 강해 요약',
+        parentBookId: targetBookId,
+        color: sec.color,
+        type: 'sermon',
+        sector: sec.name,
+        sectorId: sec.id
+      });
+    };
+
+    if (Array.isArray(rawSermons)) rawSermons.forEach((s) => pushSermonStar(s));
+    else if (rawSermons && typeof rawSermons === 'object') {
+      if (Array.isArray(rawSermons.sermons)) rawSermons.sermons.forEach((s) => pushSermonStar(s));
+      if (rawSermons.index && typeof rawSermons.index === 'object') {
+        Object.entries(rawSermons.index).forEach(([refKey, val]) => {
+          if (Array.isArray(val)) val.slice(0, 3).forEach((s) => pushSermonStar(s, refKey));
+          else if (val && typeof val === 'object') pushSermonStar(val, refKey);
+        });
+      }
+    }
+
+    Object.entries(mergedDailyRecords).forEach(([dateKey, dVal]) => {
+      if (!dVal) return;
+      if (dVal.qtTitle || dVal.qtMeditation || dVal.qtReference) {
+        const refInfo = extractBibleRefInfo(`${dVal.qtReference || ''} ${dVal.qtTitle || ''} ${dVal.qtMeditation || ''}`);
+        if (refInfo && BOOK_SECTOR_MAP[refInfo.bookKo] && BOOK_NODE_MAP[refInfo.bookKo]) {
+          const sec = BOOK_SECTOR_MAP[refInfo.bookKo];
+          outerBuckets[sec.id].push({
+            id: `my_qt_${dateKey}`,
+            label: `[QT] ${dVal.qtTitle || dateKey}`,
+            date: dateKey,
+            ref: dVal.qtReference || `${refInfo.bookKo} ${refInfo.chapter}:${refInfo.verse}`,
+            bookName: refInfo.bookKo,
+            chapter: refInfo.chapter,
+            verse: refInfo.verse,
+            summary: dVal.qtMeditation || '나의 QT 묵상 기록',
+            application: dVal.qtApplication || '',
+            parentBookId: BOOK_NODE_MAP[refInfo.bookKo],
+            color: '#F43F5E',
+            type: 'qt',
+            sector: sec.name,
+            sectorId: sec.id
+          });
+        }
+      }
+    });
+
+    (customGalaxyNodes || []).forEach((cNode, idx) => {
+      const sec = BOOK_SECTOR_MAP[cNode.bookName] || CANON_SECTORS[0];
+      outerBuckets[sec.id].push({
+        ...cNode,
+        id: cNode.id || `custom_${idx}`,
+        parentBookId: BOOK_NODE_MAP[cNode.bookName] || 'book_창세기',
+        sector: sec.name,
+        sectorId: sec.id
+      });
+    });
+
+    const OUTER_RING_RADII = [375, 405, 435, 465];
+    CANON_SECTORS.forEach((sec, sIdx) => {
+      const items = outerBuckets[sec.id] || [];
+      if (items.length === 0) return;
+      const startA = sec.angleStart + 1.8;
+      const usableAngle = Math.max(4, sec.angleEnd - 1.8 - startA);
+      const maxPerRow = Math.max(4, Math.floor(usableAngle / 2.2));
+      const hexAngle = (sIdx / CANON_SECTORS.length) * Math.PI * 2 - Math.PI / 2;
+      const secHexX = Math.cos(hexAngle) * (HEX_CELL_RADIUS * 1.82);
+      const secHexY = Math.sin(hexAngle) * (HEX_CELL_RADIUS * 1.82);
+
+      items.forEach((item, idx) => {
+        const rowIdx = Math.floor(idx / maxPerRow);
+        const colIdx = idx % maxPerRow;
+        const itemsInRow = Math.min(maxPerRow, items.length - rowIdx * maxPerRow);
+        const assignedAngle = startA + (usableAngle / (itemsInRow + 1)) * (colIdx + 1);
+        const assignedRadius = OUTER_RING_RADII[rowIdx % OUTER_RING_RADII.length] + Math.floor(rowIdx / 4) * 26;
+        const rad = (assignedAngle * Math.PI) / 180;
+        const r3d = 345 + (rowIdx % 3) * 30;
+        const tilt = ((rowIdx % 3) - 1) * 0.28;
+        const localHexAngle = (idx * 2.39996) % (Math.PI * 2);
+
+        nodes.push({
+          ...item,
+          level: item.type === 'sermon' ? 3 : 4,
+          radius: assignedRadius,
+          angle: assignedAngle,
+          xHex: secHexX + Math.cos(localHexAngle) * (92 + (idx % 4) * 14),
+          yHex: secHexY + Math.sin(localHexAngle) * (92 + (idx % 4) * 14),
+          x3d: r3d * Math.cos(rad),
+          y3d: r3d * Math.sin(rad) * tilt + (idx % 2 === 0 ? 14 : -14),
+          z3d: r3d * Math.sin(rad),
+          size: 8.5
+        });
+        links.push({ source: item.parentBookId, target: item.id, color: item.color, alpha: 0.22 });
+      });
+    });
+
     ORIGINAL_LANGUAGE_ROOTS.forEach((root, rIdx) => {
       const rad = (root.angle * Math.PI) / 180;
       nodes.push({
@@ -1431,7 +1517,7 @@ export default function BibleKnowledgeGalaxy({
     });
 
     return { nodes, links };
-  }, [readVerses]);
+  }, [rawSermons, mergedDailyRecords, readVerses, customGalaxyNodes]);
 
   const connectedNodeIds = useMemo(() => {
     const set = new Set();
@@ -1445,13 +1531,23 @@ export default function BibleKnowledgeGalaxy({
     return set;
   }, [selectedNode, hoveredNode, galaxyData]);
 
+  const orbitCounts = useMemo(() => {
+    const counts = { all: 0, book: 0, sermon: 0, qt: 0, original_word: 0 };
+    galaxyData.nodes.forEach((n) => {
+      if (n.type === 'core' || n.type === 'sector') return;
+      counts.all++;
+      if (counts[n.type] !== undefined) counts[n.type]++;
+    });
+    return counts;
+  }, [galaxyData.nodes]);
+
   const filteredListNodes = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
     return galaxyData.nodes.filter((n) => {
       if (n.type === 'core' || n.type === 'sector') return false;
       if (orbitFilter !== 'all' && n.type !== orbitFilter) return false;
       if (!q) return true;
-      return n.label?.toLowerCase().includes(q) || n.desc?.toLowerCase().includes(q) || n.bookName?.toLowerCase().includes(q);
+      return n.label?.toLowerCase().includes(q) || n.summary?.toLowerCase().includes(q) || n.desc?.toLowerCase().includes(q) || n.bookName?.toLowerCase().includes(q);
     });
   }, [galaxyData.nodes, orbitFilter, searchQuery]);
 
@@ -1461,8 +1557,8 @@ export default function BibleKnowledgeGalaxy({
     const usableW = Math.max(120, width - padX * 2);
     const maxRadiusPossible = usableW / 2;
     const topSafeMargin = isMobile ? 48 : 80;
-    const bottomSafeMargin = isMobile ? 235 : 180;
-    const baselineY = Math.max(topSafeMargin + 95, Math.min(height - bottomSafeMargin, height * (isMobile ? 0.44 : 0.57)));
+    const bottomSafeMargin = isMobile ? 245 : 185;
+    const baselineY = Math.max(topSafeMargin + 95, Math.min(height - bottomSafeMargin, height * (isMobile ? 0.44 : 0.58)));
     const verticalScale = Math.max(0.38, Math.min(1.0, Math.max(75, baselineY - topSafeMargin) / Math.max(1, maxRadiusPossible)));
     return { padX, usableW, baselineY, verticalScale };
   }, []);
@@ -1479,9 +1575,9 @@ export default function BibleKnowledgeGalaxy({
       oCtx.scale(safeDpr, safeDpr);
 
       const { padX, usableW, baselineY, verticalScale } = getArcGeometry(width, height);
-      const chapToX = (globalChap) => padX + (globalChap / (TOTAL_BIBLE_CHAPTERS - 1)) * usableW;
+      const chapToX = (g) => padX + (g / (TOTAL_BIBLE_CHAPTERS - 1)) * usableW;
       const hasBookFilter = arcFromBookFilter !== 'ALL' || arcToBookFilter !== 'ALL';
-      const baseAlpha = hasBookFilter ? 0.45 : isLightTheme ? 0.28 : 0.22;
+      const baseAlpha = hasBookFilter ? 0.44 : 0.22;
 
       const buckets = { violet: [], indigo: [], sky: [], teal: [], rose: [] };
       allFullArcs.forEach((th) => {
@@ -1503,11 +1599,11 @@ export default function BibleKnowledgeGalaxy({
       });
 
       const bucketStyles = [
-        { key: 'violet', color: `rgba(124, 58, 237, ${baseAlpha + 0.04})`, lw: hasBookFilter ? 1.25 : 0.95 },
-        { key: 'indigo', color: `rgba(37, 99, 235, ${baseAlpha})`, lw: hasBookFilter ? 1.25 : 0.95 },
-        { key: 'sky', color: `rgba(14, 165, 233, ${baseAlpha})`, lw: hasBookFilter ? 1.25 : 0.95 },
-        { key: 'teal', color: `rgba(13, 148, 136, ${baseAlpha})`, lw: hasBookFilter ? 1.25 : 0.95 },
-        { key: 'rose', color: 'rgba(225, 29, 72, 0.55)', lw: 1.45 }
+        { key: 'violet', color: `rgba(139, 92, 246, ${baseAlpha + 0.04})`, lw: hasBookFilter ? 1.25 : 0.95 },
+        { key: 'indigo', color: `rgba(99, 102, 241, ${baseAlpha})`, lw: hasBookFilter ? 1.25 : 0.95 },
+        { key: 'sky', color: `rgba(56, 189, 248, ${baseAlpha})`, lw: hasBookFilter ? 1.25 : 0.95 },
+        { key: 'teal', color: `rgba(45, 212, 191, ${baseAlpha})`, lw: hasBookFilter ? 1.25 : 0.95 },
+        { key: 'rose', color: 'rgba(251, 113, 133, 0.55)', lw: 1.45 }
       ];
 
       bucketStyles.forEach(({ key, color, lw }) => {
@@ -1530,11 +1626,10 @@ export default function BibleKnowledgeGalaxy({
         oCtx.stroke();
       });
 
-      // 베이스라인
       oCtx.beginPath();
       oCtx.moveTo(padX, baselineY);
       oCtx.lineTo(padX + usableW, baselineY);
-      oCtx.strokeStyle = isLightTheme ? 'rgba(15, 23, 42, 0.6)' : 'rgba(226, 241, 255, 0.75)';
+      oCtx.strokeStyle = isLightTheme ? 'rgba(15, 23, 42, 0.65)' : 'rgba(226, 241, 255, 0.78)';
       oCtx.lineWidth = 1.2;
       oCtx.stroke();
 
@@ -1543,7 +1638,7 @@ export default function BibleKnowledgeGalaxy({
         oCtx.beginPath();
         oCtx.moveTo(bx, baselineY + 1);
         oCtx.lineTo(bx, baselineY + (bk.chaps >= 24 ? 9 : 5));
-        oCtx.strokeStyle = bk.isOT ? 'rgba(100, 116, 139, 0.7)' : 'rgba(217, 119, 6, 0.85)';
+        oCtx.strokeStyle = bk.isOT ? 'rgba(148, 163, 184, 0.7)' : 'rgba(251, 191, 36, 0.85)';
         oCtx.lineWidth = bk.chaps >= 24 ? 1.1 : 0.65;
         oCtx.stroke();
       });
@@ -1553,7 +1648,7 @@ export default function BibleKnowledgeGalaxy({
       oCtx.beginPath();
       oCtx.moveTo(padX, barY);
       oCtx.lineTo(otEndX - 3, barY);
-      oCtx.strokeStyle = '#64748B';
+      oCtx.strokeStyle = '#94A3B8';
       oCtx.lineWidth = 3;
       oCtx.stroke();
 
@@ -1568,7 +1663,7 @@ export default function BibleKnowledgeGalaxy({
       oCtx.strokeStyle = '#D97706';
       oCtx.lineWidth = 3;
       oCtx.stroke();
-      oCtx.fillStyle = '#D97706';
+      oCtx.fillStyle = '#FBBF24';
       oCtx.fillText('신약 (27권)', (otEndX + padX + usableW) / 2, barY + 16);
 
       arcBgBufferRef.current = {
@@ -1632,6 +1727,7 @@ export default function BibleKnowledgeGalaxy({
     allFullArcs, activeFilteredArcs, selectedArc, hoveredArc, scrubbedBookKo, bakeArcDiagramBuffer
   };
 
+  // 메인 60FPS 캔버스 렌더러 (도트 그리드 · 방사형 도트 · 베지에 광선 · 이중 링 · 호버 툴팁 100% 복구)
   useEffect(() => {
     if (viewMode === 'list') return;
     const canvas = canvasRef.current;
@@ -1655,6 +1751,17 @@ export default function BibleKnowledgeGalaxy({
       ctx.fillStyle = st.theme.bg;
       ctx.fillRect(0, 0, width, height);
 
+      if (st.viewMode !== 'arc') {
+        const gridStep = 28;
+        ctx.fillStyle = st.theme.gridDot;
+        for (let gx = (width % gridStep) / 2; gx < width; gx += gridStep) {
+          for (let gy = (height % gridStep) / 2; gy < height; gy += gridStep) {
+            ctx.fillRect(gx, gy, 1.5, 1.5);
+          }
+        }
+      }
+
+      // MODE A: 구속사 아크
       if (st.viewMode === 'arc') {
         const expectedKey = `${st.arcCategoryFilter}_${st.arcFromBookFilter}_${st.arcFromChapFilter}_${st.arcToBookFilter}_${st.allFullArcs.length}_${st.isLightTheme}`;
         if (!arcBgBufferRef.current || arcBgBufferRef.current.width !== width || arcBgBufferRef.current.height !== height || arcBgBufferRef.current.filterKey !== expectedKey) {
@@ -1677,8 +1784,8 @@ export default function BibleKnowledgeGalaxy({
             const hx2 = chapToX(st.hoveredArc.end);
             ctx.beginPath();
             ctx.ellipse((hx1 + hx2) / 2, baselineY, Math.abs(hx2 - hx1) / 2, (Math.abs(hx2 - hx1) / 2) * verticalScale, 0, Math.PI, 0, false);
-            ctx.strokeStyle = '#2563EB';
-            ctx.lineWidth = 2.0 / Math.sqrt(zoom);
+            ctx.strokeStyle = '#38BDF8';
+            ctx.lineWidth = 2.2 / Math.sqrt(zoom);
             ctx.stroke();
           }
 
@@ -1689,24 +1796,24 @@ export default function BibleKnowledgeGalaxy({
             const cx = (x1 + x2) / 2;
             const rx = Math.abs(x2 - x1) / 2;
             const ry = rx * verticalScale;
-            const highlightStroke = st.isLightTheme ? '#D97706' : '#FACC15';
+            const hiStroke = st.isLightTheme ? '#D97706' : '#FACC15';
 
             if (rx > 0.5 && ry > 0.5) {
               ctx.beginPath();
               ctx.ellipse(cx, baselineY, rx, ry, 0, Math.PI, 0, false);
               ctx.strokeStyle = st.isLightTheme ? 'rgba(217, 119, 6, 0.25)' : 'rgba(250, 204, 21, 0.35)';
-              ctx.lineWidth = 6 / Math.sqrt(zoom);
+              ctx.lineWidth = 6.5 / Math.sqrt(zoom);
               ctx.stroke();
 
               ctx.beginPath();
               ctx.ellipse(cx, baselineY, rx, ry, 0, Math.PI, 0, false);
-              ctx.strokeStyle = highlightStroke;
-              ctx.lineWidth = 2.4 / Math.sqrt(zoom);
+              ctx.strokeStyle = hiStroke;
+              ctx.lineWidth = 2.5 / Math.sqrt(zoom);
               ctx.stroke();
 
               const tAngle = Math.PI - (pulseTick % Math.PI);
               ctx.beginPath();
-              ctx.arc(cx + rx * Math.cos(tAngle), baselineY - ry * Math.sin(tAngle), 4.5 / Math.sqrt(zoom), 0, Math.PI * 2);
+              ctx.arc(cx + rx * Math.cos(tAngle), baselineY - ry * Math.sin(tAngle), 5 / Math.sqrt(zoom), 0, Math.PI * 2);
               ctx.fillStyle = st.isLightTheme ? '#2563EB' : '#FEF08A';
               ctx.fill();
             }
@@ -1716,8 +1823,8 @@ export default function BibleKnowledgeGalaxy({
               { x: x2, label: `${activeArc.toBook} ${activeArc.toChap}:${activeArc.toVerse}` }
             ].forEach((pt, idx) => {
               ctx.beginPath();
-              ctx.arc(pt.x, baselineY, 5 / Math.sqrt(zoom), 0, Math.PI * 2);
-              ctx.fillStyle = highlightStroke;
+              ctx.arc(pt.x, baselineY, 5.5 / Math.sqrt(zoom), 0, Math.PI * 2);
+              ctx.fillStyle = hiStroke;
               ctx.fill();
 
               ctx.save();
@@ -1729,7 +1836,7 @@ export default function BibleKnowledgeGalaxy({
               ctx.fillStyle = st.isLightTheme ? 'rgba(255,255,255,0.96)' : 'rgba(15, 23, 42, 0.94)';
               drawSafeRoundRect(ctx, -tw / 2, -10, tw, 20, 6);
               ctx.fill();
-              ctx.strokeStyle = highlightStroke;
+              ctx.strokeStyle = hiStroke;
               ctx.lineWidth = 1.1;
               ctx.stroke();
               ctx.fillStyle = st.isLightTheme ? '#191F28' : '#FEF08A';
@@ -1745,7 +1852,14 @@ export default function BibleKnowledgeGalaxy({
         return;
       }
 
-      // 2D / Hex / HUD / 3D 은하계 렌더
+      // MODE B/C/D/E: 2D Rings / Hex / HUD / 3D
+      if (targetCameraRef.current && st.viewMode !== '3d') {
+        cameraRef.current.x += (targetCameraRef.current.x - cameraRef.current.x) * 0.14;
+        cameraRef.current.y += (targetCameraRef.current.y - cameraRef.current.y) * 0.14;
+        cameraRef.current.zoom += (targetCameraRef.current.zoom - cameraRef.current.zoom) * 0.14;
+        if (Math.abs(targetCameraRef.current.x - cameraRef.current.x) < 0.4) targetCameraRef.current = null;
+      }
+
       ctx.save();
       const camX = width / 2 + (st.viewMode !== '3d' ? cameraRef.current.x : 0);
       const camY = height / 2 + (st.viewMode !== '3d' ? cameraRef.current.y : 0);
@@ -1762,6 +1876,17 @@ export default function BibleKnowledgeGalaxy({
         if (!isDraggingRef.current && !activeFocusNode) planetRotRef.current.yaw += st.rotationSpeed * 0.004;
         const { yaw, pitch } = planetRotRef.current;
         const cosY = Math.cos(yaw), sinY = Math.sin(yaw), cosP = Math.cos(pitch), sinP = Math.sin(pitch);
+
+        [225, 345].forEach((sphereRad, idx) => {
+          ctx.beginPath();
+          ctx.arc(0, 0, sphereRad * st.orbitSpacing, 0, Math.PI * 2);
+          ctx.strokeStyle = st.theme.orbitLine;
+          ctx.lineWidth = idx === 0 ? 1.2 : 0.7;
+          ctx.globalAlpha = idx === 0 ? 0.5 : 0.25;
+          ctx.stroke();
+          ctx.globalAlpha = 1;
+        });
+
         st.galaxyData.nodes.forEach((node) => {
           const sx = (node.x3d || 0) * st.orbitSpacing;
           const sy = (node.y3d || 0) * st.orbitSpacing;
@@ -1775,48 +1900,96 @@ export default function BibleKnowledgeGalaxy({
         });
       } else if (st.viewMode === 'hex') {
         st.galaxyData.nodes.forEach((node) => {
+          if (node.type === 'core') {
+            posMap.set(node.id, { x: 0, y: 0, zDepth: 0, perspScale: 1, ...node });
+            return;
+          }
           if (node.type === 'sector') {
             const hx = node.xHex * st.orbitSpacing;
             const hy = node.yHex * st.orbitSpacing;
-            drawHexagonPath(ctx, hx, hy, (node.hexRadius || 150) * st.orbitSpacing);
+            const hexR = (node.hexRadius || 150) * st.orbitSpacing;
+            drawHexagonPath(ctx, hx, hy, hexR);
             ctx.fillStyle = st.isLightTheme ? 'rgba(255,255,255,0.85)' : 'rgba(8, 15, 26, 0.72)';
             ctx.fill();
-            ctx.lineWidth = 1.5;
+            ctx.lineWidth = 1.6;
             ctx.strokeStyle = node.color;
+            ctx.globalAlpha = 0.65;
             ctx.stroke();
+            ctx.globalAlpha = 1;
+            ctx.font = 'bold 11px monospace';
+            ctx.fillStyle = node.color;
+            ctx.textAlign = 'center';
+            ctx.fillText(node.label.toUpperCase(), hx, hy - hexR * 0.68);
             posMap.set(node.id, { x: hx, y: hy, zDepth: 0, perspScale: 1, ...node });
             return;
           }
-          posMap.set(node.id, { x: (node.xHex || 0) * st.orbitSpacing, y: (node.yHex || 0) * st.orbitSpacing, zDepth: 0, perspScale: 1, ...node });
+          const parentSec = st.galaxyData.nodes.find((s) => s.type === 'sector' && s.sectorId === node.sectorId);
+          const cx = (parentSec ? parentSec.xHex : 0) * st.orbitSpacing;
+          const cy = (parentSec ? parentSec.yHex : 0) * st.orbitSpacing;
+          const dx = (node.xHex - (parentSec?.xHex || 0)) * st.orbitSpacing;
+          const dy = (node.yHex - (parentSec?.yHex || 0)) * st.orbitSpacing;
+          const localAngle = Math.atan2(dy, dx) + rot * (node.type === 'book' ? 0.5 : -0.35);
+          const localDist = Math.hypot(dx, dy);
+          posMap.set(node.id, { x: cx + Math.cos(localAngle) * localDist, y: cy + Math.sin(localAngle) * localDist, zDepth: 0, perspScale: 1, ...node });
         });
       } else {
-        [125, 235, 375, 520].forEach((baseR) => {
+        const ORBIT_RINGS = st.viewMode === 'hud' ? [45, 95, 185, 240, 310] : [58, 125, 235, 265, 375, 405, 435, 465, 520];
+        ORBIT_RINGS.forEach((baseR, idx) => {
           ctx.beginPath();
           ctx.arc(0, 0, baseR * st.orbitSpacing, 0, Math.PI * 2);
           ctx.strokeStyle = st.theme.orbitLine;
-          ctx.lineWidth = 0.85;
+          ctx.lineWidth = idx === 1 || idx === 4 ? 1.25 : 0.75;
+          ctx.globalAlpha = idx >= 4 && idx <= 7 ? 0.38 : 0.68;
           ctx.stroke();
+          ctx.globalAlpha = 1;
         });
+
         st.galaxyData.nodes.forEach((node) => {
-          const adjR = (st.viewMode === 'hud' ? node.radius * 0.7 : node.radius) * st.orbitSpacing;
+          const adjR = (st.viewMode === 'hud' ? node.radius * 0.68 : node.radius) * st.orbitSpacing;
           const angleRad = ((node.angle + ((rot * 180) / Math.PI) * (node.level > 0 ? 1 / Math.sqrt(node.level) : 0)) * Math.PI) / 180;
-          posMap.set(node.id, { x: adjR * Math.cos(angleRad), y: adjR * Math.sin(angleRad), zDepth: 0, perspScale: 1, ...node });
+          posMap.set(node.id, { x: adjR * Math.cos(angleRad), y: adjR * Math.sin(angleRad), zDepth: 0, perspScale: 1, angleRad, ...node });
+        });
+
+        // 방사형 네온 도트 매트릭스 복구
+        posMap.forEach((node) => {
+          if (node.type !== 'book') return;
+          if (st.orbitFilter !== 'all' && st.orbitFilter !== 'book') return;
+          const dotCount = node.spokeDots || 6;
+          const startR = (st.viewMode === 'hud' ? 88 : 138) * st.orbitSpacing;
+          const endR = (st.viewMode === 'hud' ? node.radius * 0.68 - 10 : node.radius - 14) * st.orbitSpacing;
+          const stepR = (endR - startR) / Math.max(1, dotCount);
+          ctx.fillStyle = node.color;
+          ctx.globalAlpha = activeFocusNode && activeFocusNode.id !== node.id && !st.connectedNodeIds.has(node.id) ? 0.1 : 0.8;
+          for (let d = 0; d < dotCount; d++) {
+            const dr = startR + d * stepR;
+            ctx.beginPath();
+            ctx.arc(dr * Math.cos(node.angleRad), dr * Math.sin(node.angleRad), (1.3 + (d / dotCount)) * st.nodeScale, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.globalAlpha = 1;
         });
       }
 
       nodePositionsRef.current = posMap;
+
       st.galaxyData.links.forEach((link) => {
         const src = posMap.get(link.source);
         const tgt = posMap.get(link.target);
         if (!src || !tgt) return;
         const isHi = activeFocusNode && (link.source === activeFocusNode.id || link.target === activeFocusNode.id);
         if (link.isCrossRefLink && !isHi) return;
+        if (activeFocusNode && !isHi) return;
         ctx.beginPath();
-        ctx.moveTo(src.x, src.y);
-        ctx.lineTo(tgt.x, tgt.y);
-        ctx.strokeStyle = isHi ? st.theme.accent : link.color;
-        ctx.globalAlpha = isHi ? 0.9 : 0.16;
-        ctx.lineWidth = isHi ? 1.8 / Math.sqrt(zoom) : 0.75;
+        if (isHi && st.viewMode !== '3d') {
+          ctx.moveTo(src.x, src.y);
+          ctx.quadraticCurveTo((src.x + tgt.x) * 0.28, (src.y + tgt.y) * 0.28, tgt.x, tgt.y);
+        } else {
+          ctx.moveTo(src.x, src.y);
+          ctx.lineTo(tgt.x, tgt.y);
+        }
+        ctx.strokeStyle = isHi ? (link.isCrossRefLink ? '#FACC15' : st.theme.accent) : link.color;
+        ctx.globalAlpha = isHi ? 0.92 : link.alpha || 0.15;
+        ctx.lineWidth = isHi ? 2.1 / Math.sqrt(zoom) : 0.75;
         ctx.stroke();
         ctx.globalAlpha = 1;
       });
@@ -1824,18 +1997,36 @@ export default function BibleKnowledgeGalaxy({
       Array.from(posMap.values())
         .sort((a, b) => b.zDepth - a.zDepth)
         .forEach((node) => {
+          if (st.viewMode === 'hex' && node.type === 'sector') return;
+          const matchesFilter = st.orbitFilter === 'all' || node.type === st.orbitFilter || node.type === 'core';
           const isSel = activeFocusNode?.id === node.id;
-          const rSize = (node.size || 8) * st.nodeScale * node.perspScale * (isSel ? 1.4 : 1);
+          const isNeighbor = activeFocusNode && st.connectedNodeIds.has(node.id);
+          let alpha = st.viewMode === '3d' ? Math.max(0.18, Math.min(1.0, (420 - node.zDepth) / 560)) : 1.0;
+          if (!matchesFilter) alpha = 0.05;
+          else if (activeFocusNode && !isSel && !isNeighbor) alpha = 0.14;
+
+          const rSize = (node.size || 8) * st.nodeScale * node.perspScale * (isSel ? 1.45 : 1.0);
+          ctx.globalAlpha = alpha;
           ctx.beginPath();
           ctx.arc(node.x, node.y, rSize, 0, Math.PI * 2);
-          ctx.fillStyle = isSel ? st.theme.accent : node.color;
+          ctx.fillStyle = node.level >= 3 || node.type === 'core' ? st.theme.bg : isSel ? '#FFFFFF' : node.color;
           ctx.fill();
+          ctx.lineWidth = isSel ? 2.2 : 1.3;
+          ctx.strokeStyle = isSel ? '#FFFFFF' : node.color;
+          ctx.stroke();
+          if (node.level >= 3 || node.type === 'core') {
+            ctx.beginPath();
+            ctx.arc(node.x, node.y, rSize * 0.45, 0, Math.PI * 2);
+            ctx.fillStyle = isSel ? '#FFFFFF' : node.color;
+            ctx.fill();
+          }
+          ctx.globalAlpha = 1;
 
-          if (node.level <= 2 || isSel) {
+          if (alpha > 0.25 && (isSel || isNeighbor || node.level <= 2 || st.showOuterLabels)) {
             ctx.font = `${isSel ? 'bold' : '600'} 10px sans-serif`;
-            ctx.fillStyle = st.theme.textMain;
+            ctx.fillStyle = isSel ? st.theme.accent : st.theme.textMain;
             ctx.textAlign = 'center';
-            ctx.fillText(node.label.slice(0, 10), node.x, node.y + rSize + 12);
+            ctx.fillText(node.label.slice(0, 11), node.x, node.y + rSize + 12);
           }
         });
 
@@ -1871,6 +2062,19 @@ export default function BibleKnowledgeGalaxy({
     return () => window.removeEventListener('resize', handleResize);
   }, [handleResize, viewMode]);
 
+  const focusCameraOnNode = useCallback(
+    (node) => {
+      if (!node) return;
+      setSelectedNode(node);
+      const pos = nodePositionsRef.current.get(node.id);
+      if (pos && viewMode !== '3d' && viewMode !== 'arc') {
+        const targetZoom = Math.max(cameraRef.current.zoom, 1.08);
+        targetCameraRef.current = { x: -pos.x * targetZoom, y: -pos.y * targetZoom, zoom: targetZoom };
+      }
+    },
+    [viewMode]
+  );
+
   const handleArcPointerAction = useCallback(
     (clientX, clientY, isClick = false) => {
       if (!isClick && Date.now() - lastTouchScrubTimeRef.current < 50) return;
@@ -1885,6 +2089,119 @@ export default function BibleKnowledgeGalaxy({
     },
     [findClosestArcAtScreenPos]
   );
+
+  // 휠 줌 복구
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || viewMode === 'list') return;
+    const handleWheel = (e) => {
+      if (e.cancelable) e.preventDefault();
+      targetCameraRef.current = null;
+      cameraRef.current.zoom = Math.min(4.0, Math.max(0.28, cameraRef.current.zoom * (e.deltaY < 0 ? 1.12 : 0.89)));
+    };
+    canvas.addEventListener('wheel', handleWheel, { passive: false });
+    return () => canvas.removeEventListener('wheel', handleWheel);
+  }, [viewMode]);
+
+  // 터치 & 마우스 드래그/핀치/클릭 100% 복구
+  const handleTouchStart = (e) => {
+    targetCameraRef.current = null;
+    if (e.touches.length === 2) {
+      pinchDistRef.current = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+      isDraggingRef.current = false;
+    } else if (e.touches.length === 1) {
+      isDraggingRef.current = true;
+      dragMovedRef.current = false;
+      dragStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }
+  };
+
+  const handleTouchMove = (e) => {
+    if (e.touches.length === 2 && pinchDistRef.current) {
+      const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+      cameraRef.current.zoom = Math.min(4.0, Math.max(0.28, cameraRef.current.zoom * (dist / pinchDistRef.current)));
+      pinchDistRef.current = dist;
+      dragMovedRef.current = true;
+    } else if (e.touches.length === 1 && isDraggingRef.current) {
+      const dx = e.touches[0].clientX - dragStartRef.current.x;
+      const dy = e.touches[0].clientY - dragStartRef.current.y;
+      if (Math.hypot(dx, dy) > 6) dragMovedRef.current = true;
+      if (viewMode === '3d') {
+        planetRotRef.current.yaw += dx * 0.007;
+        planetRotRef.current.pitch = Math.max(-Math.PI / 2.1, Math.min(Math.PI / 2.1, planetRotRef.current.pitch + dy * 0.007));
+      } else {
+        cameraRef.current.x += dx;
+        cameraRef.current.y += dy;
+      }
+      dragStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }
+  };
+
+  const handleTouchEnd = (e) => {
+    pinchDistRef.current = null;
+    isDraggingRef.current = false;
+    if (!dragMovedRef.current && e.changedTouches?.length === 1 && viewMode === 'arc') {
+      handleArcPointerAction(e.changedTouches[0].clientX, e.changedTouches[0].clientY, true);
+    }
+  };
+
+  const handleMouseDown = (e) => {
+    targetCameraRef.current = null;
+    isDraggingRef.current = true;
+    dragMovedRef.current = false;
+    dragStartRef.current = { x: e.clientX, y: e.clientY };
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDraggingRef.current) {
+      if (viewMode === 'arc') handleArcPointerAction(e.clientX, e.clientY, false);
+      return;
+    }
+    const dx = e.clientX - dragStartRef.current.x;
+    const dy = e.clientY - dragStartRef.current.y;
+    if (Math.hypot(dx, dy) > 5) dragMovedRef.current = true;
+    if (viewMode === '3d') {
+      planetRotRef.current.yaw += dx * 0.0065;
+      planetRotRef.current.pitch = Math.max(-Math.PI / 2.1, Math.min(Math.PI / 2.1, planetRotRef.current.pitch + dy * 0.0065));
+    } else {
+      cameraRef.current.x += dx;
+      cameraRef.current.y += dy;
+    }
+    dragStartRef.current = { x: e.clientX, y: e.clientY };
+  };
+
+  const handleMouseUp = () => {
+    isDraggingRef.current = false;
+  };
+
+  const handleCanvasClick = (e) => {
+    if (dragMovedRef.current) return;
+    if (viewMode === 'arc') {
+      handleArcPointerAction(e.clientX, e.clientY, true);
+      return;
+    }
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const camX = canvas.width / dpr / 2 + (viewMode !== '3d' ? cameraRef.current.x : 0);
+    const camY = canvas.height / dpr / 2 + (viewMode !== '3d' ? cameraRef.current.y : 0);
+    const worldX = (e.clientX - rect.left - camX) / cameraRef.current.zoom;
+    const worldY = (e.clientY - rect.top - camY) / cameraRef.current.zoom;
+
+    let closestNode = null;
+    let minDist = 28 / Math.sqrt(cameraRef.current.zoom);
+    nodePositionsRef.current.forEach((node) => {
+      if (orbitFilter !== 'all' && node.type !== orbitFilter && node.type !== 'core') return;
+      const dist = Math.hypot(worldX - node.x, worldY - node.y);
+      if (dist < minDist) {
+        minDist = dist;
+        closestNode = node;
+      }
+    });
+    if (closestNode) focusCameraOnNode(closestNode);
+    else setSelectedNode(null);
+  };
 
   const handleJumpToBibleChapter = (bookKo, chap = 1, verseNum = 1) => {
     const enBook = KO_TO_EN_BOOK[bookKo] || 'Genesis';
@@ -1945,12 +2262,8 @@ export default function BibleKnowledgeGalaxy({
         span: Math.abs(end - start),
         category: 'user_sync',
         badgeLabel: '나의 교차참조',
-        fromBook: fBook,
-        fromChap: fChap,
-        fromVerse: fVerse,
-        toBook: tBook,
-        toChap: tChap,
-        toVerse: tVerse,
+        fromBook: fBook, fromChap: fChap, fromVerse: fVerse,
+        toBook: tBook, toChap: tChap, toVerse: tVerse,
         title: createTitle.trim() || `${fBook} ${fChap}:${fVerse} ➔ ${tBook} ${tChap}:${tVerse}`,
         desc: createBody.trim() || '직접 말씀을 묵상하며 연결한 교차참조 아크입니다.',
         isLandmark: true
@@ -1964,9 +2277,32 @@ export default function BibleKnowledgeGalaxy({
       showToast('나만의 교차참조 아크가 등록되었습니다.');
       return;
     }
+
     if (!createTitle.trim() && !createBody.trim()) return showToast('제목이나 내용을 입력해주세요.');
+    const todayKey = new Date().toISOString().split('T')[0];
+    const validV = clampValidVerse(createBook, createChap, createVerse);
+    const refStr = `${createBook} ${createChap}:${validV}`;
+    const finalTitle = createTitle.trim() || `${refStr} 묵상`;
+
+    if (createType === 'qt' && updateDay) {
+      const cur = dailyData[todayKey] || {};
+      updateDay(todayKey, { ...cur, qtTitle: finalTitle, qtReference: refStr, qtMeditation: createBody.trim(), qtApplication: createApply.trim(), checks: { ...(cur.checks || {}), QTin: true } });
+    } else if (createType === 'sermon' && updateDay) {
+      const cur = dailyData[todayKey] || {};
+      updateDay(todayKey, { ...cur, sermonTitle: finalTitle, sermonReference: refStr, sermonNotes: createBody.trim() });
+    } else if (createType === 'bibleNote' && setBibleNotes) {
+      setBibleNotes([{ id: Date.now(), date: todayKey, verses: [{ ref: refStr, text: finalTitle }], note: createBody.trim() }, ...(Array.isArray(bibleNotes) ? bibleNotes : [])]);
+    }
+
+    const nextCustom = [{ id: `custom_star_${Date.now()}`, label: finalTitle, type: createType === 'sermon' ? 'sermon' : 'qt', bookName: createBook, chapter: Number(createChap) || 1, verse: validV, ref: refStr, date: todayKey, summary: createBody.trim(), color: createType === 'qt' ? '#F43F5E' : '#10B981' }, ...customGalaxyNodes];
+    setCustomGalaxyNodes(nextCustom);
+    localStorage.setItem('goodtree_custom_galaxy_nodes', JSON.stringify(nextCustom));
+    setCreateTitle('');
+    setCreateBody('');
+    setCreateApply('');
     setIsCreatorOpen(false);
-    showToast('새 지식 노드가 등록되었습니다.');
+    triggerRealtimeSync(false);
+    showToast(`[${finalTitle}] 노드가 은하계에 등록되었습니다.`);
   };
 
   const currentDisplayArc = selectedArc || activeFilteredArcs[0] || allFullArcs[0];
@@ -1978,7 +2314,6 @@ export default function BibleKnowledgeGalaxy({
     () => (currentDisplayArc ? getScripturePreview(currentDisplayArc.toBook, currentDisplayArc.toChap, currentDisplayArc.toVerse, 1, krv4Db, easyBibleDb, webBibleDb) : null),
     [currentDisplayArc, krv4Db, easyBibleDb, webBibleDb]
   );
-
   const fromInterlinearWords = currentDisplayArc ? liveInterlinearMap[`${currentDisplayArc.fromBook}-${currentDisplayArc.fromChap}-${currentDisplayArc.fromVerse}`] : null;
   const toInterlinearWords = currentDisplayArc ? liveInterlinearMap[`${currentDisplayArc.toBook}-${currentDisplayArc.toChap}-${currentDisplayArc.toVerse}`] : null;
 
@@ -1987,9 +2322,8 @@ export default function BibleKnowledgeGalaxy({
       style={{ backgroundColor: theme.bg, color: theme.textMain, colorScheme: isLightTheme ? 'light' : 'dark', height: '100dvh' }}
       className="flex-1 w-full max-w-full relative overflow-hidden select-none font-sans flex flex-col"
     >
-      {/* 토스트 */}
       {toastMsg && (
-        <div className="fixed top-14 left-1/2 -translate-x-1/2 z-[1200] px-4 py-2 rounded-xl bg-[#191F28] text-white text-[12.5px] font-bold shadow-lg flex items-center gap-1.5 whitespace-nowrap">
+        <div className="fixed top-14 left-1/2 -translate-x-1/2 z-[1200] px-4 py-2 rounded-xl bg-slate-900 text-white text-[12.5px] font-bold border border-cyan-400/40 shadow-lg flex items-center gap-1.5 whitespace-nowrap">
           <Check className="w-4 h-4 text-[#34D399]" />
           <span>{toastMsg}</span>
         </div>
@@ -2001,20 +2335,19 @@ export default function BibleKnowledgeGalaxy({
         style={{ backgroundColor: theme.panelBg, borderColor: theme.panelBorder }}
       >
         <div className="flex flex-wrap items-center justify-between gap-1.5">
-          <div className="flex items-center gap-1.5 flex-1 min-w-[165px]">
+          <div className="flex items-center gap-1.5 flex-1 min-w-[160px]">
             <button
               type="button"
               onClick={() => (isModalPopup && onClosePopup ? onClosePopup() : setActiveScreen && setActiveScreen('home'))}
-              className="h-8 px-2.5 rounded-lg text-[12px] font-bold border flex items-center gap-1 cursor-pointer shrink-0"
+              className="h-8 px-2.5 rounded-lg text-[12px] font-bold border flex items-center gap-1 cursor-pointer shrink-0 whitespace-nowrap"
               style={{ borderColor: theme.panelBorder }}
             >
               {isModalPopup ? <X className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
               <span className="hidden sm:inline">{isModalPopup ? '닫기' : '홈'}</span>
             </button>
 
-            {/* 5영역 딥서치 입력창 */}
             <div className="relative flex-1 max-w-xs">
-              <div className="h-8 px-2.5 rounded-lg border flex items-center gap-1.5" style={{ borderColor: theme.panelBorder }}>
+              <div className="h-8 px-2.5 rounded-lg border flex items-center gap-1.5 bg-black/30" style={{ borderColor: theme.panelBorder }}>
                 <Search className="w-3.5 h-3.5 opacity-60 shrink-0" />
                 <input
                   type="text"
@@ -2028,14 +2361,7 @@ export default function BibleKnowledgeGalaxy({
                   className="w-full bg-transparent outline-none text-[12px] select-text"
                 />
                 {searchQuery && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSearchQuery('');
-                      setShowDeepSearchDropdown(false);
-                    }}
-                    className="cursor-pointer"
-                  >
+                  <button type="button" onClick={() => { setSearchQuery(''); setShowDeepSearchDropdown(false); }} className="cursor-pointer">
                     <X className="w-3.5 h-3.5 opacity-60" />
                   </button>
                 )}
@@ -2050,17 +2376,12 @@ export default function BibleKnowledgeGalaxy({
                     <button
                       key={hit.id}
                       type="button"
-                      onClick={() => {
-                        hit.onSelect();
-                        setShowDeepSearchDropdown(false);
-                      }}
-                      className="w-full p-2.5 text-left hover:bg-[#2563EB]/10 flex flex-col gap-0.5 cursor-pointer"
+                      onClick={() => { hit.onSelect(); setShowDeepSearchDropdown(false); }}
+                      className="w-full p-2.5 text-left hover:bg-white/10 flex flex-col gap-0.5 cursor-pointer"
                     >
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-[12px] font-bold truncate">{hit.title}</span>
-                        <span style={{ color: hit.color }} className="text-[10px] font-mono font-bold shrink-0">
-                          {hit.badge}
-                        </span>
+                        <span style={{ color: hit.color }} className="text-[10px] font-mono font-bold shrink-0">{hit.badge}</span>
                       </div>
                       <span className="text-[11px] opacity-70 truncate">{hit.sub}</span>
                     </button>
@@ -2070,9 +2391,8 @@ export default function BibleKnowledgeGalaxy({
             </div>
           </div>
 
-          {/* 뷰 모드 스위처 + 세컨드 브레인 + 컨트롤 */}
           <div className="flex items-center gap-1 overflow-x-auto hide-scrollbar ml-auto">
-            <div className="flex p-0.5 rounded-lg border shrink-0" style={{ borderColor: theme.panelBorder }}>
+            <div className="flex p-0.5 rounded-lg border shrink-0 bg-black/30" style={{ borderColor: theme.panelBorder }}>
               {[
                 { id: 'arc', label: '아크' },
                 { id: '2d', label: '링' },
@@ -2085,8 +2405,8 @@ export default function BibleKnowledgeGalaxy({
                   key={m.id}
                   type="button"
                   onClick={() => setViewMode(m.id)}
-                  className={`px-2 py-1 rounded-md text-[11px] font-bold cursor-pointer whitespace-nowrap ${
-                    viewMode === m.id ? 'bg-[#2563EB] text-white' : 'opacity-70 hover:opacity-100'
+                  className={`px-2 py-1 rounded-md text-[11px] font-bold cursor-pointer whitespace-nowrap shrink-0 ${
+                    viewMode === m.id ? 'bg-[#2563EB] text-white' : 'opacity-75 hover:opacity-100'
                   }`}
                 >
                   {m.label}
@@ -2095,7 +2415,7 @@ export default function BibleKnowledgeGalaxy({
               <button
                 type="button"
                 onClick={() => setActiveScreen && setActiveScreen('bibleSecondBrain')}
-                className="px-2 py-1 rounded-md text-[11px] font-bold bg-[#0D9488] text-white ml-0.5 cursor-pointer whitespace-nowrap"
+                className="px-2 py-1 rounded-md text-[11px] font-bold bg-[#0D9488] text-white ml-0.5 cursor-pointer whitespace-nowrap shrink-0"
               >
                 세컨드브레인
               </button>
@@ -2104,28 +2424,25 @@ export default function BibleKnowledgeGalaxy({
             <button
               type="button"
               onClick={() => triggerRealtimeSync(true)}
-              className="h-8 px-2 rounded-lg border flex items-center cursor-pointer"
+              className="h-8 px-2 rounded-lg border flex items-center cursor-pointer shrink-0"
               style={{ borderColor: theme.panelBorder }}
               title={`동기화 (${lastSyncedTime})`}
             >
-              <RefreshCw className="w-3.5 h-3.5 text-[#0D9488]" />
+              <RefreshCw className="w-3.5 h-3.5 text-[#2DD4BF]" />
             </button>
 
             <button
               type="button"
               onClick={() => setIsMobileFilterSheetOpen(true)}
-              className="lg:hidden h-8 px-2.5 rounded-lg text-[11px] font-bold bg-[#D97706]/15 text-[#D97706] cursor-pointer"
+              className="lg:hidden h-8 px-2.5 rounded-lg text-[11px] font-bold bg-[#D97706]/20 text-[#FBBF24] border border-[#D97706]/40 cursor-pointer whitespace-nowrap shrink-0"
             >
               목록
             </button>
 
             <button
               type="button"
-              onClick={() => {
-                setCreateType('customArc');
-                setIsCreatorOpen(true);
-              }}
-              className="h-8 px-2.5 rounded-lg bg-[#2563EB] text-white font-bold flex items-center cursor-pointer"
+              onClick={() => { setCreateType('customArc'); setIsCreatorOpen(true); }}
+              className="h-8 px-2.5 rounded-lg bg-[#2563EB] text-white font-bold flex items-center cursor-pointer shrink-0"
               title="교차참조 아크 추가"
             >
               <Plus className="w-4 h-4" />
@@ -2135,7 +2452,7 @@ export default function BibleKnowledgeGalaxy({
               <button
                 type="button"
                 onClick={() => setIsControlOpen(!isControlOpen)}
-                className="h-8 px-2 rounded-lg border flex items-center cursor-pointer"
+                className="h-8 px-2 rounded-lg border flex items-center cursor-pointer shrink-0"
                 style={{ borderColor: theme.panelBorder }}
                 title="테마 및 궤도 설정"
               >
@@ -2145,7 +2462,7 @@ export default function BibleKnowledgeGalaxy({
           </div>
         </div>
 
-        {/* 서브 필터 바 */}
+        {/* 2열 서브 필터 바 */}
         <div className="flex items-center gap-1.5 overflow-x-auto hide-scrollbar py-0.5">
           {viewMode === 'arc' ? (
             <>
@@ -2160,11 +2477,8 @@ export default function BibleKnowledgeGalaxy({
                 <button
                   key={cat.id}
                   type="button"
-                  onClick={() => {
-                    setArcCategoryFilter(cat.id);
-                    setScrubbedBookKo(null);
-                  }}
-                  className={`px-2.5 py-1 rounded-full text-[11px] font-bold cursor-pointer shrink-0 ${
+                  onClick={() => { setArcCategoryFilter(cat.id); setScrubbedBookKo(null); }}
+                  className={`px-2.5 py-1 rounded-full text-[11px] font-bold cursor-pointer shrink-0 whitespace-nowrap ${
                     arcCategoryFilter === cat.id ? 'bg-[#2563EB] text-white' : 'opacity-75 border'
                   }`}
                   style={arcCategoryFilter !== cat.id ? { borderColor: theme.panelBorder } : undefined}
@@ -2175,35 +2489,93 @@ export default function BibleKnowledgeGalaxy({
               <button
                 type="button"
                 onClick={() => setIsAutoTourPlaying(!isAutoTourPlaying)}
-                className="px-2.5 py-1 rounded-full text-[11px] font-bold border border-[#D97706] text-[#D97706] flex items-center gap-1 cursor-pointer shrink-0 ml-auto"
+                className="px-2.5 py-1 rounded-full text-[11px] font-bold border border-[#F59E0B]/60 text-[#FBBF24] flex items-center gap-1 cursor-pointer shrink-0 whitespace-nowrap ml-auto"
               >
                 {isAutoTourPlaying ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
                 <span>{isAutoTourPlaying ? '순례 정지' : '자동 순례'}</span>
               </button>
             </>
           ) : (
-            <button
-              type="button"
-              onClick={() => applyResponsiveCameraReset(viewMode)}
-              className="px-2.5 py-1 rounded-full text-[11px] font-bold border text-[#0D9488] flex items-center gap-1 cursor-pointer ml-auto"
-              style={{ borderColor: theme.panelBorder }}
-            >
-              <RotateCcw className="w-3 h-3" /> 화면 맞춤
-            </button>
+            <>
+              {[
+                { id: 'all', label: `전체 (${orbitCounts.all})` },
+                { id: 'book', label: `성경 66권 (${orbitCounts.book})` },
+                { id: 'sermon', label: `강해 (${orbitCounts.sermon})` },
+                { id: 'qt', label: `QT·노트 (${orbitCounts.qt})` },
+                { id: 'original_word', label: `원어 (${orbitCounts.original_word})` }
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setOrbitFilter(tab.id)}
+                  className={`px-2.5 py-1 rounded-full text-[11px] font-bold border cursor-pointer shrink-0 whitespace-nowrap ${
+                    orbitFilter === tab.id ? 'bg-[#00F5D4] text-slate-950 border-[#00F5D4]' : 'opacity-75'
+                  }`}
+                  style={orbitFilter !== tab.id ? { borderColor: theme.panelBorder } : undefined}
+                >
+                  {tab.label}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => applyResponsiveCameraReset(viewMode)}
+                className="px-2.5 py-1 rounded-full text-[11px] font-bold border text-[#2DD4BF] flex items-center gap-1 cursor-pointer shrink-0 whitespace-nowrap ml-auto"
+                style={{ borderColor: theme.panelBorder }}
+              >
+                <RotateCcw className="w-3 h-3" /> 화면 맞춤
+              </button>
+            </>
           )}
         </div>
       </header>
 
       {/* 2. 메인 바디 */}
       <div className="flex-1 flex overflow-hidden relative">
+        {/* HUD 모드 좌측 66권 텔레메트리 사이드바 복구 */}
+        {viewMode === 'hud' && (
+          <aside
+            className="hidden md:flex w-[245px] h-full border-r flex-col justify-between p-3 shrink-0 z-20 text-left"
+            style={{ backgroundColor: theme.panelBg, borderColor: theme.panelBorder }}
+          >
+            <div className="flex items-center justify-between pb-2 border-b" style={{ borderColor: theme.panelBorder }}>
+              <span className="text-[11px] font-mono font-bold text-[#00F5D4]">CANON 66 BOOKS</span>
+              <span className="text-[10px] font-mono opacity-60">LIVE</span>
+            </div>
+            <div className="flex-1 overflow-y-auto my-2 space-y-1 pr-1 hide-scrollbar">
+              {galaxyData.nodes.filter((n) => n.type === 'book').map((bNode) => (
+                <button
+                  key={bNode.id}
+                  type="button"
+                  onClick={() => focusCameraOnNode(bNode)}
+                  className={`w-full px-2.5 py-1.5 rounded-lg border flex items-center justify-between text-left cursor-pointer ${
+                    selectedNode?.id === bNode.id ? 'border-[#00F5D4] bg-[#00F5D4]/15' : 'border-transparent hover:bg-white/5'
+                  }`}
+                >
+                  <span className="text-[11.5px] font-bold truncate">{bNode.bookName}</span>
+                  <span className="text-[10px] font-mono text-[#2DD4BF]">{bNode.readChaps}/{bNode.totalChaps}</span>
+                </button>
+              ))}
+            </div>
+            <div className="pt-2 border-t" style={{ borderColor: theme.panelBorder }}>
+              <div className="text-[9.5px] font-mono opacity-60">KST SEOUL</div>
+              <div className="text-xl font-mono font-black tracking-widest" style={{ color: theme.accent }}>{liveClock}</div>
+            </div>
+          </aside>
+        )}
+
         <div ref={containerRef} className="flex-1 relative w-full h-full overflow-hidden flex flex-col">
           {viewMode !== 'list' ? (
             <>
               <canvas
                 ref={canvasRef}
-                onMouseMove={(e) => viewMode === 'arc' && handleArcPointerAction(e.clientX, e.clientY, false)}
-                onClick={(e) => viewMode === 'arc' && handleArcPointerAction(e.clientX, e.clientY, true)}
-                className="absolute inset-0 w-full h-full cursor-crosshair touch-none"
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onClick={handleCanvasClick}
+                className="absolute inset-0 w-full h-full cursor-crosshair active:cursor-grabbing touch-none"
               />
 
               {viewMode === 'arc' && currentDisplayArc && (
@@ -2248,7 +2620,7 @@ export default function BibleKnowledgeGalaxy({
                         onClick={(e) => handleOpenParallelComparisonReader(currentDisplayArc, e)}
                         className="p-2.5 rounded-xl border border-[#D97706]/40 cursor-pointer space-y-1 min-w-0"
                       >
-                        <div className="flex justify-between items-center text-[11px] font-bold text-[#D97706]">
+                        <div className="flex justify-between items-center text-[11px] font-bold text-[#FBBF24]">
                           <span className="truncate">{currentDisplayArc.fromBook} {currentDisplayArc.fromChap}:{currentDisplayArc.fromVerse}</span>
                           <button
                             type="button"
@@ -2265,7 +2637,7 @@ export default function BibleKnowledgeGalaxy({
                         {fromInterlinearWords && fromInterlinearWords.length > 0 && (
                           <div className="hidden sm:flex flex-wrap gap-1 pt-0.5">
                             {fromInterlinearWords.slice(0, 3).map((w, i) => (
-                              <span key={i} className="px-1.5 py-0.5 rounded bg-[#D97706]/10 text-[#D97706] text-[10px]">
+                              <span key={i} className="px-1.5 py-0.5 rounded bg-[#D97706]/15 text-[#FBBF24] text-[10px]">
                                 <b>{w.original_word}</b> {w.korean_trans}
                               </span>
                             ))}
@@ -2275,9 +2647,9 @@ export default function BibleKnowledgeGalaxy({
 
                       <div
                         onClick={(e) => handleOpenParallelComparisonReader(currentDisplayArc, e)}
-                        className="p-2.5 rounded-xl border border-[#0D9488]/40 cursor-pointer space-y-1 min-w-0"
+                        className="p-2.5 rounded-xl border border-[#2DD4BF]/40 cursor-pointer space-y-1 min-w-0"
                       >
-                        <div className="flex justify-between items-center text-[11px] font-bold text-[#0D9488]">
+                        <div className="flex justify-between items-center text-[11px] font-bold text-[#2DD4BF]">
                           <span className="truncate">{currentDisplayArc.toBook} {currentDisplayArc.toChap}:{currentDisplayArc.toVerse}</span>
                           <button
                             type="button"
@@ -2294,7 +2666,7 @@ export default function BibleKnowledgeGalaxy({
                         {toInterlinearWords && toInterlinearWords.length > 0 && (
                           <div className="hidden sm:flex flex-wrap gap-1 pt-0.5">
                             {toInterlinearWords.slice(0, 3).map((w, i) => (
-                              <span key={i} className="px-1.5 py-0.5 rounded bg-[#0D9488]/10 text-[#0D9488] text-[10px]">
+                              <span key={i} className="px-1.5 py-0.5 rounded bg-[#2DD4BF]/15 text-[#2DD4BF] text-[10px]">
                                 <b>{w.original_word}</b> {w.korean_trans}
                               </span>
                             ))}
@@ -2376,16 +2748,12 @@ export default function BibleKnowledgeGalaxy({
         >
           <div className="p-3 rounded-xl border space-y-2" style={{ borderColor: theme.panelBorder }}>
             <div className="flex items-center justify-between text-[11px] font-bold">
-              <span className="text-[#D97706]">66권 · 장별 핀셋 필터 ({activeFilteredArcs.length.toLocaleString()})</span>
+              <span className="text-[#FBBF24]">66권 · 장별 핀셋 필터 ({activeFilteredArcs.length.toLocaleString()})</span>
               {(arcFromBookFilter !== 'ALL' || arcToBookFilter !== 'ALL') && (
                 <button
                   type="button"
-                  onClick={() => {
-                    setArcFromBookFilter('ALL');
-                    setArcFromChapFilter('ALL');
-                    setArcToBookFilter('ALL');
-                  }}
-                  className="text-rose-500 cursor-pointer"
+                  onClick={() => { setArcFromBookFilter('ALL'); setArcFromChapFilter('ALL'); setArcToBookFilter('ALL'); }}
+                  className="text-rose-400 cursor-pointer"
                 >
                   초기화
                 </button>
@@ -2394,11 +2762,8 @@ export default function BibleKnowledgeGalaxy({
             <div className="grid grid-cols-3 gap-1.5 text-[11.5px]">
               <select
                 value={arcFromBookFilter}
-                onChange={(e) => {
-                  setArcFromBookFilter(e.target.value);
-                  setArcFromChapFilter('ALL');
-                }}
-                className="p-1.5 rounded-lg border bg-transparent outline-none"
+                onChange={(e) => { setArcFromBookFilter(e.target.value); setArcFromChapFilter('ALL'); }}
+                className="p-1.5 rounded-lg border bg-slate-900 text-white outline-none"
                 style={{ borderColor: theme.panelBorder }}
               >
                 <option value="ALL">출발 66권</option>
@@ -2408,7 +2773,7 @@ export default function BibleKnowledgeGalaxy({
                 value={arcFromChapFilter}
                 disabled={arcFromBookFilter === 'ALL'}
                 onChange={(e) => setArcFromChapFilter(e.target.value)}
-                className="p-1.5 rounded-lg border bg-transparent outline-none disabled:opacity-40"
+                className="p-1.5 rounded-lg border bg-slate-900 text-white outline-none disabled:opacity-40"
                 style={{ borderColor: theme.panelBorder }}
               >
                 <option value="ALL">전체 장</option>
@@ -2420,14 +2785,14 @@ export default function BibleKnowledgeGalaxy({
               <select
                 value={arcToBookFilter}
                 onChange={(e) => setArcToBookFilter(e.target.value)}
-                className="p-1.5 rounded-lg border bg-transparent outline-none"
+                className="p-1.5 rounded-lg border bg-slate-900 text-white outline-none"
                 style={{ borderColor: theme.panelBorder }}
               >
                 <option value="ALL">도착 66권</option>
                 {BIBLE_66_CANON.map((b) => <option key={b.ko} value={b.ko}>{b.ko}</option>)}
               </select>
             </div>
-            {isShardLoading && <span className="text-[10.5px] text-[#0D9488] block">장별 샤드 데이터 로딩 중...</span>}
+            {isShardLoading && <span className="text-[10.5px] text-[#2DD4BF] block">장별 샤드 데이터 로딩 중...</span>}
           </div>
 
           <div className="space-y-1.5 flex-1 overflow-y-auto hide-scrollbar">
@@ -2437,12 +2802,12 @@ export default function BibleKnowledgeGalaxy({
                 type="button"
                 onClick={() => setSelectedArc(arc)}
                 className={`w-full p-2.5 rounded-xl border text-left space-y-0.5 cursor-pointer ${
-                  currentDisplayArc?.id === arc.id ? 'border-[#2563EB] bg-[#2563EB]/10' : ''
+                  currentDisplayArc?.id === arc.id ? 'border-[#00F5D4] bg-[#00F5D4]/10' : ''
                 }`}
                 style={currentDisplayArc?.id !== arc.id ? { borderColor: theme.panelBorder } : undefined}
               >
                 <div className="flex justify-between text-[10.5px] font-mono font-bold">
-                  <span className="text-[#D97706]">{arc.badgeLabel}</span>
+                  <span className="text-[#FBBF24]">{arc.badgeLabel}</span>
                   <span>{arc.fromBook} {arc.fromChap}:{arc.fromVerse} ➔ {arc.toBook} {arc.toChap}:{arc.toVerse}</span>
                 </div>
                 <div className="text-[12px] font-bold truncate">{arc.title}</div>
@@ -2475,12 +2840,12 @@ export default function BibleKnowledgeGalaxy({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 flex-1 overflow-y-auto hide-scrollbar">
                 {[readerModalData.left, readerModalData.right].map((side, sIdx) => (
                   <div key={sIdx} className="p-3 rounded-xl border space-y-2 overflow-y-auto max-h-[65dvh] hide-scrollbar" style={{ borderColor: theme.panelBorder }}>
-                    <div className="font-bold text-[13px] text-[#2563EB]">{side.bookKo} {side.chap}장</div>
+                    <div className="font-bold text-[13px] text-[#00F5D4]">{side.bookKo} {side.chap}장</div>
                     {side.verses.map((v) => (
-                      <div key={v.vNum} className={`p-2 rounded-lg text-[13px] leading-relaxed ${v.vNum === side.targetVerse ? 'bg-[#2563EB]/15 font-bold' : ''}`}>
-                        <span className="font-mono text-[#D97706] mr-1.5">{v.vNum}</span>
+                      <div key={v.vNum} className={`p-2 rounded-lg text-[13px] leading-relaxed ${v.vNum === side.targetVerse ? 'bg-[#2563EB]/25 font-bold' : ''}`}>
+                        <span className="font-mono text-[#FBBF24] mr-1.5">{v.vNum}</span>
                         <span>{v.text}</span>
-                        {v.easyText && <p className="text-[11.5px] text-[#0D9488] mt-1">[쉬운] {v.easyText}</p>}
+                        {v.easyText && <p className="text-[11.5px] text-[#2DD4BF] mt-1">[쉬운] {v.easyText}</p>}
                         {v.webText && <p className="text-[11.5px] opacity-75 mt-0.5">[WEB] {v.webText}</p>}
                       </div>
                     ))}
@@ -2490,8 +2855,8 @@ export default function BibleKnowledgeGalaxy({
             ) : (
               <div className="flex-1 overflow-y-auto space-y-2 hide-scrollbar">
                 {readerModalData.verses.map((v) => (
-                  <div key={v.vNum} className={`p-2.5 rounded-xl text-[13.5px] leading-relaxed ${v.vNum === readerModalData.targetVerse ? 'bg-[#2563EB]/15 font-bold' : ''}`}>
-                    <span className="font-mono text-[#D97706] mr-2">{v.vNum}절</span>
+                  <div key={v.vNum} className={`p-2.5 rounded-xl text-[13.5px] leading-relaxed ${v.vNum === readerModalData.targetVerse ? 'bg-[#2563EB]/25 font-bold' : ''}`}>
+                    <span className="font-mono text-[#FBBF24] mr-2">{v.vNum}절</span>
                     <span>{v.text}</span>
                   </div>
                 ))}
@@ -2501,16 +2866,37 @@ export default function BibleKnowledgeGalaxy({
         </div>
       )}
 
-      {/* 4. 테마 & 스튜디오 컨트롤 드로어 */}
+      {/* 4. 스튜디오 컨트롤 & 궤도 슬라이더 & 테마 드로어 100% 복구 */}
       {isControlOpen && viewMode !== 'list' && (
         <div
-          className="absolute top-20 right-3 z-40 w-72 p-4 rounded-2xl border shadow-2xl space-y-3 text-xs max-h-[76dvh] overflow-y-auto hide-scrollbar"
+          className="absolute top-20 right-3 z-40 w-72 p-4 rounded-2xl border shadow-2xl space-y-3 text-xs max-h-[78dvh] overflow-y-auto hide-scrollbar"
           style={{ backgroundColor: theme.panelBg, borderColor: theme.panelBorder }}
         >
           <div className="flex justify-between items-center pb-2 border-b" style={{ borderColor: theme.panelBorder }}>
-            <span className="font-bold text-[#2563EB]">스튜디오 테마 · 궤도</span>
+            <span className="font-bold text-[#00F5D4]">스튜디오 테마 · 궤도</span>
             <button type="button" onClick={() => setIsControlOpen(false)} className="cursor-pointer"><X className="w-4 h-4" /></button>
           </div>
+
+          {viewMode !== 'arc' && (
+            <div className="space-y-2.5 pb-2 border-b" style={{ borderColor: theme.panelBorder }}>
+              <div>
+                <div className="flex justify-between text-[11px] mb-1"><span>궤도 회전 속도</span><span className="text-[#00F5D4] font-mono">{rotationSpeed.toFixed(2)}x</span></div>
+                <input type="range" min="0" max="0.8" step="0.04" value={rotationSpeed} onChange={(e) => setRotationSpeed(Number(e.target.value))} className="w-full accent-[#00F5D4] cursor-pointer" />
+              </div>
+              <div>
+                <div className="flex justify-between text-[11px] mb-1"><span>궤도 간격 반경</span><span className="text-[#00F5D4] font-mono">{orbitSpacing.toFixed(2)}x</span></div>
+                <input type="range" min="0.7" max="1.6" step="0.05" value={orbitSpacing} onChange={(e) => setOrbitSpacing(Number(e.target.value))} className="w-full accent-[#00F5D4] cursor-pointer" />
+              </div>
+              <div>
+                <div className="flex justify-between text-[11px] mb-1"><span>노드 &amp; 링 크기</span><span className="text-[#00F5D4] font-mono">{nodeScale.toFixed(2)}x</span></div>
+                <input type="range" min="0.6" max="1.8" step="0.1" value={nodeScale} onChange={(e) => setNodeScale(Number(e.target.value))} className="w-full accent-[#00F5D4] cursor-pointer" />
+              </div>
+              <label className="flex items-center justify-between text-[11px] cursor-pointer">
+                <span>외곽 강해·QT 라벨 전체 표시</span>
+                <input type="checkbox" checked={showOuterLabels} onChange={(e) => setShowOuterLabels(e.target.checked)} className="accent-[#00F5D4]" />
+              </label>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-1.5">
             <button type="button" onClick={() => applyResponsiveCameraReset(viewMode)} className="py-2 rounded-lg bg-[#2563EB] text-white font-bold flex items-center justify-center gap-1 cursor-pointer">
@@ -2540,7 +2926,7 @@ export default function BibleKnowledgeGalaxy({
                 key={th.id}
                 type="button"
                 onClick={() => setCurrentTheme(th.id)}
-                className={`w-full p-2 rounded-xl border text-left flex items-center justify-between cursor-pointer ${currentTheme === th.id ? 'border-[#2563EB] bg-[#2563EB]/10' : ''}`}
+                className={`w-full p-2 rounded-xl border text-left flex items-center justify-between cursor-pointer ${currentTheme === th.id ? 'border-[#00F5D4] bg-[#00F5D4]/15' : ''}`}
                 style={currentTheme !== th.id ? { borderColor: theme.panelBorder } : undefined}
               >
                 <span className="font-bold">{th.name}</span>
@@ -2553,31 +2939,61 @@ export default function BibleKnowledgeGalaxy({
         </div>
       )}
 
-      {/* 5. 교차참조 아크 생성 모달 */}
+      {/* 5. 교차참조 아크 · QT · 강해 노드 생성 모달 100% 복구 */}
       {isCreatorOpen && (
-        <div onClick={() => setIsCreatorOpen(false)} className="fixed inset-0 z-[100] bg-black/70 flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div onClick={() => setIsCreatorOpen(false)} className="fixed inset-0 z-[100] bg-black/75 flex items-end sm:items-center justify-center p-0 sm:p-4">
           <div
             onClick={(e) => e.stopPropagation()}
             className="w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl border p-4 space-y-3 text-left max-h-[88dvh] overflow-y-auto"
             style={{ backgroundColor: theme.panelBg, borderColor: theme.panelBorder }}
           >
             <div className="flex justify-between items-center pb-2 border-b" style={{ borderColor: theme.panelBorder }}>
-              <h3 className="text-[15px] font-bold">나만의 교차참조 아크 등록</h3>
+              <h3 className="text-[15px] font-bold">교차참조 아크 · QT · 강해 등록</h3>
               <button type="button" onClick={() => setIsCreatorOpen(false)} className="cursor-pointer"><X className="w-4 h-4" /></button>
             </div>
-            <div className="grid grid-cols-2 gap-2 text-[12px]">
-              <select value={createBook} onChange={(e) => setCreateBook(e.target.value)} className="p-2 rounded-lg border bg-transparent" style={{ borderColor: theme.panelBorder }}>
-                {BIBLE_66_CANON.map((b) => <option key={b.ko} value={b.ko}>{b.ko}</option>)}
-              </select>
-              <select value={createToBook} onChange={(e) => setCreateToBook(e.target.value)} className="p-2 rounded-lg border bg-transparent" style={{ borderColor: theme.panelBorder }}>
-                {BIBLE_66_CANON.map((b) => <option key={b.ko} value={b.ko}>{b.ko}</option>)}
-              </select>
+
+            <div className="grid grid-cols-4 gap-1.5 text-[11px] font-bold">
+              {[
+                { id: 'customArc', label: '교차아크' },
+                { id: 'qt', label: '오늘의 QT' },
+                { id: 'sermon', label: '강해 노트' },
+                { id: 'bibleNote', label: '성경 묵상' }
+              ].map((tItem) => (
+                <button
+                  key={tItem.id}
+                  type="button"
+                  onClick={() => setCreateType(tItem.id)}
+                  className={`py-2 rounded-lg border cursor-pointer ${createType === tItem.id ? 'bg-[#2563EB] text-white border-[#2563EB]' : ''}`}
+                  style={createType !== tItem.id ? { borderColor: theme.panelBorder } : undefined}
+                >
+                  {tItem.label}
+                </button>
+              ))}
             </div>
+
+            <div className="grid grid-cols-4 gap-2 text-[12px]">
+              <select value={createBook} onChange={(e) => setCreateBook(e.target.value)} className="col-span-2 p-2 rounded-lg border bg-slate-900 text-white" style={{ borderColor: theme.panelBorder }}>
+                {BIBLE_66_CANON.map((b) => <option key={b.ko} value={b.ko}>{b.ko}</option>)}
+              </select>
+              <input type="number" min="1" max="150" value={createChap} onChange={(e) => setCreateChap(e.target.value)} placeholder="장" className="p-2 rounded-lg border bg-transparent" style={{ borderColor: theme.panelBorder }} />
+              <input type="number" min="1" max="176" value={createVerse} onChange={(e) => setCreateVerse(e.target.value)} placeholder="절" className="p-2 rounded-lg border bg-transparent" style={{ borderColor: theme.panelBorder }} />
+            </div>
+
+            {createType === 'customArc' && (
+              <div className="grid grid-cols-4 gap-2 text-[12px]">
+                <select value={createToBook} onChange={(e) => setCreateToBook(e.target.value)} className="col-span-2 p-2 rounded-lg border bg-slate-900 text-white" style={{ borderColor: theme.panelBorder }}>
+                  {BIBLE_66_CANON.map((b) => <option key={b.ko} value={b.ko}>{b.ko}</option>)}
+                </select>
+                <input type="number" min="1" max="150" value={createToChap} onChange={(e) => setCreateToChap(e.target.value)} placeholder="장" className="p-2 rounded-lg border bg-transparent" style={{ borderColor: theme.panelBorder }} />
+                <input type="number" min="1" max="176" value={createToVerse} onChange={(e) => setCreateToVerse(e.target.value)} placeholder="절" className="p-2 rounded-lg border bg-transparent" style={{ borderColor: theme.panelBorder }} />
+              </div>
+            )}
+
             <input
               type="text"
               value={createTitle}
               onChange={(e) => setCreateTitle(e.target.value)}
-              placeholder="연결 주제..."
+              placeholder="주제 / 연결 제목..."
               className="w-full p-2.5 rounded-xl border bg-transparent text-[13px] outline-none select-text"
               style={{ borderColor: theme.panelBorder }}
             />
@@ -2585,12 +3001,12 @@ export default function BibleKnowledgeGalaxy({
               rows={3}
               value={createBody}
               onChange={(e) => setCreateBody(e.target.value)}
-              placeholder="구속사적 연결 해설..."
+              placeholder="구속사적 연결 해설 및 묵상 내용..."
               className="w-full p-2.5 rounded-xl border bg-transparent text-[13px] outline-none resize-none select-text"
               style={{ borderColor: theme.panelBorder }}
             />
             <button type="button" onClick={handleSaveNewKnowledgeNode} className="w-full py-2.5 rounded-xl bg-[#2563EB] text-white font-bold text-[13px] cursor-pointer">
-              등록하기
+              은하계 &amp; 아크에 등록하기
             </button>
           </div>
         </div>
@@ -2598,7 +3014,7 @@ export default function BibleKnowledgeGalaxy({
 
       {/* 6. 모바일 바텀 시트 목록 */}
       {isMobileFilterSheetOpen && (
-        <div onClick={() => setIsMobileFilterSheetOpen(false)} className="lg:hidden fixed inset-0 z-50 bg-black/60 flex items-end justify-center">
+        <div onClick={() => setIsMobileFilterSheetOpen(false)} className="lg:hidden fixed inset-0 z-50 bg-black/65 flex items-end justify-center">
           <div
             onClick={(e) => e.stopPropagation()}
             className="w-full p-4 rounded-t-3xl border max-h-[75dvh] overflow-y-auto hide-scrollbar space-y-2"
@@ -2612,14 +3028,11 @@ export default function BibleKnowledgeGalaxy({
               <button
                 key={arc.id}
                 type="button"
-                onClick={() => {
-                  setSelectedArc(arc);
-                  setIsMobileFilterSheetOpen(false);
-                }}
+                onClick={() => { setSelectedArc(arc); setIsMobileFilterSheetOpen(false); }}
                 className="w-full p-2.5 rounded-xl border text-left space-y-0.5 cursor-pointer"
                 style={{ borderColor: theme.panelBorder }}
               >
-                <div className="text-[11px] font-mono text-[#D97706]">{arc.fromBook} {arc.fromChap}:{arc.fromVerse} ➔ {arc.toBook} {arc.toChap}:{arc.toVerse}</div>
+                <div className="text-[11px] font-mono text-[#FBBF24]">{arc.fromBook} {arc.fromChap}:{arc.fromVerse} ➔ {arc.toBook} {arc.toChap}:{arc.toVerse}</div>
                 <div className="text-[12.5px] font-bold truncate">{arc.title}</div>
               </button>
             ))}
@@ -2649,7 +3062,7 @@ export function BibleGalaxyArcModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-[1380px] h-[92dvh] rounded-3xl overflow-hidden border border-[#2563EB]/40 shadow-2xl flex flex-col relative"
+        className="w-full max-w-[1380px] h-[92dvh] rounded-3xl overflow-hidden border border-cyan-400/35 shadow-2xl flex flex-col relative bg-[#04080E]"
         onClick={(e) => e.stopPropagation()}
       >
         <BibleKnowledgeGalaxy

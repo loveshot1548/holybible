@@ -5,16 +5,15 @@ import {
   ChevronRight,
   Search,
   X,
-  RotateCcw,
-  Plus,
-  Minus,
+  Play,
+  Pause,
   BookOpen,
-  FileText,
   Sparkles,
+  FileText,
+  Activity,
   Layers,
-  Terminal,
-  ChevronDown,
-  ChevronUp
+  Grid,
+  ExternalLink
 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { BIBLE_66_CANON, extractAllBibleRefsFromText } from './BibleKnowledgeGalaxy';
@@ -22,243 +21,320 @@ import { ensureKrv4TxtLoaded, splitPericopeAndVerse } from './Bible';
 import bibleData from '../ko_ko.json';
 
 // =====================================================================
-// 1. LAYER TRIAGE 4대 코어 궤도 라우터 마스터 데이터
+// 1. 8대 성경 정경 섹터 (상단 신약 에메랄드 / 하단 구약 크림슨 극성 매핑)
 // =====================================================================
-const TRIAGE_ORBIT_LAYERS = [
-  {
-    id: 'PROMPT',
-    alias: 'WORD',
-    code: '1 symptom · layer 1/4',
-    title: 'PROMPT // 원어·정경 로고스',
-    korSub: '성경 66권 개역개정4판 & 원어 형태소',
-    color: '#FACC15',
-    lightColor: '#B45309',
-    orbitRadiusRatio: 0.145,
-    baseAngle: -Math.PI * 0.68,
-    calloutDir: { dx: -78, dy: -46 },
-    bridgeCode: 's01 → routing',
-    bridgeDesc: 'BHS Hebrew · NA28 Greek',
-    bookRef: '창세기',
-    chapRef: 1,
-    strongsRef: 'H7225',
-    desc: '성경 66권(1,189장) 정경 본문과 히브리어·헬라어 원어 스트롱 코드를 직결하는 제1 원천 레이어입니다.'
-  },
-  {
-    id: 'CONTEXT',
-    alias: 'CONTEXT',
-    code: '4 symptoms · layer 2/4',
-    title: 'CONTEXT // 구속사·34만 교차참조',
-    korSub: 'TSK 교차참조 · 70인역 · 주석 문맥망',
-    color: '#F59E0B',
-    lightColor: '#D97706',
-    orbitRadiusRatio: 0.215,
-    baseAngle: Math.PI * 0.78,
-    calloutDir: { dx: -92, dy: 34 },
-    bridgeCode: 's08 → routing',
-    bridgeDesc: '344K cross-refs verified',
-    bookRef: '이사야',
-    chapRef: 53,
-    strongsRef: 'H5375',
-    desc: '신구약 교차참조(TSK)와 언약 신학의 문맥을 실시간 대조하여 성경이 성경을 해석하게 하는 제2 컨텍스트 레이어입니다.'
-  },
-  {
-    id: 'LOOP',
-    alias: 'MEDITATION',
-    code: '3 symptoms · layer 3/4',
-    title: 'LOOP // QT·설교 묵상 순환',
-    korSub: '매일 QT 묵상 & 예배 설교노트 동기화',
-    color: '#2DD4BF',
-    lightColor: '#0D9488',
-    orbitRadiusRatio: 0.175,
-    baseAngle: Math.PI * 0.22,
-    calloutDir: { dx: 24, dy: 32 },
-    bridgeCode: 'f07 → LOOP',
-    bridgeDesc: 'verify meditation step',
-    bookRef: '요한복음',
-    chapRef: 1,
-    strongsRef: 'G3056',
-    desc: '선포된 설교 말씀과 매일의 QT 묵상이 원어 본문과 순환하며 영적 통찰로 응집되는 제3 세컨드브레인 코어입니다.'
-  },
-  {
-    id: 'HARNESS',
-    alias: 'PRAXIS',
-    code: '3 symptoms · layer 4/4',
-    title: 'HARNESS // 기도·삶의 적용 결속',
-    korSub: '적용질문 · 감사나눔 · 중보기도 실천',
-    color: '#FB923C',
-    lightColor: '#EA580C',
-    orbitRadiusRatio: 0.245,
-    baseAngle: -Math.PI * 0.24,
-    calloutDir: { dx: -45, dy: -54 },
-    bridgeCode: 'f13 → HARNESS',
-    bridgeDesc: 'praxis & prayer locked',
-    bookRef: '로마서',
-    chapRef: 8,
-    strongsRef: 'G26',
-    desc: '묵상과 설교에서 깨달은 진리를 삶의 적용 트래커와 중보기도 제목으로 결속하는 제4 실천 레이어입니다.'
-  }
+const CANON_SECTOR_GROUPS = [
+  { id: 'gospels', name: '복음서·행전', code: 'GOSPELS', polarity: 'nt', color: '#10B981', glow: 'rgba(16,185,129,0.45)', defaultBook: '요한복음', strongs: 'G3056' },
+  { id: 'pauline', name: '바울서신', code: 'PAULINE', polarity: 'nt', color: '#2DD4BF', glow: 'rgba(45,212,191,0.45)', defaultBook: '로마서', strongs: 'G26' },
+  { id: 'general', name: '공동서신', code: 'GENERAL', polarity: 'nt', color: '#38BDF8', glow: 'rgba(56,189,248,0.45)', defaultBook: '히브리서', strongs: 'G4102' },
+  { id: 'prophecy_nt', name: '요한계시록', code: 'APOCALYPSE', polarity: 'nt', color: '#34D399', glow: 'rgba(52,211,153,0.45)', defaultBook: '요한계시록', strongs: 'G5056' },
+  { id: 'law', name: '모세오경', code: 'PENTATEUCH', polarity: 'ot', color: '#F43F5E', glow: 'rgba(244,63,94,0.45)', defaultBook: '창세기', strongs: 'H7225' },
+  { id: 'ot_history', name: '구약역사서', code: 'OT HISTORY', polarity: 'ot', color: '#FB7185', glow: 'rgba(251,113,133,0.45)', defaultBook: '사무엘하', strongs: 'H1285' },
+  { id: 'poetry', name: '시가서', code: 'POETRY', polarity: 'ot', color: '#F59E0B', glow: 'rgba(245,158,11,0.45)', defaultBook: '시편', strongs: 'H2617' },
+  { id: 'prophets', name: '선지서', code: 'PROPHETS', polarity: 'ot', color: '#EC4899', glow: 'rgba(236,72,153,0.45)', defaultBook: '이사야', strongs: 'H5375' }
 ];
 
-// =====================================================================
-// 2. 우측 아크 18대 핵심 원어(히브리어/헬라어) 마스터 사전
-// =====================================================================
-const LEXICON_STREAM_CODES = [
-  { code: 'f01 H7225', strongs: 'H7225', word: 'בְּרֵאשִׁית', pron: '베레쉬트', mean: '태초에·시작·첫열매', grammar: '명사·여성·단수', book: '창세기', chap: 1, verse: 1, layer: 'PROMPT' },
-  { code: 'f02 H430', strongs: 'H430', word: 'אֱלֹהִים', pron: '엘로힘', mean: '전능하신 창조주 하나님', grammar: '명사·남성·장엄복수', book: '창세기', chap: 1, verse: 1, layer: 'PROMPT' },
-  { code: 'f03 H1285', strongs: 'H1285', word: 'בְּרִית', pron: '베리트', mean: '언약·피의 맹세', grammar: '명사·여성·단수', book: '출애굽기', chap: 19, verse: 5, layer: 'CONTEXT' },
-  { code: 'f04 H3068', strongs: 'H3068', word: 'יְהוָה', pron: '여호와', mean: '스스로 계신 언약의 주', grammar: '고유명사·신명', book: '출애굽기', chap: 3, verse: 14, layer: 'PROMPT' },
-  { code: 'f05 H2617', strongs: 'H2617', word: 'חֶסֶד', pron: '헤세드', mean: '인자하심·끝없는 언약적 사랑', grammar: '명사·남성·단수', book: '시편', chap: 23, verse: 6, layer: 'LOOP' },
-  { code: 'f06 H7965', strongs: 'H7965', word: 'שָׁלוֹם', pron: '샬롬', mean: '평강·완전한 조화·구원', grammar: '명사·남성·단수', book: '민수기', chap: 6, verse: 26, layer: 'HARNESS' },
-  { code: 'f07 H5375', strongs: 'H5375', word: 'נָשָׂא', pron: '나사', mean: '죄를 짊어지다·담당하다', grammar: '동사·칼·완료', book: '이사야', chap: 53, verse: 4, layer: 'CONTEXT' },
-  { code: 'f08 H7307', strongs: 'H7307', word: 'רוּחַ', pron: '루아흐', mean: '성령·생기·하나님의 호흡', grammar: '명사·여성·단수', book: '에스겔', chap: 37, verse: 5, layer: 'LOOP' },
-  { code: 'f09 H8451', strongs: 'H8451', word: 'תּוֹרָה', pron: '토라', mean: '율법·과녁을 향한 가르침', grammar: '명사·여성·단수', book: '시편', chap: 119, verse: 105, layer: 'PROMPT' },
-  { code: 'f10 G3056', strongs: 'G3056', word: 'λόγος', pron: '로고스', mean: '말씀·성육신하신 그리스도', grammar: '명사·주격·남성·단수', book: '요한복음', chap: 1, verse: 1, layer: 'LOOP' },
-  { code: 'f11 G5485', strongs: 'G5485', word: 'χάρις', pron: '카리스', mean: '은혜·거저 주시는 선물', grammar: '명사·주격·여성·단수', book: '에베소서', chap: 2, verse: 8, layer: 'LOOP' },
-  { code: 'f12 G4102', strongs: 'G4102', word: 'πίστις', pron: '피스티스', mean: '믿음·신실함·확신', grammar: '명사·주격·여성·단수', book: '히브리서', chap: 11, verse: 1, layer: 'HARNESS' },
-  { code: 'f13 G26', strongs: 'G26', word: 'ἀγάπη', pron: '아가페', mean: '하나님의 무조건적 사랑', grammar: '명사·주격·여성·단수', book: '로마서', chap: 8, verse: 39, layer: 'HARNESS' },
-  { code: 'f14 G4151', strongs: 'G4151', word: 'πνεῦμα', pron: '프뉴마', mean: '성령·생명의 영', grammar: '명사·주격·중성·단수', book: '로마서', chap: 8, verse: 2, layer: 'LOOP' },
-  { code: 'f15 G2222', strongs: 'G2222', word: 'ζωή', pron: '조에', mean: '영원한 생명·신적 생명', grammar: '명사·주격·여성·단수', book: '요한복음', chap: 3, verse: 16, layer: 'CONTEXT' },
-  { code: 'f16 G1411', strongs: 'G1411', word: 'δύναμις', pron: '뒤나미스', mean: '능력·복음의 폭발적 권능', grammar: '명사·주격·여성·단수', book: '사도행전', chap: 1, verse: 8, layer: 'HARNESS' },
-  { code: 'f17 G3875', strongs: 'G3875', word: 'παράκλητος', pron: '파라클레토스', mean: '보혜사·곁에서 돕는 자', grammar: '명사·주격·남성·단수', book: '요한복음', chap: 14, verse: 26, layer: 'CONTEXT' },
-  { code: 'f18 G5056', strongs: 'G5056', word: 'τέλος', pron: '텔로스', mean: '완성·구속사의 최종 성취', grammar: '명사·주격·중성·단수', book: '요한계시록', chap: 21, verse: 6, layer: 'PROMPT' }
-];
+const SECTOR_NAME_TO_ID = {
+  '복음서·행전': 'gospels',
+  '바울서신': 'pauline',
+  '공동서신': 'general',
+  '예언서': 'prophecy_nt',
+  '요한계시록': 'prophecy_nt',
+  '모세오경': 'law',
+  '구약역사서': 'ot_history',
+  '시가서': 'poetry',
+  '선지서': 'prophets'
+};
 
 // =====================================================================
-// 3. 우측 패널 `SYMPTOM / CANON QUEUE (11)` 9단 세그먼트 데이터
+// 2. 핵심 히브리어/헬라어 원어 앵커 사전
 // =====================================================================
-const ELEVEN_CANON_QUEUE = [
-  { id: 'q01', num: '01', label: 'pentateuch law (모세오경)', sector: '모세오경', layer: 'PROMPT', color: '#F59E0B', bookRef: '창세기', chapRef: 1, strongs: 'H7225' },
-  { id: 'q02', num: '02', label: 'covenant history (역사서)', sector: '구약역사서', layer: 'CONTEXT', color: '#F59E0B', bookRef: '사무엘하', chapRef: 7, strongs: 'H1285' },
-  { id: 'q03', num: '03', label: 'psalms & wisdom (시가서)', sector: '시가서', layer: 'LOOP', color: '#F59E0B', bookRef: '시편', chapRef: 23, strongs: 'H2617' },
-  { id: 'q04', num: '04', label: 'major prophets (대선지서)', sector: '선지서', layer: 'CONTEXT', color: '#F59E0B', bookRef: '이사야', chapRef: 53, strongs: 'H5375' },
-  { id: 'q05', num: '05', label: 'minor prophets (소선지서)', sector: '선지서', layer: 'CONTEXT', color: '#F59E0B', bookRef: '미가', chapRef: 5, strongs: 'H7965' },
-  { id: 'q06', num: '06', label: 'synoptic gospels (복음서)', sector: '복음서·행전', layer: 'PROMPT', color: '#2DD4BF', bookRef: '마태복음', chapRef: 5, strongs: 'G3056' },
-  { id: 'q07', num: '07', label: 'acts ecclesia (사도행전)', sector: '복음서·행전', layer: 'HARNESS', color: '#2DD4BF', bookRef: '사도행전', chapRef: 1, strongs: 'G1411' },
-  { id: 'q08', num: '08', label: 'pauline epistles (바울서신)', sector: '바울서신', layer: 'LOOP', color: '#2DD4BF', bookRef: '로마서', chapRef: 8, strongs: 'G26' },
-  { id: 'q09', num: '09', label: 'general epistles (공동서신)', sector: '공동서신·계시록', layer: 'HARNESS', color: '#38BDF8', bookRef: '히브리서', chapRef: 11, strongs: 'G4102' },
-  { id: 'q10', num: '10', label: 'hebrew/greek lexicon (원어)', sector: '모세오경', layer: 'PROMPT', color: '#FACC15', bookRef: '요한복음', chapRef: 1, strongs: 'G3056' },
-  { id: 'q11', num: '11', label: 'apocalypse crown (계시록)', sector: '공동서신·계시록', layer: 'HARNESS', color: '#34D399', bookRef: '요한계시록', chapRef: 21, strongs: 'G5056' }
-];
+const CORE_LEXICON_MAP = {
+  H7225: { strongs: 'H7225', word: 'בְּרֵאשִׁית', pron: '베레쉬트', mean: '태초에·시작·첫열매', grammar: '명사·여성·단수', book: '창세기', chap: 1, verse: 1 },
+  H1285: { strongs: 'H1285', word: 'בְּרִית', pron: '베리트', mean: '언약·피의 맹세', grammar: '명사·여성·단수', book: '출애굽기', chap: 19, verse: 5 },
+  H2617: { strongs: 'H2617', word: 'חֶסֶד', pron: '헤세드', mean: '인자하심·끝없는 언약적 사랑', grammar: '명사·남성·단수', book: '시편', chap: 23, verse: 6 },
+  H5375: { strongs: 'H5375', word: 'נָשָׂא', pron: '나사', mean: '죄를 짊어지다·담당하다', grammar: '동사·칼·완료', book: '이사야', chap: 53, verse: 4 },
+  G3056: { strongs: 'G3056', word: 'λόγος', pron: '로고스', mean: '말씀·성육신하신 그리스도', grammar: '명사·주격·남성·단수', book: '요한복음', chap: 1, verse: 1 },
+  G26: { strongs: 'G26', word: 'ἀγάπη', pron: '아가페', mean: '하나님의 무조건적 사랑', grammar: '명사·주격·여성·단수', book: '로마서', chap: 8, verse: 39 },
+  G4102: { strongs: 'G4102', word: 'πίστις', pron: '피스티스', mean: '믿음·신실함·확신', grammar: '명사·주격·여성·단수', book: '히브리서', chap: 11, verse: 1 },
+  G5056: { strongs: 'G5056', word: 'τέλος', pron: '텔로스', mean: '완성·구속사의 최종 성취', grammar: '명사·주격·중성·단수', book: '요한계시록', chap: 21, verse: 6 }
+};
 
 // =====================================================================
-// iOS Safari 100% 호환 둥근 사각형 & 전류 광선 & 배지 드로잉 헬퍼
+// 3. 상단 펄스 스파크라인 캔버스 (실시간 신구약 교차 파동)
 // =====================================================================
-function drawSafeRoundRect(ctx, x, y, w, h, r) {
-  const radius = Math.max(0, Math.min(r, w / 2, h / 2));
-  ctx.beginPath();
-  ctx.moveTo(x + radius, y);
-  ctx.arcTo(x + w, y, x + w, y + h, radius);
-  ctx.arcTo(x + w, y + h, x, y + h, radius);
-  ctx.arcTo(x, y + h, x, y, radius);
-  ctx.arcTo(x, y, x + w, y, radius);
-  ctx.closePath();
-}
+function TopPulseSparkline({ isPlaying, ntCount, otCount }) {
+  const canvasRef = useRef(null);
 
-function drawElectricBeam(ctx, x1, y1, x2, y2, colorHex, glowColor, tick, isHighlighted = false, isDark = true) {
-  const dist = Math.hypot(x2 - x1, y2 - y1);
-  if (dist < 2) return;
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
 
-  ctx.save();
-  ctx.beginPath();
-  ctx.moveTo(x1, y1);
-  ctx.lineTo(x2, y2);
-  ctx.strokeStyle = glowColor;
-  ctx.lineWidth = isHighlighted ? 6.0 : 3.0;
-  ctx.stroke();
+    let animId;
+    let tick = 0;
 
-  ctx.beginPath();
-  ctx.moveTo(x1, y1);
-  ctx.lineTo(x2, y2);
-  ctx.strokeStyle = isHighlighted ? (isDark ? '#FFFFFF' : colorHex) : colorHex;
-  ctx.lineWidth = isHighlighted ? 2.0 : 1.2;
-  ctx.stroke();
-
-  if (isHighlighted) {
-    const angle = Math.atan2(y2 - y1, x2 - x1);
-    const cosA = Math.cos(angle);
-    const sinA = Math.sin(angle);
-    const steps = Math.max(12, Math.floor(dist / 8));
-
-    ctx.beginPath();
-    for (let i = 0; i <= steps; i++) {
-      const t = i / steps;
-      const d = t * dist;
-      const envelope = Math.sin(t * Math.PI);
-      const wave = Math.sin(t * 28 - tick * 18) * 3.4 * envelope + Math.cos(t * 53 + tick * 24) * 1.8 * envelope;
-      const px = x1 + cosA * d - sinA * wave;
-      const py = y1 + sinA * d + cosA * wave;
-      if (i === 0) ctx.moveTo(px, py);
-      else ctx.lineTo(px, py);
-    }
-    ctx.strokeStyle = colorHex;
-    ctx.lineWidth = 1.3;
-    ctx.shadowColor = colorHex;
-    ctx.shadowBlur = isDark ? 10 : 4;
-    ctx.stroke();
-    ctx.shadowBlur = 0;
-  }
-
-  const speeds = isHighlighted ? [0.95, 1.35] : [0.65];
-  speeds.forEach((spd, sIdx) => {
-    const headT = (tick * spd + sIdx * 0.48) % 1;
-    const tailSegments = 14;
-    for (let s = 0; s < tailSegments; s++) {
-      const segT = headT - s * 0.014;
-      if (segT < 0 || segT > 1) continue;
-      const sx = x1 + (x2 - x1) * segT;
-      const sy = y1 + (y2 - y1) * segT;
-      const alpha = (1 - s / tailSegments) * (isHighlighted ? 0.95 : 0.7);
-      const rad = (1 - s / tailSegments) * (isHighlighted ? 4.0 : 2.4);
-
-      ctx.beginPath();
-      ctx.arc(sx, sy, Math.max(0.6, rad), 0, Math.PI * 2);
-      ctx.fillStyle = s < 3 ? (isDark ? `rgba(255,255,255,${alpha})` : colorHex) : colorHex;
-      if (s === 0 && isDark) {
-        ctx.shadowColor = colorHex;
-        ctx.shadowBlur = 12;
+    const draw = () => {
+      if (isPlaying) tick += 0.04;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const rect = canvas.getBoundingClientRect();
+      if (rect.width < 10 || rect.height < 10) {
+        animId = requestAnimationFrame(draw);
+        return;
       }
-      ctx.fill();
-      ctx.shadowBlur = 0;
-    }
-  });
-  ctx.restore();
+      if (canvas.width !== Math.round(rect.width * dpr) || canvas.height !== Math.round(rect.height * dpr)) {
+        canvas.width = Math.round(rect.width * dpr);
+        canvas.height = Math.round(rect.height * dpr);
+      }
+
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const w = rect.width;
+      const h = rect.height;
+      const midY = h / 2;
+
+      ctx.clearRect(0, 0, w, h);
+
+      // 중앙 기준선
+      ctx.beginPath();
+      ctx.moveTo(0, midY);
+      ctx.lineTo(w, midY);
+      ctx.strokeStyle = 'rgba(148, 163, 184, 0.2)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      const bars = Math.max(40, Math.floor(w / 4));
+      for (let i = 0; i < bars; i++) {
+        const x = (i / bars) * w;
+        const norm = i / bars;
+        const amp = Math.sin(norm * 14 - tick) * Math.cos(norm * 7 + tick * 0.6) * (midY - 3);
+        const isNT = norm > 0.48;
+        ctx.beginPath();
+        ctx.moveTo(x, midY);
+        ctx.lineTo(x, midY - amp);
+        ctx.strokeStyle = isNT ? 'rgba(16, 185, 129, 0.85)' : 'rgba(244, 63, 94, 0.85)';
+        ctx.lineWidth = 1.6;
+        ctx.stroke();
+      }
+
+      animId = requestAnimationFrame(draw);
+    };
+
+    draw();
+    return () => cancelAnimationFrame(animId);
+  }, [isPlaying, ntCount, otCount]);
+
+  return <canvas ref={canvasRef} className="w-full h-7 block" />;
 }
 
-function drawCrispBadgeText(ctx, text, x, y, textColor, borderColor, align = 'left', isActive = false, isDark = true) {
-  ctx.save();
-  ctx.font = isActive
-    ? '900 10.5px "JetBrains Mono", "Pretendard", monospace'
-    : '600 9.5px "JetBrains Mono", "Pretendard", monospace';
-  const metrics = ctx.measureText(text);
-  const padX = 6;
-  const boxW = metrics.width + padX * 2;
-  const boxH = isActive ? 19 : 16;
+// =====================================================================
+// 4. 중앙 60FPS 오더블록 라이브 플로우 & 수직 스파인 시뮬레이션 캔버스
+// =====================================================================
+function OrderBlockFlowCanvas({
+  streams,
+  activeSectorId,
+  selectedBookKo,
+  isPlaying,
+  onSelectBook
+}) {
+  const containerRef = useRef(null);
+  const canvasRef = useRef(null);
+  const hitPointsRef = useRef([]);
 
-  let boxX = x;
-  if (align === 'right') boxX = x - boxW;
-  else if (align === 'center') boxX = x - boxW / 2;
-  const boxY = y - boxH / 2;
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const container = containerRef.current;
+    if (!canvas || !container) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
 
-  ctx.fillStyle = isDark
-    ? isActive
-      ? 'rgba(10, 14, 24, 0.96)'
-      : 'rgba(6, 8, 14, 0.86)'
-    : isActive
-    ? 'rgba(255, 255, 255, 0.98)'
-    : 'rgba(248, 250, 252, 0.92)';
+    let animId;
+    let tick = 0;
 
-  drawSafeRoundRect(ctx, boxX, boxY, boxW, boxH, 4);
-  ctx.fill();
+    const render = () => {
+      if (isPlaying) tick += 0.018;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const rect = container.getBoundingClientRect();
+      const w = rect.width;
+      const h = rect.height;
 
-  ctx.lineWidth = isActive ? 1.5 : 0.8;
-  ctx.strokeStyle = borderColor;
-  ctx.stroke();
+      if (w < 20 || h < 20) {
+        animId = requestAnimationFrame(render);
+        return;
+      }
+      if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+        canvas.width = Math.round(w * dpr);
+        canvas.height = Math.round(h * dpr);
+      }
 
-  ctx.fillStyle = textColor;
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(text, boxX + padX, y + 0.5);
-  ctx.restore();
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      // 딥 터미널 배경
+      ctx.fillStyle = '#05070B';
+      ctx.fillRect(0, 0, w, h);
+
+      // 미세 수직·수평 헤어라인 그리드
+      ctx.strokeStyle = 'rgba(148, 163, 184, 0.05)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (let gx = 40; gx < w; gx += 56) {
+        ctx.moveTo(gx, 0);
+        ctx.lineTo(gx, h);
+      }
+      for (let gy = 30; gy < h; gy += 36) {
+        ctx.moveTo(0, gy);
+        ctx.lineTo(w, gy);
+      }
+      ctx.stroke();
+
+      // 중앙-우측 수직 수렴 스파인(Order-Block Spine) 좌표
+      const spineX = w * 0.72;
+      const spineW = 14;
+      const padY = 18;
+      const usableH = h - padY * 2;
+      const splitY = padY + usableH * 0.46; // 상단 신약(에메랄드) / 하단 구약(크림슨) 경계
+
+      // 수평 분할선 (신약 / 구약 극성 경계)
+      ctx.beginPath();
+      ctx.moveTo(0, splitY);
+      ctx.lineTo(w, splitY);
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.35)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      const nextHits = [];
+
+      // 66권 스트림 궤적 렌더링
+      streams.forEach((st, idx) => {
+        const isSelected = selectedBookKo === st.bookKo;
+        const isSectorMatch = activeSectorId === 'ALL' || st.sectorId === activeSectorId;
+        const baseY = padY + (idx / Math.max(1, streams.length - 1)) * usableH;
+
+        const isNT = !st.isOT;
+        const strokeColor = isSelected
+          ? '#38BDF8'
+          : isNT
+          ? '#10B981'
+          : '#F43F5E';
+
+        const alpha = isSelected ? 1.0 : isSectorMatch ? (st.hasActivity ? 0.72 : 0.34) : 0.08;
+
+        // 1) 좌측 -> 수직 스파인(spineX) 실시간 파동 궤적
+        ctx.beginPath();
+        const steps = 28;
+        for (let s = 0; s <= steps; s++) {
+          const t = s / steps;
+          const x = t * (spineX - 4);
+          // 오른쪽 스파인에 가까워질수록 해당 스트림의 고정 Y로 수렴
+          const converge = 1 - Math.pow(t, 2.2);
+          const wave =
+            Math.sin(t * 7.5 - tick * (1.2 + (idx % 5) * 0.15) + idx * 0.45) * (16 + st.readRatio * 22) * converge +
+            Math.cos(t * 13 + tick * 0.9 + idx) * 5 * converge;
+          const y = Math.max(padY, Math.min(h - padY, baseY + wave));
+          if (s === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.strokeStyle = strokeColor;
+        ctx.globalAlpha = alpha;
+        ctx.lineWidth = isSelected ? 2.2 : st.hasActivity ? 1.3 : 0.85;
+        if (isSelected) {
+          ctx.shadowColor = '#38BDF8';
+          ctx.shadowBlur = 10;
+        }
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // 2) 스파인 내부 세그먼트 블록
+        const segH = Math.max(2, usableH / streams.length - 0.8);
+        ctx.fillStyle = strokeColor;
+        ctx.globalAlpha = isSelected ? 1 : isSectorMatch ? 0.55 : 0.12;
+        ctx.fillRect(spineX, baseY - segH / 2, spineW, segH);
+
+        // 3) 스파인 우측 -> 우측 카드 매트릭스로 퍼져나가는 베지어 팬아웃(Fan-out) 곡선
+        if (isSelected || (isSectorMatch && (idx % 2 === 0 || st.hasActivity))) {
+          const rightEndX = w;
+          const rightEndY = padY + ((idx * 1.03) % streams.length) / streams.length * usableH;
+          ctx.beginPath();
+          ctx.moveTo(spineX + spineW, baseY);
+          ctx.bezierCurveTo(
+            spineX + spineW + (w - spineX) * 0.42,
+            baseY,
+            spineX + spineW + (w - spineX) * 0.58,
+            rightEndY,
+            rightEndX,
+            rightEndY
+          );
+          ctx.strokeStyle = strokeColor;
+          ctx.globalAlpha = isSelected ? 0.95 : 0.25;
+          ctx.lineWidth = isSelected ? 2.0 : 0.9;
+          ctx.stroke();
+        }
+
+        // 선택된 스트림 위를 질주하는 광자 패킷
+        if (isSelected) {
+          const headT = (tick * 0.55) % 1;
+          const px = headT * (spineX - 4);
+          const converge = 1 - Math.pow(headT, 2.2);
+          const wave =
+            Math.sin(headT * 7.5 - tick * (1.2 + (idx % 5) * 0.15) + idx * 0.45) * (16 + st.readRatio * 22) * converge +
+            Math.cos(headT * 13 + tick * 0.9 + idx) * 5 * converge;
+          const py = Math.max(padY, Math.min(h - padY, baseY + wave));
+
+          ctx.globalAlpha = 1;
+          ctx.beginPath();
+          ctx.arc(px, py, 4, 0, Math.PI * 2);
+          ctx.fillStyle = '#FFFFFF';
+          ctx.shadowColor = '#38BDF8';
+          ctx.shadowBlur = 12;
+          ctx.fill();
+          ctx.shadowBlur = 0;
+        }
+
+        ctx.globalAlpha = 1;
+        nextHits.push({ bookKo: st.bookKo, x: spineX + spineW / 2, y: baseY, r: 10 });
+      });
+
+      // 수직 스파인 외곽 프레임 글로우
+      ctx.strokeStyle = 'rgba(226, 232, 240, 0.35)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(spineX, padY - 2, spineW, usableH + 4);
+
+      hitPointsRef.current = nextHits;
+      animId = requestAnimationFrame(render);
+    };
+
+    render();
+    return () => cancelAnimationFrame(animId);
+  }, [streams, activeSectorId, selectedBookKo, isPlaying]);
+
+  const handleCanvasClick = (e) => {
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    let best = null;
+    let minD = 24;
+    for (const pt of hitPointsRef.current) {
+      const d = Math.abs(y - pt.y) + Math.abs(x - pt.x) * 0.15;
+      if (d < minD) {
+        minD = d;
+        best = pt;
+      }
+    }
+    if (best && onSelectBook) onSelectBook(best.bookKo);
+  };
+
+  return (
+    <div ref={containerRef} className="relative w-full h-full overflow-hidden">
+      <canvas
+        ref={canvasRef}
+        onClick={handleCanvasClick}
+        className="w-full h-full block cursor-crosshair"
+      />
+    </div>
+  );
 }
 // ==================== PART 1 끝 (아래에 PART 2 이어붙이기) ====================
 // ==================== PART 2 시작 ====================
@@ -274,35 +350,14 @@ export default function BibleSecondBrain3D({
     dailyData = {},
     readVerses = {},
     bibleNotes = [],
-    generalNotes = [],
-    isDarkMode
+    generalNotes = []
   } = store;
 
-  // iOS 야간 다크모드 자동 감지 + 앱 테마 100% 호환
-  const [systemDark, setSystemDark] = useState(() => {
-    if (typeof window === 'undefined' || !window.matchMedia) return true;
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
-  });
-
-  useEffect(() => {
-    if (typeof window === 'undefined' || !window.matchMedia) return;
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    const onChange = (e) => setSystemDark(e.matches);
-    mq.addEventListener?.('change', onChange);
-    return () => mq.removeEventListener?.('change', onChange);
-  }, []);
-
-  const isDark = typeof isDarkMode === 'boolean' ? isDarkMode : systemDark;
-
-  const containerRef = useRef(null);
-  const canvasRef = useRef(null);
-
-  const [activeLayerId, setActiveLayerId] = useState('LOOP');
-  const [selectedLexicon, setSelectedLexicon] = useState(LEXICON_STREAM_CODES[9]); // 기본: G3056 로고스
-  const [selectedBookChap, setSelectedBookChap] = useState({ bookKo: '요한복음', chap: 1, verse: 1 });
-  const [isAutoPulse, setIsAutoPulse] = useState(true);
-  const [mobileViewTab, setMobileViewTab] = useState('canvas'); // 'canvas' | 'queue' | 'terminal'
-  const [isHudCollapsed, setIsHudCollapsed] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [activeSectorId, setActiveSectorId] = useState('ALL');
+  const [selectedBookKo, setSelectedBookKo] = useState('요한복음');
+  const [selectedChap, setSelectedChap] = useState(1);
+  const [selectedVerse, setSelectedVerse] = useState(1);
 
   // 4대 역본 상태 ('krv4' | 'easy' | 'web' | 'orig')
   const [previewVersion, setPreviewVersion] = useState('krv4');
@@ -310,11 +365,11 @@ export default function BibleSecondBrain3D({
   const [easyDb, setEasyDb] = useState({});
   const [webDb, setWebDb] = useState({});
 
+  // 검색 & 모바일 탭 ('flow' | 'matrix' | 'inspector')
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState([]);
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+  const [mobileTab, setMobileTab] = useState('flow');
 
-  // 4대 역본 비동기 로드
   useEffect(() => {
     ensureKrv4TxtLoaded().then((db) => {
       if (db) setKrv4Db(db);
@@ -323,18 +378,10 @@ export default function BibleSecondBrain3D({
     fetch('/data/web_bible.json').then((r) => (r.ok ? r.json() : {})).then((d) => setWebDb(d || {})).catch(() => {});
   }, []);
 
-  // 카메라 팬 / 줌 상태
-  const cameraRef = useRef({ x: 0, y: 0, zoom: 1.0 });
-  const isDraggingRef = useRef(false);
-  const dragMovedRef = useRef(false);
-  const dragStartRef = useRef({ x: 0, y: 0 });
-  const pinchDistRef = useRef(null);
-  const hitRegionsRef = useRef([]);
-
   // =====================================================================
-  // 4. 앱 내 성경 통독 · QT · 설교 · 노트 텔레메트리 파싱 엔진
+  // 5. 66권 실시간 텔레메트리 스트림 (신약 상단 에메랄드 / 구약 하단 크림슨)
   // =====================================================================
-  const telemetry = useMemo(() => {
+  const { streams, sectorStats, ntActiveCount, otActiveCount, totalReadChaps } = useMemo(() => {
     const readChapSet = new Set();
     Object.keys(readVerses || {}).forEach((k) => {
       if (readVerses[k]) {
@@ -343,977 +390,459 @@ export default function BibleSecondBrain3D({
       }
     });
 
-    const bookReadCounts = {};
-    const sectorProgress = {};
-
-    BIBLE_66_CANON.forEach((b) => {
-      if (!sectorProgress[b.sector]) sectorProgress[b.sector] = { total: 0, read: 0 };
-      sectorProgress[b.sector].total += b.chaps;
-      let bRead = 0;
-      for (let c = 1; c <= b.chaps; c++) {
-        if (readChapSet.has(`${b.en}-${c}`) || readChapSet.has(`${b.ko}-${c}`)) {
-          bRead++;
-          sectorProgress[b.sector].read += 1;
-        }
-      }
-      bookReadCounts[b.ko] = { read: bRead, total: b.chaps, ratio: bRead / Math.max(1, b.chaps) };
-    });
-
-    let qtCount = 0;
-    let sermonCount = 0;
-    let applyCount = 0;
-    const cliRoutes = [];
-
-    Object.entries(dailyData || {})
-      .sort((a, b) => b[0].localeCompare(a[0]))
-      .forEach(([dateKey, d]) => {
-        if (!d) return;
-        if (d.qtTitle || d.qtMeditation) {
-          qtCount++;
-          const ref = d.qtReference || '시편 119:105';
-          cliRoutes.push({
-            id: `qt_${dateKey}`,
-            cmd: 'ROUTE',
-            src: `${dateKey} QT묵상`,
-            layer: 'LOOP',
-            dest: `${ref} · ${(d.qtTitle || d.qtMeditation || '').replace(/<[^>]*>?/gm, '').slice(0, 34)}`,
-            color: '#2DD4BF',
-            bookRef: ref,
-            screen: 'qt'
-          });
-        }
-        if (d.sermonTitle || d.sermonNotes) {
-          sermonCount++;
-          const ref = d.sermonReference || '요한복음 1:1';
-          cliRoutes.push({
-            id: `serm_${dateKey}`,
-            cmd: 'ROUTE',
-            src: `${dateKey} 설교노트`,
-            layer: 'CONTEXT',
-            dest: `${ref} · ${(d.sermonTitle || '예배 설교 강해').slice(0, 34)}`,
-            color: '#F59E0B',
-            bookRef: ref,
-            screen: 'sermon'
-          });
-        }
-        if (d.sermonActionItem || d.qtGraceLine || d.sermonGraceLine) {
-          applyCount++;
+    // 권별 QT / 설교 / 성경노트 카운트 집계
+    const noteCountByBook = {};
+    Object.values(dailyData || {}).forEach((d) => {
+      if (!d) return;
+      const refText = `${d.qtReference || ''} ${d.qtTitle || ''} ${d.sermonReference || ''} ${d.sermonTitle || ''}`;
+      BIBLE_66_CANON.forEach((b) => {
+        if (refText.includes(b.ko)) {
+          noteCountByBook[b.ko] = (noteCountByBook[b.ko] || 0) + 1;
         }
       });
+    });
 
-    const defaultRoutes = [
-      { id: 'def_1', cmd: 'ROUTE', src: 'H7225 בְּרֵאשִׁית', layer: 'PROMPT', dest: '창세기 1:1 · BHS 히브리어 원어 형태소 파싱 완료', color: '#FACC15', bookRef: '창세기 1:1', screen: 'interlinear' },
-      { id: 'def_2', cmd: 'ROUTE', src: 'G3056 λόγος', layer: 'LOOP', dest: '요한복음 1:14 · 말씀이 육신이 되어 (로고스 결합)', color: '#2DD4BF', bookRef: '요한복음 1:14', screen: 'interlinear' },
-      { id: 'def_3', cmd: 'ROUTE', src: 'TSK 344K Cross-Ref', layer: 'CONTEXT', dest: '이사야 53:5 ↔ 베드로전서 2:24 · 대속 언약 시냅스', color: '#F59E0B', bookRef: '이사야 53:5', screen: 'bible' },
-      { id: 'def_4', cmd: 'ROUTE', src: 'G26 ἀγάπη', layer: 'HARNESS', dest: '로마서 8:28 · 삶의 적용 트래커 & 중보기도 동기화', color: '#FB923C', bookRef: '로마서 8:28', screen: 'qt' }
+    (bibleNotes || []).forEach((bn) => {
+      const refStr = bn?.verses?.[0]?.ref || '';
+      BIBLE_66_CANON.forEach((b) => {
+        if (refStr.includes(b.ko)) {
+          noteCountByBook[b.ko] = (noteCountByBook[b.ko] || 0) + 1;
+        }
+      });
+    });
+
+    // 신약(상단 27권) 먼저, 구약(하단 39권) 순서로 배치해 오더블록 극성 구조 구현
+    const orderedCanon = [
+      ...BIBLE_66_CANON.filter((b) => !b.isOT),
+      ...BIBLE_66_CANON.filter((b) => b.isOT)
     ];
 
+    const secMap = {};
+    CANON_SECTOR_GROUPS.forEach((g) => {
+      secMap[g.id] = { ...g, totalChaps: 0, readChaps: 0, noteCount: 0, bookCount: 0 };
+    });
+
+    let ntAct = 0;
+    let otAct = 0;
+
+    const list = orderedCanon.map((b) => {
+      const sectorId = SECTOR_NAME_TO_ID[b.sector] || (b.isOT ? 'law' : 'gospels');
+      let readCount = 0;
+      for (let c = 1; c <= b.chaps; c++) {
+        if (readChapSet.has(`${b.en}-${c}`) || readChapSet.has(`${b.ko}-${c}`)) readCount++;
+      }
+      const noteCount = noteCountByBook[b.ko] || 0;
+      const readRatio = readCount / Math.max(1, b.chaps);
+      const hasActivity = readCount > 0 || noteCount > 0;
+
+      if (!b.isOT && hasActivity) ntAct++;
+      if (b.isOT && hasActivity) otAct++;
+
+      if (secMap[sectorId]) {
+        secMap[sectorId].totalChaps += b.chaps;
+        secMap[sectorId].readChaps += readCount;
+        secMap[sectorId].noteCount += noteCount;
+        secMap[sectorId].bookCount += 1;
+      }
+
+      return {
+        bookKo: b.ko,
+        bookEn: b.en,
+        abbr: b.abbr,
+        chaps: b.chaps,
+        isOT: b.isOT,
+        sector: b.sector,
+        sectorId,
+        readCount,
+        readRatio,
+        pct: Math.round(readRatio * 100),
+        noteCount,
+        hasActivity
+      };
+    });
+
+    const sectorStatsArr = CANON_SECTOR_GROUPS.map((g) => {
+      const st = secMap[g.id];
+      const pct = st.totalChaps > 0 ? ((st.readChaps / st.totalChaps) * 100).toFixed(1) : '0.0';
+      return { ...st, pct };
+    });
+
     return {
-      totalReadChaps: readChapSet.size,
-      qtCount,
-      sermonCount,
-      applyCount,
-      totalNotes: qtCount + sermonCount + (bibleNotes?.length || 0) + (generalNotes?.length || 0),
-      bookReadCounts,
-      sectorProgress,
-      cliRoutes: [...cliRoutes, ...defaultRoutes].slice(0, 6)
+      streams: list,
+      sectorStats: sectorStatsArr,
+      ntActiveCount: ntAct || 27,
+      otActiveCount: otAct || 39,
+      totalReadChaps: readChapSet.size
     };
-  }, [dailyData, readVerses, bibleNotes, generalNotes]);
+  }, [dailyData, readVerses, bibleNotes]);
 
-  const activeLayerObj = useMemo(
-    () => TRIAGE_ORBIT_LAYERS.find((l) => l.id === activeLayerId) || TRIAGE_ORBIT_LAYERS[2],
-    [activeLayerId]
-  );
+  // 현재 선택된 성경의 4대 역본 + 원어 + 연결 노트 추출
+  const activeBookDetail = useMemo(() => {
+    const meta = BIBLE_66_CANON.find((b) => b.ko === selectedBookKo) || BIBLE_66_CANON[42];
+    const chapNum = Math.max(1, Math.min(meta.chaps, selectedChap || 1));
+    const sectorId = SECTOR_NAME_TO_ID[meta.sector] || (meta.isOT ? 'law' : 'gospels');
+    const sectorObj = CANON_SECTOR_GROUPS.find((g) => g.id === sectorId) || CANON_SECTOR_GROUPS[0];
+    const lexicon = CORE_LEXICON_MAP[sectorObj.strongs] || CORE_LEXICON_MAP.G3056;
 
-  // 현재 포커스된 성경 권/장의 4대 역본 데이터 + 연결된 내 QT/설교/노트 역추적
-  const scripturePreview = useMemo(() => {
-    const bMeta = BIBLE_66_CANON.find((b) => b.ko === selectedBookChap.bookKo) || BIBLE_66_CANON[42];
-    const chapNum = Math.max(1, Math.min(bMeta.chaps, selectedBookChap.chap || 1));
-    const bookIndex = BIBLE_66_CANON.findIndex((b) => b.ko === bMeta.ko) + 1;
-
-    const krv4Chap = krv4Db?.[bMeta.en]?.[chapNum - 1] || krv4Db?.[bMeta.ko]?.[chapNum - 1];
-    const fallbackBook = (Array.isArray(bibleData) ? bibleData : []).find((b) => b.name === bMeta.en || b.name === bMeta.ko);
+    const krv4Chap = krv4Db?.[meta.en]?.[chapNum - 1] || krv4Db?.[meta.ko]?.[chapNum - 1];
+    const fallbackBook = (Array.isArray(bibleData) ? bibleData : []).find((b) => b.name === meta.en || b.name === meta.ko);
     const baseVerses = krv4Chap || fallbackBook?.chapters?.[chapNum - 1] || [];
 
-    const verses = baseVerses.slice(0, 3).map((raw, i) => {
-      const vNum = i + 1;
+    const startIdx = Math.max(0, Math.min(baseVerses.length - 1, (selectedVerse || 1) - 1));
+    const verses = baseVerses.slice(startIdx, startIdx + 3).map((raw, i) => {
+      const vNum = startIdx + i + 1;
       const decoded = String(raw || '').replace(/&#x27;/g, "'").replace(/&quot;/g, '"').trim();
       const { pureText } = splitPericopeAndVerse(decoded);
       return {
         v: vNum,
         krv4: pureText || decoded,
-        easy: easyDb[`${bMeta.ko}-${chapNum}-${vNum}`] || '',
-        web: webDb[`${bMeta.ko}-${chapNum}-${vNum}`] || webDb[`${bMeta.en}-${chapNum}-${vNum}`] || ''
+        easy: easyDb[`${meta.ko}-${chapNum}-${vNum}`] || '',
+        web: webDb[`${meta.ko}-${chapNum}-${vNum}`] || webDb[`${meta.en}-${chapNum}-${vNum}`] || ''
       };
     });
 
-    // 현재 권/장에 연결된 내 QT · 설교 · 성경노트 역추적
-    const linkedRecords = [];
+    // 연결된 내 QT / 설교 / 성경노트 역추적
+    const linked = [];
     Object.entries(dailyData || {}).forEach(([dateKey, d]) => {
       if (!d) return;
-      const qtRefStr = `${d.qtReference || ''} ${d.qtTitle || ''}`;
-      if (qtRefStr.includes(bMeta.ko)) {
-        linkedRecords.push({
-          id: `lqt_${dateKey}`,
-          badge: 'QT',
-          date: dateKey,
-          title: d.qtTitle || d.qtReference || `${bMeta.ko} QT`,
-          screen: 'qt'
-        });
+      if (`${d.qtReference || ''} ${d.qtTitle || ''}`.includes(meta.ko)) {
+        linked.push({ id: `qt_${dateKey}`, tag: 'QT', title: d.qtTitle || d.qtReference, date: dateKey, screen: 'qt' });
       }
-      const sermRefStr = `${d.sermonReference || ''} ${d.sermonTitle || ''}`;
-      if (sermRefStr.includes(bMeta.ko)) {
-        linkedRecords.push({
-          id: `lserm_${dateKey}`,
-          badge: '설교',
-          date: dateKey,
-          title: d.sermonTitle || d.sermonReference || `${bMeta.ko} 설교`,
-          screen: 'sermon'
-        });
+      if (`${d.sermonReference || ''} ${d.sermonTitle || ''}`.includes(meta.ko)) {
+        linked.push({ id: `serm_${dateKey}`, tag: '설교', title: d.sermonTitle || d.sermonReference, date: dateKey, screen: 'sermon' });
       }
     });
-
     (bibleNotes || []).forEach((bn) => {
       const refStr = bn?.verses?.[0]?.ref || '';
-      if (refStr.includes(bMeta.ko)) {
-        linkedRecords.push({
-          id: `lbn_${bn.id}`,
-          badge: '노트',
-          date: bn.date || '',
-          title: `${refStr} · ${(bn.note || '').slice(0, 22)}`,
-          screen: 'diary'
-        });
+      if (refStr.includes(meta.ko)) {
+        linked.push({ id: `bn_${bn.id}`, tag: '노트', title: `${refStr} · ${(bn.note || '').slice(0, 20)}`, date: bn.date || '', screen: 'diary' });
+      }
+    });
+    (generalNotes || []).forEach((gn) => {
+      if (`${gn.title || ''} ${gn.content || ''}`.includes(meta.ko)) {
+        linked.push({ id: `gn_${gn.id}`, tag: '자유', title: gn.title || '자유 노트', date: gn.updatedAt || '', screen: 'generalNote' });
       }
     });
 
     return {
-      bookKo: bMeta.ko,
-      bookEn: bMeta.en,
-      bookCode: `s${String(bookIndex).padStart(2, '0')}`,
-      chap: chapNum,
-      totalChaps: bMeta.chaps,
-      sector: bMeta.sector,
+      meta,
+      chapNum,
+      sectorObj,
+      lexicon,
       verses,
-      linkedRecords: linkedRecords.slice(0, 4)
+      linked: linked.slice(0, 5)
     };
-  }, [selectedBookChap, krv4Db, easyDb, webDb, dailyData, bibleNotes]);
+  }, [selectedBookKo, selectedChap, selectedVerse, krv4Db, easyDb, webDb, dailyData, bibleNotes, generalNotes]);
 
-  // =====================================================================
-  // 5. 통합 검색 엔진 (성경 권명 · 구절 · 원어 · 본문 키워드)
-  // =====================================================================
-  const handleRunOmniboxSearch = useCallback(
-    (qStr) => {
-      const q = (qStr || '').trim();
-      setSearchQuery(qStr);
-      if (!q) {
-        setSearchResults([]);
-        setShowSearchDropdown(false);
-        return;
-      }
+  // 통합 딥서치
+  const searchResults = useMemo(() => {
+    const q = searchQuery.trim();
+    if (!q) return [];
+    const lowerQ = q.toLowerCase();
+    const hits = [];
 
-      const hits = [];
-      const parsedRefs = extractAllBibleRefsFromText(q);
-      if (parsedRefs.length > 0) {
-        parsedRefs.forEach((r) => {
-          hits.push({
-            id: `ref_${r.bookKo}_${r.chapter}`,
-            badge: '성경구절',
-            color: '#0D9488',
-            title: `${r.bookKo} ${r.chapter}장 ${r.verse ? `${r.verse}절` : ''}`,
-            sub: '해당 성경 아크 및 4대 역본으로 즉시 이동',
-            action: () => {
-              setSelectedBookChap({ bookKo: r.bookKo, chap: r.chapter || 1, verse: r.verse || 1 });
-              setActiveLayerId('PROMPT');
-            }
-          });
-        });
-      }
-
-      LEXICON_STREAM_CODES.forEach((lex) => {
-        if (
-          lex.code.toLowerCase().includes(q.toLowerCase()) ||
-          lex.word.includes(q) ||
-          lex.pron.includes(q) ||
-          lex.mean.includes(q)
-        ) {
-          hits.push({
-            id: `lex_${lex.code}`,
-            badge: `원어 ${lex.strongs}`,
-            color: '#D97706',
-            title: `${lex.word} (${lex.pron}) — ${lex.mean}`,
-            sub: `${lex.book} ${lex.chap}:${lex.verse} · ${lex.grammar}`,
-            action: () => {
-              setSelectedLexicon(lex);
-              setActiveLayerId(lex.layer);
-              setSelectedBookChap({ bookKo: lex.book, chap: lex.chap, verse: lex.verse });
-            }
-          });
+    extractAllBibleRefsFromText(q).forEach((r) => {
+      hits.push({
+        id: `ref_${r.bookKo}_${r.chapter}_${r.verse}`,
+        badge: '구절',
+        color: '#38BDF8',
+        title: `${r.bookKo} ${r.chapter}:${r.verse}`,
+        onSelect: () => {
+          setSelectedBookKo(r.bookKo);
+          setSelectedChap(r.chapter || 1);
+          setSelectedVerse(r.verse || 1);
+          setActiveSectorId('ALL');
         }
       });
+    });
 
-      BIBLE_66_CANON.forEach((b, idx) => {
-        if (b.ko.includes(q) || b.en.toLowerCase().includes(q.toLowerCase())) {
-          hits.push({
-            id: `bk_${b.ko}`,
-            badge: `s${String(idx + 1).padStart(2, '0')} ${b.sector}`,
-            color: '#2563EB',
-            title: `${b.ko} (${b.en}) 전체 ${b.chaps}장`,
-            sub: `통독: ${telemetry.bookReadCounts[b.ko]?.read || 0}/${b.chaps}장`,
-            action: () => {
-              setSelectedBookChap({ bookKo: b.ko, chap: 1, verse: 1 });
-              setActiveLayerId('CONTEXT');
-            }
-          });
-        }
-      });
-
-      setSearchResults(hits.slice(0, 10));
-      setShowSearchDropdown(true);
-    },
-    [telemetry.bookReadCounts]
-  );
-
-  const rightConstellationParticles = useMemo(() => {
-    const pts = [];
-    for (let i = 0; i < 85; i++) {
-      pts.push({
-        normY: (i / 84) * 2 - 1,
-        spreadX: ((i * 29) % 100) / 100,
-        size: 1.5 + (i % 4) * 0.8,
-        phase: i * 0.7,
-        isCyan: i % 3 !== 0,
-        isHub: i % 9 === 0
-      });
-    }
-    return pts;
-  }, []);
-
-  // =====================================================================
-  // 6. 60FPS `LAYER TRIAGE` 캔버스 렌더러 (다크/라이트 100% 대응)
-  // =====================================================================
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    let animId;
-    let tick = 0;
-
-    const render = () => {
-      tick += 0.016;
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const width = canvas.width / dpr;
-      const height = canvas.height / dpr;
-
-      if (!width || !height || width < 20) {
-        animId = requestAnimationFrame(render);
-        return;
-      }
-
-      ctx.globalCompositeOperation = 'source-over';
-      ctx.fillStyle = isDark ? '#040508' : '#F4F6F9';
-      ctx.fillRect(0, 0, width, height);
-
-      const cam = cameraRef.current;
-      ctx.save();
-      ctx.translate(width / 2 + cam.x, height / 2 + cam.y);
-      ctx.scale(cam.zoom, cam.zoom);
-
-      const minDim = Math.min(width, height);
-      const orbitCenter = { x: 0, y: 0 };
-
-      // 미세 테크니컬 그리드
-      const gridSpan = Math.max(width, height) * 1.2;
-      ctx.strokeStyle = isDark ? 'rgba(148, 163, 184, 0.04)' : 'rgba(15, 23, 42, 0.05)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      for (let gx = -gridSpan; gx <= gridSpan; gx += 48) {
-        ctx.moveTo(gx, -gridSpan);
-        ctx.lineTo(gx, gridSpan);
-      }
-      for (let gy = -gridSpan; gy <= gridSpan; gy += 48) {
-        ctx.moveTo(-gridSpan, gy);
-        ctx.lineTo(gridSpan, gy);
-      }
-      ctx.stroke();
-
-      // 볼류메트릭 오라
-      const bgGlow = ctx.createRadialGradient(0, 0, 8, 0, 0, minDim * 0.48);
-      if (isDark) {
-        bgGlow.addColorStop(0, 'rgba(45, 212, 191, 0.16)');
-        bgGlow.addColorStop(0.38, 'rgba(88, 28, 135, 0.18)');
-        bgGlow.addColorStop(0.75, 'rgba(245, 158, 11, 0.06)');
-        bgGlow.addColorStop(1, 'rgba(4, 5, 8, 0)');
-      } else {
-        bgGlow.addColorStop(0, 'rgba(37, 99, 235, 0.12)');
-        bgGlow.addColorStop(0.45, 'rgba(13, 148, 136, 0.08)');
-        bgGlow.addColorStop(1, 'rgba(244, 246, 249, 0)');
-      }
-      ctx.fillStyle = bgGlow;
-      ctx.beginPath();
-      ctx.arc(0, 0, minDim * 0.48, 0, Math.PI * 2);
-      ctx.fill();
-
-      const arcR = Math.max(300, minDim * 0.88);
-      const maxArcAngle = 0.56;
-      const leftArcSpineX = -Math.min(width * 0.22, 230);
-      const leftArcCx = leftArcSpineX - arcR;
-      const rightArcSpineX = Math.min(width * 0.20, 210);
-      const rightArcCx = rightArcSpineX + arcR;
-      const nextHitRegions = [];
-
-      // 좌측 브래킷 아크 `)` — 160채널 스펙트럼 & 성경 66권
-      ctx.save();
-      const totalLeftNeedles = 160;
-      for (let i = 0; i < totalLeftNeedles; i++) {
-        const norm = i / (totalLeftNeedles - 1) - 0.5;
-        const ang = norm * (maxArcAngle * 2);
-        const bIdx = Math.min(65, Math.floor((i / totalLeftNeedles) * 66));
-        const book = BIBLE_66_CANON[bIdx];
-        const readRatio = telemetry.bookReadCounts[book.ko]?.ratio || 0;
-        const isCurrentBook = selectedBookChap.bookKo === book.ko;
-
-        const wave = Math.sin(tick * 3.6 + i * 0.22) * 9 + Math.cos(tick * 2.0 - i * 0.15) * 6;
-        const barLen = Math.max(12, 24 + readRatio * 36 + ((i * 19) % 28) + wave + (isCurrentBook ? 20 : 0));
-
-        ctx.beginPath();
-        ctx.moveTo(leftArcCx + Math.cos(ang) * arcR, Math.sin(ang) * arcR);
-        ctx.lineTo(leftArcCx + Math.cos(ang) * (arcR - barLen), Math.sin(ang) * (arcR - barLen));
-        if (isCurrentBook) {
-          ctx.strokeStyle = isDark ? '#FFFFFF' : '#2563EB';
-          ctx.lineWidth = 2.2;
-        } else if (i % 7 === 0 || readRatio > 0) {
-          ctx.strokeStyle = bIdx < 39 ? 'rgba(217, 119, 6, 0.78)' : 'rgba(13, 148, 136, 0.78)';
-          ctx.lineWidth = 1.3;
-        } else {
-          ctx.strokeStyle = isDark ? 'rgba(180, 120, 40, 0.32)' : 'rgba(100, 116, 139, 0.28)';
-          ctx.lineWidth = 0.9;
-        }
-        ctx.stroke();
-      }
-
-      [arcR, arcR + 9].forEach((r, idx) => {
-        ctx.beginPath();
-        ctx.arc(leftArcCx, 0, r, -maxArcAngle, maxArcAngle);
-        ctx.strokeStyle = idx === 0 ? '#D97706' : 'rgba(13, 148, 136, 0.55)';
-        ctx.lineWidth = idx === 0 ? 2.0 : 1.2;
-        ctx.stroke();
-      });
-
-      BIBLE_66_CANON.forEach((book, bIdx) => {
-        const isCurrentBook = selectedBookChap.bookKo === book.ko;
-        if (bIdx % 4 !== 0 && !isCurrentBook) return;
-        const norm = bIdx / 65 - 0.5;
-        const ang = norm * (maxArcAngle * 1.92);
-        const lx = leftArcCx + Math.cos(ang) * (arcR - 72);
-        const ly = Math.sin(ang) * (arcR - 72);
-        const codeStr = `s${String(bIdx + 1).padStart(2, '0')} ${book.ko}`;
-
-        drawCrispBadgeText(
-          ctx,
-          codeStr,
-          lx,
-          ly,
-          isCurrentBook ? (isDark ? '#FACC15' : '#2563EB') : isDark ? (bIdx < 39 ? '#FDE68A' : '#99F6E4') : '#1E293B',
-          isCurrentBook ? (isDark ? '#FACC15' : '#2563EB') : isDark ? 'rgba(255,255,255,0.12)' : 'rgba(15,23,42,0.14)',
-          'right',
-          isCurrentBook,
-          isDark
-        );
-
-        nextHitRegions.push({ id: `book_${book.ko}`, type: 'book', x: lx - 38, y: ly, r: 20, bookKo: book.ko, chap: 1 });
-      });
-      ctx.restore();
-
-      // 우측 브래킷 아크 `(` — 18대 원어 스트림 & 외곽 시냅스 성단
-      ctx.save();
-      const constellationNodes = rightConstellationParticles.map((pt) => {
-        const ang = Math.PI + pt.normY * (maxArcAngle * 0.95);
-        const baseX = rightArcCx + Math.cos(ang) * (arcR - 14);
-        const baseY = Math.sin(ang) * (arcR - 14);
-        return {
-          ...pt,
-          x: baseX + 46 + pt.spreadX * Math.min(180, width * 0.22) + Math.sin(tick * 0.8 + pt.phase) * 4,
-          y: baseY + Math.cos(tick * 0.7 + pt.phase) * 4
-        };
-      });
-
-      ctx.lineWidth = 0.85;
-      for (let i = 0; i < constellationNodes.length; i++) {
-        for (let j = i + 1; j < constellationNodes.length; j++) {
-          const d = Math.hypot(constellationNodes[i].x - constellationNodes[j].x, constellationNodes[i].y - constellationNodes[j].y);
-          if (d < 44) {
-            const alpha = (1 - d / 44) * (isDark ? 0.36 : 0.25);
-            ctx.strokeStyle = constellationNodes[i].isCyan ? `rgba(13, 148, 136, ${alpha})` : `rgba(217, 119, 6, ${alpha})`;
-            ctx.beginPath();
-            ctx.moveTo(constellationNodes[i].x, constellationNodes[i].y);
-            ctx.lineTo(constellationNodes[j].x, constellationNodes[j].y);
-            ctx.stroke();
+    Object.values(CORE_LEXICON_MAP).forEach((lex) => {
+      if (lex.strongs.toLowerCase().includes(lowerQ) || lex.pron.includes(q) || lex.mean.includes(q)) {
+        hits.push({
+          id: `lex_${lex.strongs}`,
+          badge: lex.strongs,
+          color: '#F59E0B',
+          title: `${lex.word} [${lex.pron}] — ${lex.mean}`,
+          onSelect: () => {
+            setSelectedBookKo(lex.book);
+            setSelectedChap(lex.chap);
+            setSelectedVerse(lex.verse);
+            setPreviewVersion('orig');
           }
-        }
-      }
-
-      constellationNodes.forEach((p) => {
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.isHub ? p.size * 1.4 : p.size, 0, Math.PI * 2);
-        ctx.fillStyle = p.isHub ? (isDark ? '#FFFFFF' : '#2563EB') : p.isCyan ? '#0D9488' : '#D97706';
-        ctx.fill();
-      });
-
-      [arcR, arcR - 10].forEach((r, idx) => {
-        ctx.beginPath();
-        ctx.arc(rightArcCx, 0, r, Math.PI - maxArcAngle, Math.PI + maxArcAngle);
-        ctx.strokeStyle = idx === 0 ? '#0D9488' : 'rgba(217, 119, 6, 0.48)';
-        ctx.lineWidth = idx === 0 ? 2.0 : 1.2;
-        ctx.stroke();
-      });
-
-      let activeLexiconAnchor = null;
-      LEXICON_STREAM_CODES.forEach((lex, lIdx) => {
-        const norm = lIdx / (LEXICON_STREAM_CODES.length - 1) - 0.5;
-        const ang = Math.PI - norm * (maxArcAngle * 1.88);
-        const dx = rightArcCx + Math.cos(ang) * (arcR - 10);
-        const dy = Math.sin(ang) * (arcR - 10);
-        const isSelLex = selectedLexicon?.code === lex.code;
-        const isLayerMatch = lex.layer === activeLayerId;
-
-        if (isSelLex) activeLexiconAnchor = { x: dx, y: dy, lex };
-
-        ctx.beginPath();
-        ctx.arc(dx, dy, isSelLex ? 6 : 3.5, 0, Math.PI * 2);
-        ctx.fillStyle = isSelLex ? (isDark ? '#FFFFFF' : '#2563EB') : isLayerMatch ? '#D97706' : isDark ? '#090D16' : '#FFFFFF';
-        ctx.fill();
-        ctx.lineWidth = isSelLex ? 2 : 1.3;
-        ctx.strokeStyle = isSelLex ? '#0D9488' : isLayerMatch ? '#D97706' : 'rgba(13, 148, 136, 0.65)';
-        ctx.stroke();
-
-        const labelText = isSelLex ? `${lex.code} ${lex.word} (${lex.pron})` : `${lex.code} ${lex.word}`;
-        drawCrispBadgeText(
-          ctx,
-          labelText,
-          dx + 14,
-          dy,
-          isSelLex ? (isDark ? '#5EEAD4' : '#0F766E') : isLayerMatch ? (isDark ? '#FEF08A' : '#B45309') : isDark ? '#E2E8F0' : '#334155',
-          isSelLex ? '#0D9488' : isLayerMatch ? 'rgba(217,119,6,0.45)' : isDark ? 'rgba(255,255,255,0.12)' : 'rgba(15,23,42,0.14)',
-          'left',
-          isSelLex,
-          isDark
-        );
-
-        nextHitRegions.push({ id: `lex_${lex.code}`, type: 'lexicon', x: dx + 60, y: dy, r: 22, lexicon: lex });
-      });
-      ctx.restore();
-
-      // 중앙 동심 점선 궤도 링
-      [0.145, 0.195, 0.245].forEach((ratio) => {
-        ctx.beginPath();
-        ctx.arc(orbitCenter.x, orbitCenter.y, minDim * ratio, 0, Math.PI * 2);
-        ctx.strokeStyle = isDark ? 'rgba(148, 163, 184, 0.24)' : 'rgba(15, 23, 42, 0.16)';
-        ctx.lineWidth = 1;
-        ctx.setLineDash([4, 5]);
-        ctx.stroke();
-        ctx.setLineDash([]);
-      });
-
-      if (activeLexiconAnchor) {
-        drawElectricBeam(ctx, 0, 0, activeLexiconAnchor.x, activeLexiconAnchor.y, '#0D9488', 'rgba(13, 148, 136, 0.24)', tick, true, isDark);
-      }
-
-      // 4대 회전 궤도 레이어 노드
-      TRIAGE_ORBIT_LAYERS.forEach((layer, idx) => {
-        const currentAng = layer.baseAngle + (isAutoPulse ? Math.sin(tick * 0.42 + idx * 1.3) * 0.1 : 0);
-        const r = minDim * layer.orbitRadiusRatio;
-        const nx = Math.cos(currentAng) * r;
-        const ny = Math.sin(currentAng) * r;
-        const isAct = activeLayerId === layer.id;
-        const lColor = isDark ? layer.color : layer.lightColor;
-
-        drawElectricBeam(ctx, 0, 0, nx, ny, lColor, isAct ? 'rgba(217, 119, 6, 0.25)' : 'rgba(148, 163, 184, 0.08)', tick, isAct, isDark);
-
-        if (isAct) {
-          const arcHitY = Math.max(-arcR * 0.48, Math.min(arcR * 0.48, ny));
-          const arcHitX = leftArcCx + Math.sqrt(Math.max(0, arcR * arcR - arcHitY * arcHitY));
-          drawElectricBeam(ctx, nx, ny, arcHitX, arcHitY, lColor, 'rgba(217, 119, 6, 0.24)', tick, true, isDark);
-        }
-
-        const outerR = isAct ? 22 : 16;
-        ctx.beginPath();
-        ctx.arc(nx, ny, outerR, 0, Math.PI * 2);
-        ctx.fillStyle = isDark ? 'rgba(8, 10, 18, 0.94)' : 'rgba(255, 255, 255, 0.96)';
-        ctx.fill();
-        ctx.lineWidth = isAct ? 2.2 : 1.4;
-        ctx.strokeStyle = lColor;
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.arc(nx, ny, isAct ? 5 : 3, 0, Math.PI * 2);
-        ctx.fillStyle = isAct ? (isDark ? '#FFFFFF' : lColor) : lColor;
-        ctx.fill();
-
-        const boxW = 104;
-        const boxH = 34;
-        const boxX = nx + layer.calloutDir.dx;
-        const boxY = ny + layer.calloutDir.dy;
-        ctx.fillStyle = isDark ? 'rgba(10, 14, 24, 0.94)' : 'rgba(255, 255, 255, 0.96)';
-        drawSafeRoundRect(ctx, boxX, boxY, boxW, boxH, 4);
-        ctx.fill();
-        ctx.strokeStyle = isAct ? lColor : isDark ? 'rgba(148,163,184,0.35)' : 'rgba(15,23,42,0.18)';
-        ctx.lineWidth = isAct ? 1.5 : 1;
-        ctx.stroke();
-
-        ctx.font = '900 10px "JetBrains Mono", monospace';
-        ctx.fillStyle = lColor;
-        ctx.textAlign = 'left';
-        ctx.fillText(layer.id, boxX + 8, boxY + 13);
-        ctx.font = '600 8.5px "JetBrains Mono", monospace';
-        ctx.fillStyle = isDark ? '#CBD5E1' : '#475569';
-        ctx.fillText(layer.code, boxX + 8, boxY + 25);
-
-        nextHitRegions.push({
-          id: `layer_${layer.id}`,
-          type: 'layer',
-          x: nx,
-          y: ny,
-          r: 28,
-          layerId: layer.id,
-          bookKo: layer.bookRef,
-          chap: layer.chapRef,
-          strongs: layer.strongsRef
         });
-      });
+      }
+    });
 
-      // 정중앙 TRIAGE 코어
-      ctx.beginPath();
-      ctx.arc(0, 0, 22, 0, Math.PI * 2);
-      ctx.strokeStyle = '#0D9488';
-      ctx.lineWidth = 2;
-      ctx.stroke();
+    BIBLE_66_CANON.forEach((b) => {
+      if (b.ko.includes(q) || b.en.toLowerCase().includes(lowerQ)) {
+        hits.push({
+          id: `bk_${b.ko}`,
+          badge: b.isOT ? '구약' : '신약',
+          color: b.isOT ? '#F43F5E' : '#10B981',
+          title: `${b.ko} (${b.en}) · ${b.chaps}장`,
+          onSelect: () => {
+            setSelectedBookKo(b.ko);
+            setSelectedChap(1);
+            setSelectedVerse(1);
+            setActiveSectorId(SECTOR_NAME_TO_ID[b.sector] || 'ALL');
+          }
+        });
+      }
+    });
 
-      ctx.beginPath();
-      ctx.arc(0, 0, 12, 0, Math.PI * 2);
-      ctx.fillStyle = isDark ? '#FFFFFF' : '#2563EB';
-      ctx.fill();
+    return hits.slice(0, 10);
+  }, [searchQuery]);
 
-      hitRegionsRef.current = nextHitRegions;
-      ctx.restore();
-      animId = requestAnimationFrame(render);
-    };
+  // 우측 카드 매트릭스 필터링
+  const visibleMatrixStreams = useMemo(() => {
+    return activeSectorId === 'ALL' ? streams : streams.filter((s) => s.sectorId === activeSectorId);
+  }, [streams, activeSectorId]);
 
-    render();
-    return () => cancelAnimationFrame(animId);
-  }, [activeLayerId, selectedLexicon, selectedBookChap, isAutoPulse, telemetry, rightConstellationParticles, isDark]);
-
-  const handleResize = useCallback(() => {
-    const canvas = canvasRef.current;
-    const container = containerRef.current;
-    if (!canvas || !container) return;
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const rect = container.getBoundingClientRect();
-    canvas.width = Math.max(1, Math.round(rect.width * dpr));
-    canvas.height = Math.max(1, Math.round(rect.height * dpr));
-    canvas.style.width = `${rect.width}px`;
-    canvas.style.height = `${rect.height}px`;
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.scale(dpr, dpr);
-    }
-    cameraRef.current = { x: 0, y: 0, zoom: rect.width < 520 ? 0.72 : rect.width < 900 ? 0.86 : 1.0 };
+  const handleSelectBook = useCallback((bookKo) => {
+    setSelectedBookKo(bookKo);
+    setSelectedChap(1);
+    setSelectedVerse(1);
   }, []);
 
-  useEffect(() => {
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [handleResize, mobileViewTab]);
-
-  const findHitTarget = (clientX, clientY) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return null;
-    const rect = canvas.getBoundingClientRect();
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const cam = cameraRef.current;
-    const wx = (clientX - rect.left - (canvas.width / dpr / 2 + cam.x)) / cam.zoom;
-    const wy = (clientY - rect.top - (canvas.height / dpr / 2 + cam.y)) / cam.zoom;
-    return hitRegionsRef.current.find((r) => Math.hypot(wx - r.x, wy - r.y) <= (r.r || 24)) || null;
-  };
-
-  const handlePointerDown = (e) => {
-    if (e.touches && e.touches.length === 2) {
-      pinchDistRef.current = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-      return;
-    }
-    const cx = e.touches ? e.touches[0].clientX : e.clientX;
-    const cy = e.touches ? e.touches[0].clientY : e.clientY;
-    isDraggingRef.current = true;
-    dragMovedRef.current = false;
-    dragStartRef.current = { x: cx, y: cy };
-  };
-
-  const handlePointerMove = (e) => {
-    if (e.touches && e.touches.length === 2 && pinchDistRef.current) {
-      const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-      cameraRef.current.zoom = Math.max(0.45, Math.min(2.4, cameraRef.current.zoom * (dist / pinchDistRef.current)));
-      pinchDistRef.current = dist;
-      dragMovedRef.current = true;
-      return;
-    }
-    if (!isDraggingRef.current) return;
-    const cx = e.touches ? e.touches[0].clientX : e.clientX;
-    const cy = e.touches ? e.touches[0].clientY : e.clientY;
-    const dx = cx - dragStartRef.current.x;
-    const dy = cy - dragStartRef.current.y;
-    if (Math.hypot(dx, dy) > 4) dragMovedRef.current = true;
-    cameraRef.current.x += dx;
-    cameraRef.current.y += dy;
-    dragStartRef.current = { x: cx, y: cy };
-  };
-
-  const handlePointerUp = (e) => {
-    pinchDistRef.current = null;
-    const wasMoved = dragMovedRef.current;
-    isDraggingRef.current = false;
-    if (!wasMoved) {
-      const cx = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
-      const cy = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
-      const hit = findHitTarget(cx, cy);
-      if (hit) {
-        if (hit.type === 'layer') {
-          setActiveLayerId(hit.layerId);
-          setSelectedBookChap({ bookKo: hit.bookKo, chap: hit.chap || 1, verse: 1 });
-          const matchedLex = LEXICON_STREAM_CODES.find((l) => l.strongs === hit.strongs);
-          if (matchedLex) setSelectedLexicon(matchedLex);
-        } else if (hit.type === 'lexicon' && hit.lexicon) {
-          setSelectedLexicon(hit.lexicon);
-          setActiveLayerId(hit.lexicon.layer);
-          setSelectedBookChap({ bookKo: hit.lexicon.book, chap: hit.lexicon.chap, verse: hit.lexicon.verse || 1 });
-        } else if (hit.type === 'book') {
-          setSelectedBookChap({ bookKo: hit.bookKo, chap: hit.chap || 1, verse: 1 });
-        }
-      }
-    }
-  };
-
-  const handleJumpToBible = (bookKo, chap = 1, verse = 1) => {
-    const bMeta = BIBLE_66_CANON.find((b) => b.ko === bookKo) || BIBLE_66_CANON[0];
-    if (typeof setCurrentChapId === 'function') setCurrentChapId(`${bMeta.en}-${chap}`);
+  const handleJumpToBible = () => {
+    if (typeof setCurrentChapId === 'function') setCurrentChapId(`${activeBookDetail.meta.en}-${activeBookDetail.chapNum}`);
     if (typeof setBibleViewMode === 'function') setBibleViewMode('read');
-    if (typeof setTargetVerse === 'function') setTargetVerse(verse || 1);
+    if (typeof setTargetVerse === 'function') setTargetVerse(selectedVerse || 1);
     if (typeof setActiveScreen === 'function') setActiveScreen('bible');
   };
 
-  const handleJumpToInterlinear = (bookKo, chap = 1, verse = 1) => {
+  const handleJumpToInterlinear = () => {
     try {
-      localStorage.setItem('interlinear_jump', JSON.stringify({ book: bookKo, chapter: Number(chap) || 1, verse: Number(verse) || 1 }));
+      localStorage.setItem(
+        'interlinear_jump',
+        JSON.stringify({ book: activeBookDetail.meta.ko, chapter: activeBookDetail.chapNum, verse: selectedVerse || 1 })
+      );
     } catch (_) {}
     if (typeof setActiveScreen === 'function') setActiveScreen('interlinear');
   };
 
-  // 다크/라이트 100% 호환 토큰
-  const bgShell = isDark ? 'bg-[#040508] text-slate-100' : 'bg-[#F4F6F9] text-[#191F28]';
-  const surfaceBg = isDark ? 'bg-[#070910]' : 'bg-white';
-  const subBg = isDark ? 'bg-[#0D111A]' : 'bg-[#F1F3F6]';
-  const borderClass = isDark ? 'border-white/15' : 'border-[#E2E8F0]';
-  const textSub = isDark ? 'text-slate-400' : 'text-[#64748B]';
-
   return (
     <div
-      style={{ height: '100dvh', colorScheme: isDark ? 'dark' : 'light' }}
-      className={`flex-1 w-full flex flex-col overflow-hidden select-none font-mono relative ${bgShell}`}
+      style={{ height: '100dvh', colorScheme: 'dark' }}
+      className="flex-1 w-full bg-[#05070B] text-slate-100 flex flex-col overflow-hidden select-none font-mono relative"
     >
-      {/* 1. 상단 LAYER TRIAGE 헤더 + Omnibox 통합 검색 */}
-      <header className={`shrink-0 ${surfaceBg} border-b ${borderClass} z-30`}>
-        <div className={`px-3 sm:px-5 py-2 flex items-center justify-between gap-2 border-b ${borderClass}`}>
-          <div className="flex items-center gap-2 shrink-0">
+      {/* 1. 상단 오더블록 라이브 텔레메트리 헤더 */}
+      <header className="shrink-0 bg-[#080B12] border-b border-white/10 px-3 sm:px-4 py-2 z-30">
+        <div className="flex items-center justify-between gap-2.5">
+          {/* 좌측: 복귀 & 검색창 */}
+          <div className="flex items-center gap-2 flex-1 max-w-md min-w-0">
             <button
               type="button"
               onClick={() => setActiveScreen && setActiveScreen('galaxy')}
-              className={`h-8 px-2.5 rounded-lg border ${borderClass} ${subBg} text-[11px] font-bold flex items-center gap-1 cursor-pointer`}
+              className="h-8 px-2.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-[11px] font-bold text-slate-200 flex items-center gap-1 cursor-pointer shrink-0"
             >
               <ChevronLeft className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">GALAXY</span>
             </button>
-            <div>
-              <div className="text-[12.5px] sm:text-[14px] font-black tracking-widest text-[#D97706] leading-none">
-                LAYER TRIAGE
-              </div>
-              <div className={`text-[9.5px] ${textSub} mt-0.5 hidden sm:block`}>
-                prompt · context · loop · harness
-              </div>
-            </div>
-          </div>
 
-          {/* 통합 검색창 */}
-          <div className="relative flex-1 max-w-xs sm:max-w-md mx-1">
-            <div className={`flex items-center ${subBg} border ${borderClass} focus-within:border-[#0D9488] rounded-lg px-2.5 h-8`}>
-              <Search className="w-3.5 h-3.5 text-[#0D9488] mr-1.5 shrink-0" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => handleRunOmniboxSearch(e.target.value)}
-                onFocus={() => searchResults.length > 0 && setShowSearchDropdown(true)}
-                placeholder="성경·원어(로고스/H7225)·구절 검색..."
-                className="w-full bg-transparent text-[12px] font-sans font-medium outline-none select-text"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSearchQuery('');
-                    setSearchResults([]);
-                    setShowSearchDropdown(false);
+            <div className="relative flex-1 min-w-0">
+              <div className="h-8 px-2.5 rounded-lg bg-[#05070B] border border-white/15 focus-within:border-sky-400 flex items-center gap-1.5">
+                <Search className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setShowSearchDropdown(Boolean(e.target.value.trim()));
                   }}
-                  className="p-0.5 cursor-pointer"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
-
-            {showSearchDropdown && searchResults.length > 0 && (
-              <div className={`absolute left-0 right-0 top-full mt-1 ${surfaceBg} border border-[#0D9488]/60 rounded-xl shadow-2xl max-h-72 overflow-y-auto z-50 divide-y ${isDark ? 'divide-white/10' : 'divide-slate-100'} font-sans`}>
-                {searchResults.map((item) => (
-                  <div
-                    key={item.id}
+                  onFocus={() => searchQuery.trim() && setShowSearchDropdown(true)}
+                  placeholder="66권 · 구절(요 3:16) · 원어 검색..."
+                  className="w-full bg-transparent text-[12px] font-sans text-white placeholder:text-slate-500 outline-none select-text"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
                     onClick={() => {
-                      item.action();
+                      setSearchQuery('');
                       setShowSearchDropdown(false);
                     }}
-                    className="p-2.5 hover:bg-[#2563EB]/10 cursor-pointer flex flex-col gap-0.5 text-left"
+                    className="cursor-pointer text-slate-400 hover:text-white"
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-[12.5px] font-bold truncate">{item.title}</span>
-                      <span style={{ color: item.color }} className="text-[10px] font-mono font-bold shrink-0">
-                        {item.badge}
-                      </span>
-                    </div>
-                    <span className={`text-[11px] ${textSub} truncate`}>{item.sub}</span>
-                  </div>
-                ))}
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
-            )}
+
+              {showSearchDropdown && searchResults.length > 0 && (
+                <div className="absolute left-0 right-0 top-full mt-1 bg-[#0A0E17] border border-sky-500/40 rounded-xl shadow-2xl max-h-64 overflow-y-auto z-50 divide-y divide-white/10 font-sans">
+                  {searchResults.map((hit) => (
+                    <button
+                      key={hit.id}
+                      type="button"
+                      onClick={() => {
+                        hit.onSelect();
+                        setShowSearchDropdown(false);
+                      }}
+                      className="w-full px-3 py-2 text-left hover:bg-white/10 flex items-center justify-between gap-2 cursor-pointer"
+                    >
+                      <span className="text-[12px] font-bold text-white truncate">{hit.title}</span>
+                      <span style={{ color: hit.color }} className="text-[10px] font-mono font-bold shrink-0">
+                        {hit.badge}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setIsAutoPulse((prev) => !prev)}
-            className={`h-8 px-2.5 sm:px-3 rounded-full border text-[10px] font-black tracking-wider flex items-center gap-1.5 cursor-pointer shrink-0 ${
-              isAutoPulse ? 'border-[#0D9488] bg-[#0D9488]/15 text-[#0D9488]' : `${borderClass} ${subBg} ${textSub}`
-            }`}
-          >
-            <span className={`w-1.5 h-1.5 rounded-full ${isAutoPulse ? 'bg-[#0D9488] animate-ping' : 'bg-slate-500'}`} />
-            <span className="hidden sm:inline">{isAutoPulse ? 'ROUTING' : 'PAUSED'}</span>
-          </button>
-        </div>
-
-        {/* 2단 레이어 & 장 네비게이터 */}
-        <div className={`px-3 sm:px-5 py-1.5 ${subBg} flex items-center justify-between gap-2 overflow-x-auto hide-scrollbar text-[10.5px]`}>
-          <div className="flex items-center gap-3 shrink-0">
-            {TRIAGE_ORBIT_LAYERS.map((l) => {
-              const isAct = activeLayerId === l.id;
-              return (
-                <button
-                  key={l.id}
-                  type="button"
-                  onClick={() => {
-                    setActiveLayerId(l.id);
-                    setSelectedBookChap({ bookKo: l.bookRef, chap: l.chapRef, verse: 1 });
-                    const matchedLex = LEXICON_STREAM_CODES.find((lx) => lx.strongs === l.strongsRef);
-                    if (matchedLex) setSelectedLexicon(matchedLex);
-                  }}
-                  className={`flex items-center gap-1 cursor-pointer ${isAct ? 'font-black' : 'opacity-60 hover:opacity-100'}`}
-                >
-                  <span style={{ color: isDark ? l.color : l.lightColor }}>{l.id}</span>
-                </button>
-              );
-            })}
+          {/* 중앙: 실시간 신구약 펄스 스파크라인 (PC/태블릿) */}
+          <div className="hidden lg:flex items-center flex-1 max-w-md px-3">
+            <TopPulseSparkline isPlaying={isPlaying} ntCount={ntActiveCount} otCount={otActiveCount} />
           </div>
 
-          <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-lg border ${borderClass} ${surfaceBg} shrink-0`}>
-            <span className="text-[#D97706] font-bold">{scripturePreview.bookKo}</span>
+          {/* 우측: 신약/구약 라이브 카운터 & 시뮬레이션 토글 */}
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="hidden sm:flex items-center gap-3 px-2.5 py-1 rounded-lg bg-[#05070B] border border-white/10 text-[11px]">
+              <div className="flex items-center gap-1">
+                <span className="text-[9.5px] text-slate-400">NT</span>
+                <span className="font-black text-emerald-400">{ntActiveCount}</span>
+              </div>
+              <span className="w-px h-3 bg-white/10" />
+              <div className="flex items-center gap-1">
+                <span className="text-[9.5px] text-slate-400">OT</span>
+                <span className="font-black text-rose-400">{otActiveCount}</span>
+              </div>
+              <span className="w-px h-3 bg-white/10" />
+              <div className="flex items-center gap-1">
+                <span className="text-[9.5px] text-slate-400">READ</span>
+                <span className="font-black text-sky-400">{totalReadChaps}</span>
+              </div>
+            </div>
+
             <button
               type="button"
-              onClick={() => setSelectedBookChap((prev) => ({ ...prev, chap: Math.max(1, (prev.chap || 1) - 1) }))}
-              className="p-0.5 cursor-pointer"
+              onClick={() => setIsPlaying((p) => !p)}
+              className={`h-8 px-2.5 rounded-lg border text-[11px] font-bold flex items-center gap-1 cursor-pointer ${
+                isPlaying
+                  ? 'border-emerald-500/50 bg-emerald-500/15 text-emerald-300'
+                  : 'border-white/15 bg-white/5 text-slate-400'
+              }`}
             >
-              <ChevronLeft className="w-3.5 h-3.5" />
-            </button>
-            <span className="font-black">{scripturePreview.chap}장</span>
-            <button
-              type="button"
-              onClick={() => setSelectedBookChap((prev) => ({ ...prev, chap: Math.min(scripturePreview.totalChaps, (prev.chap || 1) + 1) }))}
-              className="p-0.5 cursor-pointer"
-            >
-              <ChevronRight className="w-3.5 h-3.5" />
+              {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+              <span className="hidden sm:inline">{isPlaying ? 'LIVE' : 'PAUSE'}</span>
             </button>
           </div>
         </div>
       </header>
 
-      {/* 2. 메인 바디 */}
-      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
-        {/* 좌측: 아크 캔버스 + 하단 4대 역본/CLI 지식 패널 */}
-        <div className={`flex-1 flex flex-col relative overflow-hidden ${mobileViewTab === 'queue' ? 'hidden lg:flex' : 'flex'}`}>
-          <div
-            ref={containerRef}
-            className={`flex-1 relative w-full h-full overflow-hidden cursor-grab active:cursor-grabbing ${
-              mobileViewTab === 'terminal' ? 'hidden sm:block' : 'block'
-            }`}
-          >
-            <canvas
-              ref={canvasRef}
-              onMouseDown={handlePointerDown}
-              onMouseMove={handlePointerMove}
-              onMouseUp={handlePointerUp}
-              onTouchStart={handlePointerDown}
-              onTouchMove={handlePointerMove}
-              onTouchEnd={handlePointerUp}
-              onWheel={(e) => {
-                cameraRef.current.zoom = Math.max(0.45, Math.min(2.4, cameraRef.current.zoom * (e.deltaY < 0 ? 1.1 : 0.9)));
-              }}
-              className="absolute inset-0 w-full h-full touch-none"
-            />
+      {/* 2. 메인 3단 오더블록 텔레메트리 바디 */}
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden min-h-0">
+        {/* [좌측] 극성 수직 바 + 8대 정경 섹터 리스트 */}
+        <aside className="hidden lg:flex w-[210px] xl:w-[230px] bg-[#080B12] border-r border-white/10 shrink-0 p-2.5 flex-col gap-1.5 overflow-y-auto hide-scrollbar">
+          <div className="flex items-center justify-between px-1 pb-1.5 border-b border-white/10">
+            <span className="text-[10px] font-bold text-slate-400 tracking-wider">CANON SECTORS</span>
+            {activeSectorId !== 'ALL' && (
+              <button
+                type="button"
+                onClick={() => setActiveSectorId('ALL')}
+                className="text-[10px] font-bold text-sky-400 cursor-pointer"
+              >
+                ALL
+              </button>
+            )}
+          </div>
 
-            {/* 좌측 상단 포커스 HUD 카드 (모바일 접기/펼치기 지원) */}
-            <div className={`absolute top-2.5 left-2.5 z-20 w-[230px] sm:w-[275px] ${surfaceBg}/95 backdrop-blur-md border ${borderClass} rounded-xl p-2.5 sm:p-3 shadow-xl pointer-events-auto`}>
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <span style={{ color: isDark ? activeLayerObj.color : activeLayerObj.lightColor }} className="text-[15px] sm:text-[18px] font-black tracking-wider">
-                    {activeLayerObj.id}
-                  </span>
-                  <span className="text-[9.5px] font-bold text-[#0D9488] truncate">{activeLayerObj.code}</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsHudCollapsed((p) => !p)}
-                  className={`p-1 rounded ${subBg} cursor-pointer shrink-0`}
-                  aria-label="HUD 접기"
-                >
-                  {isHudCollapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
-                </button>
-              </div>
-
-              {!isHudCollapsed && (
-                <>
-                  <div className={`text-[11px] font-sans font-bold ${textSub} mt-0.5`}>{activeLayerObj.korSub}</div>
-
-                  {selectedLexicon && (
-                    <div className={`mt-2 p-2 rounded-lg ${subBg} border ${borderClass} space-y-0.5 font-sans`}>
-                      <div className="flex items-center justify-between text-[10px]">
-                        <span className="font-mono font-bold text-[#D97706]">{selectedLexicon.code}</span>
-                        <span className="text-[#0D9488] font-bold">{selectedLexicon.book} {selectedLexicon.chap}:{selectedLexicon.verse}</span>
-                      </div>
-                      <div className="text-[13.5px] font-bold">
-                        {selectedLexicon.word} <span className="text-[11.5px] text-[#D97706]">[{selectedLexicon.pron}]</span>
-                      </div>
-                      <div className={`text-[11px] ${textSub}`}>{selectedLexicon.mean}</div>
-                    </div>
-                  )}
-
-                  <div className={`grid grid-cols-2 gap-1.5 mt-2 pt-2 border-t ${borderClass} font-sans`}>
-                    <button
-                      type="button"
-                      onClick={() => handleJumpToBible(scripturePreview.bookKo, scripturePreview.chap, selectedBookChap.verse)}
-                      className="py-1.5 px-2 rounded-lg bg-[#0D9488]/15 text-[#0D9488] text-[10.5px] font-bold flex items-center justify-center gap-1 cursor-pointer"
-                    >
-                      <BookOpen className="w-3 h-3" /> 성경 본문
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleJumpToInterlinear(scripturePreview.bookKo, scripturePreview.chap, selectedBookChap.verse)}
-                      className="py-1.5 px-2 rounded-lg bg-[#D97706]/15 text-[#D97706] text-[10.5px] font-bold flex items-center justify-center gap-1 cursor-pointer"
-                    >
-                      <Sparkles className="w-3 h-3" /> 원어 분석
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveScreen && setActiveScreen('qt')}
-                      className={`py-1 px-2 rounded-lg ${subBg} border ${borderClass} text-[10px] font-bold cursor-pointer`}
-                    >
-                      오늘의 QT
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveScreen && setActiveScreen('sermon')}
-                      className={`py-1 px-2 rounded-lg ${subBg} border ${borderClass} text-[10px] font-bold cursor-pointer`}
-                    >
-                      예배 설교노트
-                    </button>
-                  </div>
-                </>
-              )}
+          <div className="flex gap-2 flex-1 min-h-0">
+            {/* 극성 수직 스파인 바 (상단 에메랄드 신약 / 하단 크림슨 구약) */}
+            <div className="w-1.5 rounded-full overflow-hidden flex flex-col shrink-0 my-1">
+              <div className="flex-1 bg-gradient-to-b from-emerald-400 to-teal-500" />
+              <div className="h-0.5 bg-sky-400" />
+              <div className="flex-1 bg-gradient-to-b from-rose-500 to-pink-600" />
             </div>
 
-            {/* 우측 하단 줌 컨트롤 */}
-            <div className={`absolute bottom-2.5 right-2.5 z-20 flex items-center gap-1 ${surfaceBg}/90 border ${borderClass} px-1.5 py-1 rounded-lg`}>
-              <button type="button" onClick={() => { cameraRef.current.zoom = Math.min(2.4, cameraRef.current.zoom + 0.15); }} className="p-1 cursor-pointer">
-                <Plus className="w-3.5 h-3.5" />
-              </button>
-              <button type="button" onClick={() => { cameraRef.current.zoom = Math.max(0.45, cameraRef.current.zoom - 0.15); }} className="p-1 cursor-pointer">
-                <Minus className="w-3.5 h-3.5" />
-              </button>
-              <button type="button" onClick={handleResize} className="p-1 text-[#0D9488] cursor-pointer" title="초기화">
-                <RotateCcw className="w-3.5 h-3.5" />
-              </button>
+            <div className="flex-1 space-y-1 overflow-y-auto hide-scrollbar">
+              {sectorStats.map((sec) => {
+                const isAct = activeSectorId === sec.id;
+                const isNT = sec.polarity === 'nt';
+                return (
+                  <button
+                    key={sec.id}
+                    type="button"
+                    onClick={() => {
+                      setActiveSectorId(isAct ? 'ALL' : sec.id);
+                      handleSelectBook(sec.defaultBook);
+                    }}
+                    className={`w-full px-2 py-2 rounded-lg border text-left transition-all cursor-pointer ${
+                      isAct
+                        ? 'bg-sky-500/15 border-sky-400/60'
+                        : 'bg-[#05070B]/70 border-white/5 hover:border-white/20'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-[11px] font-sans font-bold text-white truncate">{sec.name}</span>
+                      <span className={`text-[10px] font-black ${isNT ? 'text-emerald-400' : 'text-rose-400'}`}>
+                        {sec.pct}%
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between mt-1 text-[9.5px] text-slate-500">
+                      <span>{sec.code}</span>
+                      <span>{sec.readChaps}/{sec.totalChaps}</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </aside>
+
+        {/* [중앙] 60FPS 라이브 오더블록 플로우 캔버스 */}
+        <section
+          className={`flex-1 flex flex-col min-w-0 min-h-0 relative ${
+            mobileTab === 'flow' ? 'flex' : 'hidden lg:flex'
+          }`}
+        >
+          <div className="flex-1 min-h-0 relative">
+            <OrderBlockFlowCanvas
+              streams={streams}
+              activeSectorId={activeSectorId}
+              selectedBookKo={selectedBookKo}
+              isPlaying={isPlaying}
+              onSelectBook={handleSelectBook}
+            />
+
+            {/* 좌상단 선택된 스트림 미니 HUD */}
+            <div className="absolute top-2.5 left-2.5 z-10 px-3 py-1.5 rounded-lg bg-[#080B12]/90 border border-white/15 backdrop-blur-md flex items-center gap-2 text-[11px]">
+              <span className={`w-2 h-2 rounded-full ${activeBookDetail.meta.isOT ? 'bg-rose-400' : 'bg-emerald-400'}`} />
+              <span className="font-sans font-bold text-white">
+                {activeBookDetail.meta.ko} {activeBookDetail.chapNum}장
+              </span>
+              <span className="text-slate-400">·</span>
+              <span className="text-sky-400 font-bold">{activeBookDetail.lexicon.strongs}</span>
             </div>
           </div>
 
-          {/* 2-B. 하단 4대 역본 대조 & 내 QT/설교/노트 역추적 & CLI 터미널 */}
-          <div
-            className={`shrink-0 ${surfaceBg} border-t ${borderClass} px-3.5 py-2.5 z-20 overflow-y-auto ${
-              mobileViewTab === 'canvas' ? 'hidden sm:block' : mobileViewTab === 'terminal' ? 'flex-1' : 'block'
-            }`}
-          >
-            <div className="grid grid-cols-1 xl:grid-cols-12 gap-3 items-start">
-              {/* 좌측: CLI 라우팅 로그 + 현재 권/장 연결 노트 */}
-              <div className="xl:col-span-6 space-y-2">
-                <div className={`flex items-center justify-between pb-1.5 border-b ${borderClass} text-[10.5px]`}>
-                  <span className="text-[#D97706] font-bold truncate">
-                    $ route --target {scripturePreview.bookCode}_{scripturePreview.bookKo} {scripturePreview.chap}장
-                  </span>
-                  <span className="text-[#0D9488] font-bold shrink-0">SYNCED</span>
-                </div>
-
-                <div className="space-y-1 text-[11px]">
-                  {telemetry.cliRoutes.slice(0, 3).map((rt) => (
-                    <div
-                      key={rt.id}
-                      onClick={() => {
-                        const refs = extractAllBibleRefsFromText(rt.bookRef);
-                        if (refs.length > 0) setSelectedBookChap({ bookKo: refs[0].bookKo, chap: refs[0].chapter || 1, verse: refs[0].verse || 1 });
-                        setActiveLayerId(rt.layer);
-                      }}
-                      className={`flex items-center gap-1.5 truncate hover:bg-[#2563EB]/10 px-1.5 py-0.5 rounded cursor-pointer`}
+          {/* 하단 통합 4대 역본 & 연결 노트 인스펙터 (PC/태블릿 상시 표시, 모바일은 inspector 탭) */}
+          <div className="hidden lg:block shrink-0 bg-[#080B12] border-t border-white/10 p-3 font-sans">
+            <div className="grid grid-cols-12 gap-3 items-start">
+              {/* 좌측 7컬럼: 4대 역본 대조 */}
+              <div className="col-span-7 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[13px] font-bold text-white">
+                      {activeBookDetail.meta.ko} {activeBookDetail.chapNum}장
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedChap((c) => Math.max(1, c - 1))}
+                      className="p-0.5 rounded bg-white/5 hover:bg-white/15 cursor-pointer"
                     >
-                      <span className={textSub}>{rt.cmd}</span>
-                      <span className="font-bold">{rt.src}</span>
-                      <span style={{ color: rt.color }} className="font-black">→ {rt.layer}</span>
-                      <span className={`${textSub} font-sans truncate`}>{rt.dest}</span>
-                    </div>
-                  ))}
-                </div>
-
-                {scripturePreview.linkedRecords.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 pt-1 font-sans">
-                    {scripturePreview.linkedRecords.map((rec) => (
-                      <button
-                        key={rec.id}
-                        type="button"
-                        onClick={() => setActiveScreen && setActiveScreen(rec.screen)}
-                        className={`px-2 py-0.5 rounded-md border ${borderClass} ${subBg} text-[10.5px] font-bold flex items-center gap-1 cursor-pointer hover:border-[#2563EB]`}
-                      >
-                        <span className="text-[#2563EB]">[{rec.badge}]</span>
-                        <span className="truncate max-w-[140px]">{rec.title}</span>
-                      </button>
-                    ))}
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedChap((c) => Math.min(activeBookDetail.meta.chaps, c + 1))}
+                      className="p-0.5 rounded bg-white/5 hover:bg-white/15 cursor-pointer"
+                    >
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
                   </div>
-                )}
-              </div>
 
-              {/* 우측: 4대 역본 실시간 지식 대조 패널 */}
-              <div className={`xl:col-span-6 p-2.5 rounded-xl border ${borderClass} ${subBg} font-sans space-y-2`}>
-                <div className="flex items-center justify-between gap-2 flex-wrap">
                   <div className="flex items-center gap-1 text-[10.5px] font-bold">
                     {[
                       { id: 'krv4', label: '개역개정4판' },
@@ -1325,144 +854,270 @@ export default function BibleSecondBrain3D({
                         key={ver.id}
                         type="button"
                         onClick={() => setPreviewVersion(ver.id)}
-                        className={`px-2 py-0.5 rounded-md cursor-pointer ${
-                          previewVersion === ver.id ? 'bg-[#2563EB] text-white' : `${surfaceBg} ${textSub}`
+                        className={`px-2 py-0.5 rounded cursor-pointer ${
+                          previewVersion === ver.id ? 'bg-[#2563EB] text-white' : 'bg-white/5 text-slate-400 hover:text-white'
                         }`}
                       >
                         {ver.label}
                       </button>
                     ))}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => handleJumpToInterlinear(scripturePreview.bookKo, scripturePreview.chap, 1)}
-                    className="text-[10.5px] font-bold text-[#0D9488] hover:underline cursor-pointer"
-                  >
-                    원어 스튜디오 ➔
-                  </button>
                 </div>
 
                 {previewVersion === 'orig' ? (
-                  <div className="text-[12px] space-y-1">
-                    <div className="font-bold">
-                      {selectedLexicon.word} <span className="text-[#D97706]">[{selectedLexicon.pron}]</span> · {selectedLexicon.strongs}
+                  <div className="p-2.5 rounded-lg bg-[#05070B] border border-white/10 text-[12px] space-y-0.5">
+                    <div className="font-bold text-white">
+                      {activeBookDetail.lexicon.word}{' '}
+                      <span className="text-amber-400">[{activeBookDetail.lexicon.pron}]</span> · {activeBookDetail.lexicon.strongs}
                     </div>
-                    <p className={textSub}>{selectedLexicon.mean} ({selectedLexicon.grammar})</p>
+                    <p className="text-slate-400">{activeBookDetail.lexicon.mean} ({activeBookDetail.lexicon.grammar})</p>
                   </div>
                 ) : (
-                  <div className="space-y-1">
-                    {scripturePreview.verses.slice(0, 2).map((v) => (
-                      <p key={v.v} className="text-[12px] leading-snug line-clamp-2">
-                        <b className="text-[#D97706] font-mono mr-1">{v.v}.</b>
+                  <div className="p-2.5 rounded-lg bg-[#05070B] border border-white/10 space-y-1 text-[12px] leading-relaxed">
+                    {activeBookDetail.verses.slice(0, 2).map((v) => (
+                      <p key={v.v} className="line-clamp-1 text-slate-200">
+                        <b className="text-sky-400 font-mono mr-1.5">{v.v}</b>
                         {previewVersion === 'easy' ? v.easy || v.krv4 : previewVersion === 'web' ? v.web || v.krv4 : v.krv4}
                       </p>
                     ))}
                   </div>
                 )}
               </div>
+
+              {/* 우측 5컬럼: 연결된 내 QT/설교/노트 + 바로가기 */}
+              <div className="col-span-5 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-slate-400">연결된 내 기록 ({activeBookDetail.linked.length})</span>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={handleJumpToBible}
+                      className="px-2 py-1 rounded bg-emerald-500/15 text-emerald-300 text-[10.5px] font-bold flex items-center gap-1 cursor-pointer"
+                    >
+                      <BookOpen className="w-3 h-3" /> 본문
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleJumpToInterlinear}
+                      className="px-2 py-1 rounded bg-amber-500/15 text-amber-300 text-[10.5px] font-bold flex items-center gap-1 cursor-pointer"
+                    >
+                      <Sparkles className="w-3 h-3" /> 원어
+                    </button>
+                  </div>
+                </div>
+
+                {activeBookDetail.linked.length === 0 ? (
+                  <div className="p-2.5 rounded-lg bg-[#05070B] border border-white/10 text-[11.5px] text-slate-500 flex items-center justify-between">
+                    <span>연결된 QT·설교 노트가 없습니다.</span>
+                    <button
+                      type="button"
+                      onClick={() => setActiveScreen && setActiveScreen('qt')}
+                      className="text-sky-400 font-bold cursor-pointer"
+                    >
+                      QT 작성
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-1 max-h-[68px] overflow-y-auto hide-scrollbar">
+                    {activeBookDetail.linked.map((rec) => (
+                      <button
+                        key={rec.id}
+                        type="button"
+                        onClick={() => setActiveScreen && setActiveScreen(rec.screen)}
+                        className="w-full px-2.5 py-1.5 rounded-lg bg-[#05070B] border border-white/10 hover:border-sky-400 flex items-center justify-between gap-2 text-[11px] cursor-pointer"
+                      >
+                        <span className="truncate">
+                          <b className="text-sky-400 mr-1.5">[{rec.tag}]</b>
+                          {rec.title}
+                        </span>
+                        <ExternalLink className="w-3 h-3 text-slate-500 shrink-0" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* 3. 우측 11단 세그먼트 큐 사이드바 */}
+        {/* [우측] 초고밀도 66권 오더블록 카드 매트릭스 */}
         <aside
-          className={`w-full lg:w-[300px] xl:w-[325px] ${surfaceBg} border-t lg:border-t-0 lg:border-l ${borderClass} flex flex-col justify-between p-3.5 overflow-y-auto hide-scrollbar shrink-0 z-20 ${
-            mobileViewTab === 'queue' ? 'flex flex-1' : 'hidden lg:flex'
+          className={`w-full lg:w-[340px] xl:w-[400px] bg-[#080B12] border-t lg:border-t-0 lg:border-l border-white/10 p-2.5 flex-col overflow-hidden shrink-0 ${
+            mobileTab === 'matrix' ? 'flex flex-1' : 'hidden lg:flex'
           }`}
         >
-          <div>
-            <div className={`flex items-baseline justify-between border-b ${borderClass} pb-2`}>
-              <div>
-                <div className={`text-[10px] font-bold ${textSub} tracking-widest`}>CANON QUEUE</div>
-                <div className={`text-[9.5px] ${textSub}`}>9-stage sanctification pass</div>
-              </div>
-              <span className="text-lg font-black">11</span>
-            </div>
-
-            <div className="space-y-2 mt-2">
-              {ELEVEN_CANON_QUEUE.map((qItem, qIdx) => {
-                const secStat = telemetry.sectorProgress[qItem.sector] || { total: 50, read: 10 };
-                const baseFilled = Math.max(3, Math.min(9, Math.round((secStat.read / Math.max(1, secStat.total)) * 9) + ((qIdx % 4) + 3)));
-                const isSelected = activeLayerId === qItem.layer && selectedBookChap.bookKo === qItem.bookRef;
-
-                return (
-                  <div
-                    key={qItem.id}
-                    onClick={() => {
-                      setActiveLayerId(qItem.layer);
-                      setSelectedBookChap({ bookKo: qItem.bookRef, chap: qItem.chapRef, verse: 1 });
-                      const matchedLex = LEXICON_STREAM_CODES.find((l) => l.strongs === qItem.strongs);
-                      if (matchedLex) setSelectedLexicon(matchedLex);
-                      if (mobileViewTab === 'queue') setMobileViewTab('canvas');
-                    }}
-                    className={`p-1.5 rounded-lg transition-all cursor-pointer border ${
-                      isSelected ? 'border-[#0D9488] bg-[#0D9488]/10' : 'border-transparent hover:bg-black/5 dark:hover:bg-white/5'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between text-[10.5px] mb-1">
-                      <span className="font-bold truncate">
-                        <b className={`${textSub} mr-1.5`}>{qItem.num}</b>
-                        {qItem.label}
-                      </span>
-                      <span style={{ backgroundColor: qItem.color }} className="w-2 h-2 rounded-xs shrink-0" />
-                    </div>
-
-                    <div className="grid grid-cols-9 gap-1">
-                      {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((step) => (
-                        <div
-                          key={step}
-                          style={{
-                            backgroundColor: step <= baseFilled ? qItem.color : isDark ? 'rgba(255,255,255,0.06)' : 'rgba(15,23,42,0.08)',
-                            opacity: step <= baseFilled ? 0.92 : 0.4
-                          }}
-                          className="h-2 rounded-[1px]"
-                        />
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+          <div className="flex items-center justify-between pb-2 mb-2 border-b border-white/10 shrink-0">
+            <span className="text-[10.5px] font-bold text-slate-300 tracking-wider">
+              66 CANON MATRIX ({visibleMatrixStreams.length})
+            </span>
+            <span className="text-[10px] text-slate-500">NT EMERALD · OT CRIMSON</span>
           </div>
 
-          <div className={`mt-4 pt-3 border-t ${borderClass} space-y-2`}>
-            <div className="text-[11px] font-black text-[#0D9488] tracking-wider">PARSE REPLY &amp; LOGOS</div>
-            {[
-              { id: 'PROMPT', label: 'PROMPT (원어·정경)', count: 1, pct: '88%', color: '#D97706' },
-              { id: 'CONTEXT', label: 'CONTEXT (주석·교차)', count: 4, pct: '74%', color: '#F59E0B' },
-              { id: 'LOOP', label: 'LOOP (QT·설교)', count: telemetry.qtCount + telemetry.sermonCount || 3, pct: '65%', color: '#0D9488' },
-              { id: 'HARNESS', label: 'HARNESS (적용·기도)', count: telemetry.applyCount || 3, pct: '58%', color: '#2563EB' }
-            ].map((bar) => (
-              <div key={bar.id} onClick={() => setActiveLayerId(bar.id)} className="space-y-1 cursor-pointer">
-                <div className="flex items-center justify-between text-[10px]">
-                  <span className="font-bold">{bar.label}</span>
-                  <span className={textSub}>{bar.count}</span>
-                </div>
-                <div className={`w-full h-1.5 ${subBg} rounded-full overflow-hidden`}>
-                  <div style={{ width: bar.pct, backgroundColor: bar.color }} className="h-full rounded-full" />
-                </div>
-              </div>
-            ))}
+          <div className="flex-1 overflow-y-auto hide-scrollbar grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-1.5 content-start pb-4">
+            {visibleMatrixStreams.map((st) => {
+              const isSel = selectedBookKo === st.bookKo;
+              const isNT = !st.isOT;
+              return (
+                <button
+                  key={st.bookKo}
+                  type="button"
+                  onClick={() => {
+                    handleSelectBook(st.bookKo);
+                    if (mobileTab === 'matrix') setMobileTab('inspector');
+                  }}
+                  className={`p-2 rounded-lg border text-left transition-all cursor-pointer flex flex-col justify-between gap-1.5 ${
+                    isSel
+                      ? 'bg-sky-500/20 border-sky-400 shadow-[0_0_12px_rgba(56,189,248,0.25)]'
+                      : isNT
+                      ? 'bg-emerald-950/25 border-emerald-500/25 hover:border-emerald-400/60'
+                      : 'bg-rose-950/25 border-rose-500/25 hover:border-rose-400/60'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="text-[11.5px] font-sans font-bold text-white truncate">{st.bookKo}</span>
+                    <span className={`text-[9.5px] font-black shrink-0 ${isNT ? 'text-emerald-400' : 'text-rose-400'}`}>
+                      {st.pct}%
+                    </span>
+                  </div>
+
+                  <div className="w-full h-1 rounded-full bg-black/50 overflow-hidden">
+                    <div
+                      style={{ width: `${Math.max(8, st.pct)}%` }}
+                      className={`h-full ${isNT ? 'bg-emerald-400' : 'bg-rose-400'}`}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between text-[9px] text-slate-400">
+                    <span>{st.readCount}/{st.chaps}장</span>
+                    {st.noteCount > 0 && <span className="text-sky-300 font-bold">N:{st.noteCount}</span>}
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </aside>
+
+        {/* 모바일 전용 4대 역본 & 연결 기록 탭 뷰 */}
+        {mobileTab === 'inspector' && (
+          <section className="lg:hidden flex-1 overflow-y-auto p-3.5 space-y-3 font-sans hide-scrollbar">
+            <div className="p-3.5 rounded-xl bg-[#080B12] border border-white/10 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <h2 className="text-[15px] font-bold text-white">
+                  {activeBookDetail.meta.ko} {activeBookDetail.chapNum}장
+                </h2>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedChap((c) => Math.max(1, c - 1))}
+                    className="p-1.5 rounded-lg bg-white/5 cursor-pointer"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedChap((c) => Math.min(activeBookDetail.meta.chaps, c + 1))}
+                    className="p-1.5 rounded-lg bg-white/5 cursor-pointer"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-4 gap-1 text-[11px] font-bold">
+                {[
+                  { id: 'krv4', label: '개역4판' },
+                  { id: 'easy', label: '쉬운성경' },
+                  { id: 'web', label: 'WEB영어' },
+                  { id: 'orig', label: '원어' }
+                ].map((ver) => (
+                  <button
+                    key={ver.id}
+                    type="button"
+                    onClick={() => setPreviewVersion(ver.id)}
+                    className={`py-1.5 rounded-lg cursor-pointer ${
+                      previewVersion === ver.id ? 'bg-[#2563EB] text-white' : 'bg-white/5 text-slate-400'
+                    }`}
+                  >
+                    {ver.label}
+                  </button>
+                ))}
+              </div>
+
+              {previewVersion === 'orig' ? (
+                <div className="p-3 rounded-lg bg-[#05070B] border border-white/10 space-y-1">
+                  <div className="text-[14px] font-bold text-white">
+                    {activeBookDetail.lexicon.word} <span className="text-amber-400">[{activeBookDetail.lexicon.pron}]</span>
+                  </div>
+                  <p className="text-[12.5px] text-slate-300">{activeBookDetail.lexicon.mean}</p>
+                  <span className="text-[11px] font-mono text-slate-500">{activeBookDetail.lexicon.strongs} · {activeBookDetail.lexicon.grammar}</span>
+                </div>
+              ) : (
+                <div className="space-y-2 p-3 rounded-lg bg-[#05070B] border border-white/10 text-[13px] leading-relaxed">
+                  {activeBookDetail.verses.map((v) => (
+                    <p key={v.v} className="text-slate-200">
+                      <b className="text-sky-400 font-mono mr-1.5">{v.v}</b>
+                      {previewVersion === 'easy' ? v.easy || v.krv4 : previewVersion === 'web' ? v.web || v.krv4 : v.krv4}
+                    </p>
+                  ))}
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={handleJumpToBible}
+                  className="py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-[12.5px] flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <BookOpen className="w-4 h-4" /> 성경 본문 열기
+                </button>
+                <button
+                  type="button"
+                  onClick={handleJumpToInterlinear}
+                  className="py-2.5 rounded-xl bg-amber-600 text-white font-bold text-[12.5px] flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <Sparkles className="w-4 h-4" /> 원어 스튜디오
+                </button>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-[#080B12] border border-white/10 space-y-2">
+              <span className="text-[12.5px] font-bold text-slate-300 block">연결된 내 QT · 설교 · 노트</span>
+              {activeBookDetail.linked.length === 0 ? (
+                <p className="text-[12px] text-slate-500 py-2">이 성경에 연결된 기록이 아직 없습니다.</p>
+              ) : (
+                activeBookDetail.linked.map((rec) => (
+                  <button
+                    key={rec.id}
+                    type="button"
+                    onClick={() => setActiveScreen && setActiveScreen(rec.screen)}
+                    className="w-full p-2.5 rounded-lg bg-[#05070B] border border-white/10 flex items-center justify-between text-[12px] cursor-pointer"
+                  >
+                    <span className="truncate"><b className="text-sky-400 mr-1.5">[{rec.tag}]</b>{rec.title}</span>
+                    <ExternalLink className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                  </button>
+                ))
+              )}
+            </div>
+          </section>
+        )}
       </div>
 
-      {/* 4. 모바일 하단 3단 뷰 전환 바 (iOS 안전 영역 적용) */}
-      <div className={`lg:hidden shrink-0 ${surfaceBg} border-t ${borderClass} px-3 pt-1.5 pb-[max(8px,env(safe-area-inset-bottom))] flex items-center justify-around gap-1.5 z-30 font-sans`}>
+      {/* 3. 모바일 전용 하단 3단 전환 바 (iOS 안전 영역 적용) */}
+      <nav className="lg:hidden shrink-0 bg-[#080B12] border-t border-white/10 px-3 pt-1.5 pb-[max(8px,env(safe-area-inset-bottom))] grid grid-cols-3 gap-1.5 z-30 font-sans">
         {[
-          { id: 'canvas', label: '아크맵', icon: Layers },
-          { id: 'queue', label: '11큐', icon: FileText },
-          { id: 'terminal', label: '4대역본·CLI', icon: Terminal }
+          { id: 'flow', label: '라이브 플로우', icon: Activity },
+          { id: 'matrix', label: '66권 매트릭스', icon: Grid },
+          { id: 'inspector', label: '4대역본·기록', icon: FileText }
         ].map((tab) => {
           const TabIcon = tab.icon;
-          const active = mobileViewTab === tab.id;
+          const active = mobileTab === tab.id;
           return (
             <button
               key={tab.id}
               type="button"
-              onClick={() => setMobileViewTab(tab.id)}
-              className={`flex-1 py-2 rounded-lg text-[11.5px] font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-colors ${
-                active ? 'bg-[#2563EB] text-white' : `${subBg} ${textSub}`
+              onClick={() => setMobileTab(tab.id)}
+              className={`py-2 rounded-lg text-[11.5px] font-bold flex items-center justify-center gap-1.5 cursor-pointer ${
+                active ? 'bg-[#2563EB] text-white' : 'bg-white/5 text-slate-400'
               }`}
             >
               <TabIcon className="w-3.5 h-3.5" />
@@ -1470,7 +1125,7 @@ export default function BibleSecondBrain3D({
             </button>
           );
         })}
-      </div>
+      </nav>
     </div>
   );
 }
