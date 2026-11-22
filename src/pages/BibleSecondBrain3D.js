@@ -11,9 +11,9 @@ import {
   Sparkles,
   FileText,
   Activity,
-  Layers,
   Grid,
-  ExternalLink
+  ExternalLink,
+  Link2
 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { BIBLE_66_CANON, extractAllBibleRefsFromText } from './BibleKnowledgeGalaxy';
@@ -21,17 +21,17 @@ import { ensureKrv4TxtLoaded, splitPericopeAndVerse } from './Bible';
 import bibleData from '../ko_ko.json';
 
 // =====================================================================
-// 1. 8대 성경 정경 섹터 (상단 신약 에메랄드 / 하단 구약 크림슨 극성 매핑)
+// 1. 8대 성경 정경 섹터 (상단 신약 에메랄드 / 하단 구약 크림슨)
 // =====================================================================
 const CANON_SECTOR_GROUPS = [
-  { id: 'gospels', name: '복음서·행전', code: 'GOSPELS', polarity: 'nt', color: '#10B981', glow: 'rgba(16,185,129,0.45)', defaultBook: '요한복음', strongs: 'G3056' },
-  { id: 'pauline', name: '바울서신', code: 'PAULINE', polarity: 'nt', color: '#2DD4BF', glow: 'rgba(45,212,191,0.45)', defaultBook: '로마서', strongs: 'G26' },
-  { id: 'general', name: '공동서신', code: 'GENERAL', polarity: 'nt', color: '#38BDF8', glow: 'rgba(56,189,248,0.45)', defaultBook: '히브리서', strongs: 'G4102' },
-  { id: 'prophecy_nt', name: '요한계시록', code: 'APOCALYPSE', polarity: 'nt', color: '#34D399', glow: 'rgba(52,211,153,0.45)', defaultBook: '요한계시록', strongs: 'G5056' },
-  { id: 'law', name: '모세오경', code: 'PENTATEUCH', polarity: 'ot', color: '#F43F5E', glow: 'rgba(244,63,94,0.45)', defaultBook: '창세기', strongs: 'H7225' },
-  { id: 'ot_history', name: '구약역사서', code: 'OT HISTORY', polarity: 'ot', color: '#FB7185', glow: 'rgba(251,113,133,0.45)', defaultBook: '사무엘하', strongs: 'H1285' },
-  { id: 'poetry', name: '시가서', code: 'POETRY', polarity: 'ot', color: '#F59E0B', glow: 'rgba(245,158,11,0.45)', defaultBook: '시편', strongs: 'H2617' },
-  { id: 'prophets', name: '선지서', code: 'PROPHETS', polarity: 'ot', color: '#EC4899', glow: 'rgba(236,72,153,0.45)', defaultBook: '이사야', strongs: 'H5375' }
+  { id: 'gospels', name: '복음서·행전', code: 'GOSPELS', polarity: 'nt', color: '#10B981', defaultBook: '요한복음', strongs: 'G3056' },
+  { id: 'pauline', name: '바울서신', code: 'PAULINE', polarity: 'nt', color: '#2DD4BF', defaultBook: '로마서', strongs: 'G26' },
+  { id: 'general', name: '공동서신', code: 'GENERAL', polarity: 'nt', color: '#38BDF8', defaultBook: '히브리서', strongs: 'G4102' },
+  { id: 'prophecy_nt', name: '요한계시록', code: 'APOCALYPSE', polarity: 'nt', color: '#34D399', defaultBook: '요한계시록', strongs: 'G5056' },
+  { id: 'law', name: '모세오경', code: 'PENTATEUCH', polarity: 'ot', color: '#F43F5E', defaultBook: '창세기', strongs: 'H7225' },
+  { id: 'ot_history', name: '구약역사서', code: 'OT HISTORY', polarity: 'ot', color: '#FB7185', defaultBook: '사무엘하', strongs: 'H1285' },
+  { id: 'poetry', name: '시가서', code: 'POETRY', polarity: 'ot', color: '#F59E0B', defaultBook: '시편', strongs: 'H2617' },
+  { id: 'prophets', name: '선지서', code: 'PROPHETS', polarity: 'ot', color: '#EC4899', defaultBook: '이사야', strongs: 'H5375' }
 ];
 
 const SECTOR_NAME_TO_ID = {
@@ -47,7 +47,7 @@ const SECTOR_NAME_TO_ID = {
 };
 
 // =====================================================================
-// 2. 핵심 히브리어/헬라어 원어 앵커 사전
+// 2. 핵심 히브리어/헬라어 원어 앵커 사전 & 신구약 교차참조 파트너 맵
 // =====================================================================
 const CORE_LEXICON_MAP = {
   H7225: { strongs: 'H7225', word: 'בְּרֵאשִׁית', pron: '베레쉬트', mean: '태초에·시작·첫열매', grammar: '명사·여성·단수', book: '창세기', chap: 1, verse: 1 },
@@ -60,10 +60,73 @@ const CORE_LEXICON_MAP = {
   G5056: { strongs: 'G5056', word: 'τέλος', pron: '텔로스', mean: '완성·구속사의 최종 성취', grammar: '명사·주격·중성·단수', book: '요한계시록', chap: 21, verse: 6 }
 };
 
+const CROSS_REF_PARTNERS = {
+  창세기: [
+    { book: '요한복음', chap: 1, label: '태초의 로고스' },
+    { book: '로마서', chap: 4, label: '아브라함 이신칭의' },
+    { book: '요한계시록', chap: 22, label: '생명나무 완성' }
+  ],
+  출애굽기: [
+    { book: '고린도전서', chap: 5, label: '유월절 어린양' },
+    { book: '요한복음', chap: 6, label: '하늘의 생명의 떡' },
+    { book: '히브리서', chap: 9, label: '새 언약의 성막' }
+  ],
+  레위기: [
+    { book: '히브리서', chap: 10, label: '영원한 속죄제사' },
+    { book: '베드로전서', chap: 1, label: '거룩함의 부르심' }
+  ],
+  시편: [
+    { book: '마태복음', chap: 27, label: '십자가 메시아 시편' },
+    { book: '히브리서', chap: 1, label: '영원한 보좌와 아들' },
+    { book: '요한복음', chap: 10, label: '선한 목자' }
+  ],
+  이사야: [
+    { book: '마태복음', chap: 1, label: '임마누엘 성취' },
+    { book: '베드로전서', chap: 2, label: '고난받는 종의 대속' },
+    { book: '요한계시록', chap: 21, label: '새 하늘과 새 땅' }
+  ],
+  요한복음: [
+    { book: '창세기', chap: 1, label: '태초 창조와 말씀' },
+    { book: '출애굽기', chap: 3, label: '스스로 있는 자' },
+    { book: '이사야', chap: 53, label: '하나님의 어린양' }
+  ],
+  로마서: [
+    { book: '창세기', chap: 15, label: '믿음으로 의롭다 함' },
+    { book: '하박국', chap: 2, label: '의인은 믿음으로' },
+    { book: '시편', chap: 32, label: '사죄의 복' }
+  ],
+  히브리서: [
+    { book: '레위기', chap: 16, label: '대속죄일 완성' },
+    { book: '시편', chap: 110, label: '멜기세덱 반차' },
+    { book: '예레미야', chap: 31, label: '새 언약 성취' }
+  ],
+  요한계시록: [
+    { book: '창세기', chap: 2, label: '에덴의 회복' },
+    { book: '다니엘', chap: 7, label: '인자의 영원한 나라' },
+    { book: '에스겔', chap: 47, label: '생명수의 강' }
+  ]
+};
+
+// 카드 내부 미니 SVG 스파크라인 포인트 생성 (결정론적)
+function buildSparklinePoints(seedIdx, chaps, readRatio) {
+  const pts = [];
+  const count = 14;
+  for (let i = 0; i < count; i++) {
+    const x = (i / (count - 1)) * 100;
+    const wave =
+      Math.sin(i * 0.9 + seedIdx * 1.3) * 6 +
+      Math.cos(i * 1.7 - seedIdx * 0.7) * 4;
+    const trend = (i / (count - 1)) * (readRatio * 10 + Math.min(8, chaps / 12));
+    const y = Math.max(3, Math.min(21, 16 - trend * 0.6 + wave * 0.55));
+    pts.push(`${x.toFixed(1)},${y.toFixed(1)}`);
+  }
+  return pts.join(' ');
+}
+
 // =====================================================================
-// 3. 상단 펄스 스파크라인 캔버스 (실시간 신구약 교차 파동)
+// 3. 상단 실시간 신구약 펄스 스파크라인 (모바일/PC 공통)
 // =====================================================================
-function TopPulseSparkline({ isPlaying, ntCount, otCount }) {
+function TopPulseSparkline({ isPlaying }) {
   const canvasRef = useRef(null);
 
   useEffect(() => {
@@ -76,7 +139,7 @@ function TopPulseSparkline({ isPlaying, ntCount, otCount }) {
     let tick = 0;
 
     const draw = () => {
-      if (isPlaying) tick += 0.04;
+      if (isPlaying) tick += 0.045;
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       const rect = canvas.getBoundingClientRect();
       if (rect.width < 10 || rect.height < 10) {
@@ -95,25 +158,29 @@ function TopPulseSparkline({ isPlaying, ntCount, otCount }) {
 
       ctx.clearRect(0, 0, w, h);
 
-      // 중앙 기준선
       ctx.beginPath();
       ctx.moveTo(0, midY);
       ctx.lineTo(w, midY);
-      ctx.strokeStyle = 'rgba(148, 163, 184, 0.2)';
+      ctx.strokeStyle = 'rgba(148, 163, 184, 0.22)';
       ctx.lineWidth = 1;
       ctx.stroke();
 
-      const bars = Math.max(40, Math.floor(w / 4));
+      const bars = Math.max(48, Math.floor(w / 3.5));
       for (let i = 0; i < bars; i++) {
         const x = (i / bars) * w;
         const norm = i / bars;
-        const amp = Math.sin(norm * 14 - tick) * Math.cos(norm * 7 + tick * 0.6) * (midY - 3);
+        const envelope = Math.sin(norm * Math.PI);
+        const spike =
+          Math.sin(norm * 22 - tick) * 0.65 +
+          Math.cos(norm * 47 + tick * 1.3) * 0.35;
+        const amp = spike * envelope * (midY - 2);
         const isNT = norm > 0.48;
+
         ctx.beginPath();
         ctx.moveTo(x, midY);
         ctx.lineTo(x, midY - amp);
-        ctx.strokeStyle = isNT ? 'rgba(16, 185, 129, 0.85)' : 'rgba(244, 63, 94, 0.85)';
-        ctx.lineWidth = 1.6;
+        ctx.strokeStyle = isNT ? 'rgba(16, 185, 129, 0.9)' : 'rgba(244, 63, 94, 0.9)';
+        ctx.lineWidth = 1.5;
         ctx.stroke();
       }
 
@@ -122,24 +189,46 @@ function TopPulseSparkline({ isPlaying, ntCount, otCount }) {
 
     draw();
     return () => cancelAnimationFrame(animId);
-  }, [isPlaying, ntCount, otCount]);
+  }, [isPlaying]);
 
   return <canvas ref={canvasRef} className="w-full h-7 block" />;
 }
 
 // =====================================================================
-// 4. 중앙 60FPS 오더블록 라이브 플로우 & 수직 스파인 시뮬레이션 캔버스
+// 4. 중앙 60FPS 오더블록 오로라 플로우 + 발광 볼륨 기둥 + 교차참조 아크
 // =====================================================================
 function OrderBlockFlowCanvas({
   streams,
+  sectorStats,
   activeSectorId,
   selectedBookKo,
+  partnerBookSet,
   isPlaying,
-  onSelectBook
+  onSelectBook,
+  onSelectSector
 }) {
   const containerRef = useRef(null);
   const canvasRef = useRef(null);
   const hitPointsRef = useRef([]);
+  const isScrubbingRef = useRef(false);
+
+  // 각 66권 스트림별 고정 시계열 노이즈 패턴 (매 프레임 흔들리지 않고 차트처럼 흐름)
+  const seriesNoise = useMemo(() => {
+    const STEPS = 44;
+    return streams.map((_, idx) => {
+      const arr = [0];
+      let val = 0;
+      for (let s = 1; s < STEPS; s++) {
+        // 결정론적 의사 난수 스텝
+        const r = Math.sin(idx * 12.9898 + s * 78.233) * 43758.5453;
+        const step = (r - Math.floor(r) - 0.5) * 2;
+        val = val * 0.82 + step;
+        arr.push(val);
+      }
+      arr.push(0);
+      return arr;
+    });
+  }, [streams.length]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -152,7 +241,7 @@ function OrderBlockFlowCanvas({
     let tick = 0;
 
     const render = () => {
-      if (isPlaying) tick += 0.018;
+      if (isPlaying) tick += 0.012;
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       const rect = container.getBoundingClientRect();
       const w = rect.width;
@@ -168,138 +257,197 @@ function OrderBlockFlowCanvas({
       }
 
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-      // 딥 터미널 배경
-      ctx.fillStyle = '#05070B';
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.fillStyle = '#04060A';
       ctx.fillRect(0, 0, w, h);
 
-      // 미세 수직·수평 헤어라인 그리드
-      ctx.strokeStyle = 'rgba(148, 163, 184, 0.05)';
+      // 미세 차트 그리드
+      ctx.strokeStyle = 'rgba(148, 163, 184, 0.04)';
       ctx.lineWidth = 1;
       ctx.beginPath();
-      for (let gx = 40; gx < w; gx += 56) {
+      for (let gx = 40; gx < w; gx += 48) {
         ctx.moveTo(gx, 0);
         ctx.lineTo(gx, h);
       }
-      for (let gy = 30; gy < h; gy += 36) {
+      for (let gy = 28; gy < h; gy += 34) {
         ctx.moveTo(0, gy);
         ctx.lineTo(w, gy);
       }
       ctx.stroke();
 
-      // 중앙-우측 수직 수렴 스파인(Order-Block Spine) 좌표
-      const spineX = w * 0.72;
-      const spineW = 14;
+      const isNarrow = w < 540;
+      const leftPad = isNarrow ? 76 : 116;
+      const spineX = isNarrow ? w * 0.75 : w * 0.78;
+      const spineW = isNarrow ? 16 : 24;
       const padY = 18;
       const usableH = h - padY * 2;
-      const splitY = padY + usableH * 0.46; // 상단 신약(에메랄드) / 하단 구약(크림슨) 경계
+      const splitY = padY + (27 / Math.max(1, streams.length)) * usableH;
 
-      // 수평 분할선 (신약 / 구약 극성 경계)
+      // 1) 좌측 극성 수직 폴
+      const gaugeX = 8;
+      ctx.fillStyle = '#10B981';
+      ctx.fillRect(gaugeX, padY, 2.5, Math.max(2, splitY - padY - 2));
+      ctx.fillStyle = '#F43F5E';
+      ctx.fillRect(gaugeX, splitY + 2, 2.5, Math.max(2, h - padY - splitY - 2));
+
+      // 극성 경계 수평선
       ctx.beginPath();
-      ctx.moveTo(0, splitY);
+      ctx.moveTo(gaugeX + 6, splitY);
       ctx.lineTo(w, splitY);
-      ctx.strokeStyle = 'rgba(56, 189, 248, 0.35)';
+      ctx.strokeStyle = 'rgba(148, 163, 184, 0.18)';
       ctx.lineWidth = 1;
-      ctx.setLineDash([4, 4]);
       ctx.stroke();
-      ctx.setLineDash([]);
 
       const nextHits = [];
 
-      // 66권 스트림 궤적 렌더링
-      streams.forEach((st, idx) => {
-        const isSelected = selectedBookKo === st.bookKo;
-        const isSectorMatch = activeSectorId === 'ALL' || st.sectorId === activeSectorId;
-        const baseY = padY + (idx / Math.max(1, streams.length - 1)) * usableH;
+      // 2) 좌측 8대 정경 섹터 티커
+      (sectorStats || []).forEach((sec, sIdx) => {
+        const sy = padY + ((sIdx + 0.5) / Math.max(1, sectorStats.length)) * usableH;
+        const isAct = activeSectorId === sec.id;
+        const isNT = sec.polarity === 'nt';
+        const secColor = isAct ? '#38BDF8' : isNT ? '#10B981' : '#F43F5E';
+        const bx = 16;
+        const bw = leftPad - 22;
+        const bh = isNarrow ? 18 : 20;
 
+        ctx.fillStyle = isAct ? 'rgba(56, 189, 248, 0.18)' : 'rgba(9, 13, 22, 0.92)';
+        ctx.fillRect(bx, sy - bh / 2, bw, bh);
+        ctx.strokeStyle = isAct ? '#38BDF8' : 'rgba(255, 255, 255, 0.08)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(bx, sy - bh / 2, bw, bh);
+
+        // 좌측 얇은 컬러 팁
+        ctx.fillStyle = secColor;
+        ctx.fillRect(bx, sy - bh / 2, 2, bh);
+
+        ctx.font = `bold ${isNarrow ? 8.5 : 9.5}px "Pretendard", sans-serif`;
+        ctx.fillStyle = '#E2E8F0';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(sec.name.slice(0, isNarrow ? 4 : 6), bx + 6, sy);
+
+        ctx.font = `bold ${isNarrow ? 8 : 9}px monospace`;
+        ctx.fillStyle = secColor;
+        ctx.textAlign = 'right';
+        ctx.fillText(`${sec.pct}%`, bx + bw - 4, sy);
+
+        nextHits.push({ type: 'sector', sectorId: sec.id, defaultBook: sec.defaultBook, x: bx, y: sy, w: bw, h: bh + 4 });
+      });
+
+      // 3) 66권 시계열 텔레메트리 폴리라인 (브라운 브릿지: 천장 클리핑 없음)
+      const flowW = Math.max(20, spineX - leftPad);
+      const steps = 44;
+      const bookYMap = {};
+
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+
+      streams.forEach((st, idx) => {
+        const baseY = padY + (idx / Math.max(1, streams.length - 1)) * usableH;
+        bookYMap[st.bookKo] = baseY;
+
+        const isSelected = selectedBookKo === st.bookKo;
+        const isPartner = partnerBookSet.has(st.bookKo);
+        const isSectorMatch = activeSectorId === 'ALL' || st.sectorId === activeSectorId;
         const isNT = !st.isOT;
+
         const strokeColor = isSelected
           ? '#38BDF8'
+          : isPartner
+          ? '#F59E0B'
           : isNT
           ? '#10B981'
           : '#F43F5E';
 
-        const alpha = isSelected ? 1.0 : isSectorMatch ? (st.hasActivity ? 0.72 : 0.34) : 0.08;
+        const alpha = isSelected
+          ? 0.98
+          : isPartner
+          ? 0.65
+          : isSectorMatch
+          ? st.hasActivity
+            ? 0.36
+            : 0.16
+          : 0.04;
 
-        // 1) 좌측 -> 수직 스파인(spineX) 실시간 파동 궤적
+        const noiseArr = seriesNoise[idx] || [];
+        // 왼쪽은 splitY 쪽에서 모아 출발해 오른쪽 baseY로 계단식 시계열 드리프트
+        const startY = splitY + (baseY - splitY) * 0.55;
+
         ctx.beginPath();
-        const steps = 28;
         for (let s = 0; s <= steps; s++) {
           const t = s / steps;
-          const x = t * (spineX - 4);
-          // 오른쪽 스파인에 가까워질수록 해당 스트림의 고정 Y로 수렴
-          const converge = 1 - Math.pow(t, 2.2);
-          const wave =
-            Math.sin(t * 7.5 - tick * (1.2 + (idx % 5) * 0.15) + idx * 0.45) * (16 + st.readRatio * 22) * converge +
-            Math.cos(t * 13 + tick * 0.9 + idx) * 5 * converge;
-          const y = Math.max(padY, Math.min(h - padY, baseY + wave));
+          const x = leftPad + t * flowW;
+          const envelope = Math.sin(t * Math.PI); // 양 끝(0, 1)에서 정확히 0으로 수렴
+          const liveDrift = Math.sin(tick * 1.4 + idx * 0.7 + t * 5) * 4.5 * envelope;
+          const jitter = (noiseArr[s] || 0) * 11.5 * envelope;
+          const y = Math.max(padY + 2, Math.min(h - padY - 2, startY + (baseY - startY) * t + jitter + liveDrift));
           if (s === 0) ctx.moveTo(x, y);
           else ctx.lineTo(x, y);
         }
+
         ctx.strokeStyle = strokeColor;
         ctx.globalAlpha = alpha;
-        ctx.lineWidth = isSelected ? 2.2 : st.hasActivity ? 1.3 : 0.85;
+        ctx.lineWidth = isSelected ? 1.8 : isPartner ? 1.2 : 0.8;
         if (isSelected) {
           ctx.shadowColor = '#38BDF8';
-          ctx.shadowBlur = 10;
+          ctx.shadowBlur = 8;
         }
         ctx.stroke();
         ctx.shadowBlur = 0;
 
-        // 2) 스파인 내부 세그먼트 블록
-        const segH = Math.max(2, usableH / streams.length - 0.8);
-        ctx.fillStyle = strokeColor;
-        ctx.globalAlpha = isSelected ? 1 : isSectorMatch ? 0.55 : 0.12;
-        ctx.fillRect(spineX, baseY - segH / 2, spineW, segH);
-
-        // 3) 스파인 우측 -> 우측 카드 매트릭스로 퍼져나가는 베지어 팬아웃(Fan-out) 곡선
-        if (isSelected || (isSectorMatch && (idx % 2 === 0 || st.hasActivity))) {
-          const rightEndX = w;
-          const rightEndY = padY + ((idx * 1.03) % streams.length) / streams.length * usableH;
+        // 우측 팬아웃 필라멘트 (스파인 -> 우측 카드 매트릭스)
+        if (isSelected || isPartner || (isSectorMatch && idx % 2 === 0)) {
+          const rightEndY = padY + (((idx * 1.04) % streams.length) / streams.length) * usableH;
+          const fanW = w - (spineX + spineW);
           ctx.beginPath();
           ctx.moveTo(spineX + spineW, baseY);
           ctx.bezierCurveTo(
-            spineX + spineW + (w - spineX) * 0.42,
+            spineX + spineW + fanW * 0.45,
             baseY,
-            spineX + spineW + (w - spineX) * 0.58,
+            spineX + spineW + fanW * 0.55,
             rightEndY,
-            rightEndX,
+            w,
             rightEndY
           );
           ctx.strokeStyle = strokeColor;
-          ctx.globalAlpha = isSelected ? 0.95 : 0.25;
-          ctx.lineWidth = isSelected ? 2.0 : 0.9;
+          ctx.globalAlpha = isSelected ? 0.9 : isPartner ? 0.5 : 0.16;
+          ctx.lineWidth = isSelected ? 1.6 : 0.75;
           ctx.stroke();
         }
+      });
 
-        // 선택된 스트림 위를 질주하는 광자 패킷
+      ctx.restore();
+
+      // 4) 슬림 글래스 수직 오더블록 기둥 (과한 채움 제거)
+      ctx.fillStyle = 'rgba(10, 15, 26, 0.85)';
+      ctx.fillRect(spineX, padY, spineW, usableH);
+
+      streams.forEach((st) => {
+        const baseY = bookYMap[st.bookKo];
+        const isSelected = selectedBookKo === st.bookKo;
+        const isPartner = partnerBookSet.has(st.bookKo);
+        const isNT = !st.isOT;
+        const tickW = Math.max(3, (spineW - 4) * (0.2 + Math.min(0.8, st.chaps / 66 + st.readRatio * 0.4)));
+
+        ctx.fillStyle = isSelected ? '#38BDF8' : isPartner ? '#F59E0B' : isNT ? '#10B981' : '#F43F5E';
+        ctx.globalAlpha = isSelected ? 1 : isPartner ? 0.85 : 0.32;
+        ctx.fillRect(spineX + 2, baseY - 0.8, isSelected ? spineW - 4 : tickW, isSelected ? 2.4 : 1.4);
+
         if (isSelected) {
-          const headT = (tick * 0.55) % 1;
-          const px = headT * (spineX - 4);
-          const converge = 1 - Math.pow(headT, 2.2);
-          const wave =
-            Math.sin(headT * 7.5 - tick * (1.2 + (idx % 5) * 0.15) + idx * 0.45) * (16 + st.readRatio * 22) * converge +
-            Math.cos(headT * 13 + tick * 0.9 + idx) * 5 * converge;
-          const py = Math.max(padY, Math.min(h - padY, baseY + wave));
-
-          ctx.globalAlpha = 1;
-          ctx.beginPath();
-          ctx.arc(px, py, 4, 0, Math.PI * 2);
-          ctx.fillStyle = '#FFFFFF';
-          ctx.shadowColor = '#38BDF8';
-          ctx.shadowBlur = 12;
-          ctx.fill();
-          ctx.shadowBlur = 0;
+          // 선택된 행 수평 크로스헤어 라인 (레퍼런스 파란 수평선)
+          ctx.globalAlpha = 0.55;
+          ctx.fillStyle = '#38BDF8';
+          ctx.fillRect(leftPad, baseY - 0.5, w - leftPad, 1);
         }
 
         ctx.globalAlpha = 1;
-        nextHits.push({ bookKo: st.bookKo, x: spineX + spineW / 2, y: baseY, r: 10 });
+        nextHits.push({ type: 'book', bookKo: st.bookKo, x: spineX - 10, y: baseY, w: spineW + 30, h: 12 });
       });
 
-      // 수직 스파인 외곽 프레임 글로우
-      ctx.strokeStyle = 'rgba(226, 232, 240, 0.35)';
+      // 기둥 양쪽 얇은 글래스 테두리
+      ctx.strokeStyle = 'rgba(148, 163, 184, 0.32)';
       ctx.lineWidth = 1;
-      ctx.strokeRect(spineX, padY - 2, spineW, usableH + 4);
+      ctx.strokeRect(spineX, padY, spineW, usableH);
 
       hitPointsRef.current = nextHits;
       animId = requestAnimationFrame(render);
@@ -307,38 +455,64 @@ function OrderBlockFlowCanvas({
 
     render();
     return () => cancelAnimationFrame(animId);
-  }, [streams, activeSectorId, selectedBookKo, isPlaying]);
+  }, [streams, sectorStats, activeSectorId, selectedBookKo, partnerBookSet, isPlaying, seriesNoise]);
 
-  const handleCanvasClick = (e) => {
+  const pickAtClientPos = (clientX, clientY, allowSector = true) => {
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return;
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+
+    if (allowSector) {
+      for (const pt of hitPointsRef.current) {
+        if (pt.type === 'sector' && x >= pt.x && x <= pt.x + pt.w && Math.abs(y - pt.y) <= pt.h / 2) {
+          onSelectSector?.(pt.sectorId, pt.defaultBook);
+          return;
+        }
+      }
+    }
+
     let best = null;
-    let minD = 24;
+    let minD = 26;
     for (const pt of hitPointsRef.current) {
-      const d = Math.abs(y - pt.y) + Math.abs(x - pt.x) * 0.15;
+      if (pt.type !== 'book') continue;
+      const d = Math.abs(y - pt.y);
       if (d < minD) {
         minD = d;
         best = pt;
       }
     }
-    if (best && onSelectBook) onSelectBook(best.bookKo);
+    if (best) onSelectBook?.(best.bookKo);
   };
 
   return (
     <div ref={containerRef} className="relative w-full h-full overflow-hidden">
       <canvas
         ref={canvasRef}
-        onClick={handleCanvasClick}
-        className="w-full h-full block cursor-crosshair"
+        onClick={(e) => pickAtClientPos(e.clientX, e.clientY, true)}
+        onTouchStart={(e) => {
+          if (e.touches.length === 1) {
+            isScrubbingRef.current = true;
+            pickAtClientPos(e.touches[0].clientX, e.touches[0].clientY, true);
+          }
+        }}
+        onTouchMove={(e) => {
+          if (isScrubbingRef.current && e.touches.length === 1) {
+            pickAtClientPos(e.touches[0].clientX, e.touches[0].clientY, false);
+          }
+        }}
+        onTouchEnd={() => {
+          isScrubbingRef.current = false;
+        }}
+        className="w-full h-full block cursor-crosshair touch-none"
       />
     </div>
   );
 }
-// ==================== PART 1 끝 (아래에 PART 2 이어붙이기) ====================
-// ==================== PART 2 시작 ====================
 
+// =====================================================================
+// 5. 메인 BibleSecondBrain3D (Order-Block Live Telemetry Terminal)
+// =====================================================================
 export default function BibleSecondBrain3D({
   setActiveScreen,
   setCurrentChapId,
@@ -355,20 +529,19 @@ export default function BibleSecondBrain3D({
 
   const [isPlaying, setIsPlaying] = useState(true);
   const [activeSectorId, setActiveSectorId] = useState('ALL');
+  const [matrixFilter, setMatrixFilter] = useState('all'); // 'all' | 'nt' | 'ot' | 'active'
   const [selectedBookKo, setSelectedBookKo] = useState('요한복음');
   const [selectedChap, setSelectedChap] = useState(1);
   const [selectedVerse, setSelectedVerse] = useState(1);
 
-  // 4대 역본 상태 ('krv4' | 'easy' | 'web' | 'orig')
-  const [previewVersion, setPreviewVersion] = useState('krv4');
+  const [previewVersion, setPreviewVersion] = useState('krv4'); // 'krv4' | 'easy' | 'web' | 'orig'
   const [krv4Db, setKrv4Db] = useState(() => (typeof window !== 'undefined' ? window.__GTC_KRV4_DB__ : null));
   const [easyDb, setEasyDb] = useState({});
   const [webDb, setWebDb] = useState({});
 
-  // 검색 & 모바일 탭 ('flow' | 'matrix' | 'inspector')
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
-  const [mobileTab, setMobileTab] = useState('flow');
+  const [mobileTab, setMobileTab] = useState('flow'); // 'flow' | 'matrix' | 'inspector'
 
   useEffect(() => {
     ensureKrv4TxtLoaded().then((db) => {
@@ -378,9 +551,7 @@ export default function BibleSecondBrain3D({
     fetch('/data/web_bible.json').then((r) => (r.ok ? r.json() : {})).then((d) => setWebDb(d || {})).catch(() => {});
   }, []);
 
-  // =====================================================================
-  // 5. 66권 실시간 텔레메트리 스트림 (신약 상단 에메랄드 / 구약 하단 크림슨)
-  // =====================================================================
+  // 66권 실시간 텔레메트리 스트림
   const { streams, sectorStats, ntActiveCount, otActiveCount, totalReadChaps } = useMemo(() => {
     const readChapSet = new Set();
     Object.keys(readVerses || {}).forEach((k) => {
@@ -390,28 +561,22 @@ export default function BibleSecondBrain3D({
       }
     });
 
-    // 권별 QT / 설교 / 성경노트 카운트 집계
     const noteCountByBook = {};
     Object.values(dailyData || {}).forEach((d) => {
       if (!d) return;
       const refText = `${d.qtReference || ''} ${d.qtTitle || ''} ${d.sermonReference || ''} ${d.sermonTitle || ''}`;
       BIBLE_66_CANON.forEach((b) => {
-        if (refText.includes(b.ko)) {
-          noteCountByBook[b.ko] = (noteCountByBook[b.ko] || 0) + 1;
-        }
+        if (refText.includes(b.ko)) noteCountByBook[b.ko] = (noteCountByBook[b.ko] || 0) + 1;
       });
     });
 
     (bibleNotes || []).forEach((bn) => {
       const refStr = bn?.verses?.[0]?.ref || '';
       BIBLE_66_CANON.forEach((b) => {
-        if (refStr.includes(b.ko)) {
-          noteCountByBook[b.ko] = (noteCountByBook[b.ko] || 0) + 1;
-        }
+        if (refStr.includes(b.ko)) noteCountByBook[b.ko] = (noteCountByBook[b.ko] || 0) + 1;
       });
     });
 
-    // 신약(상단 27권) 먼저, 구약(하단 39권) 순서로 배치해 오더블록 극성 구조 구현
     const orderedCanon = [
       ...BIBLE_66_CANON.filter((b) => !b.isOT),
       ...BIBLE_66_CANON.filter((b) => b.isOT)
@@ -425,7 +590,7 @@ export default function BibleSecondBrain3D({
     let ntAct = 0;
     let otAct = 0;
 
-    const list = orderedCanon.map((b) => {
+    const list = orderedCanon.map((b, idx) => {
       const sectorId = SECTOR_NAME_TO_ID[b.sector] || (b.isOT ? 'law' : 'gospels');
       let readCount = 0;
       for (let c = 1; c <= b.chaps; c++) {
@@ -434,7 +599,6 @@ export default function BibleSecondBrain3D({
       const noteCount = noteCountByBook[b.ko] || 0;
       const readRatio = readCount / Math.max(1, b.chaps);
       const hasActivity = readCount > 0 || noteCount > 0;
-
       if (!b.isOT && hasActivity) ntAct++;
       if (b.isOT && hasActivity) otAct++;
 
@@ -445,7 +609,10 @@ export default function BibleSecondBrain3D({
         secMap[sectorId].bookCount += 1;
       }
 
+      const xrWeight = (CROSS_REF_PARTNERS[b.ko]?.length || 0) * 14 + Math.min(48, b.chaps);
+
       return {
+        idx,
         bookKo: b.ko,
         bookEn: b.en,
         abbr: b.abbr,
@@ -457,6 +624,8 @@ export default function BibleSecondBrain3D({
         readRatio,
         pct: Math.round(readRatio * 100),
         noteCount,
+        xrWeight,
+        sparkPoints: buildSparklinePoints(idx, b.chaps, readRatio),
         hasActivity
       };
     });
@@ -470,13 +639,31 @@ export default function BibleSecondBrain3D({
     return {
       streams: list,
       sectorStats: sectorStatsArr,
-      ntActiveCount: ntAct || 27,
-      otActiveCount: otAct || 39,
+      ntActiveCount: ntAct,
+      otActiveCount: otAct,
       totalReadChaps: readChapSet.size
     };
   }, [dailyData, readVerses, bibleNotes]);
 
-  // 현재 선택된 성경의 4대 역본 + 원어 + 연결 노트 추출
+  // 현재 선택된 성경의 교차참조 파트너 목록 & Set
+  const activePartners = useMemo(() => {
+    const direct = CROSS_REF_PARTNERS[selectedBookKo];
+    if (direct && direct.length > 0) return direct;
+    const isOT = BIBLE_66_CANON.find((b) => b.ko === selectedBookKo)?.isOT;
+    return isOT
+      ? [
+          { book: '요한복음', chap: 1, label: '신약 로고스 성취' },
+          { book: '로마서', chap: 8, label: '복음의 완성' }
+        ]
+      : [
+          { book: '창세기', chap: 1, label: '구약 창조 언약' },
+          { book: '이사야', chap: 53, label: '메시아 예언' }
+        ];
+  }, [selectedBookKo]);
+
+  const partnerBookSet = useMemo(() => new Set(activePartners.map((p) => p.book)), [activePartners]);
+
+  // 현재 선택된 성경의 4대 역본 + 원어 + 연결 기록
   const activeBookDetail = useMemo(() => {
     const meta = BIBLE_66_CANON.find((b) => b.ko === selectedBookKo) || BIBLE_66_CANON[42];
     const chapNum = Math.max(1, Math.min(meta.chaps, selectedChap || 1));
@@ -488,7 +675,7 @@ export default function BibleSecondBrain3D({
     const fallbackBook = (Array.isArray(bibleData) ? bibleData : []).find((b) => b.name === meta.en || b.name === meta.ko);
     const baseVerses = krv4Chap || fallbackBook?.chapters?.[chapNum - 1] || [];
 
-    const startIdx = Math.max(0, Math.min(baseVerses.length - 1, (selectedVerse || 1) - 1));
+    const startIdx = Math.max(0, Math.min(Math.max(0, baseVerses.length - 1), (selectedVerse || 1) - 1));
     const verses = baseVerses.slice(startIdx, startIdx + 3).map((raw, i) => {
       const vNum = startIdx + i + 1;
       const decoded = String(raw || '').replace(/&#x27;/g, "'").replace(/&quot;/g, '"').trim();
@@ -501,7 +688,6 @@ export default function BibleSecondBrain3D({
       };
     });
 
-    // 연결된 내 QT / 설교 / 성경노트 역추적
     const linked = [];
     Object.entries(dailyData || {}).forEach(([dateKey, d]) => {
       if (!d) return;
@@ -524,14 +710,7 @@ export default function BibleSecondBrain3D({
       }
     });
 
-    return {
-      meta,
-      chapNum,
-      sectorObj,
-      lexicon,
-      verses,
-      linked: linked.slice(0, 5)
-    };
+    return { meta, chapNum, sectorObj, lexicon, verses, linked: linked.slice(0, 5) };
   }, [selectedBookKo, selectedChap, selectedVerse, krv4Db, easyDb, webDb, dailyData, bibleNotes, generalNotes]);
 
   // 통합 딥서치
@@ -595,12 +774,16 @@ export default function BibleSecondBrain3D({
 
   // 우측 카드 매트릭스 필터링
   const visibleMatrixStreams = useMemo(() => {
-    return activeSectorId === 'ALL' ? streams : streams.filter((s) => s.sectorId === activeSectorId);
-  }, [streams, activeSectorId]);
+    let list = activeSectorId === 'ALL' ? streams : streams.filter((s) => s.sectorId === activeSectorId);
+    if (matrixFilter === 'nt') list = list.filter((s) => !s.isOT);
+    else if (matrixFilter === 'ot') list = list.filter((s) => s.isOT);
+    else if (matrixFilter === 'active') list = list.filter((s) => s.hasActivity);
+    return list;
+  }, [streams, activeSectorId, matrixFilter]);
 
-  const handleSelectBook = useCallback((bookKo) => {
+  const handleSelectBook = useCallback((bookKo, chap = 1) => {
     setSelectedBookKo(bookKo);
-    setSelectedChap(1);
+    setSelectedChap(chap);
     setSelectedVerse(1);
   }, []);
 
@@ -624,24 +807,23 @@ export default function BibleSecondBrain3D({
   return (
     <div
       style={{ height: '100dvh', colorScheme: 'dark' }}
-      className="flex-1 w-full bg-[#05070B] text-slate-100 flex flex-col overflow-hidden select-none font-mono relative"
+      className="flex-1 w-full bg-[#04060A] text-slate-100 flex flex-col overflow-hidden select-none font-mono relative"
     >
-      {/* 1. 상단 오더블록 라이브 텔레메트리 헤더 */}
-      <header className="shrink-0 bg-[#080B12] border-b border-white/10 px-3 sm:px-4 py-2 z-30">
-        <div className="flex items-center justify-between gap-2.5">
-          {/* 좌측: 복귀 & 검색창 */}
-          <div className="flex items-center gap-2 flex-1 max-w-md min-w-0">
+      {/* 1. 상단 오더블록 텔레메트리 헤더 (모바일/PC 공통 실시간 펄스 파형) */}
+      <header className="shrink-0 bg-[#080B12] border-b border-white/10 px-2.5 sm:px-4 pt-2 pb-1.5 z-30 space-y-1.5">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 flex-1 max-w-md min-w-0">
             <button
               type="button"
               onClick={() => setActiveScreen && setActiveScreen('galaxy')}
-              className="h-8 px-2.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-[11px] font-bold text-slate-200 flex items-center gap-1 cursor-pointer shrink-0"
+              className="h-8 px-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-[11px] font-bold text-slate-200 flex items-center gap-1 cursor-pointer shrink-0"
             >
               <ChevronLeft className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">GALAXY</span>
             </button>
 
             <div className="relative flex-1 min-w-0">
-              <div className="h-8 px-2.5 rounded-lg bg-[#05070B] border border-white/15 focus-within:border-sky-400 flex items-center gap-1.5">
+              <div className="h-8 px-2.5 rounded-lg bg-[#04060A] border border-white/15 focus-within:border-sky-400 flex items-center gap-1.5">
                 <Search className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                 <input
                   type="text"
@@ -651,7 +833,7 @@ export default function BibleSecondBrain3D({
                     setShowSearchDropdown(Boolean(e.target.value.trim()));
                   }}
                   onFocus={() => searchQuery.trim() && setShowSearchDropdown(true)}
-                  placeholder="66권 · 구절(요 3:16) · 원어 검색..."
+                  placeholder="66권 · 구절(요 3:16) · 원어..."
                   className="w-full bg-transparent text-[12px] font-sans text-white placeholder:text-slate-500 outline-none select-text"
                 />
                 {searchQuery && (
@@ -691,34 +873,23 @@ export default function BibleSecondBrain3D({
             </div>
           </div>
 
-          {/* 중앙: 실시간 신구약 펄스 스파크라인 (PC/태블릿) */}
-          <div className="hidden lg:flex items-center flex-1 max-w-md px-3">
-            <TopPulseSparkline isPlaying={isPlaying} ntCount={ntActiveCount} otCount={otActiveCount} />
+          {/* PC 전용 중앙 스파크라인 */}
+          <div className="hidden lg:flex items-center flex-1 max-w-md px-2">
+            <TopPulseSparkline isPlaying={isPlaying} />
           </div>
 
-          {/* 우측: 신약/구약 라이브 카운터 & 시뮬레이션 토글 */}
-          <div className="flex items-center gap-2 shrink-0">
-            <div className="hidden sm:flex items-center gap-3 px-2.5 py-1 rounded-lg bg-[#05070B] border border-white/10 text-[11px]">
-              <div className="flex items-center gap-1">
-                <span className="text-[9.5px] text-slate-400">NT</span>
-                <span className="font-black text-emerald-400">{ntActiveCount}</span>
-              </div>
-              <span className="w-px h-3 bg-white/10" />
-              <div className="flex items-center gap-1">
-                <span className="text-[9.5px] text-slate-400">OT</span>
-                <span className="font-black text-rose-400">{otActiveCount}</span>
-              </div>
-              <span className="w-px h-3 bg-white/10" />
-              <div className="flex items-center gap-1">
-                <span className="text-[9.5px] text-slate-400">READ</span>
-                <span className="font-black text-sky-400">{totalReadChaps}</span>
-              </div>
+          {/* 우측 라이브 카운터 & 재생 토글 */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <div className="flex items-center gap-2 px-2 py-1 rounded-lg bg-[#04060A] border border-white/10 text-[10.5px]">
+              <span className="text-emerald-400 font-black">NT {ntActiveCount}</span>
+              <span className="text-rose-400 font-black">OT {otActiveCount}</span>
+              <span className="hidden sm:inline text-sky-400 font-black">READ {totalReadChaps}</span>
             </div>
 
             <button
               type="button"
               onClick={() => setIsPlaying((p) => !p)}
-              className={`h-8 px-2.5 rounded-lg border text-[11px] font-bold flex items-center gap-1 cursor-pointer ${
+              className={`h-8 px-2 rounded-lg border text-[10.5px] font-bold flex items-center gap-1 cursor-pointer ${
                 isPlaying
                   ? 'border-emerald-500/50 bg-emerald-500/15 text-emerald-300'
                   : 'border-white/15 bg-white/5 text-slate-400'
@@ -729,69 +900,16 @@ export default function BibleSecondBrain3D({
             </button>
           </div>
         </div>
+
+        {/* 모바일 전용 상단 실시간 펄스 파형 바 */}
+        <div className="lg:hidden">
+          <TopPulseSparkline isPlaying={isPlaying} />
+        </div>
       </header>
 
-      {/* 2. 메인 3단 오더블록 텔레메트리 바디 */}
+      {/* 2. 메인 바디: 캔버스(좌측 극성·섹터 통합) + 우측 66권 매트릭스 */}
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden min-h-0">
-        {/* [좌측] 극성 수직 바 + 8대 정경 섹터 리스트 */}
-        <aside className="hidden lg:flex w-[210px] xl:w-[230px] bg-[#080B12] border-r border-white/10 shrink-0 p-2.5 flex-col gap-1.5 overflow-y-auto hide-scrollbar">
-          <div className="flex items-center justify-between px-1 pb-1.5 border-b border-white/10">
-            <span className="text-[10px] font-bold text-slate-400 tracking-wider">CANON SECTORS</span>
-            {activeSectorId !== 'ALL' && (
-              <button
-                type="button"
-                onClick={() => setActiveSectorId('ALL')}
-                className="text-[10px] font-bold text-sky-400 cursor-pointer"
-              >
-                ALL
-              </button>
-            )}
-          </div>
-
-          <div className="flex gap-2 flex-1 min-h-0">
-            {/* 극성 수직 스파인 바 (상단 에메랄드 신약 / 하단 크림슨 구약) */}
-            <div className="w-1.5 rounded-full overflow-hidden flex flex-col shrink-0 my-1">
-              <div className="flex-1 bg-gradient-to-b from-emerald-400 to-teal-500" />
-              <div className="h-0.5 bg-sky-400" />
-              <div className="flex-1 bg-gradient-to-b from-rose-500 to-pink-600" />
-            </div>
-
-            <div className="flex-1 space-y-1 overflow-y-auto hide-scrollbar">
-              {sectorStats.map((sec) => {
-                const isAct = activeSectorId === sec.id;
-                const isNT = sec.polarity === 'nt';
-                return (
-                  <button
-                    key={sec.id}
-                    type="button"
-                    onClick={() => {
-                      setActiveSectorId(isAct ? 'ALL' : sec.id);
-                      handleSelectBook(sec.defaultBook);
-                    }}
-                    className={`w-full px-2 py-2 rounded-lg border text-left transition-all cursor-pointer ${
-                      isAct
-                        ? 'bg-sky-500/15 border-sky-400/60'
-                        : 'bg-[#05070B]/70 border-white/5 hover:border-white/20'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between gap-1">
-                      <span className="text-[11px] font-sans font-bold text-white truncate">{sec.name}</span>
-                      <span className={`text-[10px] font-black ${isNT ? 'text-emerald-400' : 'text-rose-400'}`}>
-                        {sec.pct}%
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between mt-1 text-[9.5px] text-slate-500">
-                      <span>{sec.code}</span>
-                      <span>{sec.readChaps}/{sec.totalChaps}</span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </aside>
-
-        {/* [중앙] 60FPS 라이브 오더블록 플로우 캔버스 */}
+        {/* [좌·중앙] 60FPS 오로라 플로우 + 발광 볼륨 기둥 + 하단 인스펙터 */}
         <section
           className={`flex-1 flex flex-col min-w-0 min-h-0 relative ${
             mobileTab === 'flow' ? 'flex' : 'hidden lg:flex'
@@ -800,24 +918,73 @@ export default function BibleSecondBrain3D({
           <div className="flex-1 min-h-0 relative">
             <OrderBlockFlowCanvas
               streams={streams}
+              sectorStats={sectorStats}
               activeSectorId={activeSectorId}
               selectedBookKo={selectedBookKo}
+              partnerBookSet={partnerBookSet}
               isPlaying={isPlaying}
-              onSelectBook={handleSelectBook}
+              onSelectBook={(bk) => handleSelectBook(bk, 1)}
+              onSelectSector={(secId, defBook) => {
+                setActiveSectorId((prev) => (prev === secId ? 'ALL' : secId));
+                handleSelectBook(defBook, 1);
+              }}
             />
 
-            {/* 좌상단 선택된 스트림 미니 HUD */}
-            <div className="absolute top-2.5 left-2.5 z-10 px-3 py-1.5 rounded-lg bg-[#080B12]/90 border border-white/15 backdrop-blur-md flex items-center gap-2 text-[11px]">
-              <span className={`w-2 h-2 rounded-full ${activeBookDetail.meta.isOT ? 'bg-rose-400' : 'bg-emerald-400'}`} />
-              <span className="font-sans font-bold text-white">
-                {activeBookDetail.meta.ko} {activeBookDetail.chapNum}장
-              </span>
-              <span className="text-slate-400">·</span>
-              <span className="text-sky-400 font-bold">{activeBookDetail.lexicon.strongs}</span>
+            {/* 우상단 선택 성경 & 필터 해제 배지 */}
+            <div className="absolute top-2 right-2 z-10 flex items-center gap-1.5">
+              {activeSectorId !== 'ALL' && (
+                <button
+                  type="button"
+                  onClick={() => setActiveSectorId('ALL')}
+                  className="px-2 py-1 rounded-md bg-sky-500/20 border border-sky-400/50 text-sky-300 text-[10px] font-bold cursor-pointer"
+                >
+                  전체 섹터 ✕
+                </button>
+              )}
+              <div className="px-2.5 py-1 rounded-md bg-[#080B12]/90 border border-white/15 backdrop-blur-md flex items-center gap-1.5 text-[10.5px]">
+                <span className={`w-2 h-2 rounded-full ${activeBookDetail.meta.isOT ? 'bg-rose-400' : 'bg-emerald-400'}`} />
+                <span className="font-sans font-bold text-white">
+                  {activeBookDetail.meta.ko} {activeBookDetail.chapNum}장
+                </span>
+                <span className="text-amber-400 font-bold">{activeBookDetail.lexicon.strongs}</span>
+              </div>
             </div>
           </div>
 
-          {/* 하단 통합 4대 역본 & 연결 노트 인스펙터 (PC/태블릿 상시 표시, 모바일은 inspector 탭) */}
+          {/* 모바일 플로우 탭 하단 컴팩트 라이브 프리뷰 독 */}
+          <div className="lg:hidden shrink-0 bg-[#080B12] border-t border-white/10 px-3 py-2 font-sans space-y-1.5">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="text-[12.5px] font-bold text-white shrink-0">
+                  {activeBookDetail.meta.ko} {activeBookDetail.chapNum}장
+                </span>
+                <span className="text-[11px] text-amber-400 font-mono truncate">
+                  {activeBookDetail.lexicon.word} [{activeBookDetail.lexicon.pron}]
+                </span>
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleJumpToBible}
+                  className="px-2 py-1 rounded bg-emerald-500/15 text-emerald-300 text-[10.5px] font-bold cursor-pointer"
+                >
+                  본문
+                </button>
+                <button
+                  type="button"
+                  onClick={handleJumpToInterlinear}
+                  className="px-2 py-1 rounded bg-amber-500/15 text-amber-300 text-[10.5px] font-bold cursor-pointer"
+                >
+                  원어
+                </button>
+              </div>
+            </div>
+            <p className="text-[11.5px] text-slate-300 line-clamp-1">
+              {activeBookDetail.verses[0]?.krv4 || '기둥을 터치하거나 드래그해 66권을 탐색하세요.'}
+            </p>
+          </div>
+
+          {/* PC/태블릿 하단 4대 역본 · 교차참조 파트너 · 연결 기록 통합 독 */}
           <div className="hidden lg:block shrink-0 bg-[#080B12] border-t border-white/10 p-3 font-sans">
             <div className="grid grid-cols-12 gap-3 items-start">
               {/* 좌측 7컬럼: 4대 역본 대조 */}
@@ -865,7 +1032,7 @@ export default function BibleSecondBrain3D({
                 </div>
 
                 {previewVersion === 'orig' ? (
-                  <div className="p-2.5 rounded-lg bg-[#05070B] border border-white/10 text-[12px] space-y-0.5">
+                  <div className="p-2.5 rounded-lg bg-[#04060A] border border-white/10 text-[12px] space-y-0.5">
                     <div className="font-bold text-white">
                       {activeBookDetail.lexicon.word}{' '}
                       <span className="text-amber-400">[{activeBookDetail.lexicon.pron}]</span> · {activeBookDetail.lexicon.strongs}
@@ -873,7 +1040,7 @@ export default function BibleSecondBrain3D({
                     <p className="text-slate-400">{activeBookDetail.lexicon.mean} ({activeBookDetail.lexicon.grammar})</p>
                   </div>
                 ) : (
-                  <div className="p-2.5 rounded-lg bg-[#05070B] border border-white/10 space-y-1 text-[12px] leading-relaxed">
+                  <div className="p-2.5 rounded-lg bg-[#04060A] border border-white/10 space-y-1 text-[12px] leading-relaxed">
                     {activeBookDetail.verses.slice(0, 2).map((v) => (
                       <p key={v.v} className="line-clamp-1 text-slate-200">
                         <b className="text-sky-400 font-mono mr-1.5">{v.v}</b>
@@ -882,9 +1049,26 @@ export default function BibleSecondBrain3D({
                     ))}
                   </div>
                 )}
+
+                {/* 신구약 교차참조 퀵 점프 칩 */}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-[10.5px] font-bold text-amber-400 flex items-center gap-1">
+                    <Link2 className="w-3 h-3" /> 교차참조:
+                  </span>
+                  {activePartners.map((p) => (
+                    <button
+                      key={`${p.book}_${p.chap}`}
+                      type="button"
+                      onClick={() => handleSelectBook(p.book, p.chap)}
+                      className="px-2 py-0.5 rounded bg-amber-500/10 hover:bg-amber-500/25 border border-amber-400/30 text-[10.5px] font-bold text-amber-200 cursor-pointer"
+                    >
+                      {p.book} {p.chap}장 · {p.label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              {/* 우측 5컬럼: 연결된 내 QT/설교/노트 + 바로가기 */}
+              {/* 우측 5컬럼: 연결된 내 기록 + 바로가기 */}
               <div className="col-span-5 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] font-bold text-slate-400">연결된 내 기록 ({activeBookDetail.linked.length})</span>
@@ -907,7 +1091,7 @@ export default function BibleSecondBrain3D({
                 </div>
 
                 {activeBookDetail.linked.length === 0 ? (
-                  <div className="p-2.5 rounded-lg bg-[#05070B] border border-white/10 text-[11.5px] text-slate-500 flex items-center justify-between">
+                  <div className="p-2.5 rounded-lg bg-[#04060A] border border-white/10 text-[11.5px] text-slate-500 flex items-center justify-between">
                     <span>연결된 QT·설교 노트가 없습니다.</span>
                     <button
                       type="button"
@@ -918,13 +1102,13 @@ export default function BibleSecondBrain3D({
                     </button>
                   </div>
                 ) : (
-                  <div className="space-y-1 max-h-[68px] overflow-y-auto hide-scrollbar">
+                  <div className="space-y-1 max-h-[82px] overflow-y-auto hide-scrollbar">
                     {activeBookDetail.linked.map((rec) => (
                       <button
                         key={rec.id}
                         type="button"
                         onClick={() => setActiveScreen && setActiveScreen(rec.screen)}
-                        className="w-full px-2.5 py-1.5 rounded-lg bg-[#05070B] border border-white/10 hover:border-sky-400 flex items-center justify-between gap-2 text-[11px] cursor-pointer"
+                        className="w-full px-2.5 py-1.5 rounded-lg bg-[#04060A] border border-white/10 hover:border-sky-400 flex items-center justify-between gap-2 text-[11px] cursor-pointer"
                       >
                         <span className="truncate">
                           <b className="text-sky-400 mr-1.5">[{rec.tag}]</b>
@@ -940,56 +1124,86 @@ export default function BibleSecondBrain3D({
           </div>
         </section>
 
-        {/* [우측] 초고밀도 66권 오더블록 카드 매트릭스 */}
+        {/* [우측] 초고밀도 66권 오더블록 카드 매트릭스 (미니 스파크라인 내장) */}
         <aside
-          className={`w-full lg:w-[340px] xl:w-[400px] bg-[#080B12] border-t lg:border-t-0 lg:border-l border-white/10 p-2.5 flex-col overflow-hidden shrink-0 ${
+          className={`w-full lg:w-[360px] xl:w-[430px] bg-[#080B12] border-t lg:border-t-0 lg:border-l border-white/10 p-2.5 flex-col overflow-hidden shrink-0 ${
             mobileTab === 'matrix' ? 'flex flex-1' : 'hidden lg:flex'
           }`}
         >
-          <div className="flex items-center justify-between pb-2 mb-2 border-b border-white/10 shrink-0">
+          <div className="flex items-center justify-between gap-2 pb-2 mb-2 border-b border-white/10 shrink-0">
             <span className="text-[10.5px] font-bold text-slate-300 tracking-wider">
-              66 CANON MATRIX ({visibleMatrixStreams.length})
+              CANON MATRIX ({visibleMatrixStreams.length})
             </span>
-            <span className="text-[10px] text-slate-500">NT EMERALD · OT CRIMSON</span>
+            <div className="flex items-center gap-1 font-sans text-[10px] font-bold">
+              {[
+                { id: 'all', label: '전체' },
+                { id: 'nt', label: '신약' },
+                { id: 'ot', label: '구약' },
+                { id: 'active', label: '활동' }
+              ].map((f) => (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => setMatrixFilter(f.id)}
+                  className={`px-1.5 py-0.5 rounded cursor-pointer ${
+                    matrixFilter === f.id ? 'bg-[#2563EB] text-white' : 'bg-white/5 text-slate-400'
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="flex-1 overflow-y-auto hide-scrollbar grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-1.5 content-start pb-4">
             {visibleMatrixStreams.map((st) => {
               const isSel = selectedBookKo === st.bookKo;
+              const isPartner = partnerBookSet.has(st.bookKo);
               const isNT = !st.isOT;
+              const accentHex = isSel ? '#38BDF8' : isPartner ? '#FACC15' : isNT ? '#10B981' : '#F43F5E';
+
               return (
                 <button
                   key={st.bookKo}
                   type="button"
                   onClick={() => {
-                    handleSelectBook(st.bookKo);
+                    handleSelectBook(st.bookKo, 1);
                     if (mobileTab === 'matrix') setMobileTab('inspector');
                   }}
-                  className={`p-2 rounded-lg border text-left transition-all cursor-pointer flex flex-col justify-between gap-1.5 ${
+                  style={{ borderLeftColor: accentHex }}
+                  className={`p-2 rounded-lg border border-l-2 text-left transition-all cursor-pointer flex flex-col justify-between gap-1 ${
                     isSel
-                      ? 'bg-sky-500/20 border-sky-400 shadow-[0_0_12px_rgba(56,189,248,0.25)]'
+                      ? 'bg-sky-500/20 border-sky-400 shadow-[0_0_12px_rgba(56,189,248,0.28)]'
+                      : isPartner
+                      ? 'bg-amber-500/15 border-amber-400/60'
                       : isNT
-                      ? 'bg-emerald-950/25 border-emerald-500/25 hover:border-emerald-400/60'
-                      : 'bg-rose-950/25 border-rose-500/25 hover:border-rose-400/60'
+                      ? 'bg-emerald-950/25 border-emerald-500/20 hover:border-emerald-400/60'
+                      : 'bg-rose-950/25 border-rose-500/20 hover:border-rose-400/60'
                   }`}
                 >
                   <div className="flex items-center justify-between gap-1">
                     <span className="text-[11.5px] font-sans font-bold text-white truncate">{st.bookKo}</span>
-                    <span className={`text-[9.5px] font-black shrink-0 ${isNT ? 'text-emerald-400' : 'text-rose-400'}`}>
+                    <span style={{ color: accentHex }} className="text-[9.5px] font-black shrink-0">
                       {st.pct}%
                     </span>
                   </div>
 
-                  <div className="w-full h-1 rounded-full bg-black/50 overflow-hidden">
-                    <div
-                      style={{ width: `${Math.max(8, st.pct)}%` }}
-                      className={`h-full ${isNT ? 'bg-emerald-400' : 'bg-rose-400'}`}
+                  {/* 카드 내부 실시간 밀도 미니 SVG 스파크라인 */}
+                  <svg viewBox="0 0 100 24" className="w-full h-4 overflow-visible">
+                    <polyline
+                      fill="none"
+                      stroke={accentHex}
+                      strokeWidth={isSel ? '2' : '1.35'}
+                      strokeOpacity={isSel || st.hasActivity ? '0.95' : '0.45'}
+                      points={st.sparkPoints}
                     />
-                  </div>
+                  </svg>
 
                   <div className="flex items-center justify-between text-[9px] text-slate-400">
                     <span>{st.readCount}/{st.chaps}장</span>
-                    {st.noteCount > 0 && <span className="text-sky-300 font-bold">N:{st.noteCount}</span>}
+                    <span className={st.noteCount > 0 ? 'text-sky-300 font-bold' : 'text-slate-500'}>
+                      {st.noteCount > 0 ? `N:${st.noteCount}` : `XR:${st.xrWeight}`}
+                    </span>
                   </div>
                 </button>
               );
@@ -997,9 +1211,9 @@ export default function BibleSecondBrain3D({
           </div>
         </aside>
 
-        {/* 모바일 전용 4대 역본 & 연결 기록 탭 뷰 */}
+        {/* 모바일 전용 4대 역본 & 교차참조 & 연결 기록 탭 */}
         {mobileTab === 'inspector' && (
-          <section className="lg:hidden flex-1 overflow-y-auto p-3.5 space-y-3 font-sans hide-scrollbar">
+          <section className="lg:hidden flex-1 overflow-y-auto p-3 space-y-3 font-sans hide-scrollbar">
             <div className="p-3.5 rounded-xl bg-[#080B12] border border-white/10 space-y-2.5">
               <div className="flex items-center justify-between">
                 <h2 className="text-[15px] font-bold text-white">
@@ -1044,15 +1258,17 @@ export default function BibleSecondBrain3D({
               </div>
 
               {previewVersion === 'orig' ? (
-                <div className="p-3 rounded-lg bg-[#05070B] border border-white/10 space-y-1">
+                <div className="p-3 rounded-lg bg-[#04060A] border border-white/10 space-y-1">
                   <div className="text-[14px] font-bold text-white">
                     {activeBookDetail.lexicon.word} <span className="text-amber-400">[{activeBookDetail.lexicon.pron}]</span>
                   </div>
                   <p className="text-[12.5px] text-slate-300">{activeBookDetail.lexicon.mean}</p>
-                  <span className="text-[11px] font-mono text-slate-500">{activeBookDetail.lexicon.strongs} · {activeBookDetail.lexicon.grammar}</span>
+                  <span className="text-[11px] font-mono text-slate-500">
+                    {activeBookDetail.lexicon.strongs} · {activeBookDetail.lexicon.grammar}
+                  </span>
                 </div>
               ) : (
-                <div className="space-y-2 p-3 rounded-lg bg-[#05070B] border border-white/10 text-[13px] leading-relaxed">
+                <div className="space-y-2 p-3 rounded-lg bg-[#04060A] border border-white/10 text-[13px] leading-relaxed">
                   {activeBookDetail.verses.map((v) => (
                     <p key={v.v} className="text-slate-200">
                       <b className="text-sky-400 font-mono mr-1.5">{v.v}</b>
@@ -1061,6 +1277,20 @@ export default function BibleSecondBrain3D({
                   ))}
                 </div>
               )}
+
+              {/* 교차참조 파트너 */}
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {activePartners.map((p) => (
+                  <button
+                    key={`${p.book}_${p.chap}`}
+                    type="button"
+                    onClick={() => handleSelectBook(p.book, p.chap)}
+                    className="px-2.5 py-1 rounded-lg bg-amber-500/15 border border-amber-400/30 text-[11px] font-bold text-amber-200 cursor-pointer"
+                  >
+                    {p.book} {p.chap}장 · {p.label}
+                  </button>
+                ))}
+              </div>
 
               <div className="grid grid-cols-2 gap-2 pt-1">
                 <button
@@ -1090,9 +1320,12 @@ export default function BibleSecondBrain3D({
                     key={rec.id}
                     type="button"
                     onClick={() => setActiveScreen && setActiveScreen(rec.screen)}
-                    className="w-full p-2.5 rounded-lg bg-[#05070B] border border-white/10 flex items-center justify-between text-[12px] cursor-pointer"
+                    className="w-full p-2.5 rounded-lg bg-[#04060A] border border-white/10 flex items-center justify-between text-[12px] cursor-pointer"
                   >
-                    <span className="truncate"><b className="text-sky-400 mr-1.5">[{rec.tag}]</b>{rec.title}</span>
+                    <span className="truncate">
+                      <b className="text-sky-400 mr-1.5">[{rec.tag}]</b>
+                      {rec.title}
+                    </span>
                     <ExternalLink className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                   </button>
                 ))
@@ -1102,7 +1335,7 @@ export default function BibleSecondBrain3D({
         )}
       </div>
 
-      {/* 3. 모바일 전용 하단 3단 전환 바 (iOS 안전 영역 적용) */}
+      {/* 3. 모바일 하단 3단 전환 바 (iOS 안전 영역 적용) */}
       <nav className="lg:hidden shrink-0 bg-[#080B12] border-t border-white/10 px-3 pt-1.5 pb-[max(8px,env(safe-area-inset-bottom))] grid grid-cols-3 gap-1.5 z-30 font-sans">
         {[
           { id: 'flow', label: '라이브 플로우', icon: Activity },

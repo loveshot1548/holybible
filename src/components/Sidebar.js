@@ -490,7 +490,169 @@ export default function Sidebar({
   const isDark = isDarkMode;
 
   const [showWelcomeBloom, setShowWelcomeBloom] = useState(false);
+  // =====================================================================
+  // 🕶️ [스텔스 UX 4종 엔진] Supabase shared_qt('stealth_ux_payload') 연동 (DB 추가 불필요)
+  // =====================================================================
+  const [stealthConfig, setStealthConfig] = useState(() => {
+    try {
+      const saved = localStorage.getItem('secret_stealth_config_v1');
+      if (saved) return JSON.parse(saved);
+    } catch (_) {}
+    return {
+      countdownEnabled: false,
+      countdownTarget: '',
+      countdownLabel: '오늘 밤 예약됨 · 거절 불가',
+      hijackEnabled: false,
+      hijackText: '지금 다른 생각하지 말고 내 생각만 해. 오늘 밤 다 벗고 기다려.',
+      keywordEnabled: false,
+      keywords: '오늘,밤,사랑,힘들,생각,보고싶',
+      keywordReply: '방금 그 단어 쓰면서 내 생각했지? 오늘 밤 제대로 확인해 줄게.',
+      signalTs: 0
+    };
+  });
+  const [stealthCountdownStr, setStealthCountdownStr] = useState('');
+  const [stealthBorderPulse, setStealthBorderPulse] = useState(false);
+  const [stealthWhisperMsg, setStealthWhisperMsg] = useState('');
+  const [stealthPreviewOnMe, setStealthPreviewOnMe] = useState(false);
+  const lastSignalTsRef = useRef(0);
+  const whisperTimerRef = useRef(null);
 
+  const isStealthReceiver = isTargetMohana || (isOwnerJeongShinDong && stealthPreviewOnMe);
+
+  // Supabase 실시간 동기화 (shared_qt 테이블 재사용)
+  useEffect(() => {
+    if (!supabase || !isPrivileged) return;
+    const applyPayload = (raw) => {
+      if (!raw) return;
+      try {
+        const parsed = JSON.parse(decryptSecret(raw));
+        setStealthConfig((prev) => {
+          const next = { ...prev, ...parsed };
+          localStorage.setItem('secret_stealth_config_v1', JSON.stringify(next));
+          return next;
+        });
+        if (parsed.signalTs && parsed.signalTs > lastSignalTsRef.current && Date.now() - parsed.signalTs < 12000) {
+          lastSignalTsRef.current = parsed.signalTs;
+          if (isStealthReceiver) {
+            setStealthBorderPulse(true);
+            if (navigator.vibrate) navigator.vibrate([70, 90, 140]);
+            setTimeout(() => setStealthBorderPulse(false), 2600);
+          }
+        }
+      } catch (_) {}
+    };
+
+    supabase.from('shared_qt').select('video_id').eq('date', 'stealth_ux_payload').maybeSingle()
+      .then(({ data }) => data?.video_id && applyPayload(data.video_id))
+      .catch(() => {});
+
+    const ch = supabase.channel('stealth_ux_realtime_chan')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'shared_qt', filter: 'date=eq.stealth_ux_payload' }, (payload) => {
+        if (payload.new?.video_id) applyPayload(payload.new.video_id);
+      })
+      .subscribe();
+
+    return () => supabase.removeChannel(ch);
+  }, [isPrivileged, isStealthReceiver]);
+
+  const saveStealthConfig = async (nextPatch, alertMsg = '') => {
+    const next = { ...stealthConfig, ...nextPatch };
+    setStealthConfig(next);
+    localStorage.setItem('secret_stealth_config_v1', JSON.stringify(next));
+    if (supabase) {
+      try {
+        await supabase.from('shared_qt').upsert([{
+          date: 'stealth_ux_payload',
+          video_id: encryptSecret(JSON.stringify(next))
+        }], { onConflict: 'date' });
+      } catch (_) {}
+    }
+    if (alertMsg) alert(alertMsg);
+  };
+
+  const triggerSilentSignal = () => {
+    const ts = Date.now();
+    saveStealthConfig({ signalTs: ts });
+    if (stealthPreviewOnMe) {
+      setStealthBorderPulse(true);
+      if (navigator.vibrate) navigator.vibrate([70, 90, 140]);
+      setTimeout(() => setStealthBorderPulse(false), 2600);
+    }
+    setCouplePulseToast('🔴 모하나 화면에 무음 테두리 펄스 & 햅틱 신호를 보냈습니다.');
+    if (pulseTimerRef.current) clearTimeout(pulseTimerRef.current);
+    pulseTimerRef.current = setTimeout(() => setCouplePulseToast(null), 2600);
+  };
+
+  // 1) 상시 마이크로 카운트다운 연산
+  useEffect(() => {
+    if (!isStealthReceiver || !stealthConfig.countdownEnabled) {
+      setStealthCountdownStr('');
+      return;
+    }
+    const updateTick = () => {
+      if (!stealthConfig.countdownTarget) {
+        setStealthCountdownStr('LIVE');
+        return;
+      }
+      const diff = new Date(stealthConfig.countdownTarget).getTime() - Date.now();
+      if (isNaN(diff) || diff <= 0) {
+        setStealthCountdownStr('NOW');
+        return;
+      }
+      const h = String(Math.floor(diff / 3600000)).padStart(2, '0');
+      const m = String(Math.floor((diff % 3600000) / 60000)).padStart(2, '0');
+      const s = String(Math.floor((diff % 60000) / 1000)).padStart(2, '0');
+      setStealthCountdownStr(`${h}:${m}:${s}`);
+    };
+    updateTick();
+    const t = setInterval(updateTick, 1000);
+    return () => clearInterval(t);
+  }, [isStealthReceiver, stealthConfig.countdownEnabled, stealthConfig.countdownTarget]);
+
+  // 2) 플레이스홀더 스텔스 치환 + 3) 키워드 타이핑 인터셉트 (전역 DOM 리스너)
+  useEffect(() => {
+    if (!isStealthReceiver) return;
+
+    const handleFocusIn = (e) => {
+      if (!stealthConfig.hijackEnabled || !stealthConfig.hijackText) return;
+      const el = e.target;
+      if (!el || !['INPUT', 'TEXTAREA'].includes(el.tagName)) return;
+      if (el.type === 'password' || el.type === 'date' || el.type === 'datetime-local') return;
+      if (el.value && el.value.trim()) return;
+
+      const orig = el.getAttribute('data-orig-ph') ?? el.getAttribute('placeholder') ?? '';
+      el.setAttribute('data-orig-ph', orig);
+      el.setAttribute('placeholder', stealthConfig.hijackText);
+
+      const restore = () => {
+        el.setAttribute('placeholder', orig);
+        el.removeEventListener('input', restore);
+      };
+      el.addEventListener('input', restore, { once: true });
+      setTimeout(restore, 5000);
+    };
+
+    const handleInput = (e) => {
+      if (!stealthConfig.keywordEnabled || !stealthConfig.keywords || !stealthConfig.keywordReply) return;
+      const el = e.target;
+      if (!el || !['INPUT', 'TEXTAREA'].includes(el.tagName)) return;
+      const val = String(el.value || '');
+      const kwList = stealthConfig.keywords.split(',').map((k) => k.trim()).filter(Boolean);
+      if (kwList.some((kw) => val.endsWith(kw))) {
+        setStealthWhisperMsg(stealthConfig.keywordReply);
+        if (navigator.vibrate) navigator.vibrate(40);
+        if (whisperTimerRef.current) clearTimeout(whisperTimerRef.current);
+        whisperTimerRef.current = setTimeout(() => setStealthWhisperMsg(''), 3500);
+      }
+    };
+
+    document.addEventListener('focusin', handleFocusIn, true);
+    document.addEventListener('input', handleInput, true);
+    return () => {
+      document.removeEventListener('focusin', handleFocusIn, true);
+      document.removeEventListener('input', handleInput, true);
+    };
+  }, [isStealthReceiver, stealthConfig.hijackEnabled, stealthConfig.hijackText, stealthConfig.keywordEnabled, stealthConfig.keywords, stealthConfig.keywordReply]);
   // 언마운트 시 모든 타이머 안전 정리
   useEffect(() => {
     return () => {
@@ -1579,7 +1741,33 @@ export default function Sidebar({
     <>
       {/* 🛡️ [철통 보안 3단계] 오직 연인(정신동·모하나)에게만 미션 수신 모달 마운트 */}
       {isPrivileged && <MissionReceiverModal currentUserName={currentUserName} />}
+      {/* 🕶️ 스텔스 1: 무음 화면 테두리 펄스 (팝업·알림음 없음) */}
+      {isStealthReceiver && stealthBorderPulse && (
+        <div
+          className="fixed inset-0 pointer-events-none z-[100002] animate-pulse"
+          style={{ boxShadow: 'inset 0 0 42px rgba(225, 29, 72, 0.85), inset 0 0 12px rgba(244, 63, 94, 0.95)' }}
+        />
+      )}
 
+      {/* 🕶️ 스텔스 2: 상시 마이크로 카운트다운 칩 */}
+      {isStealthReceiver && stealthConfig.countdownEnabled && (
+        <div
+          onClick={() => sendCoupleHeartbeatPulse(`⏱️ 모하나가 [${stealthConfig.countdownLabel}] 카운트다운을 터치했습니다.`)}
+          className="fixed top-2 left-1/2 -translate-x-1/2 z-[99985] px-3 py-1 rounded-full bg-slate-950/90 border border-rose-500/45 text-white text-[10.5px] font-mono font-bold flex items-center gap-1.5 shadow-lg cursor-pointer select-none"
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping shrink-0" />
+          <span className="text-rose-300">{stealthCountdownStr}</span>
+          <span className="text-white/40">·</span>
+          <span className="font-sans text-slate-200 max-w-[160px] truncate">{stealthConfig.countdownLabel}</span>
+        </div>
+      )}
+
+      {/* 🕶️ 스텔스 3: 키워드 타이핑 인터셉트 1줄 속삭임 배너 */}
+      {isStealthReceiver && stealthWhisperMsg && (
+        <div className="fixed top-12 left-1/2 -translate-x-1/2 z-[100003] max-w-[90vw] px-4 py-2 rounded-full bg-black/90 border border-rose-500/50 text-rose-200 text-[12px] font-bold shadow-2xl backdrop-blur-md pointer-events-none animate-fade-in">
+          {stealthWhisperMsg}
+        </div>
+      )}
       {/* 💓 연인 실시간 심장박동(설렘) 교감 토스트 (모바일 가로 넘침 방지) */}
       {isPrivileged && couplePulseToast && (
         <div className="fixed top-14 left-1/2 -translate-x-1/2 z-[100001] max-w-[92vw] px-4 py-2.5 rounded-2xl sm:rounded-full bg-gradient-to-r from-rose-600 via-red-600 to-amber-600 text-white text-[12px] font-black shadow-[0_0_30px_rgba(244,63,94,0.8)] border border-rose-300/50 flex items-center gap-2 animate-bounce select-none pointer-events-none text-center">
@@ -2215,7 +2403,143 @@ export default function Sidebar({
                       전체 풀가동 🔥
                     </button>
                   </div>
+                {/* 🕶️ 팝업 없이 스며드는 스텔스 UX 4종 컨트롤러 */}
+                  <div className="p-4 sm:p-5 rounded-2xl bg-slate-900/80 border border-rose-500/35 space-y-3.5">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-2.5">
+                      <div>
+                        <h4 className="text-[14px] font-black text-rose-300">🕶️ 스텔스 침투 컨트롤러 (무팝업)</h4>
+                        <p className="text-[11px] text-slate-400 mt-0.5">직접 ON/발사할 때만 모하나 화면에 자연스럽게 스며듭니다.</p>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setStealthPreviewOnMe((v) => !v)}
+                          className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold border cursor-pointer ${
+                            stealthPreviewOnMe ? 'bg-amber-500/20 border-amber-400 text-amber-300' : 'bg-white/5 border-white/10 text-slate-400'
+                          }`}
+                        >
+                          내 폰 테스트 {stealthPreviewOnMe ? 'ON' : 'OFF'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={triggerSilentSignal}
+                          className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-black cursor-pointer"
+                        >
+                          🔴 무음 신호 발사
+                        </button>
+                      </div>
+                    </div>
 
+                    {/* 1. 상시 마이크로 카운트다운 */}
+                    <div className="p-3 rounded-xl bg-black/40 border border-white/10 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[12px] font-black text-white">⏱️ 상시 마이크로 카운트다운 칩</span>
+                        <button
+                          type="button"
+                          onClick={() => saveStealthConfig({ countdownEnabled: !stealthConfig.countdownEnabled })}
+                          className={`px-3 py-1 rounded-lg text-[11px] font-black cursor-pointer ${
+                            stealthConfig.countdownEnabled ? 'bg-rose-600 text-white' : 'bg-white/10 text-slate-400'
+                          }`}
+                        >
+                          {stealthConfig.countdownEnabled ? 'ON' : 'OFF'}
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <input
+                          type="datetime-local"
+                          value={stealthConfig.countdownTarget}
+                          onChange={(e) => setStealthConfig((p) => ({ ...p, countdownTarget: e.target.value }))}
+                          className="px-2.5 py-1.5 rounded-lg bg-slate-900 border border-white/15 text-[11.5px] font-mono text-white outline-none"
+                        />
+                        <input
+                          type="text"
+                          value={stealthConfig.countdownLabel}
+                          onChange={(e) => setStealthConfig((p) => ({ ...p, countdownLabel: e.target.value }))}
+                          placeholder="상태 문구 (예: 오늘 밤 예약됨)"
+                          className="px-2.5 py-1.5 rounded-lg bg-slate-900 border border-white/15 text-[11.5px] text-white outline-none select-text"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => saveStealthConfig({}, '카운트다운 설정이 실시간 반영되었습니다.')}
+                        className="w-full py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-[11px] font-bold text-rose-200 cursor-pointer"
+                      >
+                        카운트다운 저장 · 동기화
+                      </button>
+                    </div>
+
+                    {/* 2. 플레이스홀더 스텔스 치환 */}
+                    <div className="p-3 rounded-xl bg-black/40 border border-white/10 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[12px] font-black text-white">✍️ 입력창 플레이스홀더 스텔스 치환 (5초 후 원복)</span>
+                        <button
+                          type="button"
+                          onClick={() => saveStealthConfig({ hijackEnabled: !stealthConfig.hijackEnabled })}
+                          className={`px-3 py-1 rounded-lg text-[11px] font-black cursor-pointer ${
+                            stealthConfig.hijackEnabled ? 'bg-rose-600 text-white' : 'bg-white/10 text-slate-400'
+                          }`}
+                        >
+                          {stealthConfig.hijackEnabled ? 'ON' : 'OFF'}
+                        </button>
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={stealthConfig.hijackText}
+                          onChange={(e) => setStealthConfig((p) => ({ ...p, hijackText: e.target.value }))}
+                          placeholder="입력창 터치 시 5초간 뜰 문구..."
+                          className="flex-1 min-w-0 px-2.5 py-1.5 rounded-lg bg-slate-900 border border-white/15 text-[11.5px] text-white outline-none select-text"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => saveStealthConfig({}, '플레이스홀더 치환 문구가 저장되었습니다.')}
+                          className="px-3 py-1.5 rounded-lg bg-white/10 text-[11px] font-bold text-white cursor-pointer shrink-0"
+                        >
+                          저장
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* 3. 키워드 타이핑 인터셉트 */}
+                    <div className="p-3 rounded-xl bg-black/40 border border-white/10 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[12px] font-black text-white">⚡ 키워드 타이핑 인터셉트 (3.5초 속삭임)</span>
+                        <button
+                          type="button"
+                          onClick={() => saveStealthConfig({ keywordEnabled: !stealthConfig.keywordEnabled })}
+                          className={`px-3 py-1 rounded-lg text-[11px] font-black cursor-pointer ${
+                            stealthConfig.keywordEnabled ? 'bg-rose-600 text-white' : 'bg-white/10 text-slate-400'
+                          }`}
+                        >
+                          {stealthConfig.keywordEnabled ? 'ON' : 'OFF'}
+                        </button>
+                      </div>
+                      <input
+                        type="text"
+                        value={stealthConfig.keywords}
+                        onChange={(e) => setStealthConfig((p) => ({ ...p, keywords: e.target.value }))}
+                        placeholder="감지 키워드 (쉼표 구분: 오늘,밤,사랑,생각)"
+                        className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-white/15 text-[11.5px] text-white outline-none select-text"
+                      />
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={stealthConfig.keywordReply}
+                          onChange={(e) => setStealthConfig((p) => ({ ...p, keywordReply: e.target.value }))}
+                          placeholder="키워드 입력 시 스쳐갈 한 줄 반응..."
+                          className="flex-1 min-w-0 px-2.5 py-1.5 rounded-lg bg-slate-900 border border-white/15 text-[11.5px] text-white outline-none select-text"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => saveStealthConfig({}, '키워드 인터셉트 설정이 저장되었습니다.')}
+                          className="px-3 py-1.5 rounded-lg bg-white/10 text-[11px] font-bold text-white cursor-pointer shrink-0"
+                        >
+                          저장
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  
                   <div className="p-4 sm:p-5 rounded-2xl bg-slate-800/60 border border-white/10 flex flex-col gap-3">
                     <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
                       <div className="min-w-0">

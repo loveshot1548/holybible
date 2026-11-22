@@ -467,9 +467,15 @@ const MediaTheaterModal = ({
   const [activeIdx, setActiveIdx] = useState(0);
   const [playerItem, setPlayerItem] = useState(null);
   const [playerSubTab, setPlayerSubTab] = useState('note');
+  const [noteCategory, setNoteCategory] = useState('grace'); // 'grace' | 'apply' | 'prayer'
+  const [isAudioOnly, setIsAudioOnly] = useState(false);
+  const [sleepMinutes, setSleepMinutes] = useState(0); // 0 | 15 | 30 | 60
+  const [sleepRemainSec, setSleepRemainSec] = useState(0);
+  const [elapsedSec, setElapsedSec] = useState(0);
+
   const [customUrlInput, setCustomUrlInput] = useState('');
   const [quickMemo, setQuickMemo] = useState('');
-  const [savedToast, setSavedToast] = useState(false);
+  const [savedToast, setSavedToast] = useState('');
   const touchStartXRef = useRef(null);
 
   const [customUrlMap, setCustomUrlMap] = useState(() => {
@@ -488,6 +494,32 @@ const MediaTheaterModal = ({
     setActiveIdx(0);
   }, [mediaTab]);
 
+  // 시청 경과 타이머 (타임스탬프용)
+  useEffect(() => {
+    if (!playerItem) {
+      setElapsedSec(0);
+      return;
+    }
+    const timer = setInterval(() => setElapsedSec((s) => s + 1), 1000);
+    return () => clearInterval(timer);
+  }, [playerItem]);
+
+  // 수면 타이머
+  useEffect(() => {
+    if (sleepRemainSec <= 0) return;
+    const timer = setInterval(() => {
+      setSleepRemainSec((prev) => {
+        if (prev <= 1) {
+          setPlayerItem(null);
+          setSleepMinutes(0);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [sleepRemainSec]);
+
   useEffect(() => {
     if (!playerItem) return;
     const initialNote =
@@ -500,6 +532,12 @@ const MediaTheaterModal = ({
   if (!isOpen || total === 0) return null;
 
   const currentCenterItem = items[safeIdx];
+
+  const formatSec = (sec) => {
+    const m = String(Math.floor(sec / 60)).padStart(2, '0');
+    const s = String(sec % 60).padStart(2, '0');
+    return `${m}:${s}`;
+  };
 
   const handleTouchStart = (e) => {
     touchStartXRef.current = e.touches[0].clientX;
@@ -517,6 +555,7 @@ const MediaTheaterModal = ({
     const resolvedUrl = customUrlMap[itemKey] || item.url;
     const embedUrl = getYoutubeEmbedUrl(resolvedUrl);
     setCustomUrlInput(customUrlMap[itemKey] || '');
+    setElapsedSec(0);
     setPlayerItem({
       ...item,
       itemKey,
@@ -545,15 +584,61 @@ const MediaTheaterModal = ({
     }));
   };
 
+  const handleInsertTimestamp = () => {
+    const stamp = `[${formatSec(elapsedSec)}] `;
+    setQuickMemo((prev) => (prev ? `${prev}\n${stamp}` : stamp));
+  };
+
+  const handleCycleSleepTimer = () => {
+    const order = [0, 15, 30, 60];
+    const nextMin = order[(order.indexOf(sleepMinutes) + 1) % order.length];
+    setSleepMinutes(nextMin);
+    setSleepRemainSec(nextMin * 60);
+  };
+
   const handleSaveQuickMemo = () => {
-    if (!updateDay) return;
-    if (mediaTab === 'worship') {
-      updateDay({ sermonNotes: quickMemo, sermonTitle: currDay?.sermonTitle || playerItem?.title || '' });
-    } else {
-      updateDay({ thanksText: quickMemo, checks: { ...(currDay?.checks || {}), 감사: true } });
+    const trimmed = quickMemo.trim();
+    if (!trimmed) return;
+
+    if (noteCategory === 'apply') {
+      try {
+        const list = JSON.parse(localStorage.getItem('apply_tracker_items') || '[]');
+        list.unshift({
+          id: `theater_${Date.now()}`,
+          date: getLocalToday(),
+          text: `[시어터 결단] ${trimmed}`,
+          category: '예배 적용',
+          completed: false
+        });
+        localStorage.setItem('apply_tracker_items', JSON.stringify(list));
+        window.dispatchEvent(new Event('storage'));
+        setSavedToast('실천 트래커에 저장됨!');
+      } catch (_) {}
+    } else if (noteCategory === 'prayer') {
+      try {
+        const prayers = JSON.parse(localStorage.getItem('globalPrayers') || '[]');
+        prayers.unshift({
+          id: Date.now(),
+          text: `[예배 중 기도] ${trimmed}`,
+          status: 'praying',
+          date: getLocalToday()
+        });
+        localStorage.setItem('globalPrayers', JSON.stringify(prayers));
+        if (updateDay) updateDay({ prayerReq: trimmed, checks: { ...(currDay?.checks || {}), 기도하기: true } });
+        window.dispatchEvent(new Event('storage'));
+        setSavedToast('기도 보관함에 저장됨!');
+      } catch (_) {}
+    } else if (updateDay) {
+      if (mediaTab === 'worship') {
+        updateDay({ sermonNotes: trimmed, sermonTitle: currDay?.sermonTitle || playerItem?.title || '' });
+        setSavedToast('예배 노트에 저장됨!');
+      } else {
+        updateDay({ thanksText: trimmed, checks: { ...(currDay?.checks || {}), 감사: true } });
+        setSavedToast('감사 일기에 저장됨!');
+      }
     }
-    setSavedToast(true);
-    setTimeout(() => setSavedToast(false), 1800);
+
+    setTimeout(() => setSavedToast(''), 1800);
   };
 
   return (
@@ -626,11 +711,7 @@ const MediaTheaterModal = ({
               <div
                 key={item.id || idx}
                 onClick={() => (isCenter ? openCinemaPlayer(item) : setActiveIdx(idx))}
-                style={{
-                  transform: `translateX(${translateX}%) scale(${scale})`,
-                  zIndex,
-                  opacity
-                }}
+                style={{ transform: `translateX(${translateX}%) scale(${scale})`, zIndex, opacity }}
                 className={`absolute w-[74%] max-w-[280px] sm:max-w-[320px] rounded-[26px] overflow-hidden border transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] cursor-pointer ${
                   isCenter
                     ? 'border-white/30 bg-[#151923] shadow-[0_24px_60px_rgba(0,0,0,0.75)]'
@@ -649,7 +730,6 @@ const MediaTheaterModal = ({
                     </div>
                   )}
                 </div>
-
                 <div className="px-4 py-3.5 text-center space-y-1">
                   <h3 className="text-[16px] font-bold text-white truncate">{item.title}</h3>
                   <p className="text-[12px] text-white/60 font-medium">
@@ -720,81 +800,149 @@ const MediaTheaterModal = ({
         </a>
       </div>
 
-      {/* 넷플릭스형 시네마 플레이어 + 실시간 메모 모달 */}
+      {/* 세밀화된 시네마 플레이어 + 3단 노트 분기 모달 */}
       {playerItem && (
         <div
           onClick={(e) => e.stopPropagation()}
           className="fixed inset-0 z-[380] bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-5"
         >
-          <div className="w-full max-w-[540px] rounded-[28px] bg-[#13161F] border border-white/15 overflow-hidden shadow-2xl flex flex-col max-h-[92vh]">
-            <div className="px-5 py-3.5 flex items-center justify-between border-b border-white/10 shrink-0">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-rose-500" />
-                <span className="text-[12px] font-bold tracking-wider text-white/80 uppercase">
-                  {playerItem.categoryLabel} · YOUTUBE
+          <div className="w-full max-w-[540px] rounded-[28px] bg-[#13161F] border border-white/15 overflow-hidden shadow-2xl flex flex-col max-h-[92dvh]">
+            {/* 헤더: 오디오 모드 & 수면 타이머 추가 */}
+            <div className="px-4 py-3 flex items-center justify-between border-b border-white/10 shrink-0 gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0" />
+                <span className="text-[11.5px] font-bold tracking-wider text-white/80 uppercase truncate">
+                  {playerItem.categoryLabel}
                 </span>
               </div>
-              <button
-                type="button"
-                onClick={() => setPlayerItem(null)}
-                className="px-3 py-1 rounded-full bg-white/10 hover:bg-white/20 text-[12px] font-bold text-white flex items-center gap-1 cursor-pointer"
-              >
-                <X className="w-3.5 h-3.5" />
-                <span>닫기</span>
-              </button>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setIsAudioOnly((v) => !v)}
+                  className={`px-2.5 py-1 rounded-full text-[11px] font-bold flex items-center gap-1 cursor-pointer border ${
+                    isAudioOnly
+                      ? 'bg-[#3B82F6] border-[#3B82F6] text-white'
+                      : 'bg-white/5 border-white/15 text-white/75'
+                  }`}
+                >
+                  <Headphones className="w-3 h-3" />
+                  <span>오디오</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCycleSleepTimer}
+                  className={`px-2.5 py-1 rounded-full text-[11px] font-bold cursor-pointer border ${
+                    sleepRemainSec > 0
+                      ? 'bg-amber-500/20 border-amber-400/50 text-amber-300'
+                      : 'bg-white/5 border-white/15 text-white/75'
+                  }`}
+                >
+                  {sleepRemainSec > 0 ? formatSec(sleepRemainSec) : '타이머'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPlayerItem(null)}
+                  className="px-2.5 py-1 rounded-full bg-white/10 hover:bg-white/20 text-[11.5px] font-bold text-white flex items-center gap-1 cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  <span>닫기</span>
+                </button>
+              </div>
             </div>
 
-            <div className="p-4 sm:p-5 space-y-3.5 overflow-y-auto hide-scrollbar">
-              {/* 영상 프레임 */}
-              <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-black border border-white/10">
-                {playerItem.embedUrl ? (
-                  <iframe
-                    width="100%"
-                    height="100%"
-                    src={playerItem.embedUrl}
-                    title={playerItem.title}
-                    frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                    className="absolute inset-0 w-full h-full"
-                  />
-                ) : (
-                  <>
-                    <img
-                      src={playerItem.bg}
-                      alt={playerItem.title}
-                      className="w-full h-full object-cover opacity-65"
-                      crossOrigin="anonymous"
-                    />
-                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/45 gap-2.5 p-4 text-center">
-                      <a
-                        href={playerItem.resolvedUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-5 py-2.5 rounded-full bg-gradient-to-r from-[#3B82F6] to-[#4F46E5] text-white text-[13.5px] font-bold flex items-center gap-2 shadow-lg"
-                      >
-                        <Play className="w-4 h-4 fill-current" />
-                        <span>유튜브에서 영상 찾기</span>
-                      </a>
-                      <span className="text-[11.5px] text-white/75">
-                        영상 링크를 복사해 아래에 붙여넣으면 이 화면에서 바로 재생됩니다
-                      </span>
+            <div className="p-4 space-y-3 overflow-y-auto hide-scrollbar">
+              {/* 영상 프레임 (오디오 모드 시 슬림바로 전환) */}
+              {isAudioOnly ? (
+                <div className="px-4 py-3.5 rounded-2xl bg-gradient-to-r from-[#1A2133] to-[#131826] border border-white/10 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="w-8 h-8 rounded-full bg-[#3B82F6]/20 text-sky-400 flex items-center justify-center shrink-0">
+                      <Headphones className="w-4 h-4" />
+                    </span>
+                    <div className="min-w-0">
+                      <span className="text-[13px] font-bold text-white block truncate">{playerItem.title}</span>
+                      <span className="text-[11px] text-sky-300 font-mono">AUDIO FOCUS · {formatSec(elapsedSec)}</span>
                     </div>
-                  </>
-                )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsAudioOnly(false)}
+                    className="px-2.5 py-1 rounded-lg bg-white/10 text-[11px] font-bold text-white shrink-0 cursor-pointer"
+                  >
+                    영상 보기
+                  </button>
+                </div>
+              ) : (
+                <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-black border border-white/10">
+                  {playerItem.embedUrl ? (
+                    <iframe
+                      width="100%"
+                      height="100%"
+                      src={playerItem.embedUrl}
+                      title={playerItem.title}
+                      frameBorder="0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      className="absolute inset-0 w-full h-full"
+                    />
+                  ) : (
+                    <>
+                      <img
+                        src={playerItem.bg}
+                        alt={playerItem.title}
+                        className="w-full h-full object-cover opacity-65"
+                        crossOrigin="anonymous"
+                      />
+                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/45 gap-2.5 p-4 text-center">
+                        <a
+                          href={playerItem.resolvedUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-5 py-2.5 rounded-full bg-gradient-to-r from-[#3B82F6] to-[#4F46E5] text-white text-[13.5px] font-bold flex items-center gap-2 shadow-lg"
+                        >
+                          <Play className="w-4 h-4 fill-current" />
+                          <span>유튜브에서 영상 찾기</span>
+                        </a>
+                        <span className="text-[11.5px] text-white/75">
+                          영상 링크를 복사해 아래에 붙여넣으면 이 화면에서 바로 재생됩니다
+                        </span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* 채널 퀵 스위처 스트립 */}
+              <div className="flex items-center gap-1.5 overflow-x-auto hide-scrollbar pb-0.5">
+                {items.map((ch, idx) => {
+                  const isCurr = ch.title === playerItem.title;
+                  return (
+                    <button
+                      key={ch.id || idx}
+                      type="button"
+                      onClick={() => openCinemaPlayer(ch)}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap cursor-pointer border transition-colors ${
+                        isCurr
+                          ? 'bg-[#3B82F6] border-[#3B82F6] text-white'
+                          : 'bg-white/5 border-white/10 text-white/65 hover:text-white'
+                      }`}
+                    >
+                      {ch.title}
+                    </button>
+                  );
+                })}
               </div>
 
               {/* 제목 & 새창 */}
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <h3 className="text-[17px] font-bold text-white truncate">{playerItem.title}</h3>
-                  <p className="text-[12px] text-white/55 mt-0.5">좋은나무교회 말씀 · 찬양 시어터</p>
+                  <h3 className="text-[16px] font-bold text-white truncate">{playerItem.title}</h3>
+                  <p className="text-[11.5px] text-white/55 mt-0.5">좋은나무교회 말씀 · 찬양 시어터</p>
                 </div>
                 <a
                   href={playerItem.resolvedUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="shrink-0 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-[12px] font-bold text-sky-300 flex items-center gap-1"
+                  className="shrink-0 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-[11.5px] font-bold text-sky-300 flex items-center gap-1"
                 >
                   <span>새 창</span>
                   <ExternalLink className="w-3.5 h-3.5" />
@@ -802,11 +950,11 @@ const MediaTheaterModal = ({
               </div>
 
               {/* 탭 전환: 실시간 노트 | 영상 링크 연결 */}
-              <div className="grid grid-cols-2 p-1 rounded-xl bg-white/10 text-[12.5px] font-bold">
+              <div className="grid grid-cols-2 p-1 rounded-xl bg-white/10 text-[12px] font-bold">
                 <button
                   type="button"
                   onClick={() => setPlayerSubTab('note')}
-                  className={`py-2 rounded-lg cursor-pointer transition-colors ${
+                  className={`py-1.5 rounded-lg cursor-pointer transition-colors ${
                     playerSubTab === 'note' ? 'bg-white text-[#13161F]' : 'text-white/70'
                   }`}
                 >
@@ -815,7 +963,7 @@ const MediaTheaterModal = ({
                 <button
                   type="button"
                   onClick={() => setPlayerSubTab('link')}
-                  className={`py-2 rounded-lg cursor-pointer transition-colors ${
+                  className={`py-1.5 rounded-lg cursor-pointer transition-colors ${
                     playerSubTab === 'link' ? 'bg-white text-[#13161F]' : 'text-white/70'
                   }`}
                 >
@@ -824,25 +972,60 @@ const MediaTheaterModal = ({
               </div>
 
               {playerSubTab === 'note' ? (
-                <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 space-y-2.5">
+                <div className="p-3 rounded-2xl bg-white/5 border border-white/10 space-y-2">
+                  {/* 3단 노트 분류 태그 + 원터치 타임스탬프 */}
+                  <div className="flex items-center justify-between gap-1.5 flex-wrap">
+                    <div className="flex items-center gap-1">
+                      {[
+                        { id: 'grace', label: '말씀 은혜' },
+                        { id: 'apply', label: '적용 결단' },
+                        { id: 'prayer', label: '기도제목' }
+                      ].map((cat) => (
+                        <button
+                          key={cat.id}
+                          type="button"
+                          onClick={() => setNoteCategory(cat.id)}
+                          className={`px-2.5 py-1 rounded-lg text-[11px] font-bold cursor-pointer ${
+                            noteCategory === cat.id
+                              ? 'bg-[#3B82F6] text-white'
+                              : 'bg-white/10 text-white/65 hover:text-white'
+                          }`}
+                        >
+                          {cat.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleInsertTimestamp}
+                      className="px-2.5 py-1 rounded-lg bg-sky-500/15 border border-sky-400/30 text-sky-300 text-[11px] font-mono font-bold cursor-pointer"
+                    >
+                      + {formatSec(elapsedSec)}
+                    </button>
+                  </div>
+
                   <textarea
                     rows={4}
                     value={quickMemo}
                     onChange={(e) => setQuickMemo(e.target.value)}
                     placeholder={
-                      mediaTab === 'worship'
-                        ? '영상을 보며 받은 은혜와 적용점을 바로 기록하세요...'
-                        : '찬양을 들으며 떠오른 감사와 기도를 바로 기록하세요...'
+                      noteCategory === 'apply'
+                        ? '오늘 삶에서 순종할 구체적인 적용을 기록하세요 (실천 트래커 자동 저장)...'
+                        : noteCategory === 'prayer'
+                        ? '영상을 보며 떠오른 기도제목을 기록하세요 (기도함 자동 저장)...'
+                        : '영상을 보며 받은 은혜와 핵심 문장을 기록하세요...'
                     }
-                    className="w-full p-3 rounded-xl bg-black/40 border border-white/10 text-[13.5px] text-white placeholder:text-white/40 outline-none focus:border-[#60A5FA] resize-none leading-relaxed select-text"
+                    className="w-full p-3 rounded-xl bg-black/40 border border-white/10 text-[13px] text-white placeholder:text-white/40 outline-none focus:border-[#60A5FA] resize-none leading-relaxed select-text"
                   />
+
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={handleSaveQuickMemo}
                       className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#3B82F6] to-[#4F46E5] text-white text-[13px] font-bold cursor-pointer"
                     >
-                      {savedToast ? '저장 완료!' : '노트에 바로 저장'}
+                      {savedToast || '노트에 바로 저장'}
                     </button>
                     <button
                       type="button"
@@ -850,11 +1033,19 @@ const MediaTheaterModal = ({
                         handleSaveQuickMemo();
                         setPlayerItem(null);
                         onClose();
-                        setActiveScreen(mediaTab === 'worship' ? 'sermon' : 'diary');
+                        setActiveScreen(
+                          noteCategory === 'apply'
+                            ? 'applyTracker'
+                            : noteCategory === 'prayer'
+                            ? 'prayer'
+                            : mediaTab === 'worship'
+                            ? 'sermon'
+                            : 'diary'
+                        );
                       }}
-                      className="px-3.5 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white text-[12.5px] font-bold cursor-pointer shrink-0"
+                      className="px-3.5 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white text-[12px] font-bold cursor-pointer shrink-0"
                     >
-                      전체 노트 열기
+                      전체 열기
                     </button>
                   </div>
                 </div>
@@ -923,15 +1114,115 @@ export function Home({
   streak5
 }) {
   const [drawerTab, setDrawerTab] = useState('records'); // 'records' | 'study'
-  const [isSheetExpanded, setIsSheetExpanded] = useState(false);
+  const [sheetStage, setSheetStage] = useState('peek'); // 'peek' | 'half' | 'full'
   const [isMemoryFestivalOpen, setIsMemoryFestivalOpen] = useState(false);
   const [isTheaterOpen, setIsTheaterOpen] = useState(false);
-  const [dragOffsetY, setDragOffsetY] = useState(0);
-  const [isDraggingSheet, setIsDraggingSheet] = useState(false);
 
-  const sheetTouchStartYRef = useRef(null);
-  const sheetTouchStartXRef = useRef(null);
-  const scrollContainerRef = useRef(null);
+  // 구글맵 3단 스냅 물리 엔진 상태
+  const homeViewportRef = useRef(null);
+  const [viewportH, setViewportH] = useState(() => (typeof window !== 'undefined' ? window.innerHeight : 800));
+  const [dragY, setDragY] = useState(null);
+  const dragMetaRef = useRef({ startY: 0, startX: 0, startTop: 0, startTime: 0, mode: null });
+
+  useEffect(() => {
+    const updateH = () => {
+      const h = homeViewportRef.current?.clientHeight || window.innerHeight;
+      setViewportH(h);
+    };
+    updateH();
+    window.addEventListener('resize', updateH);
+    return () => window.removeEventListener('resize', updateH);
+  }, []);
+
+  // 3단 스냅 포인트 (상단 헤더 56px 기준)
+  const snapPoints = useMemo(() => {
+    const fullTop = 62;
+    const halfTop = Math.max(fullTop + 120, Math.round(viewportH * 0.44));
+    const peekTop = Math.max(halfTop + 110, Math.min(viewportH - 175, Math.round(viewportH * 0.69)));
+    return { full: fullTop, half: halfTop, peek: peekTop };
+  }, [viewportH]);
+
+  const currentSheetTop = dragY !== null ? dragY : snapPoints[sheetStage];
+
+  const handleSheetTouchStart = (e) => {
+    const touch = e.touches[0];
+    dragMetaRef.current = {
+      startY: touch.clientY,
+      startX: touch.clientX,
+      startTop: snapPoints[sheetStage],
+      startTime: Date.now(),
+      mode: null
+    };
+  };
+
+  const handleSheetTouchMove = (e) => {
+    const meta = dragMetaRef.current;
+    const touch = e.touches[0];
+    const dy = touch.clientY - meta.startY;
+    const dx = touch.clientX - meta.startX;
+
+    if (!meta.mode) {
+      if (Math.abs(dy) < 6 && Math.abs(dx) < 6) return;
+      meta.mode = Math.abs(dy) >= Math.abs(dx) ? 'vertical' : 'horizontal';
+    }
+
+    if (meta.mode === 'vertical') {
+      let nextTop = meta.startTop + dy;
+      // 상하단 고무줄 저항감(Rubber-banding)
+      if (nextTop < snapPoints.full) {
+        nextTop = snapPoints.full - (snapPoints.full - nextTop) * 0.22;
+      } else if (nextTop > snapPoints.peek) {
+        nextTop = snapPoints.peek + (nextTop - snapPoints.peek) * 0.22;
+      }
+      setDragY(nextTop);
+    }
+  };
+
+  const handleSheetTouchEnd = (e) => {
+    const meta = dragMetaRef.current;
+    const touch = e.changedTouches[0];
+    const dy = touch.clientY - meta.startY;
+    const dx = touch.clientX - meta.startX;
+    const elapsed = Math.max(1, Date.now() - meta.startTime);
+    const velocity = dy / elapsed; // px/ms
+
+    if (meta.mode === 'horizontal' && Math.abs(dx) > 45) {
+      setDrawerTab(dx < 0 ? 'study' : 'records');
+      setDragY(null);
+      return;
+    }
+
+    if (meta.mode === 'vertical') {
+      const finalTop = dragY !== null ? dragY : meta.startTop;
+      const stages = ['full', 'half', 'peek'];
+      const curIdx = stages.indexOf(sheetStage);
+
+      if (velocity < -0.45 && curIdx > 0) {
+        setSheetStage(stages[curIdx - 1]);
+      } else if (velocity > 0.45 && curIdx < stages.length - 1) {
+        setSheetStage(stages[curIdx + 1]);
+      } else {
+        // 가장 가까운 스냅 포인트로 부드럽게 안착
+        let nearest = 'peek';
+        let minDiff = Infinity;
+        stages.forEach((st) => {
+          const diff = Math.abs(finalTop - snapPoints[st]);
+          if (diff < minDiff) {
+            minDiff = diff;
+            nearest = st;
+          }
+        });
+        setSheetStage(nearest);
+      }
+    }
+
+    setDragY(null);
+    dragMetaRef.current.mode = null;
+  };
+
+  const handleCycleSheetStage = () => {
+    setSheetStage((prev) => (prev === 'peek' ? 'half' : prev === 'half' ? 'full' : 'peek'));
+  };
 
   const savedStart = localStorage.getItem('readChallengeStart') || readChallengeStart || '2026-01-01';
   const startD = new Date(`${savedStart}T00:00:00`);
@@ -941,7 +1232,6 @@ export function Home({
   const currentChecks = currDay && currDay.checks ? currDay.checks : {};
   const activeBgUrl = currentBgUrl || watercolorBgs[dateHash % watercolorBgs.length];
 
-  // 유튜브 링크 현행 100% 유지
   const worshipVideos = useMemo(
     () => [
       {
@@ -973,48 +1263,30 @@ export function Home({
     [isWknd, ymdStr]
   );
 
-  // 실시간 작성/누적 내역 계산
   const statsSummary = useMemo(() => {
     const qtTitle = (currDay?.qtTitle || '').trim();
     const qtReference = (currDay?.qtReference || '').trim();
-    const qtDone = Boolean(
-      currentChecks['QTin'] || qtTitle || qtReference || (currDay?.qtMeditation || '').trim()
-    );
+    const qtDone = Boolean(currentChecks['QTin'] || qtTitle || qtReference || (currDay?.qtMeditation || '').trim());
     const qtSubLabel = [qtTitle, qtReference].filter(Boolean).join(' · ') || '오늘 묵상 작성하기';
 
     const genNotesArr = Array.isArray(generalNotes) ? generalNotes : [];
-    const genNotesCount = genNotesArr.length;
-
     const entries = Object.entries(dailyData || {});
     const sermonCount = entries.filter(
       ([_, d]) => d && ((d.sermonTitle || '').trim() || (d.sermonNotes || '').replace(/<[^>]*>?/gm, '').trim())
     ).length;
     const sermonTodayLabel = [currDay?.sermonTitle, currDay?.sermonReference].filter(Boolean).join(' · ');
-
     const diaryCount = entries.filter(
       ([_, d]) =>
-        d &&
-        (((d.testimony || '').replace(TESTIMONY_TEMPLATE.trim(), '').trim().length > 0) ||
-          (d.thanksText || '').trim().length > 0)
+        d && (((d.testimony || '').replace(TESTIMONY_TEMPLATE.trim(), '').trim().length > 0) || (d.thanksText || '').trim().length > 0)
     ).length;
 
     const prayerList = Array.isArray(globalPrayers) ? globalPrayers.filter((p) => p && (p.text || '').trim()) : [];
     const answeredPrayersCount = prayerList.filter((p) => p.status === 'answered').length;
-    const prayerBadge =
-      answeredPrayersCount > 0
-        ? `응답 ${answeredPrayersCount}`
-        : prayerList.length > 0
-        ? `${prayerList.length}건`
-        : null;
+    const prayerBadge = answeredPrayersCount > 0 ? `응답 ${answeredPrayersCount}` : prayerList.length > 0 ? `${prayerList.length}건` : null;
 
     const cellSubmissionsCount = Array.isArray(globalCellData?.submissions) ? globalCellData.submissions.length : 0;
     const cellPrayersCount = Array.isArray(globalCellData?.groupPrayers) ? globalCellData.groupPrayers.length : 0;
-    const cellBadge =
-      cellSubmissionsCount > 0
-        ? `새 글 ${cellSubmissionsCount}`
-        : cellPrayersCount > 0
-        ? `${cellPrayersCount}건`
-        : null;
+    const cellBadge = cellSubmissionsCount > 0 ? `새 글 ${cellSubmissionsCount}` : cellPrayersCount > 0 ? `${cellPrayersCount}건` : null;
 
     const familyHasRecord = Boolean(
       (currDay?.attendees && currDay.attendees.trim()) ||
@@ -1022,39 +1294,18 @@ export function Home({
         (currDay?.prayer && currDay.prayer.trim())
     );
 
-    const galaxyNotesCount = genNotesArr.filter(
-      (n) => (n?.title || '').includes('은하계') || (n?.content || '').includes('은하계')
-    ).length;
-    const wikiNotesCount = genNotesArr.filter(
-      (n) => (n?.title || '').includes('위키') || (n?.content || '').includes('위키')
-    ).length;
-    const interlinearNotesCount = genNotesArr.filter(
-      (n) => (n?.title || '').includes('원어') || (n?.content || '').includes('원어')
-    ).length;
-    const trainingNotesCount = genNotesArr.filter(
-      (n) => (n?.title || '').includes('양육') || (n?.title || '').includes('워크북')
-    ).length;
+    const galaxyNotesCount = genNotesArr.filter((n) => (n?.title || '').includes('은하계') || (n?.content || '').includes('은하계')).length;
+    const wikiNotesCount = genNotesArr.filter((n) => (n?.title || '').includes('위키') || (n?.content || '').includes('위키')).length;
+    const interlinearNotesCount = genNotesArr.filter((n) => (n?.title || '').includes('원어') || (n?.content || '').includes('원어')).length;
+    const trainingNotesCount = genNotesArr.filter((n) => (n?.title || '').includes('양육') || (n?.title || '').includes('워크북')).length;
     const jerichoCount = entries.filter(([_, d]) => d && (d.jerichoWalk || (d.checks && d.checks['여리고']))).length;
 
     return {
-      qtDone,
-      qtSubLabel,
-      genNotesCount,
-      sermonCount,
-      sermonTodayLabel,
-      diaryCount,
-      prayerBadge,
-      cellBadge,
-      familyHasRecord,
-      galaxyNotesCount,
-      wikiNotesCount,
-      interlinearNotesCount,
-      trainingNotesCount,
-      jerichoCount
+      qtDone, qtSubLabel, genNotesCount: genNotesArr.length, sermonCount, sermonTodayLabel, diaryCount,
+      prayerBadge, cellBadge, familyHasRecord, galaxyNotesCount, wikiNotesCount, interlinearNotesCount, trainingNotesCount, jerichoCount
     };
   }, [currentChecks, currDay, generalNotes, dailyData, globalPrayers, globalCellData]);
 
-  // 성경 연구 및 훈련 13개 메뉴 원본 100% 유지 + 순서편집 지원
   const MASTER_MENUS = useMemo(
     () => [
       { id: 'sermonArchiveAdvanced', sketch: 'practice', icon: Church, title: '삶의 적용과 실천', desc: '말씀 적용 기록', badgeText: statsSummary.sermonCount > 0 ? `${statsSummary.sermonCount}건` : null },
@@ -1087,10 +1338,7 @@ export function Home({
     return MASTER_MENUS.map((m) => m.id);
   });
 
-  const orderedMenus = useMemo(() => {
-    return menuOrderIds.map((id) => MASTER_MENUS.find((m) => m.id === id)).filter(Boolean);
-  }, [menuOrderIds, MASTER_MENUS]);
-
+  const orderedMenus = useMemo(() => menuOrderIds.map((id) => MASTER_MENUS.find((m) => m.id === id)).filter(Boolean), [menuOrderIds, MASTER_MENUS]);
   const [isEditMode, setIsEditMode] = useState(false);
 
   const saveNewOrder = useCallback((nextIds) => {
@@ -1108,94 +1356,15 @@ export function Home({
     saveNewOrder(copy);
   };
 
-  // 부드러운 상하 슬라이드 덮기 + 좌우 스와이프 핸들러
-  const handleSheetTouchStart = (e) => {
-    sheetTouchStartYRef.current = e.touches[0].clientY;
-    sheetTouchStartXRef.current = e.touches[0].clientX;
-    setIsDraggingSheet(true);
-  };
-
-  const handleSheetTouchMove = (e) => {
-    if (sheetTouchStartYRef.current === null) return;
-    const deltaY = e.touches[0].clientY - sheetTouchStartYRef.current;
-    const deltaX = e.touches[0].clientX - sheetTouchStartXRef.current;
-    if (Math.abs(deltaY) > Math.abs(deltaX)) {
-      const clamped = isSheetExpanded
-        ? Math.max(0, Math.min(180, deltaY))
-        : Math.max(-180, Math.min(40, deltaY));
-      setDragOffsetY(clamped);
-    }
-  };
-
-  const handleSheetTouchEnd = (e) => {
-    if (sheetTouchStartYRef.current === null) return;
-    const deltaY = e.changedTouches[0].clientY - sheetTouchStartYRef.current;
-    const deltaX = e.changedTouches[0].clientX - sheetTouchStartXRef.current;
-    sheetTouchStartYRef.current = null;
-    sheetTouchStartXRef.current = null;
-    setIsDraggingSheet(false);
-    setDragOffsetY(0);
-
-    if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY)) {
-      setDrawerTab(deltaX < 0 ? 'study' : 'records');
-      return;
-    }
-
-    if (!isSheetExpanded && deltaY < -40) {
-      setIsSheetExpanded(true);
-      scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
-    } else if (isSheetExpanded && deltaY > 40) {
-      setIsSheetExpanded(false);
-      scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  };
-
-  // 영적5종세트 차별화된 부드러운 포인트 컬러
   const fiveRoutineItems = [
-    {
-      id: '감사',
-      label: '감사',
-      sketch: 'thanks',
-      icon: Heart,
-      activeStyle: 'bg-gradient-to-br from-[#F43F5E] to-[#E11D48] text-white shadow-xs',
-      textStyle: 'text-[#E11D48] dark:text-[#FB7185]'
-    },
-    {
-      id: '성경읽기',
-      label: '성경',
-      sketch: 'bible',
-      icon: BookOpen,
-      activeStyle: 'bg-gradient-to-br from-[#3B82F6] to-[#4F46E5] text-white shadow-xs',
-      textStyle: 'text-[#3B82F6] dark:text-[#60A5FA]'
-    },
-    {
-      id: 'QTin',
-      label: '큐티',
-      sketch: 'qt',
-      icon: Flame,
-      activeStyle: 'bg-gradient-to-br from-[#F59E0B] to-[#EA580C] text-white shadow-xs',
-      textStyle: 'text-[#EA580C] dark:text-[#FBBF24]'
-    },
-    {
-      id: '기도하기',
-      label: '기도',
-      sketch: 'prayer',
-      icon: HandHeart,
-      activeStyle: 'bg-gradient-to-br from-[#0EA5E9] to-[#2563EB] text-white shadow-xs',
-      textStyle: 'text-[#2563EB] dark:text-[#38BDF8]'
-    },
-    {
-      id: '가정예배',
-      label: '가정예배',
-      sketch: 'family',
-      icon: Smile,
-      activeStyle: 'bg-gradient-to-br from-[#6366F1] to-[#7C3AED] text-white shadow-xs',
-      textStyle: 'text-[#4F46E5] dark:text-[#818CF8]'
-    }
+    { id: '감사', label: '감사', sketch: 'thanks', icon: Heart, activeStyle: 'bg-gradient-to-br from-[#F43F5E] to-[#E11D48] text-white shadow-xs', textStyle: 'text-[#E11D48] dark:text-[#FB7185]' },
+    { id: '성경읽기', label: '성경', sketch: 'bible', icon: BookOpen, activeStyle: 'bg-gradient-to-br from-[#3B82F6] to-[#4F46E5] text-white shadow-xs', textStyle: 'text-[#3B82F6] dark:text-[#60A5FA]' },
+    { id: 'QTin', label: '큐티', sketch: 'qt', icon: Flame, activeStyle: 'bg-gradient-to-br from-[#F59E0B] to-[#EA580C] text-white shadow-xs', textStyle: 'text-[#EA580C] dark:text-[#FBBF24]' },
+    { id: '기도하기', label: '기도', sketch: 'prayer', icon: HandHeart, activeStyle: 'bg-gradient-to-br from-[#0EA5E9] to-[#2563EB] text-white shadow-xs', textStyle: 'text-[#2563EB] dark:text-[#38BDF8]' },
+    { id: '가정예배', label: '가정예배', sketch: 'family', icon: Smile, activeStyle: 'bg-gradient-to-br from-[#6366F1] to-[#7C3AED] text-white shadow-xs', textStyle: 'text-[#4F46E5] dark:text-[#818CF8]' }
   ];
 
   const completedFiveCount = fiveRoutineItems.filter((item) => currentChecks[item.id]).length;
-
   const surfaceClass = isDarkMode ? 'bg-[#181B20]' : 'bg-white';
   const dividerClass = isDarkMode ? 'divide-[#262A32]' : 'divide-[#F2F4F6]';
   const borderClass = isDarkMode ? 'border-[#262A32]' : 'border-[#E5E8EB]';
@@ -1205,94 +1374,38 @@ export function Home({
     {
       heading: '묵상',
       rows: [
-        {
-          id: 'mcheyne',
-          sketch: 'mcheyne',
-          icon: BookOpen,
-          title: '맥체인 성경읽기',
-          sub: null,
-          statusText: `${readChapsCount || 0}장 · ${dDay}일차`
-        },
-        {
-          id: 'generalNote',
-          sketch: 'note',
-          icon: PenLine,
-          title: '자유 말씀 노트',
-          sub: null,
-          statusText: `${statsSummary.genNotesCount}개`
-        }
+        { id: 'mcheyne', sketch: 'mcheyne', icon: BookOpen, title: '맥체인 성경읽기', sub: null, statusText: `${readChapsCount || 0}장 · ${dDay}일차` },
+        { id: 'generalNote', sketch: 'note', icon: PenLine, title: '자유 말씀 노트', sub: null, statusText: `${statsSummary.genNotesCount}개` }
       ]
     },
     {
       heading: '예배',
       rows: [
-        {
-          id: 'sermon',
-          sketch: 'sermon',
-          icon: FileText,
-          title: '예배 노트 작성',
-          sub: statsSummary.sermonTodayLabel || null,
-          statusText: statsSummary.sermonCount > 0 ? `${statsSummary.sermonCount}건` : null
-        },
-        {
-          id: 'familySelect',
-          sketch: 'family',
-          icon: Smile,
-          title: '가정 예배 시작',
-          sub: null,
-          statusText: statsSummary.familyHasRecord ? '기록됨' : null
-        }
+        { id: 'sermon', sketch: 'sermon', icon: FileText, title: '예배 노트 작성', sub: statsSummary.sermonTodayLabel || null, statusText: statsSummary.sermonCount > 0 ? `${statsSummary.sermonCount}건` : null },
+        { id: 'familySelect', sketch: 'family', icon: Smile, title: '가정 예배 시작', sub: null, statusText: statsSummary.familyHasRecord ? '기록됨' : null }
       ]
     },
     {
       heading: '기록과 나눔',
       rows: [
-        {
-          id: 'diary',
-          sketch: 'diary',
-          icon: Heart,
-          title: '감사 및 간증 일기',
-          sub: null,
-          statusText: `${statsSummary.diaryCount}건`
-        },
-        {
-          id: 'prayer',
-          sketch: 'prayer',
-          icon: HandHeart,
-          title: '나의 기도함',
-          sub: null,
-          statusText: statsSummary.prayerBadge
-        },
-        {
-          id: 'cell',
-          sketch: 'cell',
-          icon: Users,
-          title: '목장 나눔',
-          sub: authUser?.role === 'admin' ? '관리자 모드' : null,
-          statusText: statsSummary.cellBadge
-        },
-        {
-          id: 'board',
-          sketch: 'board',
-          icon: Sparkles,
-          title: '공동체 게시판',
-          sub: null,
-          statusText: hasNewBoardPost ? '새 글' : null
-        }
+        { id: 'diary', sketch: 'diary', icon: Heart, title: '감사 및 간증 일기', sub: null, statusText: `${statsSummary.diaryCount}건` },
+        { id: 'prayer', sketch: 'prayer', icon: HandHeart, title: '나의 기도함', sub: null, statusText: statsSummary.prayerBadge },
+        { id: 'cell', sketch: 'cell', icon: Users, title: '목장 나눔', sub: authUser?.role === 'admin' ? '관리자 모드' : null, statusText: statsSummary.cellBadge },
+        { id: 'board', sketch: 'board', icon: Sparkles, title: '공동체 게시판', sub: null, statusText: hasNewBoardPost ? '새 글' : null }
       ]
     }
   ];
 
   return (
     <div
-      ref={scrollContainerRef}
-      className={`flex-1 flex flex-col h-full w-full max-w-full overflow-x-hidden touch-pan-y ${
+      ref={homeViewportRef}
+      className={`flex-1 flex flex-col h-full w-full max-w-full overflow-hidden relative ${
         isDarkMode ? 'bg-[#101216]' : 'bg-[#F4F5F7]'
-      } overflow-y-auto pb-[105px] hide-scrollbar pointer-events-auto relative`}
+      }`}
     >
-      {/* 상단 고정 네비게이션 바 */}
+      {/* 1. 상단 고정 네비게이션 바 (절대 흔들리지 않음) */}
       <header
-        className={`w-full shrink-0 flex items-center justify-between gap-2 px-3.5 sm:px-6 h-14 z-[45] sticky top-0 border-b ${borderClass} ${
+        className={`w-full shrink-0 flex items-center justify-between gap-2 px-3.5 sm:px-6 h-14 z-[45] border-b ${borderClass} ${
           isDarkMode ? 'bg-[#101216]/95' : 'bg-[#F4F5F7]/95'
         } backdrop-blur-md`}
       >
@@ -1354,413 +1467,337 @@ export function Home({
         </div>
       </header>
 
-      {/* 슬라이드 확장 시 부드럽게 나타나는 '오늘의 말씀' 한 줄 고정 바 */}
-      <div
-        className={`sticky top-14 z-[44] grid transition-[grid-template-rows,opacity] duration-400 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-          isSheetExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0 pointer-events-none'
-        }`}
-      >
-        <div className="overflow-hidden">
-          <div
-            onClick={() => setIsSheetExpanded(false)}
-            className={`px-3.5 sm:px-6 py-1.5 ${
-              isDarkMode ? 'bg-[#101216]/95' : 'bg-[#F4F5F7]/95'
-            } backdrop-blur-md cursor-pointer`}
-          >
-            <div className="max-w-[760px] mx-auto bg-gradient-to-r from-[#2563EB] to-[#4F46E5] text-white rounded-2xl px-4 py-2.5 flex items-center justify-between shadow-sm">
-              <span className="text-[13.5px] font-bold truncate">
-                {safeVerse.text} ({safeVerse.ref.replace(/[()]/g, '')})
-              </span>
-              <span className="text-[11.5px] font-semibold text-white/85 shrink-0 ml-3 flex items-center gap-1">
-                <span>루틴 {completedFiveCount}/5</span>
-                <ChevronDown className="w-3.5 h-3.5" />
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* 2. 완전 고정 상단 대시보드 배경 레이어 (바텀 시트를 움직여도 1px도 흔들리지 않음) */}
+      <div className="flex-1 overflow-y-auto overscroll-none hide-scrollbar px-3.5 sm:px-6 pt-2.5 pb-[260px]">
+        <div className="max-w-[760px] mx-auto w-full space-y-3">
+          {/* 최상단 2분할 카드 */}
+          <div className="grid grid-cols-12 gap-2.5 items-stretch">
+            <button
+              type="button"
+              onClick={() => setActiveScreen('virtualChurch')}
+              style={{ backgroundImage: `url('/images/virtual-church-card.jpg')` }}
+              className="col-span-5 relative rounded-3xl overflow-hidden bg-gradient-to-br from-[#2563EB] via-[#3B82F6] to-[#4F46E5] bg-cover bg-center text-white p-3.5 flex flex-col justify-between text-left cursor-pointer min-h-[140px] shadow-xs border border-white/15"
+            >
+              <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-black/15 pointer-events-none" />
+              <div className="relative z-10 w-8 h-8 rounded-xl bg-white/20 backdrop-blur-xs flex items-center justify-center">
+                <ChurchSketchIcon name="tour" fallback={Church} className="w-5 h-5 brightness-0 invert" isDarkMode={true} />
+              </div>
+              <div className="relative z-10 space-y-0.5 mt-4">
+                <span className="text-[15.5px] font-bold leading-snug block drop-shadow-xs">가상 교회 투어</span>
+                <span className="text-[11.5px] text-white/85 font-medium block">둘러보기</span>
+              </div>
+            </button>
 
-      {/* 메인 콘텐츠 컨테이너 */}
-      <div className="px-3.5 sm:px-6 pt-2.5 pb-6 max-w-[760px] mx-auto w-full flex-1 flex flex-col">
-        {/* 상단 카드 영역: 시트가 올라오면 부드럽게 축소·덮임 */}
-        <div
-          className={`grid transition-[grid-template-rows,opacity,transform] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] origin-top ${
-            isSheetExpanded
-              ? 'grid-rows-[0fr] opacity-0 scale-[0.96] -translate-y-2 pointer-events-none'
-              : 'grid-rows-[1fr] opacity-100 scale-100 translate-y-0 mb-3'
-          }`}
-        >
-          <div className="overflow-hidden">
-            <div className="space-y-3">
-              {/* 1. 최상단 2분할 카드: 가상 교회 투어(배경 이미지) + 오늘의 말씀(배경 이미지 & 암송 열기) */}
-              <div className="grid grid-cols-12 gap-2.5 items-stretch">
+            <div
+              onClick={() => openModal('fullVerse', { text: `${safeVerse.text} ${safeVerse.ref}`, bgHash: dateHash, bgUrl: activeBgUrl })}
+              style={{ backgroundImage: `url(${activeBgUrl})` }}
+              className="col-span-7 relative rounded-3xl overflow-hidden flex flex-col justify-between text-left cursor-pointer min-h-[140px] p-3.5 bg-cover bg-center border border-white/15 shadow-xs"
+            >
+              <div className="absolute inset-0 bg-black/55 pointer-events-none" />
+              <div className="relative z-10 flex items-center justify-between gap-2">
+                <span className="text-[12px] font-bold text-sky-200">오늘의 말씀</span>
                 <button
                   type="button"
-                  onClick={() => setActiveScreen('virtualChurch')}
-                  style={{
-                    backgroundImage: `url('/images/virtual-church-card.jpg')`
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsMemoryFestivalOpen(true);
                   }}
-                  className="col-span-5 relative rounded-3xl overflow-hidden bg-gradient-to-br from-[#2563EB] via-[#3B82F6] to-[#4F46E5] bg-cover bg-center text-white p-3.5 flex flex-col justify-between text-left cursor-pointer min-h-[144px] shadow-xs border border-white/15"
+                  className="px-2.5 py-1 rounded-lg bg-white/20 hover:bg-white/30 text-[11.5px] font-bold text-white cursor-pointer backdrop-blur-xs"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-black/15 pointer-events-none" />
-                  <div className="relative z-10 w-8 h-8 rounded-xl bg-white/20 backdrop-blur-xs flex items-center justify-center">
-                    <ChurchSketchIcon name="tour" fallback={Church} className="w-5 h-5 brightness-0 invert" isDarkMode={true} />
-                  </div>
-                  <div className="relative z-10 space-y-0.5 mt-4">
-                    <span className="text-[15.5px] font-bold leading-snug block drop-shadow-xs">가상 교회 투어</span>
-                    <span className="text-[11.5px] text-white/85 font-medium block">둘러보기</span>
-                  </div>
+                  암송 열기
                 </button>
-
-                <div
-                  onClick={() =>
-                    openModal('fullVerse', {
-                      text: `${safeVerse.text} ${safeVerse.ref}`,
-                      bgHash: dateHash,
-                      bgUrl: activeBgUrl
-                    })
-                  }
-                  style={{ backgroundImage: `url(${activeBgUrl})` }}
-                  className="col-span-7 relative rounded-3xl overflow-hidden flex flex-col justify-between text-left cursor-pointer min-h-[144px] p-3.5 bg-cover bg-center border border-white/15 shadow-xs"
-                >
-                  <div className="absolute inset-0 bg-black/55 pointer-events-none" />
-
-                  <div className="relative z-10 flex items-center justify-between gap-2">
-                    <span className="text-[12px] font-bold text-sky-200">오늘의 말씀</span>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setIsMemoryFestivalOpen(true);
-                      }}
-                      className="px-2.5 py-1 rounded-lg bg-white/20 hover:bg-white/30 text-[11.5px] font-bold text-white cursor-pointer backdrop-blur-xs"
-                    >
-                      암송 열기
-                    </button>
-                  </div>
-
-                  <p className="relative z-10 text-[14.5px] font-bold leading-snug line-clamp-3 my-1.5 break-keep text-white">
-                    {safeVerse.text}
-                  </p>
-
-                  <span className="relative z-10 text-[11.5px] font-medium text-white/85">
-                    {safeVerse.ref.replace(/[()]/g, '')}
-                  </span>
-                </div>
               </div>
-
-              {/* 2. 영적5종세트 + 연속 실천일수 + 성경 365 통독 */}
-              <section className={`${surfaceClass} rounded-3xl border ${borderClass} overflow-hidden`}>
-                <div className="px-3.5 py-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <h2 className={`text-[15.5px] font-bold ${t.textMain} tracking-tight`}>영적5종세트</h2>
-                    <span className="text-[11.5px] font-bold text-[#3B82F6] bg-[#3B82F6]/10 px-2.5 py-0.5 rounded-lg">
-                      {completedFiveCount} / 5 완료
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-5 gap-1">
-                    {fiveRoutineItems.map((item) => {
-                      const isChecked = Boolean(currentChecks[item.id]);
-                      const IconComp = item.icon;
-                      return (
-                        <button
-                          key={item.id}
-                          type="button"
-                          onClick={() => {
-                            updateDay({ checks: { ...currentChecks, [item.id]: !isChecked } });
-                            if (!isChecked) triggerConfetti();
-                          }}
-                          className="flex flex-col items-center py-0.5 rounded-2xl transition-transform active:scale-95 cursor-pointer"
-                        >
-                          <div
-                            className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-all relative ${
-                              isChecked ? item.activeStyle : mutedChipClass
-                            }`}
-                          >
-                            <ChurchSketchIcon
-                              name={item.sketch}
-                              fallback={IconComp}
-                              className="w-6 h-6"
-                              isDarkMode={isDarkMode}
-                              invertOnActive={isChecked}
-                            />
-                          </div>
-                          <span className={`text-[11.5px] mt-1 font-bold ${isChecked ? item.textStyle : t.textSub}`}>
-                            {item.label}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className={`grid grid-cols-2 border-t ${borderClass} divide-x ${borderClass}`}>
-                  <button
-                    type="button"
-                    onClick={() => setActiveScreen('fiveSetMenu')}
-                    className="px-3.5 py-2.5 flex items-center justify-between text-left hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors cursor-pointer"
-                  >
-                    <div>
-                      <span className={`text-[11.5px] font-medium ${t.textSub} block`}>연속 실천일수</span>
-                      <span className={`text-[16px] font-bold ${t.textMain} mt-0.5 block`}>{streak5 || 0}일째</span>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-[#8B95A1]" />
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setActiveScreen('bible');
-                      openModal('bibleChallenge');
-                    }}
-                    className="px-3.5 py-2.5 flex flex-col justify-between text-left hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors cursor-pointer"
-                  >
-                    <div className="flex items-center justify-between w-full">
-                      <span className={`text-[11.5px] font-medium ${t.textSub}`}>성경 365 통독</span>
-                      <span className="text-[11.5px] font-bold text-[#3B82F6]">{bibleProgress}%</span>
-                    </div>
-                    <span className={`text-[16px] font-bold ${t.textMain} mt-0.5 block`}>
-                      {dDay > 0 ? `${dDay}일차` : '시작 전'}
-                    </span>
-                    <div className={`w-full ${isDarkMode ? 'bg-[#262A32]' : 'bg-[#E5E8EB]'} rounded-full h-1.5 mt-1 overflow-hidden`}>
-                      <div
-                        className="bg-gradient-to-r from-[#3B82F6] to-[#6366F1] h-full rounded-full"
-                        style={{ width: `${bibleProgress}%` }}
-                      />
-                    </div>
-                  </button>
-                </div>
-              </section>
-
-              {/* 3. 1안: 슬림 다크 미디어 바 (클릭 시 3D 커버플로우 시어터 + 시네마 플레이어 오픈) */}
-              <button
-                type="button"
-                onClick={() => setIsTheaterOpen(true)}
-                className="w-full h-[52px] px-4 rounded-2xl bg-gradient-to-r from-[#141824] via-[#1C2333] to-[#171C2B] border border-white/10 text-white flex items-center justify-between gap-3 shadow-sm hover:brightness-110 active:scale-[0.99] transition-all cursor-pointer"
-              >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <span className="w-7 h-7 rounded-full bg-gradient-to-br from-[#3B82F6] to-[#6366F1] flex items-center justify-center shrink-0 shadow-xs">
-                    <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
-                  </span>
-                  <div className="flex items-center gap-1.5 min-w-0 truncate">
-                    <span className="text-[12.5px] font-bold text-sky-300 shrink-0">예배·찬양 시어터</span>
-                    <span className="text-white/35 text-[11px]">·</span>
-                    <span className="text-[13px] font-semibold text-white/90 truncate">
-                      {worshipVideos[0]?.title || '오늘의 예배 영상'}
-                    </span>
-                  </div>
-                </div>
-                <span className="flex items-center gap-1 text-[11.5px] font-bold text-white/75 shrink-0">
-                  <Headphones className="w-3.5 h-3.5 text-sky-300" />
-                  <span>열기</span>
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </span>
-              </button>
+              <p className="relative z-10 text-[14.5px] font-bold leading-snug line-clamp-3 my-1.5 break-keep text-white">
+                {safeVerse.text}
+              </p>
+              <span className="relative z-10 text-[11.5px] font-medium text-white/85">
+                {safeVerse.ref.replace(/[()]/g, '')}
+              </span>
             </div>
           </div>
-        </div>
 
-        {/* 4. 단일 하단 슬라이드 시트 (상하 부드러운 덮기 + 좌우 탭 스와이프) */}
-        <section
-          style={{
-            transform: dragOffsetY !== 0 ? `translateY(${dragOffsetY * 0.45}px)` : 'translateY(0px)',
-            transition: isDraggingSheet
-              ? 'none'
-              : 'transform 380ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 380ms ease'
-          }}
-          className={`${surfaceClass} rounded-3xl border ${borderClass} overflow-hidden flex-1 flex flex-col ${
-            isSheetExpanded ? 'shadow-[0_-12px_36px_rgba(15,23,42,0.12)]' : 'shadow-2xs'
-          }`}
-        >
-          {/* 드래그 핸들 바 */}
-          <div
-            onTouchStart={handleSheetTouchStart}
-            onTouchMove={handleSheetTouchMove}
-            onTouchEnd={handleSheetTouchEnd}
-            onClick={() => setIsSheetExpanded((prev) => !prev)}
-            className="pt-2.5 pb-1.5 flex flex-col items-center justify-center cursor-grab active:cursor-grabbing touch-none"
-            title={isSheetExpanded ? '아래로 내리기' : '위로 올려 전체 메뉴 보기'}
-          >
-            <span className={`w-10 h-1 rounded-full ${isDarkMode ? 'bg-[#3A4150]' : 'bg-[#D1D5DB]'}`} />
-          </div>
-
-          {/* 세그먼트 탭 바 (좌우 스와이프 대응) */}
-          <div
-            onTouchStart={handleSheetTouchStart}
-            onTouchMove={handleSheetTouchMove}
-            onTouchEnd={handleSheetTouchEnd}
-            className={`mx-4 mb-2 p-1 rounded-2xl ${mutedChipClass} grid grid-cols-2 gap-1`}
-          >
-            <button
-              type="button"
-              onClick={() => setDrawerTab('records')}
-              className={`py-2 rounded-xl text-[13.5px] font-bold transition-all cursor-pointer ${
-                drawerTab === 'records' ? `${surfaceClass} ${t.textMain} shadow-2xs` : t.textSub
-              }`}
-            >
-              말씀과 기록
-            </button>
-            <button
-              type="button"
-              onClick={() => setDrawerTab('study')}
-              className={`py-2 rounded-xl text-[13.5px] font-bold transition-all cursor-pointer ${
-                drawerTab === 'study' ? `${surfaceClass} ${t.textMain} shadow-2xs` : t.textSub
-              }`}
-            >
-              성경 연구 및 훈련
-            </button>
-          </div>
-
-          {drawerTab === 'records' ? (
-            <div className="px-4 pb-5 pt-1 space-y-3">
-              {/* 매일 큐티 하이라이트 카드 */}
-              <div
-                onClick={() => setActiveScreen('qt')}
-                className={`p-3.5 rounded-2xl flex items-center justify-between gap-3 cursor-pointer transition-colors ${
-                  isDarkMode ? 'bg-[#3B82F6]/15 hover:bg-[#3B82F6]/20' : 'bg-[#EBF3FF] hover:bg-[#E0ECFF]'
-                }`}
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-2xl bg-[#3B82F6]/15 text-[#3B82F6] flex items-center justify-center shrink-0">
-                    <ChurchSketchIcon name="qt" fallback={Flame} className="w-6 h-6" isDarkMode={isDarkMode} />
-                  </div>
-                  <div className="min-w-0">
-                    <span className={`text-[15px] font-bold ${t.textMain} block`}>매일 큐티</span>
-                    <span className={`text-[12px] ${t.textSub} block truncate mt-0.5`}>{statsSummary.qtSubLabel}</span>
-                  </div>
-                </div>
-                <span className="px-3 py-1 rounded-full bg-white text-[#3B82F6] text-[12px] font-bold shrink-0 shadow-2xs">
-                  {statsSummary.qtDone ? '완료' : '작성'}
+          {/* 영적5종세트 */}
+          <section className={`${surfaceClass} rounded-3xl border ${borderClass} overflow-hidden`}>
+            <div className="px-3.5 py-3">
+              <div className="flex items-center justify-between mb-2">
+                <h2 className={`text-[15.5px] font-bold ${t.textMain} tracking-tight`}>영적5종세트</h2>
+                <span className="text-[11.5px] font-bold text-[#3B82F6] bg-[#3B82F6]/10 px-2.5 py-0.5 rounded-lg">
+                  {completedFiveCount} / 5 완료
                 </span>
               </div>
 
-              {/* 그룹별 리스트 */}
-              {recordSections.map((sec) => (
-                <div key={sec.heading} className="space-y-0.5">
-                  <span className={`text-[11.5px] font-semibold ${t.textSub} px-1 block`}>{sec.heading}</span>
-                  <div className={`divide-y ${dividerClass}`}>
-                    {sec.rows.map((row) => {
-                      const IconComp = row.icon;
-                      return (
-                        <button
-                          key={row.id}
-                          type="button"
-                          onClick={() => setActiveScreen(row.id)}
-                          className="w-full py-3 px-1 flex items-center justify-between gap-3 text-left hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors cursor-pointer"
-                        >
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0">
-                              <ChurchSketchIcon name={row.sketch} fallback={IconComp} className="w-6 h-6" isDarkMode={isDarkMode} />
-                            </div>
-                            <div className="min-w-0">
-                              <span className={`text-[14.5px] font-bold ${t.textMain} block truncate`}>{row.title}</span>
-                              {row.sub && (
-                                <span className={`text-[11.5px] ${t.textSub} block truncate`}>{row.sub}</span>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-2 shrink-0">
-                            {row.statusText && (
-                              <span className="text-[12.5px] font-bold text-[#3B82F6]">{row.statusText}</span>
-                            )}
-                            <ChevronRight className="w-4 h-4 text-[#8B95A1]" />
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="flex flex-col">
-              <div className="px-4 pb-2 flex items-center justify-between">
-                <span className={`text-[12px] font-medium ${t.textSub}`}>
-                  {isEditMode ? '순서를 이동한 뒤 완료를 눌러주세요' : '13개 성경 연구 및 훈련 도구'}
-                </span>
-                <div className="flex items-center gap-1.5">
-                  {isEditMode && (
-                    <button
-                      type="button"
-                      onClick={() => saveNewOrder(MASTER_MENUS.map((m) => m.id))}
-                      className={`px-2.5 py-1 rounded-lg text-[11.5px] font-bold ${mutedChipClass} cursor-pointer`}
-                    >
-                      초기화
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setIsEditMode((v) => !v)}
-                    className={`px-2.5 py-1 rounded-lg text-[11.5px] font-bold cursor-pointer ${
-                      isEditMode ? 'bg-[#3B82F6] text-white' : mutedChipClass
-                    }`}
-                  >
-                    {isEditMode ? '완료' : '순서편집'}
-                  </button>
-                </div>
-              </div>
-
-              <div className={`divide-y ${dividerClass} border-t ${borderClass}`}>
-                {orderedMenus.map((item, index) => {
+              <div className="grid grid-cols-5 gap-1">
+                {fiveRoutineItems.map((item) => {
+                  const isChecked = Boolean(currentChecks[item.id]);
                   const IconComp = item.icon;
                   return (
-                    <div
+                    <button
                       key={item.id}
+                      type="button"
                       onClick={() => {
-                        if (isEditMode) return;
-                        setActiveScreen(item.id);
+                        updateDay({ checks: { ...currentChecks, [item.id]: !isChecked } });
+                        if (!isChecked) triggerConfetti();
                       }}
-                      className="w-full px-4 py-3 flex items-center justify-between gap-3 text-left hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors cursor-pointer"
+                      className="flex flex-col items-center py-0.5 rounded-2xl transition-transform active:scale-95 cursor-pointer"
                     >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${mutedChipClass}`}>
-                          <ChurchSketchIcon name={item.sketch} fallback={IconComp} className="w-6 h-6" isDarkMode={isDarkMode} />
-                        </div>
-                        <div className="min-w-0">
-                          <span className={`text-[14.5px] font-bold ${t.textMain} block truncate`}>{item.title}</span>
-                          <span className={`text-[11.5px] ${t.textSub} block truncate`}>{item.desc}</span>
-                        </div>
+                      <div className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-all relative ${isChecked ? item.activeStyle : mutedChipClass}`}>
+                        <ChurchSketchIcon name={item.sketch} fallback={IconComp} className="w-6 h-6" isDarkMode={isDarkMode} invertOnActive={isChecked} />
                       </div>
-
-                      {isEditMode ? (
-                        <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-                          <button
-                            type="button"
-                            onClick={() => handleSwapMenuOrder(index, index - 1)}
-                            disabled={index === 0}
-                            className={`px-2 py-1 rounded-lg ${mutedChipClass} text-[11px] font-bold disabled:opacity-30 cursor-pointer`}
-                          >
-                            위
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleSwapMenuOrder(index, index + 1)}
-                            disabled={index === orderedMenus.length - 1}
-                            className={`px-2 py-1 rounded-lg ${mutedChipClass} text-[11px] font-bold disabled:opacity-30 cursor-pointer`}
-                          >
-                            아래
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2 shrink-0">
-                          {item.badgeText && (
-                            <span className="text-[12px] font-bold text-[#3B82F6]">{item.badgeText}</span>
-                          )}
-                          <ChevronRight className="w-4 h-4 text-[#8B95A1]" />
-                        </div>
-                      )}
-                    </div>
+                      <span className={`text-[11.5px] mt-1 font-bold ${isChecked ? item.textStyle : t.textSub}`}>{item.label}</span>
+                    </button>
                   );
                 })}
               </div>
             </div>
-          )}
+
+            <div className={`grid grid-cols-2 border-t ${borderClass} divide-x ${borderClass}`}>
+              <button
+                type="button"
+                onClick={() => setActiveScreen('fiveSetMenu')}
+                className="px-3.5 py-2.5 flex items-center justify-between text-left hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors cursor-pointer"
+              >
+                <div>
+                  <span className={`text-[11.5px] font-medium ${t.textSub} block`}>연속 실천일수</span>
+                  <span className={`text-[16px] font-bold ${t.textMain} mt-0.5 block`}>{streak5 || 0}일째</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-[#8B95A1]" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveScreen('bible');
+                  openModal('bibleChallenge');
+                }}
+                className="px-3.5 py-2.5 flex flex-col justify-between text-left hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors cursor-pointer"
+              >
+                <div className="flex items-center justify-between w-full">
+                  <span className={`text-[11.5px] font-medium ${t.textSub}`}>성경 365 통독</span>
+                  <span className="text-[11.5px] font-bold text-[#3B82F6]">{bibleProgress}%</span>
+                </div>
+                <span className={`text-[16px] font-bold ${t.textMain} mt-0.5 block`}>{dDay > 0 ? `${dDay}일차` : '시작 전'}</span>
+                <div className={`w-full ${isDarkMode ? 'bg-[#262A32]' : 'bg-[#E5E8EB]'} rounded-full h-1.5 mt-1 overflow-hidden`}>
+                  <div className="bg-gradient-to-r from-[#3B82F6] to-[#6366F1] h-full rounded-full" style={{ width: `${bibleProgress}%` }} />
+                </div>
+              </button>
+            </div>
+          </section>
+
+          {/* 예배·찬양 시어터 바 */}
+          <button
+            type="button"
+            onClick={() => setIsTheaterOpen(true)}
+            className="w-full h-[52px] px-4 rounded-2xl bg-gradient-to-r from-[#141824] via-[#1C2333] to-[#171C2B] border border-white/10 text-white flex items-center justify-between gap-3 shadow-sm hover:brightness-110 active:scale-[0.99] transition-all cursor-pointer"
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className="w-7 h-7 rounded-full bg-gradient-to-br from-[#3B82F6] to-[#6366F1] flex items-center justify-center shrink-0 shadow-xs">
+                <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+              </span>
+              <div className="flex items-center gap-1.5 min-w-0 truncate">
+                <span className="text-[12.5px] font-bold text-sky-300 shrink-0">예배·찬양 시어터</span>
+                <span className="text-white/35 text-[11px]">·</span>
+                <span className="text-[13px] font-semibold text-white/90 truncate">{worshipVideos[0]?.title || '오늘의 예배 영상'}</span>
+              </div>
+            </div>
+            <span className="flex items-center gap-1 text-[11.5px] font-bold text-white/75 shrink-0">
+              <Headphones className="w-3.5 h-3.5 text-sky-300" />
+              <span>열기</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </span>
+          </button>
+        </div>
+      </div>
+
+      {/* 3. 구글맵 스타일 3단 스냅 바텀 시트 (상단 대시보드 위로 부드럽게 미끄러짐) */}
+      <div className="absolute inset-0 pointer-events-none z-40 flex justify-center">
+        <section
+          style={{
+            transform: `translate3d(0, ${currentSheetTop}px, 0)`,
+            transition: dragY !== null ? 'none' : 'transform 360ms cubic-bezier(0.22, 1, 0.36, 1)',
+            height: `${Math.max(400, viewportH - snapPoints.full)}px`
+          }}
+          className={`w-full max-w-[760px] pointer-events-auto ${surfaceClass} rounded-t-[28px] border-t border-x ${borderClass} shadow-[0_-10px_36px_rgba(15,23,42,0.14)] flex flex-col overflow-hidden will-change-transform`}
+        >
+          {/* 드래그 핸들 & 탭 영역 */}
+          <div
+            onTouchStart={handleSheetTouchStart}
+            onTouchMove={handleSheetTouchMove}
+            onTouchEnd={handleSheetTouchEnd}
+            className="shrink-0 touch-none select-none"
+          >
+            <div
+              onClick={handleCycleSheetStage}
+              className="pt-2.5 pb-2 flex flex-col items-center justify-center cursor-grab active:cursor-grabbing"
+              title="드래그하거나 탭하여 높이 조절"
+            >
+              <span className={`w-10 h-1 rounded-full ${isDarkMode ? 'bg-[#3A4150]' : 'bg-[#D1D5DB]'}`} />
+            </div>
+
+            <div className={`mx-4 mb-2 p-1 rounded-2xl ${mutedChipClass} grid grid-cols-2 gap-1`}>
+              <button
+                type="button"
+                onClick={() => setDrawerTab('records')}
+                className={`py-2 rounded-xl text-[13.5px] font-bold transition-all cursor-pointer ${
+                  drawerTab === 'records' ? `${surfaceClass} ${t.textMain} shadow-2xs` : t.textSub
+                }`}
+              >
+                말씀과 기록
+              </button>
+              <button
+                type="button"
+                onClick={() => setDrawerTab('study')}
+                className={`py-2 rounded-xl text-[13.5px] font-bold transition-all cursor-pointer ${
+                  drawerTab === 'study' ? `${surfaceClass} ${t.textMain} shadow-2xs` : t.textSub
+                }`}
+              >
+                성경 연구 및 훈련
+              </button>
+            </div>
+          </div>
+
+          {/* 시트 내부 독립 스크롤 영역 */}
+          <div className="flex-1 overflow-y-auto overscroll-contain hide-scrollbar pb-[115px]">
+            {drawerTab === 'records' ? (
+              <div className="px-4 pt-1 space-y-3">
+                <div
+                  onClick={() => setActiveScreen('qt')}
+                  className={`p-3.5 rounded-2xl flex items-center justify-between gap-3 cursor-pointer transition-colors ${
+                    isDarkMode ? 'bg-[#3B82F6]/15 hover:bg-[#3B82F6]/20' : 'bg-[#EBF3FF] hover:bg-[#E0ECFF]'
+                  }`}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-2xl bg-[#3B82F6]/15 text-[#3B82F6] flex items-center justify-center shrink-0">
+                      <ChurchSketchIcon name="qt" fallback={Flame} className="w-6 h-6" isDarkMode={isDarkMode} />
+                    </div>
+                    <div className="min-w-0">
+                      <span className={`text-[15px] font-bold ${t.textMain} block`}>매일 큐티</span>
+                      <span className={`text-[12px] ${t.textSub} block truncate mt-0.5`}>{statsSummary.qtSubLabel}</span>
+                    </div>
+                  </div>
+                  <span className="px-3 py-1 rounded-full bg-white text-[#3B82F6] text-[12px] font-bold shrink-0 shadow-2xs">
+                    {statsSummary.qtDone ? '완료' : '작성'}
+                  </span>
+                </div>
+
+                {recordSections.map((sec) => (
+                  <div key={sec.heading} className="space-y-0.5">
+                    <span className={`text-[11.5px] font-semibold ${t.textSub} px-1 block`}>{sec.heading}</span>
+                    <div className={`divide-y ${dividerClass}`}>
+                      {sec.rows.map((row) => {
+                        const IconComp = row.icon;
+                        return (
+                          <button
+                            key={row.id}
+                            type="button"
+                            onClick={() => setActiveScreen(row.id)}
+                            className="w-full py-3 px-1 flex items-center justify-between gap-3 text-left hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors cursor-pointer"
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0">
+                                <ChurchSketchIcon name={row.sketch} fallback={IconComp} className="w-6 h-6" isDarkMode={isDarkMode} />
+                              </div>
+                              <div className="min-w-0">
+                                <span className={`text-[14.5px] font-bold ${t.textMain} block truncate`}>{row.title}</span>
+                                {row.sub && <span className={`text-[11.5px] ${t.textSub} block truncate`}>{row.sub}</span>}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              {row.statusText && <span className="text-[12.5px] font-bold text-[#3B82F6]">{row.statusText}</span>}
+                              <ChevronRight className="w-4 h-4 text-[#8B95A1]" />
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col">
+                <div className="px-4 pb-2 flex items-center justify-between">
+                  <span className={`text-[12px] font-medium ${t.textSub}`}>
+                    {isEditMode ? '순서를 이동한 뒤 완료를 눌러주세요' : '13개 성경 연구 및 훈련 도구'}
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    {isEditMode && (
+                      <button
+                        type="button"
+                        onClick={() => saveNewOrder(MASTER_MENUS.map((m) => m.id))}
+                        className={`px-2.5 py-1 rounded-lg text-[11.5px] font-bold ${mutedChipClass} cursor-pointer`}
+                      >
+                        초기화
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setIsEditMode((v) => !v)}
+                      className={`px-2.5 py-1 rounded-lg text-[11.5px] font-bold cursor-pointer ${
+                        isEditMode ? 'bg-[#3B82F6] text-white' : mutedChipClass
+                      }`}
+                    >
+                      {isEditMode ? '완료' : '순서편집'}
+                    </button>
+                  </div>
+                </div>
+
+                <div className={`divide-y ${dividerClass} border-t ${borderClass}`}>
+                  {orderedMenus.map((item, index) => {
+                    const IconComp = item.icon;
+                    return (
+                      <div
+                        key={item.id}
+                        onClick={() => {
+                          if (isEditMode) return;
+                          setActiveScreen(item.id);
+                        }}
+                        className="w-full px-4 py-3 flex items-center justify-between gap-3 text-left hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors cursor-pointer"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${mutedChipClass}`}>
+                            <ChurchSketchIcon name={item.sketch} fallback={IconComp} className="w-6 h-6" isDarkMode={isDarkMode} />
+                          </div>
+                          <div className="min-w-0">
+                            <span className={`text-[14.5px] font-bold ${t.textMain} block truncate`}>{item.title}</span>
+                            <span className={`text-[11.5px] ${t.textSub} block truncate`}>{item.desc}</span>
+                          </div>
+                        </div>
+
+                        {isEditMode ? (
+                          <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              type="button"
+                              onClick={() => handleSwapMenuOrder(index, index - 1)}
+                              disabled={index === 0}
+                              className={`px-2 py-1 rounded-lg ${mutedChipClass} text-[11px] font-bold disabled:opacity-30 cursor-pointer`}
+                            >
+                              위
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleSwapMenuOrder(index, index + 1)}
+                              disabled={index === orderedMenus.length - 1}
+                              className={`px-2 py-1 rounded-lg ${mutedChipClass} text-[11px] font-bold disabled:opacity-30 cursor-pointer`}
+                            >
+                              아래
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 shrink-0">
+                            {item.badgeText && <span className="text-[12px] font-bold text-[#3B82F6]">{item.badgeText}</span>}
+                            <ChevronRight className="w-4 h-4 text-[#8B95A1]" />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
         </section>
       </div>
 
-      {/* 암송 열기 전용 40구절 팝업 (하단 배너 라인 숨김) */}
+      {/* 암송 열기 전용 40구절 팝업 */}
       <MemoryFestivalBanner
         isDarkMode={isDarkMode}
         currDay={currDay}
@@ -1769,13 +1806,11 @@ export function Home({
         onExternalClose={() => setIsMemoryFestivalOpen(false)}
         hideBanner={true}
         onCompleteCheck={() => {
-          if (updateDay) {
-            updateDay({ checks: { ...(currDay?.checks || {}), 암송: true } });
-          }
+          if (updateDay) updateDay({ checks: { ...(currDay?.checks || {}), 암송: true } });
         }}
       />
 
-      {/* 1안 다크 3D 커버플로우 시어터 + 시네마 플레이어 */}
+      {/* 세밀화된 시어터 + 시네마 플레이어 */}
       <MediaTheaterModal
         isOpen={isTheaterOpen}
         onClose={() => setIsTheaterOpen(false)}
