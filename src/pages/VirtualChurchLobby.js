@@ -1,4 +1,4 @@
-// src/pages/VirtualChurchLobby.js
+// src/pages/VirtualChurchLobby.js (전 층 공용 캐릭터·표정 · 에셋 디테일 · 모바일 최적화 완성본)
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { PerspectiveCamera, OrbitControls, RoundedBox, ContactShadows, Billboard } from '@react-three/drei';
@@ -19,15 +19,26 @@ const isAuthorizedPastor = (name = '', office = '') => {
 };
 
 // =====================================================================
-// 🔔 사운드 신시사이저 (엘리베이터 차임벨 & 거룩한 축도 홀리라이트 오르간 화음)
+// 🔔 사운드 신시사이저 (싱글톤 AudioContext로 모바일 메모리/오디오 안정화)
 // =====================================================================
+let sharedLobbyAudioCtx = null;
+function getLobbyAudioCtx() {
+  if (typeof window === 'undefined') return null;
+  if (!sharedLobbyAudioCtx) {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (AudioCtx) sharedLobbyAudioCtx = new AudioCtx();
+  }
+  if (sharedLobbyAudioCtx && sharedLobbyAudioCtx.state === 'suspended') {
+    sharedLobbyAudioCtx.resume().catch(() => {});
+  }
+  return sharedLobbyAudioCtx;
+}
+
 const playElevatorDingSound = () => {
   try {
-    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    if (!AudioCtx) return;
-    const ctx = new AudioCtx();
+    const ctx = getLobbyAudioCtx();
+    if (!ctx) return;
     const now = ctx.currentTime;
-
     [659.25, 523.25].forEach((freq, idx) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
@@ -45,11 +56,9 @@ const playElevatorDingSound = () => {
 
 const playHolyBlessingSound = () => {
   try {
-    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    if (!AudioCtx) return;
-    const ctx = new AudioCtx();
+    const ctx = getLobbyAudioCtx();
+    if (!ctx) return;
     const now = ctx.currentTime;
-
     [349.23, 440.0, 523.25, 659.25, 698.46, 880.0, 1046.5].forEach((freq, idx) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
@@ -68,7 +77,7 @@ const playHolyBlessingSound = () => {
 // =====================================================================
 // 🎨 고해상도 캔버스 텍스처 생성기
 // =====================================================================
-function makeCanvasTexture(drawFn, width = 512, height = 256) {
+export function makeCanvasTexture(drawFn, width = 512, height = 256) {
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
@@ -93,7 +102,6 @@ function makeLobbyMarbleTexture() {
       ctx.moveTo(i * step, 0);
       ctx.lineTo(i * step, h);
       ctx.stroke();
-
       ctx.beginPath();
       ctx.moveTo(0, i * step);
       ctx.lineTo(w, i * step);
@@ -102,9 +110,9 @@ function makeLobbyMarbleTexture() {
 
     ctx.strokeStyle = 'rgba(180, 170, 155, 0.18)';
     ctx.lineWidth = 2;
-    for (let i = 0; i < 24; i++) {
+    for (let i = 0; i < 20; i++) {
       ctx.beginPath();
-      const sy = (i / 24) * h;
+      const sy = (i / 20) * h;
       ctx.moveTo(0, sy);
       ctx.bezierCurveTo(w * 0.35, sy + 18, w * 0.65, sy - 18, w, sy + 8);
       ctx.stroke();
@@ -112,21 +120,21 @@ function makeLobbyMarbleTexture() {
   }, 512, 512);
 }
 
-function makeWoodGrainTexture(baseHex = '#D49552', lineHex = '#9C5E26') {
+export function makeWoodGrainTexture(baseHex = '#D49552', lineHex = '#9C5E26') {
   return makeCanvasTexture((ctx, w, h) => {
     ctx.fillStyle = baseHex;
     ctx.fillRect(0, 0, w, h);
     ctx.strokeStyle = lineHex;
     ctx.globalAlpha = 0.16;
-    for (let i = 0; i < 90; i++) {
+    for (let i = 0; i < 72; i++) {
       ctx.lineWidth = 1 + (i % 3);
       ctx.beginPath();
-      const y = (i / 90) * h;
+      const y = (i / 72) * h;
       ctx.moveTo(0, y);
       ctx.bezierCurveTo(w * 0.3, y + Math.sin(i) * 5, w * 0.7, y - Math.cos(i) * 5, w, y);
       ctx.stroke();
     }
-  }, 512, 512);
+  }, 256, 256);
 }
 
 function makeBrushedSteelTexture() {
@@ -139,17 +147,16 @@ function makeBrushedSteelTexture() {
     grad.addColorStop(1, '#CBD5E1');
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, w, h);
-
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
     ctx.lineWidth = 1;
-    for (let i = 0; i < 240; i++) {
-      const y = (i / 240) * h;
+    for (let i = 0; i < 120; i++) {
+      const y = (i / 120) * h;
       ctx.beginPath();
       ctx.moveTo(0, y);
       ctx.lineTo(w, y);
       ctx.stroke();
     }
-  }, 512, 512);
+  }, 256, 256);
 }
 
 function makeBrightMirrorTexture() {
@@ -172,7 +179,7 @@ function makeBrightMirrorTexture() {
       ctx.closePath();
       ctx.fill();
     }
-  }, 512, 256);
+  }, 256, 128);
 }
 
 function makeRoomSignTexture(title, subTitle, badgeColor = '#10B981') {
@@ -257,7 +264,7 @@ const ZONES_1F = [
     isElevator: true,
     badge: '04 엘리베이터',
     title: '🛗 전 층 연결 스테인리스 자동 개폐 엘리베이터 (1F~7F)',
-    desc: '다가가거나 클릭하면 "띵동~" 차임벨과 함께 브러시드 스테인리스 양문이 부드럽게 열리며 2층(북카페·목양실), 3층(본당), 4층(자모실), 5층(소예배실), 6층(교육관), 7층(하늘정원)으로 이동합니다!'
+    desc: '다가가거나 클릭하면 "띵동~" 차임벨과 함께 브러시드 스테인리스 양문이 부드럽게 열리며 2층~7층으로 이동합니다!'
   },
   {
     id: 'zone_1f_up_stairs',
@@ -436,31 +443,24 @@ const NPCS_1F = [
 ];
 
 // =====================================================================
-// 🚧 초정밀 물리 충돌(AABB + 원형 장애물) 엔진 (모든 가구·차량·기둥·NPC 통과 완벽 차단!)
+// 🚧 초정밀 물리 충돌(AABB + 원형 장애물) 엔진
 // =====================================================================
 const WALL_COLLIDERS_1F = [
-  // 1) 정문 외벽 및 측면 벽체
   { minX: -4.4, maxX: -1.85, minZ: 4.15, maxZ: 4.65 },
   { minX: 0.45, maxX: 5.5, minZ: 4.15, maxZ: 4.65 },
   { minX: -4.45, maxX: -3.95, minZ: -4.6, maxZ: 1.45 },
   { minX: -4.45, maxX: -3.95, minZ: 2.95, maxZ: 4.6 },
-  // 2) 로비 방풍 가벽 2개
   { minX: -4.2, maxX: -2.85, minZ: 0.95, maxZ: 1.35 },
   { minX: 0.95, maxX: 2.35, minZ: 0.95, maxZ: 1.35 },
-  // 3) 좌측 4인용 크롬 가죽 대기석 & 앞쪽 이동식 원목 다과 테이블
   { minX: -3.95, maxX: -3.15, minZ: -3.55, maxZ: -0.45 },
   { minX: -2.80, maxX: -2.05, minZ: -2.85, maxZ: -1.15 },
-  // 4) 북쪽 템바보드 리셉션 안내데스크 & 디지털 주보 키오스크 & 미니 커피 자판기
   { minX: -1.90, maxX: 0.30, minZ: -3.65, maxZ: -2.75 },
   { minX: -1.95, maxX: -1.15, minZ: -2.85, maxZ: -2.40 },
   { minX: 0.30, maxX: 0.98, minZ: -3.75, maxZ: -3.10 },
-  // 5) 우측 클래식 원목 장의자 벤치
   { minX: -0.58, maxX: 1.08, minZ: 1.38, maxZ: 1.92 },
-  // 6) 우측 엘리베이터 & 계단실 벽체
   { minX: 2.15, maxX: 2.65, minZ: -4.6, maxZ: -3.55 },
   { minX: 2.15, maxX: 2.65, minZ: -2.05, maxZ: -0.4 },
   { minX: 2.15, maxX: 2.65, minZ: 0.8, maxZ: 2.1 },
-  // 7) 좌측 필로티 주차장 아이오닉 5 & 아반떼 N 차량 2대 & 필로티 기둥 4개
   { minX: -10.65, maxX: -7.05, minZ: -2.35, maxZ: -0.35 },
   { minX: -10.65, maxX: -7.05, minZ: 0.20, maxZ: 2.15 },
   { minX: -10.55, maxX: -9.85, minZ: 3.85, maxZ: 4.55 },
@@ -469,16 +469,15 @@ const WALL_COLLIDERS_1F = [
   { minX: -5.35, maxX: -4.65, minZ: -3.85, maxZ: -3.15 }
 ];
 
-// 관엽식물 화분 및 고정 NPC 원형 충돌체 (x, z, 반지름)
 const STATIC_CIRCLE_OBSTACLES_1F = [
-  { x: -2.35, z: -3.05, r: 0.32 }, // 고무나무 화분
-  { x: 1.25, z: -3.05, r: 0.30 },  // 드라세나 화분
-  { x: -2.95, z: -0.35, r: 0.32 }, // 야자나무 화분
-  { x: -0.2, z: -1.8, r: 0.30 },   // 이성현 목사님
-  { x: -1.65, z: -1.8, r: 0.30 },  // 방희곤 목사님
-  { x: 0.85, z: -1.8, r: 0.30 },   // 최수경 목사님
-  { x: -6.2, z: 3.2, r: 0.30 },    // 주차팀 최집사님
-  { x: 1.45, z: -2.2, r: 0.30 }    // 엘베안내 이청년
+  { x: -2.35, z: -3.05, r: 0.32 },
+  { x: 1.25, z: -3.05, r: 0.30 },
+  { x: -2.95, z: -0.35, r: 0.32 },
+  { x: -0.2, z: -1.8, r: 0.30 },
+  { x: -1.65, z: -1.8, r: 0.30 },
+  { x: 0.85, z: -1.8, r: 0.30 },
+  { x: -6.2, z: 3.2, r: 0.30 },
+  { x: 1.45, z: -2.2, r: 0.30 }
 ];
 
 function isBlocked1F(x, z) {
@@ -493,14 +492,12 @@ function resolveCollision1F(nx, nz, radius = 0.28, dynamicPeers = []) {
   let x = Math.max(-10.0, Math.min(4.8, nx));
   let z = Math.max(-4.1, Math.min(7.4, nz));
 
-  // 1) 사각 벽체·가구·차량 AABB 밀어내기
   for (const box of WALL_COLLIDERS_1F) {
     const closestX = Math.max(box.minX, Math.min(x, box.maxX));
     const closestZ = Math.max(box.minZ, Math.min(z, box.maxZ));
     const dx = x - closestX;
     const dz = z - closestZ;
     const distSq = dx * dx + dz * dz;
-
     if (distSq < radius * radius) {
       const dist = Math.sqrt(distSq) || 0.001;
       const overlap = radius - dist;
@@ -509,7 +506,6 @@ function resolveCollision1F(nx, nz, radius = 0.28, dynamicPeers = []) {
     }
   }
 
-  // 2) 원형 화분·고정 NPC 밀어내기
   for (const c of STATIC_CIRCLE_OBSTACLES_1F) {
     const dx = x - c.x;
     const dz = z - c.z;
@@ -523,7 +519,6 @@ function resolveCollision1F(nx, nz, radius = 0.28, dynamicPeers = []) {
     }
   }
 
-  // 3) 다른 접속 성도(Remote Peers)와 몸이 겹치지 않도록 부드럽게 밀어내기
   for (const peer of dynamicPeers) {
     if (typeof peer.x !== 'number' || typeof peer.z !== 'number') continue;
     const dx = x - peer.x;
@@ -543,15 +538,11 @@ function resolveCollision1F(nx, nz, radius = 0.28, dynamicPeers = []) {
 
 function computeSmartPath1F(sx, sz, rawEx, rawEz) {
   const [tx, tz] = resolveCollision1F(rawEx, rawEz);
-
   let clear = true;
-  for (let i = 1; i <= 16; i++) {
-    const ix = sx + ((tx - sx) * i) / 16;
-    const iz = sz + ((tz - sz) * i) / 16;
-    if (isBlocked1F(ix, iz)) {
-      clear = false;
-      break;
-    }
+  for (let i = 1; i <= 14; i++) {
+    const ix = sx + ((tx - sx) * i) / 14;
+    const iz = sz + ((tz - sz) * i) / 14;
+    if (isBlocked1F(ix, iz)) { clear = false; break; }
   }
   if (clear) return [[tx, tz]];
 
@@ -560,23 +551,17 @@ function computeSmartPath1F(sx, sz, rawEx, rawEz) {
   let curZ = sz;
 
   if (curZ > 4.4 && tz <= 4.4) {
-    waypoints.push([-0.8, 5.0]);
-    waypoints.push([-0.8, 3.4]);
-    curX = -0.8;
-    curZ = 3.4;
+    waypoints.push([-0.8, 5.0], [-0.8, 3.4]);
+    curX = -0.8; curZ = 3.4;
   } else if (curZ <= 4.4 && tz > 4.4) {
-    waypoints.push([-0.8, 3.4]);
-    waypoints.push([-0.8, 5.0]);
-    curX = -0.8;
-    curZ = 5.0;
+    waypoints.push([-0.8, 3.4], [-0.8, 5.0]);
+    curX = -0.8; curZ = 5.0;
   }
 
   if (curX < -4.2 && tx >= -4.2) {
-    waypoints.push([-5.0, 2.2]);
-    waypoints.push([-2.2, 2.2]);
+    waypoints.push([-5.0, 2.2], [-2.2, 2.2]);
   } else if (curX >= -4.2 && tx < -4.2) {
-    waypoints.push([-2.2, 2.2]);
-    waypoints.push([-5.0, 2.2]);
+    waypoints.push([-2.2, 2.2], [-5.0, 2.2]);
   }
 
   if ((curZ - 1.2) * (tz - 1.2) < 0 && tx >= -4.2) {
@@ -588,7 +573,7 @@ function computeSmartPath1F(sx, sz, rawEx, rawEz) {
 }
 
 // =====================================================================
-// ✨ 축도(Benediction) 시 하늘에서 내려쬐는 홀리라이트(Holy Light) 이펙트
+// ✨ 축도(Benediction) 홀리라이트 이펙트
 // =====================================================================
 function HolyLightBeamEffect({ targetPos, pastorName, targetName }) {
   const beamRef = useRef();
@@ -623,6 +608,8 @@ function HolyLightBeamEffect({ targetPos, pastorName, targetName }) {
     }, 620, 156);
   }, [pastorName, targetName]);
 
+  useEffect(() => () => blessingBannerTex.dispose(), [blessingBannerTex]);
+
   useFrame(({ clock }) => {
     const t = clock.elapsedTime;
     if (beamRef.current) {
@@ -650,58 +637,38 @@ function HolyLightBeamEffect({ targetPos, pastorName, targetName }) {
   return (
     <group position={[targetPos[0], 0.05, targetPos[2]]}>
       <mesh ref={beamRef} position={[0, 3.2, 0]}>
-        <cylinderGeometry args={[0.95, 0.68, 6.4, 32, 1, true]} />
-        <meshBasicMaterial
-          color="#FDE047"
-          transparent
-          opacity={0.38}
-          side={THREE.DoubleSide}
-          depthWrite={false}
-          blending={THREE.AdditiveBlending}
-        />
+        <cylinderGeometry args={[0.95, 0.68, 6.4, 20, 1, true]} />
+        <meshBasicMaterial color="#FDE047" transparent opacity={0.38} side={THREE.DoubleSide} depthWrite={false} blending={THREE.AdditiveBlending} />
       </mesh>
       <mesh position={[0, 3.2, 0]}>
-        <cylinderGeometry args={[0.38, 0.28, 6.4, 24, 1, true]} />
-        <meshBasicMaterial
-          color="#FFFFFF"
-          transparent
-          opacity={0.45}
-          side={THREE.DoubleSide}
-          depthWrite={false}
-          blending={THREE.AdditiveBlending}
-        />
+        <cylinderGeometry args={[0.38, 0.28, 6.4, 16, 1, true]} />
+        <meshBasicMaterial color="#FFFFFF" transparent opacity={0.45} side={THREE.DoubleSide} depthWrite={false} blending={THREE.AdditiveBlending} />
       </mesh>
-
       <mesh ref={ring1Ref} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
-        <ringGeometry args={[0.52, 0.76, 36]} />
+        <ringGeometry args={[0.52, 0.76, 24]} />
         <meshBasicMaterial color="#FACC15" side={THREE.DoubleSide} transparent opacity={0.9} />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
-        <circleGeometry args={[0.72, 36]} />
+        <circleGeometry args={[0.72, 24]} />
         <meshBasicMaterial color="#FEF08A" transparent opacity={0.35} />
       </mesh>
-
       <mesh ref={ring2Ref} rotation={[-Math.PI / 2, 0, 0]} position={[0, 1.0, 0]}>
-        <ringGeometry args={[0.45, 0.54, 32]} />
+        <ringGeometry args={[0.45, 0.54, 20]} />
         <meshBasicMaterial color="#FFFFFF" side={THREE.DoubleSide} transparent opacity={0.85} />
       </mesh>
-
       <group ref={particlesRef}>
-        {Array.from({ length: 12 }).map((_, i) => {
-          const ang = (i / 12) * Math.PI * 2;
+        {Array.from({ length: 10 }).map((_, i) => {
+          const ang = (i / 10) * Math.PI * 2;
           const rad = 0.35 + (i % 3) * 0.14;
-          const py = (i / 12) * 2.2;
           return (
-            <mesh key={i} position={[Math.cos(ang) * rad, py, Math.sin(ang) * rad]}>
-              <sphereGeometry args={[0.04, 8, 8]} />
+            <mesh key={i} position={[Math.cos(ang) * rad, (i / 10) * 2.2, Math.sin(ang) * rad]}>
+              <sphereGeometry args={[0.04, 6, 6]} />
               <meshBasicMaterial color={i % 2 === 0 ? '#FFFFFF' : '#FDE047'} />
             </mesh>
           );
         })}
       </group>
-
-      <pointLight position={[0, 2.6, 0]} intensity={5.5} distance={6.5} color="#FDE047" />
-
+      <pointLight position={[0, 2.6, 0]} intensity={5.0} distance={6.5} color="#FDE047" />
       <Billboard position={[0, 2.35, 0]}>
         <mesh renderOrder={30}>
           <planeGeometry args={[2.5, 0.64]} />
@@ -713,7 +680,7 @@ function HolyLightBeamEffect({ targetPos, pastorName, targetName }) {
 }
 
 // =====================================================================
-// 🏎️ 정문 도로를 질주하는 #32 블루 GT 레이싱 슈퍼카 & 주차장 차량들
+// 🏎️ 정문 도로 주행 슈퍼카 & 필로티 주차 차량 (폴리곤 경량화)
 // =====================================================================
 function MovingRacingSupercar1F() {
   const carRef = useRef();
@@ -731,8 +698,10 @@ function MovingRacingSupercar1F() {
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText('32', w / 2, h / 2 + 4);
-    }, 160, 140);
+    }, 128, 128);
   }, []);
+
+  useEffect(() => () => number32Tex.dispose(), [number32Tex]);
 
   useFrame((_, delta) => {
     if (carRef.current) {
@@ -750,8 +719,8 @@ function MovingRacingSupercar1F() {
         <meshStandardMaterial color="#0284C7" metalness={0.65} roughness={0.18} />
       </RoundedBox>
       {[[-0.68, -0.52], [-0.68, 0.52], [0.68, -0.52], [0.68, 0.52]].map(([fx, fz], fi) => (
-        <mesh key={fi} position={[fx, 0.08, fz]} scale={[1.35, 0.72, 0.45]} castShadow>
-          <sphereGeometry args={[0.28, 20, 20]} />
+        <mesh key={fi} position={[fx, 0.08, fz]} scale={[1.35, 0.72, 0.45]}>
+          <sphereGeometry args={[0.28, 12, 10]} />
           <meshStandardMaterial color="#0369A1" metalness={0.65} roughness={0.2} />
         </mesh>
       ))}
@@ -762,7 +731,7 @@ function MovingRacingSupercar1F() {
         <meshStandardMaterial color="#EF4444" />
       </RoundedBox>
       <mesh position={[-0.08, 0.24, 0]} scale={[1.55, 0.62, 0.86]} castShadow>
-        <sphereGeometry args={[0.44, 24, 24]} />
+        <sphereGeometry args={[0.44, 14, 12]} />
         <meshStandardMaterial color="#0F172A" metalness={0.85} roughness={0.1} />
       </mesh>
       {[-0.57, 0.57].map((dz, di) => (
@@ -772,19 +741,14 @@ function MovingRacingSupercar1F() {
         </mesh>
       ))}
       <group position={[-1.02, 0.38, 0]}>
-        <RoundedBox args={[0.28, 0.035, 1.16]} position={[-0.04, 0.04, 0]} rotation={[0, 0, 0.12]} radius={0.01} castShadow>
+        <RoundedBox args={[0.28, 0.035, 1.16]} position={[-0.04, 0.04, 0]} rotation={[0, 0, 0.12]} radius={0.01}>
           <meshStandardMaterial color="#090A0F" metalness={0.5} roughness={0.3} />
         </RoundedBox>
       </group>
-      {[
-        [-0.68, -0.56],
-        [0.68, -0.56],
-        [-0.68, 0.56],
-        [0.68, 0.56]
-      ].map(([wx, wz], i) => (
+      {[[-0.68, -0.56], [0.68, -0.56], [-0.68, 0.56], [0.68, 0.56]].map(([wx, wz], i) => (
         <group key={i} position={[wx, -0.04, wz]} ref={(el) => (wheelsRef.current[i] = el)}>
-          <mesh rotation={[Math.PI / 2, 0, 0]} castShadow>
-            <cylinderGeometry args={[0.20, 0.20, 0.16, 24]} />
+          <mesh rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[0.20, 0.20, 0.16, 14]} />
             <meshStandardMaterial color="#18181B" roughness={0.85} />
           </mesh>
         </group>
@@ -816,18 +780,11 @@ function DetailedIoniq5EV({ position, rotationY = 0 }) {
           <meshBasicMaterial color="#FFFFFF" />
         </RoundedBox>
       ))}
-      {[
-        [-0.84, -1.12],
-        [0.84, -1.12],
-        [-0.84, 1.12],
-        [0.84, 1.12]
-      ].map(([wx, wz], i) => (
-        <group key={i} position={[wx, 0.25, wz]}>
-          <mesh rotation={[0, 0, Math.PI / 2]} castShadow>
-            <cylinderGeometry args={[0.25, 0.25, 0.22, 24]} />
-            <meshStandardMaterial color="#18181B" roughness={0.85} />
-          </mesh>
-        </group>
+      {[[-0.84, -1.12], [0.84, -1.12], [-0.84, 1.12], [0.84, 1.12]].map(([wx, wz], i) => (
+        <mesh key={i} position={[wx, 0.25, wz]} rotation={[0, 0, Math.PI / 2]} castShadow>
+          <cylinderGeometry args={[0.25, 0.25, 0.22, 14]} />
+          <meshStandardMaterial color="#18181B" roughness={0.85} />
+        </mesh>
       ))}
     </group>
   );
@@ -851,55 +808,139 @@ function DetailedAvanteNBlue({ position, rotationY = 0 }) {
       <RoundedBox args={[1.66, 0.24, 0.06]} position={[0, 0.32, 1.80]} radius={0.02}>
         <meshStandardMaterial color="#090A0F" roughness={0.3} />
       </RoundedBox>
-      {[
-        [-0.82, -1.10],
-        [0.82, -1.10],
-        [-0.82, 1.10],
-        [0.82, 1.10]
-      ].map(([wx, wz], i) => (
-        <group key={i} position={[wx, 0.23, wz]}>
-          <mesh rotation={[0, 0, Math.PI / 2]} castShadow>
-            <cylinderGeometry args={[0.23, 0.23, 0.20, 24]} />
-            <meshStandardMaterial color="#18181B" roughness={0.85} />
-          </mesh>
-        </group>
+      {[[-0.82, -1.10], [0.82, -1.10], [-0.82, 1.10], [0.82, 1.10]].map(([wx, wz], i) => (
+        <mesh key={i} position={[wx, 0.23, wz]} rotation={[0, 0, Math.PI / 2]} castShadow>
+          <cylinderGeometry args={[0.23, 0.23, 0.20, 14]} />
+          <meshStandardMaterial color="#18181B" roughness={0.85} />
+        </mesh>
       ))}
     </group>
   );
 }
 
 // =====================================================================
-// 🪑 4인용 크롬 프레임 블랙 가죽 로비 대기 의자 & 관엽식물 & 스테인리스 엘리베이터
+// 🪑 고도화 에셋 1: 클래식 원목 교회 장의자 (전 층 공용 export — 3F 본당 등 재사용 가능)
 // =====================================================================
-function FourSeaterChromeLobbyBench({ position, rotationY = 0, onSit }) {
-  const steelTex = useMemo(() => makeBrushedSteelTexture(), []);
-  const seatOffsets = [-1.08, -0.36, 0.36, 1.08];
+export function ClassicChurchPew({ position = [0, 0, 0], rotationY = 0, width = 1.65, onSit }) {
+  const oakTex = useMemo(() => makeWoodGrainTexture('#C68848', '#8A5220'), []);
+  const darkWoodTex = useMemo(() => makeWoodGrainTexture('#6E3E1B', '#42230C'), []);
+  const halfW = width / 2;
+
+  useEffect(() => () => { oakTex.dispose(); darkWoodTex.dispose(); }, [oakTex, darkWoodTex]);
 
   return (
-    <group position={position} rotation={[0, rotationY, 0]}>
-      <RoundedBox args={[2.92, 0.055, 0.055]} position={[0, 0.26, 0.05]} radius={0.02} castShadow>
-        <meshStandardMaterial map={steelTex} color="#F1F5F9" metalness={0.92} roughness={0.15} />
-      </RoundedBox>
-      <RoundedBox args={[2.92, 0.045, 0.045]} position={[0, 0.62, -0.22]} radius={0.02} castShadow>
-        <meshStandardMaterial map={steelTex} color="#F1F5F9" metalness={0.92} roughness={0.15} />
+    <group
+      position={position}
+      rotation={[0, rotationY, 0]}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (onSit) onSit();
+      }}
+    >
+      {/* 원목 좌판 베이스 */}
+      <RoundedBox args={[width, 0.055, 0.46]} position={[0, 0.37, 0]} radius={0.015} castShadow receiveShadow>
+        <meshStandardMaterial map={oakTex} roughness={0.42} />
       </RoundedBox>
 
-      {[-1.46, 1.46].map((lx, li) => (
-        <group key={`leg_${li}`} position={[lx, 0, 0]}>
-          <mesh position={[0, 0.24, 0.22]} castShadow>
-            <cylinderGeometry args={[0.028, 0.028, 0.48, 16]} />
-            <meshStandardMaterial map={steelTex} color="#F8FAFC" metalness={0.92} roughness={0.15} />
-          </mesh>
-          <mesh position={[0, 0.36, -0.22]} castShadow>
-            <cylinderGeometry args={[0.028, 0.028, 0.72, 16]} />
-            <meshStandardMaterial map={steelTex} color="#F8FAFC" metalness={0.92} roughness={0.15} />
-          </mesh>
-          <RoundedBox args={[0.05, 0.04, 0.48]} position={[0, 0.52, 0]} rotation={[0.08, 0, 0]} radius={0.02} castShadow>
-            <meshStandardMaterial map={steelTex} color="#F8FAFC" metalness={0.92} roughness={0.15} />
+      {/* 도톰한 버건디 벨벳 좌판 쿠션 + 퀼팅 절개 디테일 */}
+      <RoundedBox args={[width - 0.12, 0.065, 0.40]} position={[0, 0.42, 0.01]} radius={0.025} castShadow receiveShadow>
+        <meshStandardMaterial color="#7F1D1D" roughness={0.85} />
+      </RoundedBox>
+      {[-0.36, 0, 0.36].map((qx, qi) => (
+        <mesh key={`q_${qi}`} position={[qx, 0.454, 0.01]}>
+          <boxGeometry args={[0.012, 0.008, 0.38]} />
+          <meshStandardMaterial color="#450A0A" roughness={0.9} />
+        </mesh>
+      ))}
+
+      {/* 경사 원목 등받이 + 상단 몰딩 캡 + 벨벳 등받이 쿠션 */}
+      <group position={[0, 0.64, -0.20]} rotation={[-0.14, 0, 0]}>
+        <RoundedBox args={[width, 0.44, 0.055]} radius={0.015} castShadow receiveShadow>
+          <meshStandardMaterial map={oakTex} roughness={0.42} />
+        </RoundedBox>
+        <RoundedBox args={[width + 0.04, 0.045, 0.075]} position={[0, 0.23, 0]} radius={0.015} castShadow>
+          <meshStandardMaterial map={darkWoodTex} roughness={0.38} />
+        </RoundedBox>
+        <RoundedBox args={[width - 0.14, 0.28, 0.035]} position={[0, -0.02, 0.035]} radius={0.018}>
+          <meshStandardMaterial color="#881337" roughness={0.85} />
+        </RoundedBox>
+
+        {/* 뒷면 성경·찬송가 수납 선반 */}
+        <RoundedBox args={[width - 0.22, 0.025, 0.11]} position={[0, -0.14, -0.08]} radius={0.008} castShadow>
+          <meshStandardMaterial map={oakTex} roughness={0.45} />
+        </RoundedBox>
+        <RoundedBox args={[width - 0.22, 0.08, 0.018]} position={[0, -0.10, -0.13]} radius={0.005}>
+          <meshStandardMaterial map={darkWoodTex} />
+        </RoundedBox>
+      </group>
+
+      {/* 양쪽 조각 측판 + 팔걸이 + 하단 지지대 */}
+      {[-halfW + 0.035, halfW - 0.035].map((sx, si) => (
+        <group key={`side_${si}`} position={[sx, 0, 0]}>
+          <RoundedBox args={[0.065, 0.56, 0.46]} position={[0, 0.28, -0.01]} radius={0.02} castShadow receiveShadow>
+            <meshStandardMaterial map={oakTex} roughness={0.4} />
+          </RoundedBox>
+          <RoundedBox args={[0.085, 0.055, 0.50]} position={[0, 0.57, 0.01]} radius={0.02} castShadow>
+            <meshStandardMaterial map={darkWoodTex} roughness={0.35} />
+          </RoundedBox>
+          <RoundedBox args={[0.08, 0.04, 0.50]} position={[0, 0.02, 0]} radius={0.01}>
+            <meshStandardMaterial color="#3B220C" roughness={0.6} />
           </RoundedBox>
         </group>
       ))}
 
+      {/* 하단 가로 보강 발받침 바 */}
+      <RoundedBox args={[width - 0.12, 0.04, 0.04]} position={[0, 0.14, -0.08]} radius={0.01}>
+        <meshStandardMaterial map={darkWoodTex} />
+      </RoundedBox>
+    </group>
+  );
+}
+
+// =====================================================================
+// 🪑 고도화 에셋 2: 4인용 크롬 프레임 블랙 가죽 대기 의자 (브라켓·가죽 절개·발판)
+// =====================================================================
+export function FourSeaterChromeLobbyBench({ position, rotationY = 0, onSit }) {
+  const steelTex = useMemo(() => makeBrushedSteelTexture(), []);
+  const seatOffsets = [-1.08, -0.36, 0.36, 1.08];
+
+  useEffect(() => () => steelTex.dispose(), [steelTex]);
+
+  return (
+    <group position={position} rotation={[0, rotationY, 0]}>
+      {/* 하단 메인 크롬 빔 + 후면 지지 빔 */}
+      <RoundedBox args={[2.96, 0.06, 0.06]} position={[0, 0.25, 0.04]} radius={0.02} castShadow>
+        <meshStandardMaterial map={steelTex} color="#F1F5F9" metalness={0.88} roughness={0.18} />
+      </RoundedBox>
+      <RoundedBox args={[2.94, 0.045, 0.045]} position={[0, 0.60, -0.22]} radius={0.02}>
+        <meshStandardMaterial map={steelTex} color="#F1F5F9" metalness={0.88} roughness={0.18} />
+      </RoundedBox>
+
+      {/* 양쪽 크롬 다리 + 바닥 고무 발판 + 팔걸이 패드 */}
+      {[-1.46, 1.46].map((lx, li) => (
+        <group key={`leg_${li}`} position={[lx, 0, 0]}>
+          <mesh position={[0, 0.24, 0.22]} castShadow>
+            <cylinderGeometry args={[0.026, 0.026, 0.48, 12]} />
+            <meshStandardMaterial map={steelTex} color="#F8FAFC" metalness={0.9} roughness={0.16} />
+          </mesh>
+          <mesh position={[0, 0.36, -0.22]} castShadow>
+            <cylinderGeometry args={[0.026, 0.026, 0.72, 12]} />
+            <meshStandardMaterial map={steelTex} color="#F8FAFC" metalness={0.9} roughness={0.16} />
+          </mesh>
+          {/* 바닥 고무 미끄럼 방지 패드 */}
+          <mesh position={[0, 0.015, 0.22]}><cylinderGeometry args={[0.042, 0.042, 0.03, 10]} /><meshStandardMaterial color="#18181B" roughness={0.9} /></mesh>
+          <mesh position={[0, 0.015, -0.22]}><cylinderGeometry args={[0.042, 0.042, 0.03, 10]} /><meshStandardMaterial color="#18181B" roughness={0.9} /></mesh>
+          {/* 팔걸이 크롬 + 가죽 패드 */}
+          <RoundedBox args={[0.055, 0.038, 0.50]} position={[0, 0.52, 0]} rotation={[0.06, 0, 0]} radius={0.018} castShadow>
+            <meshStandardMaterial map={steelTex} color="#F8FAFC" metalness={0.9} roughness={0.16} />
+          </RoundedBox>
+          <RoundedBox args={[0.062, 0.022, 0.34]} position={[0, 0.545, 0.02]} rotation={[0.06, 0, 0]} radius={0.01}>
+            <meshStandardMaterial color="#18181B" roughness={0.45} />
+          </RoundedBox>
+        </group>
+      ))}
+
+      {/* 4개 개별 가죽 시트 + 가로 퀼팅 라인 + 크롬 연결 브라켓 */}
       {seatOffsets.map((sx, sIdx) => (
         <group
           key={`seat_${sIdx}`}
@@ -909,11 +950,22 @@ function FourSeaterChromeLobbyBench({ position, rotationY = 0, onSit }) {
             if (onSit) onSit(sx, sIdx + 1);
           }}
         >
-          <RoundedBox args={[0.66, 0.11, 0.52]} position={[0, 0.34, 0.04]} radius={0.045} castShadow receiveShadow>
-            <meshStandardMaterial color="#27272A" roughness={0.35} metalness={0.1} />
+          <RoundedBox args={[0.65, 0.11, 0.52]} position={[0, 0.34, 0.04]} radius={0.045} castShadow receiveShadow>
+            <meshStandardMaterial color="#27272A" roughness={0.38} metalness={0.08} />
           </RoundedBox>
-          <RoundedBox args={[0.66, 0.48, 0.11]} position={[0, 0.60, -0.18]} rotation={[-0.18, 0, 0]} radius={0.045} castShadow receiveShadow>
-            <meshStandardMaterial color="#27272A" roughness={0.35} metalness={0.1} />
+          <mesh position={[0, 0.398, 0.04]}>
+            <boxGeometry args={[0.62, 0.008, 0.014]} />
+            <meshStandardMaterial color="#18181B" />
+          </mesh>
+          <RoundedBox args={[0.65, 0.48, 0.11]} position={[0, 0.60, -0.18]} rotation={[-0.18, 0, 0]} radius={0.045} castShadow receiveShadow>
+            <meshStandardMaterial color="#27272A" roughness={0.38} metalness={0.08} />
+          </RoundedBox>
+          <mesh position={[0, 0.60, -0.122]} rotation={[-0.18, 0, 0]}>
+            <boxGeometry args={[0.60, 0.012, 0.008]} />
+            <meshStandardMaterial color="#18181B" />
+          </mesh>
+          <RoundedBox args={[0.045, 0.16, 0.04]} position={[0, 0.42, -0.20]} rotation={[-0.2, 0, 0]} radius={0.01}>
+            <meshStandardMaterial color="#CBD5E1" metalness={0.85} roughness={0.2} />
           </RoundedBox>
         </group>
       ))}
@@ -921,37 +973,40 @@ function FourSeaterChromeLobbyBench({ position, rotationY = 0, onSit }) {
   );
 }
 
-function BotanicalMultiLeafPlant({ position, variant = 'palm', scale = 1.0 }) {
+// =====================================================================
+// 🌿 고도화 에셋 3: 다품종 관엽식물 화분 (전 층 공용 export — 림·받침·흙·잎 디테일)
+// =====================================================================
+export function BotanicalMultiLeafPlant({ position, variant = 'palm', scale = 1.0 }) {
   return (
     <group position={position} scale={[scale, scale, scale]}>
       {variant === 'ficus_tree' && (
         <group>
-          <mesh position={[0, 0.03, 0]}>
-            <cylinderGeometry args={[0.24, 0.24, 0.04, 20]} />
-            <meshStandardMaterial color="#18181B" />
-          </mesh>
-          <RoundedBox args={[0.36, 0.46, 0.36]} position={[0, 0.26, 0]} radius={0.03} castShadow receiveShadow>
-            <meshStandardMaterial color="#F8FAFC" roughness={0.2} />
+          {/* 원형 받침 & 사각 화이트 화분 + 상단 림 + 흙 표면 */}
+          <mesh position={[0, 0.025, 0]}><cylinderGeometry args={[0.25, 0.25, 0.04, 14]} /><meshStandardMaterial color="#27272A" roughness={0.6} /></mesh>
+          <RoundedBox args={[0.36, 0.44, 0.36]} position={[0, 0.25, 0]} radius={0.03} castShadow receiveShadow>
+            <meshStandardMaterial color="#F8FAFC" roughness={0.28} />
           </RoundedBox>
-          {[-0.04, 0.0, 0.04].map((tx, ti) => (
-            <mesh key={ti} position={[tx, 0.78, 0]} rotation={[0, 0, tx * 2]} castShadow>
-              <cylinderGeometry args={[0.02, 0.035, 0.72, 10]} />
-              <meshStandardMaterial color="#5C4033" roughness={0.7} />
+          <RoundedBox args={[0.40, 0.05, 0.40]} position={[0, 0.46, 0]} radius={0.015}>
+            <meshStandardMaterial color="#E2E8F0" roughness={0.3} />
+          </RoundedBox>
+          <mesh position={[0, 0.475, 0]}><boxGeometry args={[0.32, 0.02, 0.32]} /><meshStandardMaterial color="#4A2E1B" roughness={0.95} /></mesh>
+
+          {/* 3갈래 자연스러운 원목 줄기 */}
+          {[[-0.04, 0.08], [0, 0], [0.04, -0.07]].map(([tx, rotZ], ti) => (
+            <mesh key={ti} position={[tx, 0.78, 0]} rotation={[0, ti * 0.6, rotZ]} castShadow>
+              <cylinderGeometry args={[0.018, 0.032, 0.68, 8]} />
+              <meshStandardMaterial color="#5C4033" roughness={0.78} />
             </mesh>
           ))}
-          {Array.from({ length: 16 }).map((_, li) => {
-            const ang = (li / 16) * Math.PI * 2;
-            const r = 0.12 + (li % 3) * 0.11;
-            const ly = 0.88 + (li % 4) * 0.14;
+          {/* 입체 다층 잎사귀 클러스터 */}
+          {Array.from({ length: 14 }).map((_, li) => {
+            const ang = (li / 14) * Math.PI * 2;
+            const r = 0.11 + (li % 3) * 0.10;
+            const ly = 0.88 + (li % 4) * 0.13;
             return (
-              <mesh
-                key={li}
-                position={[Math.cos(ang) * r, ly, Math.sin(ang) * r]}
-                scale={[1.2, 0.65, 1.0]}
-                castShadow
-              >
-                <sphereGeometry args={[0.13, 12, 12]} />
-                <meshStandardMaterial color={li % 2 === 0 ? '#22C55E' : '#15803D'} roughness={0.45} />
+              <mesh key={li} position={[Math.cos(ang) * r, ly, Math.sin(ang) * r]} rotation={[0.2, ang, 0.2]} scale={[1.25, 0.48, 0.95]} castShadow>
+                <dodecahedronGeometry args={[0.13, 0]} />
+                <meshStandardMaterial color={li % 3 === 0 ? '#22C55E' : li % 2 === 0 ? '#16A34A' : '#15803D'} roughness={0.55} />
               </mesh>
             );
           })}
@@ -960,22 +1015,19 @@ function BotanicalMultiLeafPlant({ position, variant = 'palm', scale = 1.0 }) {
 
       {variant === 'dracaena' && (
         <group>
-          <mesh position={[0, 0.22, 0]} castShadow>
-            <sphereGeometry args={[0.22, 20, 16]} />
-            <meshStandardMaterial color="#E7E5E4" roughness={0.3} />
-          </mesh>
-          <mesh position={[0, 0.58, 0]} castShadow>
-            <cylinderGeometry args={[0.028, 0.04, 0.55, 10]} />
-            <meshStandardMaterial color="#78350F" />
-          </mesh>
-          {Array.from({ length: 14 }).map((_, li) => {
-            const ang = (li / 14) * Math.PI * 2;
-            const tilt = 0.25 + (li % 3) * 0.22;
+          <mesh position={[0, 0.02, 0]}><cylinderGeometry args={[0.20, 0.20, 0.04, 14]} /><meshStandardMaterial color="#78716C" /></mesh>
+          <mesh position={[0, 0.22, 0]} castShadow><cylinderGeometry args={[0.21, 0.15, 0.38, 14]} /><meshStandardMaterial color="#E7E5E4" roughness={0.35} /></mesh>
+          <mesh position={[0, 0.41, 0]}><torusGeometry args={[0.20, 0.024, 8, 16]} rotation={[Math.PI / 2, 0, 0]} /><meshStandardMaterial color="#D6D3D1" /></mesh>
+          <mesh position={[0, 0.405, 0]}><cylinderGeometry args={[0.18, 0.18, 0.02, 12]} /><meshStandardMaterial color="#4A2E1B" roughness={0.95} /></mesh>
+          <mesh position={[0, 0.62, 0]} castShadow><cylinderGeometry args={[0.026, 0.038, 0.50, 8]} /><meshStandardMaterial color="#78350F" roughness={0.8} /></mesh>
+          {Array.from({ length: 12 }).map((_, li) => {
+            const ang = (li / 12) * Math.PI * 2;
+            const tilt = 0.28 + (li % 3) * 0.22;
             return (
-              <group key={li} position={[0, 0.82, 0]} rotation={[0, ang, 0]}>
-                <mesh position={[0, 0.22, 0.12]} rotation={[tilt, 0, 0]} scale={[0.18, 1.0, 0.04]} castShadow>
-                  <coneGeometry args={[0.16, 0.62, 6]} />
-                  <meshStandardMaterial color={li % 2 === 0 ? '#166534' : '#15803D'} roughness={0.4} />
+              <group key={li} position={[0, 0.84, 0]} rotation={[0, ang, 0]}>
+                <mesh position={[0, 0.20, 0.11]} rotation={[tilt, 0, 0]} scale={[0.20, 1.0, 0.05]} castShadow>
+                  <coneGeometry args={[0.16, 0.58, 5]} />
+                  <meshStandardMaterial color={li % 2 === 0 ? '#166534' : '#22C55E'} roughness={0.48} />
                 </mesh>
               </group>
             );
@@ -985,17 +1037,20 @@ function BotanicalMultiLeafPlant({ position, variant = 'palm', scale = 1.0 }) {
 
       {variant === 'palm' && (
         <group>
-          <mesh position={[0, 0.20, 0]} castShadow>
-            <cylinderGeometry args={[0.20, 0.14, 0.40, 20]} />
-            <meshStandardMaterial color="#44403C" roughness={0.5} />
-          </mesh>
-          {Array.from({ length: 10 }).map((_, li) => {
-            const ang = (li / 10) * Math.PI * 2;
+          <mesh position={[0, 0.20, 0]} castShadow><cylinderGeometry args={[0.21, 0.15, 0.40, 14]} /><meshStandardMaterial color="#44403C" roughness={0.55} /></mesh>
+          <mesh position={[0, 0.40, 0]}><torusGeometry args={[0.20, 0.025, 8, 16]} rotation={[Math.PI / 2, 0, 0]} /><meshStandardMaterial color="#57534E" /></mesh>
+          <mesh position={[0, 0.395, 0]}><cylinderGeometry args={[0.18, 0.18, 0.02, 12]} /><meshStandardMaterial color="#4A2E1B" roughness={0.95} /></mesh>
+          {Array.from({ length: 9 }).map((_, li) => {
+            const ang = (li / 9) * Math.PI * 2;
             return (
-              <group key={li} position={[0, 0.36, 0]} rotation={[0, ang, 0]}>
-                <mesh position={[0, 0.28, 0.18]} rotation={[0.55, 0, 0]} scale={[0.55, 1.0, 0.08]} castShadow>
-                  <sphereGeometry args={[0.24, 12, 12]} />
-                  <meshStandardMaterial color={li % 2 === 0 ? '#4ADE80' : '#16A34A'} roughness={0.45} />
+              <group key={li} position={[0, 0.38, 0]} rotation={[0, ang, 0]}>
+                <mesh position={[0, 0.18, 0.09]} rotation={[0.45, 0, 0]}>
+                  <cylinderGeometry args={[0.012, 0.018, 0.36, 5]} />
+                  <meshStandardMaterial color="#15803D" />
+                </mesh>
+                <mesh position={[0, 0.34, 0.22]} rotation={[0.72, 0, 0]} scale={[0.52, 1.0, 0.07]} castShadow>
+                  <sphereGeometry args={[0.22, 8, 8]} />
+                  <meshStandardMaterial color={li % 2 === 0 ? '#4ADE80' : '#16A34A'} roughness={0.48} />
                 </mesh>
               </group>
             );
@@ -1006,6 +1061,9 @@ function BotanicalMultiLeafPlant({ position, variant = 'palm', scale = 1.0 }) {
   );
 }
 
+// =====================================================================
+// 🛗 스테인리스 자동 개폐 엘리베이터
+// =====================================================================
 function AnimatedStainlessElevator1F({ position, rotationY = -Math.PI / 2, playerIdxRef, forceOpen, onClickElevator, signTex, showRoomSigns }) {
   const leftDoorRef = useRef();
   const rightDoorRef = useRef();
@@ -1014,6 +1072,8 @@ function AnimatedStainlessElevator1F({ position, rotationY = -Math.PI / 2, playe
   const steelTex = useMemo(() => makeBrushedSteelTexture(), []);
   const mirrorTex = useMemo(() => makeBrightMirrorTexture(), []);
   const oakTex = useMemo(() => makeWoodGrainTexture('#D49552', '#9C5E26'), []);
+
+  useEffect(() => () => { steelTex.dispose(); mirrorTex.dispose(); oakTex.dispose(); }, [steelTex, mirrorTex, oakTex]);
 
   useFrame((_, delta) => {
     if (!leftDoorRef.current || !rightDoorRef.current) return;
@@ -1028,69 +1088,27 @@ function AnimatedStainlessElevator1F({ position, rotationY = -Math.PI / 2, playe
       wasOpenRef.current = false;
     }
 
-    const targetLeftX = isOpen ? -0.92 : -0.34;
-    const targetRightX = isOpen ? 0.92 : 0.34;
-
-    leftDoorRef.current.position.x = THREE.MathUtils.lerp(leftDoorRef.current.position.x, targetLeftX, delta * 6.5);
-    rightDoorRef.current.position.x = THREE.MathUtils.lerp(rightDoorRef.current.position.x, targetRightX, delta * 6.5);
+    leftDoorRef.current.position.x = THREE.MathUtils.lerp(leftDoorRef.current.position.x, isOpen ? -0.92 : -0.34, delta * 6.5);
+    rightDoorRef.current.position.x = THREE.MathUtils.lerp(rightDoorRef.current.position.x, isOpen ? 0.92 : 0.34, delta * 6.5);
   });
 
   return (
-    <group
-      position={position}
-      rotation={[0, rotationY, 0]}
-      onClick={(e) => {
-        e.stopPropagation();
-        if (onClickElevator) onClickElevator();
-      }}
-    >
+    <group position={position} rotation={[0, rotationY, 0]} onClick={(e) => { e.stopPropagation(); if (onClickElevator) onClickElevator(); }}>
       <group position={[0, 0, -0.55]}>
-        <RoundedBox args={[1.75, 0.06, 1.15]} position={[0, 0.03, 0]} radius={0.01}>
-          <meshStandardMaterial color="#F8FAFC" roughness={0.2} />
-        </RoundedBox>
-        <RoundedBox args={[1.75, 0.06, 1.15]} position={[0, 2.22, 0]} radius={0.01}>
-          <meshBasicMaterial color="#FFFBEB" />
-        </RoundedBox>
-        <RoundedBox args={[1.75, 2.28, 0.08]} position={[0, 1.14, -0.55]} radius={0.01}>
-          <meshStandardMaterial map={oakTex} roughness={0.35} />
-        </RoundedBox>
-        <mesh position={[0, 1.42, -0.49]}>
-          <planeGeometry args={[1.32, 0.98]} />
-          <meshBasicMaterial map={mirrorTex} />
-        </mesh>
-        <RoundedBox args={[0.12, 2.45, 1.35]} position={[-1.08, 1.22, 0]} radius={0.02} castShadow>
-          <meshStandardMaterial color="#E2E8F0" />
-        </RoundedBox>
-        <RoundedBox args={[0.12, 2.45, 1.35]} position={[1.08, 1.22, 0]} radius={0.02} castShadow>
-          <meshStandardMaterial color="#E2E8F0" />
-        </RoundedBox>
-        <RoundedBox args={[2.28, 0.14, 1.38]} position={[0, 2.42, 0]} radius={0.02} castShadow>
-          <meshStandardMaterial color="#E2E8F0" />
-        </RoundedBox>
-        <pointLight position={[0, 1.95, 0]} intensity={1.6} distance={3.5} color="#FFFBEB" />
+        <RoundedBox args={[1.75, 0.06, 1.15]} position={[0, 0.03, 0]} radius={0.01}><meshStandardMaterial color="#F8FAFC" roughness={0.2} /></RoundedBox>
+        <RoundedBox args={[1.75, 0.06, 1.15]} position={[0, 2.22, 0]} radius={0.01}><meshBasicMaterial color="#FFFBEB" /></RoundedBox>
+        <RoundedBox args={[1.75, 2.28, 0.08]} position={[0, 1.14, -0.55]} radius={0.01}><meshStandardMaterial map={oakTex} roughness={0.35} /></RoundedBox>
+        <mesh position={[0, 1.42, -0.49]}><planeGeometry args={[1.32, 0.98]} /><meshBasicMaterial map={mirrorTex} /></mesh>
+        <RoundedBox args={[0.12, 2.45, 1.35]} position={[-1.08, 1.22, 0]} radius={0.02} castShadow><meshStandardMaterial color="#E2E8F0" /></RoundedBox>
+        <RoundedBox args={[0.12, 2.45, 1.35]} position={[1.08, 1.22, 0]} radius={0.02} castShadow><meshStandardMaterial color="#E2E8F0" /></RoundedBox>
+        <RoundedBox args={[2.28, 0.14, 1.38]} position={[0, 2.42, 0]} radius={0.02} castShadow><meshStandardMaterial color="#E2E8F0" /></RoundedBox>
       </group>
 
       <group position={[0, 1.06, 0.04]}>
-        <RoundedBox
-          ref={leftDoorRef}
-          args={[0.67, 2.08, 0.05]}
-          position={[-0.34, 0, 0]}
-          radius={0.008}
-          castShadow
-          receiveShadow
-          userData={{ keepOpaque: true }}
-        >
+        <RoundedBox ref={leftDoorRef} args={[0.67, 2.08, 0.05]} position={[-0.34, 0, 0]} radius={0.008} castShadow receiveShadow userData={{ keepOpaque: true }}>
           <meshStandardMaterial map={steelTex} color="#E2E8F0" metalness={0.88} roughness={0.18} />
         </RoundedBox>
-        <RoundedBox
-          ref={rightDoorRef}
-          args={[0.67, 2.08, 0.05]}
-          position={[0.34, 0, 0]}
-          radius={0.008}
-          castShadow
-          receiveShadow
-          userData={{ keepOpaque: true }}
-        >
+        <RoundedBox ref={rightDoorRef} args={[0.67, 2.08, 0.05]} position={[0.34, 0, 0]} radius={0.008} castShadow receiveShadow userData={{ keepOpaque: true }}>
           <meshStandardMaterial map={steelTex} color="#E2E8F0" metalness={0.88} roughness={0.18} />
         </RoundedBox>
       </group>
@@ -1107,10 +1125,7 @@ function AnimatedStainlessElevator1F({ position, rotationY = -Math.PI / 2, playe
 
       {showRoomSigns && (
         <Billboard position={[0, 2.65, 0]}>
-          <mesh>
-            <planeGeometry args={[1.15, 0.52]} />
-            <meshBasicMaterial map={signTex} transparent />
-          </mesh>
+          <mesh><planeGeometry args={[1.15, 0.52]} /><meshBasicMaterial map={signTex} transparent /></mesh>
         </Billboard>
       )}
     </group>
@@ -1119,7 +1134,6 @@ function AnimatedStainlessElevator1F({ position, rotationY = -Math.PI / 2, playe
 
 function SmartCutawayWall1F({ wallSide, minOpacity = 0.08, children }) {
   const groupRef = useRef();
-
   useFrame(({ camera }) => {
     if (!groupRef.current) return;
     let shouldFade = false;
@@ -1127,7 +1141,6 @@ function SmartCutawayWall1F({ wallSide, minOpacity = 0.08, children }) {
     if (wallSide === 'west' && camera.position.x < -5.0) shouldFade = true;
     if (wallSide === 'east' && camera.position.x > 4.5) shouldFade = true;
     if (wallSide === 'north' && camera.position.z < -3.5) shouldFade = true;
-
     const targetOpacity = shouldFade ? minOpacity : 1.0;
 
     groupRef.current.traverse((child) => {
@@ -1138,13 +1151,11 @@ function SmartCutawayWall1F({ wallSide, minOpacity = 0.08, children }) {
       }
     });
   });
-
   return <group ref={groupRef}>{children}</group>;
 }
 
 function HologramMarker1F({ zone, isSelected, onSelect }) {
   const pulseRef = useRef();
-
   const badgeTex = useMemo(() => {
     return makeCanvasTexture((ctx, w, h) => {
       ctx.clearRect(0, 0, w, h);
@@ -1174,8 +1185,10 @@ function HologramMarker1F({ zone, isSelected, onSelect }) {
         ctx.font = 'bold 22px sans-serif';
         ctx.fillText(zone.subCode, w / 2 + 82, h / 2 + 28);
       }
-    }, 360, 220);
+    }, 320, 196);
   }, [zone.code, zone.subCode]);
+
+  useEffect(() => () => badgeTex.dispose(), [badgeTex]);
 
   useFrame(({ clock }) => {
     if (pulseRef.current) {
@@ -1185,40 +1198,31 @@ function HologramMarker1F({ zone, isSelected, onSelect }) {
   });
 
   return (
-    <group
-      position={zone.pos}
-      onClick={(e) => {
-        e.stopPropagation();
-        onSelect(zone);
-      }}
-    >
+    <group position={zone.pos} onClick={(e) => { e.stopPropagation(); onSelect(zone); }}>
       <mesh ref={pulseRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.025, 0]}>
-        <ringGeometry args={[0.42, 0.52, 40]} />
+        <ringGeometry args={[0.42, 0.52, 24]} />
         <meshBasicMaterial color="#34D399" />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.018, 0]}>
-        <circleGeometry args={[0.42, 40]} />
+        <circleGeometry args={[0.42, 24]} />
         <meshBasicMaterial color="#10B981" transparent opacity={isSelected ? 0.45 : 0.24} />
       </mesh>
       <Billboard position={[0.06, 0.38, 0]}>
-        <mesh>
-          <planeGeometry args={[0.74, 0.44]} />
-          <meshBasicMaterial map={badgeTex} transparent depthWrite={false} />
-        </mesh>
+        <mesh><planeGeometry args={[0.74, 0.44]} /><meshBasicMaterial map={badgeTex} transparent depthWrite={false} /></mesh>
       </Billboard>
     </group>
   );
 }
 
 // =====================================================================
-// 🥰 2.5등신 귀염뽀짝 3D 치비(Chibi) 아바타 (반짝이는 눈 하이라이트 · 볼터치 · 통통한 비율)
+// 🥰 전 층 공용 2.5등신 치비 아바타 (실시간 표정 · 자동 눈 깜빡임 · 토킹 모션)
+// 2F~7F에서도 import { SharedChibiAvatar } from '../pages/VirtualChurchLobby' 로 동일 적용!
 // =====================================================================
 function wrapKoreanSpeechText(text, maxCharsPerLine = 19) {
   if (!text) return [];
   const words = text.split(' ');
   const lines = [];
   let current = '';
-
   words.forEach((word) => {
     const candidate = current ? `${current} ${word}` : word;
     if (candidate.length > maxCharsPerLine) {
@@ -1226,123 +1230,62 @@ function wrapKoreanSpeechText(text, maxCharsPerLine = 19) {
       if (word.length > maxCharsPerLine) {
         lines.push(word.slice(0, maxCharsPerLine));
         current = word.slice(maxCharsPerLine);
-      } else {
-        current = word;
-      }
-    } else {
-      current = candidate;
-    }
+      } else current = word;
+    } else current = candidate;
   });
   if (current) lines.push(current);
   return lines.slice(0, 3);
 }
 
-function CharacterHairStyle1F({ style = 'short', hairColor = '#27272A' }) {
+export function CharacterHairStyle({ style = 'short', hairColor = '#27272A' }) {
   if (style === 'long_wave') {
     return (
       <group>
-        <mesh position={[0, 0.06, -0.02]} scale={[1.08, 0.98, 1.08]} castShadow>
-          <sphereGeometry args={[0.235, 28, 28]} />
-          <meshStandardMaterial color={hairColor} roughness={0.42} />
-        </mesh>
-        {/* 귀여운 둥근 앞머리 볼륨 */}
-        <mesh position={[0, 0.10, 0.14]} scale={[1.05, 0.42, 0.55]} castShadow>
-          <sphereGeometry args={[0.19, 20, 20]} />
-          <meshStandardMaterial color={hairColor} roughness={0.42} />
-        </mesh>
-        <mesh position={[-0.18, -0.09, -0.02]} rotation={[0, 0, 0.12]} castShadow>
-          <capsuleGeometry args={[0.065, 0.25, 12, 16]} />
-          <meshStandardMaterial color={hairColor} roughness={0.42} />
-        </mesh>
-        <mesh position={[0.18, -0.09, -0.02]} rotation={[0, 0, -0.12]} castShadow>
-          <capsuleGeometry args={[0.065, 0.25, 12, 16]} />
-          <meshStandardMaterial color={hairColor} roughness={0.42} />
-        </mesh>
-        <mesh position={[0, -0.11, -0.14]} scale={[1.28, 1.0, 0.65]} castShadow>
-          <capsuleGeometry args={[0.13, 0.25, 12, 16]} />
-          <meshStandardMaterial color={hairColor} roughness={0.42} />
-        </mesh>
+        <mesh position={[0, 0.06, -0.02]} scale={[1.08, 0.98, 1.08]} castShadow><sphereGeometry args={[0.235, 16, 14]} /><meshStandardMaterial color={hairColor} roughness={0.45} /></mesh>
+        <mesh position={[0, 0.10, 0.14]} scale={[1.05, 0.42, 0.55]}><sphereGeometry args={[0.19, 12, 10]} /><meshStandardMaterial color={hairColor} roughness={0.45} /></mesh>
+        <mesh position={[-0.18, -0.09, -0.02]} rotation={[0, 0, 0.12]} castShadow><capsuleGeometry args={[0.065, 0.25, 6, 10]} /><meshStandardMaterial color={hairColor} roughness={0.45} /></mesh>
+        <mesh position={[0.18, -0.09, -0.02]} rotation={[0, 0, -0.12]} castShadow><capsuleGeometry args={[0.065, 0.25, 6, 10]} /><meshStandardMaterial color={hairColor} roughness={0.45} /></mesh>
+        <mesh position={[0, -0.11, -0.14]} scale={[1.28, 1.0, 0.65]} castShadow><capsuleGeometry args={[0.13, 0.25, 6, 10]} /><meshStandardMaterial color={hairColor} roughness={0.45} /></mesh>
       </group>
     );
   }
-
   if (style === 'bob') {
     return (
       <group>
-        <mesh position={[0, 0.06, -0.01]} scale={[1.10, 0.98, 1.08]} castShadow>
-          <sphereGeometry args={[0.238, 28, 28]} />
-          <meshStandardMaterial color={hairColor} roughness={0.42} />
-        </mesh>
-        <mesh position={[0, 0.10, 0.14]} scale={[1.05, 0.42, 0.55]} castShadow>
-          <sphereGeometry args={[0.19, 20, 20]} />
-          <meshStandardMaterial color={hairColor} roughness={0.42} />
-        </mesh>
-        <mesh position={[-0.17, -0.05, 0.02]} rotation={[0, 0, -0.08]} castShadow>
-          <capsuleGeometry args={[0.058, 0.14, 12, 16]} />
-          <meshStandardMaterial color={hairColor} roughness={0.42} />
-        </mesh>
-        <mesh position={[0.17, -0.05, 0.02]} rotation={[0, 0, 0.08]} castShadow>
-          <capsuleGeometry args={[0.058, 0.14, 12, 16]} />
-          <meshStandardMaterial color={hairColor} roughness={0.42} />
-        </mesh>
+        <mesh position={[0, 0.06, -0.01]} scale={[1.10, 0.98, 1.08]} castShadow><sphereGeometry args={[0.238, 16, 14]} /><meshStandardMaterial color={hairColor} roughness={0.45} /></mesh>
+        <mesh position={[0, 0.10, 0.14]} scale={[1.05, 0.42, 0.55]}><sphereGeometry args={[0.19, 12, 10]} /><meshStandardMaterial color={hairColor} roughness={0.45} /></mesh>
+        <mesh position={[-0.17, -0.05, 0.02]} rotation={[0, 0, -0.08]} castShadow><capsuleGeometry args={[0.058, 0.14, 6, 10]} /><meshStandardMaterial color={hairColor} roughness={0.45} /></mesh>
+        <mesh position={[0.17, -0.05, 0.02]} rotation={[0, 0, 0.08]} castShadow><capsuleGeometry args={[0.058, 0.14, 6, 10]} /><meshStandardMaterial color={hairColor} roughness={0.45} /></mesh>
       </group>
     );
   }
-
   if (style === 'bun') {
     return (
       <group>
-        <mesh position={[0, 0.06, -0.02]} scale={[1.06, 0.96, 1.06]} castShadow>
-          <sphereGeometry args={[0.235, 28, 28]} />
-          <meshStandardMaterial color={hairColor} roughness={0.45} />
-        </mesh>
-        <mesh position={[0, 0.10, 0.14]} scale={[1.02, 0.40, 0.52]} castShadow>
-          <sphereGeometry args={[0.18, 20, 20]} />
-          <meshStandardMaterial color={hairColor} roughness={0.42} />
-        </mesh>
-        {/* 귀여운 똥머리(당고머리) 번 */}
-        <mesh position={[0, 0.24, -0.14]} castShadow>
-          <sphereGeometry args={[0.105, 20, 20]} />
-          <meshStandardMaterial color={hairColor} roughness={0.42} />
-        </mesh>
+        <mesh position={[0, 0.06, -0.02]} scale={[1.06, 0.96, 1.06]} castShadow><sphereGeometry args={[0.235, 16, 14]} /><meshStandardMaterial color={hairColor} roughness={0.45} /></mesh>
+        <mesh position={[0, 0.10, 0.14]} scale={[1.02, 0.40, 0.52]}><sphereGeometry args={[0.18, 12, 10]} /><meshStandardMaterial color={hairColor} roughness={0.45} /></mesh>
+        <mesh position={[0, 0.24, -0.14]} castShadow><sphereGeometry args={[0.105, 12, 10]} /><meshStandardMaterial color={hairColor} roughness={0.45} /></mesh>
       </group>
     );
   }
-
   if (style === 'parted') {
     return (
       <group>
-        <mesh position={[0, 0.06, -0.02]} scale={[1.06, 0.94, 1.06]} castShadow>
-          <sphereGeometry args={[0.235, 28, 28]} />
-          <meshStandardMaterial color={hairColor} roughness={0.45} />
-        </mesh>
-        <mesh position={[-0.08, 0.11, 0.13]} rotation={[0, 0, 0.35]} scale={[1.1, 0.55, 0.65]} castShadow>
-          <sphereGeometry args={[0.13, 18, 18]} />
-          <meshStandardMaterial color={hairColor} roughness={0.42} />
-        </mesh>
-        <mesh position={[0.09, 0.11, 0.13]} rotation={[0, 0, -0.25]} scale={[1.0, 0.52, 0.65]} castShadow>
-          <sphereGeometry args={[0.12, 18, 18]} />
-          <meshStandardMaterial color={hairColor} roughness={0.42} />
-        </mesh>
+        <mesh position={[0, 0.06, -0.02]} scale={[1.06, 0.94, 1.06]} castShadow><sphereGeometry args={[0.235, 16, 14]} /><meshStandardMaterial color={hairColor} roughness={0.45} /></mesh>
+        <mesh position={[-0.08, 0.11, 0.13]} rotation={[0, 0, 0.35]} scale={[1.1, 0.55, 0.65]}><sphereGeometry args={[0.13, 10, 10]} /><meshStandardMaterial color={hairColor} roughness={0.45} /></mesh>
+        <mesh position={[0.09, 0.11, 0.13]} rotation={[0, 0, -0.25]} scale={[1.0, 0.52, 0.65]}><sphereGeometry args={[0.12, 10, 10]} /><meshStandardMaterial color={hairColor} roughness={0.45} /></mesh>
       </group>
     );
   }
-
   return (
     <group>
-      <mesh position={[0, 0.06, -0.02]} scale={[1.06, 0.94, 1.06]} castShadow>
-        <sphereGeometry args={[0.235, 28, 28]} />
-        <meshStandardMaterial color={hairColor} roughness={0.45} />
-      </mesh>
-      <mesh position={[0, 0.10, 0.08]} scale={[0.98, 0.65, 0.85]} castShadow>
-        <sphereGeometry args={[0.21, 20, 20]} />
-        <meshStandardMaterial color={hairColor} roughness={0.45} />
-      </mesh>
+      <mesh position={[0, 0.06, -0.02]} scale={[1.06, 0.94, 1.06]} castShadow><sphereGeometry args={[0.235, 16, 14]} /><meshStandardMaterial color={hairColor} roughness={0.45} /></mesh>
+      <mesh position={[0, 0.10, 0.08]} scale={[0.98, 0.65, 0.85]}><sphereGeometry args={[0.21, 12, 10]} /><meshStandardMaterial color={hairColor} roughness={0.45} /></mesh>
     </group>
   );
 }
 
-function SmoothChibiAvatar1F({
+export function SharedChibiAvatar({
   position = [0, 0, 0],
   targetPosition = null,
   patrolZ = null,
@@ -1368,6 +1311,8 @@ function SmoothChibiAvatar1F({
   const outerGroupRef = useRef();
   const rootRef = useRef();
   const headGroupRef = useRef();
+  const eyesOpenGroupRef = useRef();
+  const mouthRef = useRef();
   const leftArmRef = useRef();
   const rightArmRef = useRef();
   const leftLegRef = useRef();
@@ -1375,6 +1320,11 @@ function SmoothChibiAvatar1F({
 
   const isFemale = gender === 'female' || isSkirt;
   const patrolState = useRef({ z: position[2], dir: 1, pauseTimer: 0 });
+
+  // 감정별 표정 모드
+  const isPraying = emote === 'pray';
+  const isHappyEyes = emote === 'dance' || emote === 'praise' || emote === 'heart';
+  const isTalking = Boolean(speechBubbleText);
 
   const bubbleData = useMemo(() => {
     if (!speechBubbleText) return null;
@@ -1404,23 +1354,21 @@ function SmoothChibiAvatar1F({
 
       ctx.textAlign = 'center';
       let startY = speakerName ? 44 : 54;
-
       if (speakerName) {
         ctx.fillStyle = '#059669';
         ctx.font = '900 22px sans-serif';
         ctx.fillText(speakerName, w / 2, startY);
         startY += 32;
       }
-
       ctx.fillStyle = '#0F172A';
       ctx.font = '800 24px sans-serif';
-      wrappedLines.forEach((line, idx) => {
-        ctx.fillText(line, w / 2, startY + idx * 30);
-      });
-    }, 540, 175);
+      wrappedLines.forEach((line, idx) => ctx.fillText(line, w / 2, startY + idx * 30));
+    }, 500, 165);
 
     return { tex, planeW: 1.82, planeH: 0.59 };
   }, [speechBubbleText]);
+
+  useEffect(() => () => { if (bubbleData?.tex) bubbleData.tex.dispose(); }, [bubbleData]);
 
   useFrame(({ clock }, delta) => {
     const t = clock.elapsedTime + seedOffset;
@@ -1431,9 +1379,7 @@ function SmoothChibiAvatar1F({
     } else if (targetPosition && outerGroupRef.current) {
       const curX = outerGroupRef.current.position.x;
       const curZ = outerGroupRef.current.position.z;
-      const dx = targetPosition[0] - curX;
-      const dz = targetPosition[2] - curZ;
-      const dist = Math.hypot(dx, dz);
+      const dist = Math.hypot(targetPosition[0] - curX, targetPosition[2] - curZ);
       if (dist > 0.03) {
         walkingNow = true;
         outerGroupRef.current.position.x = THREE.MathUtils.lerp(curX, targetPosition[0], delta * 8.5);
@@ -1448,20 +1394,32 @@ function SmoothChibiAvatar1F({
       } else {
         walkingNow = true;
         st.z += st.dir * delta * 0.65;
-        if (st.z > patrolZ[1]) {
-          st.z = patrolZ[1];
-          st.dir = -1;
-          st.pauseTimer = 2.6;
-        } else if (st.z < patrolZ[0]) {
-          st.z = patrolZ[0];
-          st.dir = 1;
-          st.pauseTimer = 2.6;
-        }
+        if (st.z > patrolZ[1]) { st.z = patrolZ[1]; st.dir = -1; st.pauseTimer = 2.6; }
+        else if (st.z < patrolZ[0]) { st.z = patrolZ[0]; st.dir = 1; st.pauseTimer = 2.6; }
         outerGroupRef.current.position.z = st.z;
         outerGroupRef.current.rotation.y = st.dir > 0 ? 0.2 : Math.PI - 0.2;
       }
     }
 
+    // 1) 자동 눈 깜빡임 (3.6초 주기로 0.14초간 자연스럽게 깜빡임)
+    if (eyesOpenGroupRef.current) {
+      const blinkCycle = t % 3.6;
+      const blinkScaleY = blinkCycle > 3.46 ? 0.08 : 1.0;
+      eyesOpenGroupRef.current.scale.y = THREE.MathUtils.lerp(eyesOpenGroupRef.current.scale.y, blinkScaleY, 0.45);
+    }
+
+    // 2) 대화 중 오물거리는 입 모션 / 기쁨 활짝 웃음
+    if (mouthRef.current) {
+      if (isTalking) {
+        mouthRef.current.scale.y = 0.8 + Math.abs(Math.sin(t * 14)) * 1.1;
+      } else if (isHappyEyes) {
+        mouthRef.current.scale.y = 1.45;
+      } else {
+        mouthRef.current.scale.y = 1.0;
+      }
+    }
+
+    // 3) 다리 모션
     if (leftLegRef.current && rightLegRef.current) {
       if (isSeated) {
         leftLegRef.current.rotation.x = -Math.PI / 2.05;
@@ -1488,58 +1446,42 @@ function SmoothChibiAvatar1F({
       }
     }
 
+    // 4) 팔 모션
     if (leftArmRef.current && rightArmRef.current) {
       if (emote === 'bless') {
-        leftArmRef.current.rotation.x = -2.1;
-        rightArmRef.current.rotation.x = -2.1;
-        leftArmRef.current.rotation.z = 0.35;
-        rightArmRef.current.rotation.z = -0.35;
+        leftArmRef.current.rotation.set(-2.1, 0, 0.35);
+        rightArmRef.current.rotation.set(-2.1, 0, -0.35);
       } else if (emote === 'pray') {
-        leftArmRef.current.rotation.x = -1.15;
-        rightArmRef.current.rotation.x = -1.15;
-        leftArmRef.current.rotation.z = -0.42;
-        rightArmRef.current.rotation.z = 0.42;
+        leftArmRef.current.rotation.set(-1.15, 0, -0.42);
+        rightArmRef.current.rotation.set(-1.15, 0, 0.42);
       } else if (emote === 'dance') {
-        leftArmRef.current.rotation.z = 2.4 + Math.sin(t * 12) * 0.45;
-        rightArmRef.current.rotation.z = -2.4 + Math.cos(t * 12) * 0.45;
-        leftArmRef.current.rotation.x = Math.sin(t * 6) * 0.3;
-        rightArmRef.current.rotation.x = -Math.sin(t * 6) * 0.3;
+        leftArmRef.current.rotation.set(Math.sin(t * 6) * 0.3, 0, 2.4 + Math.sin(t * 12) * 0.45);
+        rightArmRef.current.rotation.set(-Math.sin(t * 6) * 0.3, 0, -2.4 + Math.cos(t * 12) * 0.45);
       } else if (emote === 'praise' || emote === 'heart') {
-        leftArmRef.current.rotation.z = 2.65 + Math.sin(t * 8) * 0.2;
-        rightArmRef.current.rotation.z = -2.65 - Math.sin(t * 8) * 0.2;
-        leftArmRef.current.rotation.x = 0.2;
-        rightArmRef.current.rotation.x = 0.2;
+        leftArmRef.current.rotation.set(0.2, 0, 2.65 + Math.sin(t * 8) * 0.2);
+        rightArmRef.current.rotation.set(0.2, 0, -2.65 - Math.sin(t * 8) * 0.2);
       } else if (emote === 'wave' || autoWave || (patrolZ && !walkingNow)) {
-        rightArmRef.current.rotation.z = -2.35 + Math.sin(t * 10) * 0.32;
-        rightArmRef.current.rotation.x = 0.3;
-        leftArmRef.current.rotation.x = Math.sin(t * 2) * 0.08;
-        leftArmRef.current.rotation.z = 0.20;
+        rightArmRef.current.rotation.set(0.3, 0, -2.35 + Math.sin(t * 10) * 0.32);
+        leftArmRef.current.rotation.set(Math.sin(t * 2) * 0.08, 0, 0.20);
       } else if (isSeated) {
-        leftArmRef.current.rotation.x = -0.42;
-        rightArmRef.current.rotation.x = -0.42;
-        leftArmRef.current.rotation.z = 0.12;
-        rightArmRef.current.rotation.z = -0.12;
+        leftArmRef.current.rotation.set(-0.42, 0, 0.12);
+        rightArmRef.current.rotation.set(-0.42, 0, -0.12);
       } else if (walkingNow) {
         const sw = Math.sin(t * 10.5) * 0.52;
-        leftArmRef.current.rotation.x = -sw;
-        rightArmRef.current.rotation.x = sw;
-        leftArmRef.current.rotation.z = 0.18;
-        rightArmRef.current.rotation.z = -0.18;
+        leftArmRef.current.rotation.set(-sw, 0, 0.18);
+        rightArmRef.current.rotation.set(sw, 0, -0.18);
       } else {
-        leftArmRef.current.rotation.x = Math.sin(t * 2.2) * 0.06;
-        rightArmRef.current.rotation.x = -Math.sin(t * 2.2) * 0.06;
-        leftArmRef.current.rotation.z = 0.20;
-        rightArmRef.current.rotation.z = -0.20;
+        leftArmRef.current.rotation.set(Math.sin(t * 2.2) * 0.06, 0, 0.20);
+        rightArmRef.current.rotation.set(-Math.sin(t * 2.2) * 0.06, 0, -0.20);
       }
     }
 
+    // 5) 머리 & 몸통 바운스
     if (headGroupRef.current) {
-      if (emote === 'pray') {
-        headGroupRef.current.rotation.x = 0.32;
+      if (isPraying) {
+        headGroupRef.current.rotation.set(0.32, 0, 0);
       } else {
-        headGroupRef.current.rotation.x = Math.sin(t * 2.6) * 0.05;
-        headGroupRef.current.rotation.y = Math.cos(t * 1.4) * 0.08;
-        headGroupRef.current.rotation.z = Math.sin(t * 1.8) * 0.03; // 귀여운 갸우뚱 모션
+        headGroupRef.current.rotation.set(Math.sin(t * 2.6) * 0.05, Math.cos(t * 1.4) * 0.08, Math.sin(t * 1.8) * 0.03);
       }
     }
 
@@ -1553,206 +1495,134 @@ function SmoothChibiAvatar1F({
   });
 
   return (
-    <group
-      ref={outerGroupRef}
-      position={position}
-      rotation={[0, rotationY, 0]}
-      onClick={onClick}
-    >
+    <group ref={outerGroupRef} position={position} rotation={[0, rotationY, 0]} onClick={onClick}>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.015, 0]}>
-        <circleGeometry args={[0.26, 24]} />
-        <meshBasicMaterial color="#0F172A" transparent opacity={0.25} />
+        <circleGeometry args={[0.26, 16]} />
+        <meshBasicMaterial color="#0F172A" transparent opacity={0.24} />
       </mesh>
 
       <group ref={rootRef}>
-        {/* 통통하고 짧은 2.5등신 다리 & 둥근 신발 */}
+        {/* 다리 & 둥근 신발 */}
         <group ref={leftLegRef} position={[-0.085, 0.20, 0]}>
-          <mesh position={[0, -0.07, 0]} castShadow>
-            <capsuleGeometry args={[0.056, 0.10, 12, 16]} />
-            <meshStandardMaterial color={isFemale ? skinColor : pantsColor} roughness={0.45} />
-          </mesh>
-          <mesh position={[0, -0.15, 0.025]} scale={[1.05, 0.75, 1.35]} castShadow>
-            <sphereGeometry args={[0.058, 16, 16]} />
-            <meshStandardMaterial color={isFemale ? '#9F1239' : '#18181B'} roughness={0.35} />
-          </mesh>
+          <mesh position={[0, -0.07, 0]} castShadow><capsuleGeometry args={[0.056, 0.10, 6, 10]} /><meshStandardMaterial color={isFemale ? skinColor : pantsColor} roughness={0.45} /></mesh>
+          <mesh position={[0, -0.15, 0.025]} scale={[1.05, 0.75, 1.35]} castShadow><sphereGeometry args={[0.058, 10, 10]} /><meshStandardMaterial color={isFemale ? '#9F1239' : '#18181B'} roughness={0.35} /></mesh>
         </group>
         <group ref={rightLegRef} position={[0.085, 0.20, 0]}>
-          <mesh position={[0, -0.07, 0]} castShadow>
-            <capsuleGeometry args={[0.056, 0.10, 12, 16]} />
-            <meshStandardMaterial color={isFemale ? skinColor : pantsColor} roughness={0.45} />
-          </mesh>
-          <mesh position={[0, -0.15, 0.025]} scale={[1.05, 0.75, 1.35]} castShadow>
-            <sphereGeometry args={[0.058, 16, 16]} />
-            <meshStandardMaterial color={isFemale ? '#9F1239' : '#18181B'} roughness={0.35} />
-          </mesh>
+          <mesh position={[0, -0.07, 0]} castShadow><capsuleGeometry args={[0.056, 0.10, 6, 10]} /><meshStandardMaterial color={isFemale ? skinColor : pantsColor} roughness={0.45} /></mesh>
+          <mesh position={[0, -0.15, 0.025]} scale={[1.05, 0.75, 1.35]} castShadow><sphereGeometry args={[0.058, 10, 10]} /><meshStandardMaterial color={isFemale ? '#9F1239' : '#18181B'} roughness={0.35} /></mesh>
         </group>
 
-        {/* 아담하고 동글동글한 2.5등신 몸통 */}
+        {/* 몸통 */}
         {isFemale ? (
           <group>
-            <mesh position={[0, 0.42, 0]} castShadow receiveShadow>
-              <cylinderGeometry args={[0.13, 0.115, 0.22, 24]} />
-              <meshStandardMaterial color={shirtColor} roughness={0.42} />
-            </mesh>
-            <mesh position={[0, 0.50, 0]} scale={[1.15, 0.55, 0.90]} castShadow>
-              <sphereGeometry args={[0.135, 20, 20]} />
-              <meshStandardMaterial color={shirtColor} roughness={0.42} />
-            </mesh>
-            <mesh position={[0, 0.26, 0]} castShadow receiveShadow>
-              <cylinderGeometry args={[0.125, 0.24, 0.22, 28]} />
-              <meshStandardMaterial color={pantsColor || shirtColor} roughness={0.45} />
-            </mesh>
-            {/* 귀여운 카라 디테일 */}
-            <mesh position={[0, 0.51, 0.10]} rotation={[0.2, 0, 0]}>
-              <torusGeometry args={[0.06, 0.016, 10, 20]} />
-              <meshStandardMaterial color="#FFFFFF" />
-            </mesh>
+            <mesh position={[0, 0.42, 0]} castShadow receiveShadow><cylinderGeometry args={[0.13, 0.115, 0.22, 14]} /><meshStandardMaterial color={shirtColor} roughness={0.42} /></mesh>
+            <mesh position={[0, 0.50, 0]} scale={[1.15, 0.55, 0.90]} castShadow><sphereGeometry args={[0.135, 12, 10]} /><meshStandardMaterial color={shirtColor} roughness={0.42} /></mesh>
+            <mesh position={[0, 0.26, 0]} castShadow receiveShadow><cylinderGeometry args={[0.125, 0.24, 0.22, 16]} /><meshStandardMaterial color={pantsColor || shirtColor} roughness={0.45} /></mesh>
+            <mesh position={[0, 0.51, 0.10]} rotation={[0.2, 0, 0]}><torusGeometry args={[0.06, 0.016, 6, 12]} /><meshStandardMaterial color="#FFFFFF" /></mesh>
           </group>
         ) : (
           <group>
-            <mesh position={[0, 0.37, 0]} scale={[1.22, 0.95, 0.92]} castShadow receiveShadow>
-              <capsuleGeometry args={[0.145, 0.14, 16, 24]} />
-              <meshStandardMaterial color={shirtColor} roughness={0.40} />
-            </mesh>
-            <mesh position={[0, 0.49, 0.115]} rotation={[0.15, 0, 0]}>
-              <coneGeometry args={[0.05, 0.10, 3]} />
-              <meshStandardMaterial color="#FFFFFF" />
-            </mesh>
+            <mesh position={[0, 0.37, 0]} scale={[1.22, 0.95, 0.92]} castShadow receiveShadow><capsuleGeometry args={[0.145, 0.14, 8, 14]} /><meshStandardMaterial color={shirtColor} roughness={0.40} /></mesh>
+            <mesh position={[0, 0.49, 0.115]} rotation={[0.15, 0, 0]}><coneGeometry args={[0.05, 0.10, 3]} /><meshStandardMaterial color="#FFFFFF" /></mesh>
           </group>
         )}
 
-        {/* 통통한 팔 & 찹쌀떡 같은 동그란 손 */}
+        {/* 팔 & 동그란 손 */}
         <group ref={leftArmRef} position={[-0.20, 0.47, 0]}>
-          <mesh position={[0, -0.08, 0]} castShadow>
-            <capsuleGeometry args={[0.048, 0.13, 12, 16]} />
-            <meshStandardMaterial color={shirtColor} roughness={0.42} />
-          </mesh>
-          <mesh position={[0, -0.19, 0]} castShadow>
-            <sphereGeometry args={[0.052, 16, 16]} />
-            <meshStandardMaterial color={skinColor} roughness={0.35} />
-          </mesh>
+          <mesh position={[0, -0.08, 0]} castShadow><capsuleGeometry args={[0.048, 0.13, 6, 10]} /><meshStandardMaterial color={shirtColor} roughness={0.42} /></mesh>
+          <mesh position={[0, -0.19, 0]} castShadow><sphereGeometry args={[0.052, 10, 10]} /><meshStandardMaterial color={skinColor} roughness={0.35} /></mesh>
         </group>
         <group ref={rightArmRef} position={[0.20, 0.47, 0]}>
-          <mesh position={[0, -0.08, 0]} castShadow>
-            <capsuleGeometry args={[0.048, 0.13, 12, 16]} />
-            <meshStandardMaterial color={shirtColor} roughness={0.42} />
-          </mesh>
-          <mesh position={[0, -0.19, 0]} castShadow>
-            <sphereGeometry args={[0.052, 16, 16]} />
-            <meshStandardMaterial color={skinColor} roughness={0.35} />
-          </mesh>
+          <mesh position={[0, -0.08, 0]} castShadow><capsuleGeometry args={[0.048, 0.13, 6, 10]} /><meshStandardMaterial color={shirtColor} roughness={0.42} /></mesh>
+          <mesh position={[0, -0.19, 0]} castShadow><sphereGeometry args={[0.052, 10, 10]} /><meshStandardMaterial color={skinColor} roughness={0.35} /></mesh>
         </group>
 
-        {/* 🥰 2.5등신의 핵심: 큼직하고 사랑스러운 헤드 (반짝이는 눈 하이라이트 + 발그레 볼터치 + 귀여운 코와 미소) */}
+        {/* 🥰 헤드 & 실시간 표정 시스템 */}
         <group ref={headGroupRef} position={[0, 0.76, 0]}>
-          <mesh scale={[1.08, 1.0, 1.04]} castShadow receiveShadow>
-            <sphereGeometry args={[0.228, 32, 32]} />
-            <meshStandardMaterial color={skinColor} roughness={0.34} />
-          </mesh>
-          {/* 동그란 양쪽 귀 */}
-          <mesh position={[-0.23, -0.01, 0]} castShadow>
-            <sphereGeometry args={[0.044, 14, 14]} />
-            <meshStandardMaterial color={skinColor} roughness={0.38} />
-          </mesh>
-          <mesh position={[0.23, -0.01, 0]} castShadow>
-            <sphereGeometry args={[0.044, 14, 14]} />
-            <meshStandardMaterial color={skinColor} roughness={0.38} />
-          </mesh>
+          <mesh scale={[1.08, 1.0, 1.04]} castShadow receiveShadow><sphereGeometry args={[0.228, 18, 16]} /><meshStandardMaterial color={skinColor} roughness={0.34} /></mesh>
+          <mesh position={[-0.23, -0.01, 0]}><sphereGeometry args={[0.044, 8, 8]} /><meshStandardMaterial color={skinColor} roughness={0.38} /></mesh>
+          <mesh position={[0.23, -0.01, 0]}><sphereGeometry args={[0.044, 8, 8]} /><meshStandardMaterial color={skinColor} roughness={0.38} /></mesh>
 
-          <CharacterHairStyle1F
-            style={hairStyle || (isFemale ? 'bob' : 'short')}
-            hairColor={hairColor}
-          />
+          <CharacterHairStyle style={hairStyle || (isFemale ? 'bob' : 'short')} hairColor={hairColor} />
 
           {hasSunglasses ? (
             <group position={[0, 0.01, 0.225]}>
-              <RoundedBox args={[0.145, 0.082, 0.025]} position={[-0.082, 0, 0]} radius={0.025}>
-                <meshStandardMaterial color="#18181B" roughness={0.15} metalness={0.5} />
-              </RoundedBox>
-              <RoundedBox args={[0.145, 0.082, 0.025]} position={[0.082, 0, 0]} radius={0.025}>
-                <meshStandardMaterial color="#18181B" roughness={0.15} metalness={0.5} />
-              </RoundedBox>
-              <RoundedBox args={[0.05, 0.018, 0.02]} position={[0, 0.015, 0]} radius={0.005}>
-                <meshStandardMaterial color="#FACC15" metalness={0.8} />
-              </RoundedBox>
+              <RoundedBox args={[0.145, 0.082, 0.025]} position={[-0.082, 0, 0]} radius={0.025}><meshStandardMaterial color="#18181B" roughness={0.15} metalness={0.5} /></RoundedBox>
+              <RoundedBox args={[0.145, 0.082, 0.025]} position={[0.082, 0, 0]} radius={0.025}><meshStandardMaterial color="#18181B" roughness={0.15} metalness={0.5} /></RoundedBox>
+              <RoundedBox args={[0.05, 0.018, 0.02]} position={[0, 0.015, 0]} radius={0.005}><meshStandardMaterial color="#FACC15" metalness={0.8} /></RoundedBox>
+            </group>
+          ) : isPraying ? (
+            /* 🙏 기도 표정: 지그시 감은 반달 눈 (︶ ︶) */
+            <group position={[0, -0.005, 0.226]}>
+              <mesh position={[-0.082, 0, 0]} rotation={[Math.PI, 0, 0]}><torusGeometry args={[0.028, 0.006, 6, 12, Math.PI]} /><meshBasicMaterial color="#18181B" /></mesh>
+              <mesh position={[0.082, 0, 0]} rotation={[Math.PI, 0, 0]}><torusGeometry args={[0.028, 0.006, 6, 12, Math.PI]} /><meshBasicMaterial color="#18181B" /></mesh>
+            </group>
+          ) : isHappyEyes ? (
+            /* 🙌 찬양·댄스 표정: 환한 눈웃음 (◠ ◠) */
+            <group position={[0, -0.008, 0.226]}>
+              <mesh position={[-0.082, 0, 0]}><torusGeometry args={[0.030, 0.0065, 6, 12, Math.PI]} /><meshBasicMaterial color="#18181B" /></mesh>
+              <mesh position={[0.082, 0, 0]}><torusGeometry args={[0.030, 0.0065, 6, 12, Math.PI]} /><meshBasicMaterial color="#18181B" /></mesh>
             </group>
           ) : (
+            /* ✨ 기본 초롱눈 + 자동 눈 깜빡임 */
+            <group ref={eyesOpenGroupRef}>
+              {[-0.082, 0.082].map((ex, ei) => (
+                <group key={ei} position={[ex, -0.005, 0.222]}>
+                  <mesh scale={[1.0, 1.15, 0.6]}><sphereGeometry args={[0.032, 10, 10]} /><meshBasicMaterial color="#18181B" /></mesh>
+                  <mesh position={[0.010, 0.012, 0.016]}><sphereGeometry args={[0.011, 6, 6]} /><meshBasicMaterial color="#FFFFFF" /></mesh>
+                  <mesh position={[-0.008, -0.010, 0.015]}><sphereGeometry args={[0.005, 6, 6]} /><meshBasicMaterial color="#FFFFFF" /></mesh>
+                </group>
+              ))}
+            </group>
+          )}
+
+          {/* 눈썹 */}
+          {!hasSunglasses && (
             <>
-              {/* 크고 초롱초롱한 눈동자 + 하얀 별빛 안광 하이라이트 */}
-              <group position={[-0.082, -0.005, 0.222]}>
-                <mesh scale={[1.0, 1.15, 0.6]}>
-                  <sphereGeometry args={[0.032, 16, 16]} />
-                  <meshBasicMaterial color="#18181B" />
-                </mesh>
-                <mesh position={[0.010, 0.012, 0.016]}>
-                  <sphereGeometry args={[0.011, 10, 10]} />
-                  <meshBasicMaterial color="#FFFFFF" />
-                </mesh>
-                <mesh position={[-0.008, -0.010, 0.015]}>
-                  <sphereGeometry args={[0.005, 8, 8]} />
-                  <meshBasicMaterial color="#FFFFFF" />
-                </mesh>
-              </group>
-
-              <group position={[0.082, -0.005, 0.222]}>
-                <mesh scale={[1.0, 1.15, 0.6]}>
-                  <sphereGeometry args={[0.032, 16, 16]} />
-                  <meshBasicMaterial color="#18181B" />
-                </mesh>
-                <mesh position={[0.010, 0.012, 0.016]}>
-                  <sphereGeometry args={[0.011, 10, 10]} />
-                  <meshBasicMaterial color="#FFFFFF" />
-                </mesh>
-                <mesh position={[-0.008, -0.010, 0.015]}>
-                  <sphereGeometry args={[0.005, 8, 8]} />
-                  <meshBasicMaterial color="#FFFFFF" />
-                </mesh>
-              </group>
-
-              {/* 귀여운 눈썹 */}
-              <RoundedBox args={[0.048, 0.010, 0.01]} position={[-0.082, 0.048, 0.22]} rotation={[0, 0, 0.08]} radius={0.004}>
+              <RoundedBox args={[0.048, 0.010, 0.01]} position={[-0.082, isHappyEyes ? 0.056 : 0.048, 0.22]} rotation={[0, 0, isPraying ? -0.1 : 0.08]} radius={0.004}>
                 <meshBasicMaterial color={hairColor} />
               </RoundedBox>
-              <RoundedBox args={[0.048, 0.010, 0.01]} position={[0.082, 0.048, 0.22]} rotation={[0, 0, -0.08]} radius={0.004}>
+              <RoundedBox args={[0.048, 0.010, 0.01]} position={[0.082, isHappyEyes ? 0.056 : 0.048, 0.22]} rotation={[0, 0, isPraying ? 0.1 : -0.08]} radius={0.004}>
                 <meshBasicMaterial color={hairColor} />
               </RoundedBox>
             </>
           )}
 
-          {/* 앙증맞은 코 & 발그레한 핑크 볼터치 & 방긋 웃는 입 */}
-          <mesh position={[0, -0.028, 0.238]}>
-            <sphereGeometry args={[0.014, 12, 12]} />
-            <meshStandardMaterial color="#FDBA74" roughness={0.4} />
-          </mesh>
+          {/* 코 · 발그레 볼터치 · 감정/대화 반응 입 */}
+          <mesh position={[0, -0.028, 0.238]}><sphereGeometry args={[0.014, 8, 8]} /><meshStandardMaterial color="#FDBA74" roughness={0.4} /></mesh>
           <mesh position={[-0.132, -0.045, 0.198]} rotation={[0, -0.38, 0]} scale={[1.25, 0.85, 1]}>
-            <circleGeometry args={[0.032, 16]} />
-            <meshBasicMaterial color="#FB7185" transparent opacity={0.62} />
+            <circleGeometry args={[0.032, 12]} />
+            <meshBasicMaterial color="#FB7185" transparent opacity={isHappyEyes ? 0.78 : 0.58} />
           </mesh>
           <mesh position={[0.132, -0.045, 0.198]} rotation={[0, 0.38, 0]} scale={[1.25, 0.85, 1]}>
-            <circleGeometry args={[0.032, 16]} />
-            <meshBasicMaterial color="#FB7185" transparent opacity={0.62} />
+            <circleGeometry args={[0.032, 12]} />
+            <meshBasicMaterial color="#FB7185" transparent opacity={isHappyEyes ? 0.78 : 0.58} />
           </mesh>
-          <mesh position={[0, -0.062, 0.228]} rotation={[Math.PI, 0, 0]}>
-            <torusGeometry args={[0.022, 0.0045, 8, 16, Math.PI]} />
-            <meshBasicMaterial color="#E11D48" />
-          </mesh>
+
+          <group ref={mouthRef} position={[0, -0.062, 0.228]}>
+            {isHappyEyes || isTalking ? (
+              <mesh scale={[1.2, 0.9, 0.5]}>
+                <circleGeometry args={[0.022, 12, Math.PI, Math.PI]} />
+                <meshBasicMaterial color="#E11D48" side={THREE.DoubleSide} />
+              </mesh>
+            ) : (
+              <mesh rotation={[Math.PI, 0, 0]}>
+                <torusGeometry args={[0.022, 0.0045, 6, 12, Math.PI]} />
+                <meshBasicMaterial color="#E11D48" />
+              </mesh>
+            )}
+          </group>
         </group>
 
         {nameTagTexture && (
           <Billboard position={[0, 1.28, 0]}>
-            <mesh renderOrder={12}>
-              <planeGeometry args={[1.55, 0.34]} />
-              <meshBasicMaterial map={nameTagTexture} transparent depthTest={false} />
-            </mesh>
+            <mesh renderOrder={12}><planeGeometry args={[1.55, 0.34]} /><meshBasicMaterial map={nameTagTexture} transparent depthTest={false} /></mesh>
           </Billboard>
         )}
 
         {bubbleData && (
           <Billboard position={[0, 1.58, 0]}>
-            <mesh renderOrder={15}>
-              <planeGeometry args={[bubbleData.planeW, bubbleData.planeH]} />
-              <meshBasicMaterial map={bubbleData.tex} transparent depthTest={false} />
-            </mesh>
+            <mesh renderOrder={15}><planeGeometry args={[bubbleData.planeW, bubbleData.planeH]} /><meshBasicMaterial map={bubbleData.tex} transparent depthTest={false} /></mesh>
           </Billboard>
         )}
       </group>
@@ -1768,28 +1638,20 @@ function RemoteMultiplayerAvatar1F({ peer, onClickPeer }) {
     const isPastor = isAuthorizedPastor(peer.name, peer.office);
     return makeCanvasTexture((ctx, w, h) => {
       ctx.fillStyle = isPastor ? 'rgba(88, 28, 135, 0.96)' : 'rgba(15, 23, 42, 0.94)';
-      ctx.beginPath();
-      ctx.roundRect(6, 6, w - 12, h - 12, 48);
-      ctx.fill();
-      ctx.lineWidth = 4;
-      ctx.strokeStyle = isPastor ? '#FACC15' : '#34D399';
-      ctx.stroke();
-
+      ctx.beginPath(); ctx.roundRect(6, 6, w - 12, h - 12, 48); ctx.fill();
+      ctx.lineWidth = 4; ctx.strokeStyle = isPastor ? '#FACC15' : '#34D399'; ctx.stroke();
       ctx.fillStyle = isPastor ? '#FACC15' : '#34D399';
-      ctx.beginPath();
-      ctx.arc(48, h / 2, 14, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.fillStyle = '#FFFFFF';
-      ctx.font = '900 34px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
+      ctx.beginPath(); ctx.arc(48, h / 2, 14, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#FFFFFF'; ctx.font = '900 34px sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText(`${isPastor ? '✝️ ' : ''}${peer.name || '성도'}`, w / 2 + 16, h / 2 + 2);
-    }, 520, 110);
+    }, 440, 96);
   }, [peer.name, peer.office]);
 
+  useEffect(() => () => nameTagTex.dispose(), [nameTagTex]);
+
   return (
-    <SmoothChibiAvatar1F
+    <SharedChibiAvatar
       position={[peer.x ?? -0.8, 0.08, peer.z ?? 2.2]}
       targetPosition={[peer.x ?? -0.8, 0.08, peer.z ?? 2.2]}
       rotationY={peer.rotY || 0}
@@ -1804,10 +1666,7 @@ function RemoteMultiplayerAvatar1F({ peer, onClickPeer }) {
       hairColor={peer.avatar?.hairColor || '#27272A'}
       nameTagTexture={nameTagTex}
       speechBubbleText={peer.chatMsg ? `${peer.name}: ${peer.chatMsg}` : null}
-      onClick={(e) => {
-        e.stopPropagation();
-        if (onClickPeer) onClickPeer(peer);
-      }}
+      onClick={(e) => { e.stopPropagation(); if (onClickPeer) onClickPeer(peer); }}
     />
   );
 }
@@ -1835,69 +1694,34 @@ function OneFloorMasterpieceDiorama({
 
   const exteriorTextures = useMemo(() => ({
     churchSign: makeCanvasTexture((ctx, w, h) => {
-      ctx.fillStyle = '#27272A';
-      ctx.fillRect(0, 0, w, h);
-      ctx.strokeStyle = '#52525B';
-      ctx.lineWidth = 6;
-      ctx.strokeRect(4, 4, w - 8, h - 8);
-
-      ctx.fillStyle = '#2563EB';
-      ctx.fillRect(28, 28, 95, h - 56);
-      ctx.fillStyle = '#4ADE80';
-      ctx.fillRect(68, 38, 16, h - 76);
-      ctx.fillRect(42, 68, 68, 16);
-
-      ctx.fillStyle = '#FFFFFF';
-      ctx.font = '900 58px serif';
-      ctx.textAlign = 'left';
-      ctx.fillText('좋은나무교회', 145, 92);
-
-      ctx.fillStyle = '#A1A1AA';
-      ctx.font = 'bold 24px sans-serif';
-      ctx.fillText('GOOD TREE CHURCH', 148, 138);
-    }, 560, 180),
-
+      ctx.fillStyle = '#27272A'; ctx.fillRect(0, 0, w, h);
+      ctx.strokeStyle = '#52525B'; ctx.lineWidth = 6; ctx.strokeRect(4, 4, w - 8, h - 8);
+      ctx.fillStyle = '#2563EB'; ctx.fillRect(28, 28, 95, h - 56);
+      ctx.fillStyle = '#4ADE80'; ctx.fillRect(68, 38, 16, h - 76); ctx.fillRect(42, 68, 68, 16);
+      ctx.fillStyle = '#FFFFFF'; ctx.font = '900 58px serif'; ctx.textAlign = 'left'; ctx.fillText('좋은나무교회', 145, 92);
+      ctx.fillStyle = '#A1A1AA'; ctx.font = 'bold 24px sans-serif'; ctx.fillText('GOOD TREE CHURCH', 148, 138);
+    }, 512, 160),
     purpleBanner: makeCanvasTexture((ctx, w, h) => {
       const grad = ctx.createLinearGradient(0, 0, w, h);
-      grad.addColorStop(0, '#6B21A8');
-      grad.addColorStop(1, '#9333EA');
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, w, h);
-
-      ctx.strokeStyle = 'rgba(255,255,255,0.35)';
-      ctx.lineWidth = 4;
-      ctx.strokeRect(12, 12, w - 24, h - 24);
-
-      ctx.fillStyle = '#FFFFFF';
-      ctx.font = '900 38px serif';
-      ctx.textAlign = 'center';
+      grad.addColorStop(0, '#6B21A8'); grad.addColorStop(1, '#9333EA');
+      ctx.fillStyle = grad; ctx.fillRect(0, 0, w, h);
+      ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 4; ctx.strokeRect(12, 12, w - 24, h - 24);
+      ctx.fillStyle = '#FFFFFF'; ctx.font = '900 36px serif'; ctx.textAlign = 'center';
       ctx.fillText('{ 당신이 더 행복했으면 좋겠습니다 }', w / 2, h / 2 - 8);
-
-      ctx.fillStyle = '#FDE047';
-      ctx.font = 'bold 24px sans-serif';
-      ctx.fillText('김포 좋은나무교회', w / 2, h / 2 + 36);
-    }, 640, 180),
-
+      ctx.fillStyle = '#FDE047'; ctx.font = 'bold 24px sans-serif'; ctx.fillText('김포 좋은나무교회', w / 2, h / 2 + 36);
+    }, 512, 160),
     blueLedSign: makeCanvasTexture((ctx, w, h) => {
       const grad = ctx.createLinearGradient(0, 0, 0, h);
-      grad.addColorStop(0, '#0284C7');
-      grad.addColorStop(1, '#1E3A8A');
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, w, h);
-
-      ctx.fillStyle = '#FDE047';
-      ctx.font = '900 30px sans-serif';
-      ctx.textAlign = 'center';
+      grad.addColorStop(0, '#0284C7'); grad.addColorStop(1, '#1E3A8A');
+      ctx.fillStyle = grad; ctx.fillRect(0, 0, w, h);
+      ctx.fillStyle = '#FDE047'; ctx.font = '900 28px sans-serif'; ctx.textAlign = 'center';
       ctx.fillText('GOOD TREE WORSHIP', w / 2, 65);
-
-      ctx.fillStyle = '#FFFFFF';
-      ctx.font = '900 38px sans-serif';
-      ctx.fillText('주일예배 안내', w / 2, 130);
-      ctx.font = 'bold 28px sans-serif';
+      ctx.fillStyle = '#FFFFFF'; ctx.font = '900 36px sans-serif'; ctx.fillText('주일예배 안내', w / 2, 130);
+      ctx.font = 'bold 26px sans-serif';
       ctx.fillText('1부 09:00 | 2부 11:00', w / 2, 195);
       ctx.fillText('2F 북카페 / 3F 대예배당', w / 2, 245);
       ctx.fillText('4F 유아실 / 6F 교육관', w / 2, 295);
-    }, 320, 420)
+    }, 280, 380)
   }), []);
 
   const signs = useMemo(() => ({
@@ -1909,74 +1733,44 @@ function OneFloorMasterpieceDiorama({
     brochure: makeRoomSignTexture('홍보물·주보 키오스크', '클릭 시 주보·비전·방명록 열기', '#EC4899')
   }), []);
 
+  useEffect(() => () => {
+    marbleTex.dispose(); oakTex.dispose(); walnutTex.dispose();
+    Object.values(exteriorTextures).forEach((t) => t.dispose());
+    Object.values(signs).forEach((t) => t.dispose());
+  }, [marbleTex, oakTex, walnutTex, exteriorTextures, signs]);
+
   return (
     <group>
-      {/* 1. 정문 앞 보도블록 인도 & 아스팔트 차도 & #32 블루 GT 레이싱 슈퍼카 주행 */}
-      <RoundedBox args={[20.0, 0.2, 16.0]} position={[-2.2, -0.12, 1.5]} radius={0.02} receiveShadow>
-        <meshStandardMaterial color="#475569" roughness={0.8} />
-      </RoundedBox>
-      <RoundedBox args={[18.5, 0.08, 2.0]} position={[-2.0, 0.02, 5.5]} radius={0.01} receiveShadow>
-        <meshStandardMaterial color="#CBD5E1" roughness={0.65} />
-      </RoundedBox>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-0.8, 0.065, 4.95]} receiveShadow>
-        <planeGeometry args={[3.4, 1.05]} />
-        <meshStandardMaterial color="#38BDF8" roughness={0.5} />
-      </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-0.8, 0.068, 4.95]}>
-        <ringGeometry args={[0.35, 0.42, 24]} />
-        <meshBasicMaterial color="#FFFFFF" />
-      </mesh>
-
-      <RoundedBox args={[18.5, 0.06, 2.6]} position={[-2.0, 0.0, 7.7]} radius={0.01} receiveShadow>
-        <meshStandardMaterial color="#334155" roughness={0.85} />
-      </RoundedBox>
+      {/* 1. 정문 앞 보도블록 & 차도 & 슈퍼카 */}
+      <RoundedBox args={[20.0, 0.2, 16.0]} position={[-2.2, -0.12, 1.5]} radius={0.02} receiveShadow><meshStandardMaterial color="#475569" roughness={0.8} /></RoundedBox>
+      <RoundedBox args={[18.5, 0.08, 2.0]} position={[-2.0, 0.02, 5.5]} radius={0.01} receiveShadow><meshStandardMaterial color="#CBD5E1" roughness={0.65} /></RoundedBox>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-0.8, 0.065, 4.95]} receiveShadow><planeGeometry args={[3.4, 1.05]} /><meshStandardMaterial color="#38BDF8" roughness={0.5} /></mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-0.8, 0.068, 4.95]}><ringGeometry args={[0.35, 0.42, 20]} /><meshBasicMaterial color="#FFFFFF" /></mesh>
+      <RoundedBox args={[18.5, 0.06, 2.6]} position={[-2.0, 0.0, 7.7]} radius={0.01} receiveShadow><meshStandardMaterial color="#334155" roughness={0.85} /></RoundedBox>
       <MovingRacingSupercar1F />
 
       {/* 2. 좌측 필로티 주차장 */}
       <group position={[-7.6, 0, 0]}>
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0.2]} receiveShadow>
-          <planeGeometry args={[6.6, 9.2]} />
-          <meshStandardMaterial color="#3B4252" roughness={0.8} />
-        </mesh>
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0.2]} receiveShadow><planeGeometry args={[6.6, 9.2]} /><meshStandardMaterial color="#3B4252" roughness={0.8} /></mesh>
         {[-2.4, 0.0, 2.4].map((pz, i) => (
-          <mesh key={i} rotation={[-Math.PI / 2, 0, 0]} position={[-1.2, 0.02, pz]}>
-            <planeGeometry args={[3.4, 0.10]} />
-            <meshBasicMaterial color="#F8FAFC" />
-          </mesh>
+          <mesh key={i} rotation={[-Math.PI / 2, 0, 0]} position={[-1.2, 0.02, pz]}><planeGeometry args={[3.4, 0.10]} /><meshBasicMaterial color="#F8FAFC" /></mesh>
         ))}
         {[-1.2, 1.2].map((sz, si) => (
-          <RoundedBox key={si} args={[0.16, 0.10, 1.5]} position={[-2.65, 0.05, sz]} radius={0.02}>
-            <meshStandardMaterial color="#FACC15" />
-          </RoundedBox>
+          <RoundedBox key={si} args={[0.16, 0.10, 1.5]} position={[-2.65, 0.05, sz]} radius={0.02}><meshStandardMaterial color="#FACC15" /></RoundedBox>
         ))}
 
-        {[
-          [-2.6, 4.2], [2.6, 4.2], [-2.6, -3.5], [2.6, -3.5]
-        ].map(([cx, cz], idx) => (
+        {[[-2.6, 4.2], [2.6, 4.2], [-2.6, -3.5], [2.6, -3.5]].map(([cx, cz], idx) => (
           <group key={`piloti_${idx}`} position={[cx, 0, cz]}>
-            <RoundedBox args={[0.54, 3.2, 0.54]} position={[0, 1.6, 0]} radius={0.02} castShadow receiveShadow>
-              <meshStandardMaterial color="#F8FAFC" roughness={0.4} />
-            </RoundedBox>
-            <RoundedBox args={[0.56, 0.65, 0.56]} position={[0, 2.05, 0]} radius={0.015}>
-              <meshStandardMaterial color={idx % 2 === 0 ? '#EAB308' : '#0284C7'} roughness={0.35} />
-            </RoundedBox>
-            <RoundedBox args={[0.57, 0.14, 0.57]} position={[0, 1.66, 0]} radius={0.01}>
-              <meshStandardMaterial color="#15803D" />
-            </RoundedBox>
-            <RoundedBox args={[0.56, 1.58, 0.56]} position={[0, 0.79, 0]} radius={0.015}>
-              <meshStandardMaterial color="#475569" roughness={0.5} />
-            </RoundedBox>
+            <RoundedBox args={[0.54, 3.2, 0.54]} position={[0, 1.6, 0]} radius={0.02} castShadow receiveShadow><meshStandardMaterial color="#F8FAFC" roughness={0.4} /></RoundedBox>
+            <RoundedBox args={[0.56, 0.65, 0.56]} position={[0, 2.05, 0]} radius={0.015}><meshStandardMaterial color={idx % 2 === 0 ? '#EAB308' : '#0284C7'} roughness={0.35} /></RoundedBox>
+            <RoundedBox args={[0.57, 0.14, 0.57]} position={[0, 1.66, 0]} radius={0.01}><meshStandardMaterial color="#15803D" /></RoundedBox>
+            <RoundedBox args={[0.56, 1.58, 0.56]} position={[0, 0.79, 0]} radius={0.015}><meshStandardMaterial color="#475569" roughness={0.5} /></RoundedBox>
           </group>
         ))}
 
         <SmartCutawayWall1F wallSide="south" minOpacity={0.22}>
-          <RoundedBox args={[6.6, 1.1, 0.35]} position={[0, 2.75, 4.2]} radius={0.02} castShadow>
-            <meshStandardMaterial color="#3F3F46" roughness={0.4} metalness={0.3} />
-          </RoundedBox>
-          <mesh position={[0, 2.68, 4.39]}>
-            <planeGeometry args={[4.2, 0.78]} />
-            <meshBasicMaterial map={exteriorTextures.purpleBanner} />
-          </mesh>
+          <RoundedBox args={[6.6, 1.1, 0.35]} position={[0, 2.75, 4.2]} radius={0.02} castShadow><meshStandardMaterial color="#3F3F46" roughness={0.4} metalness={0.3} /></RoundedBox>
+          <mesh position={[0, 2.68, 4.39]}><planeGeometry args={[4.2, 0.78]} /><meshBasicMaterial map={exteriorTextures.purpleBanner} /></mesh>
         </SmartCutawayWall1F>
 
         <DetailedIoniq5EV position={[-1.25, 0, -1.35]} rotationY={Math.PI / 2} />
@@ -1984,306 +1778,154 @@ function OneFloorMasterpieceDiorama({
 
         {showRoomSigns && (
           <Billboard position={[0.5, 1.75, 2.2]}>
-            <mesh>
-              <planeGeometry args={[1.15, 0.52]} />
-              <meshBasicMaterial map={signs.parking} transparent />
-            </mesh>
+            <mesh><planeGeometry args={[1.15, 0.52]} /><meshBasicMaterial map={signs.parking} transparent /></mesh>
           </Billboard>
         )}
       </group>
 
-      {/* 3. 1층 메인 로비 대리석 홀 & 샹들리에 & 홍보물 키오스크 & 4인용 크롬 가죽 대기 의자 */}
+      {/* 3. 1층 메인 로비 */}
       <group>
-        <RoundedBox args={[9.0, 0.08, 8.8]} position={[0.3, 0.04, 0.0]} radius={0.02} receiveShadow>
-          <meshStandardMaterial map={marbleTex} roughness={0.25} />
-        </RoundedBox>
+        <RoundedBox args={[9.0, 0.08, 8.8]} position={[0.3, 0.04, 0.0]} radius={0.02} receiveShadow><meshStandardMaterial map={marbleTex} roughness={0.28} /></RoundedBox>
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-0.7, 0.085, 3.35]} receiveShadow><planeGeometry args={[2.2, 1.15]} /><meshStandardMaterial color="#991B1B" roughness={0.82} /></mesh>
 
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-0.7, 0.085, 3.35]} receiveShadow>
-          <planeGeometry args={[2.2, 1.15]} />
-          <meshStandardMaterial color="#991B1B" roughness={0.8} />
-        </mesh>
-
+        {/* 로비 샹들리에 */}
         <group position={[-0.5, 2.85, 0.2]}>
-          <mesh rotation={[Math.PI / 2, 0, 0]}>
-            <torusGeometry args={[0.85, 0.035, 16, 48]} />
-            <meshStandardMaterial color="#FACC15" emissive="#F59E0B" emissiveIntensity={1.2} metalness={0.8} />
-          </mesh>
-          <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, -0.18, 0]}>
-            <torusGeometry args={[0.52, 0.028, 16, 36]} />
-            <meshStandardMaterial color="#FEF08A" emissive="#FDE047" emissiveIntensity={1.5} />
-          </mesh>
-          <pointLight position={[0, -0.2, 0]} intensity={2.2} distance={9} color="#FEF3C7" />
+          <mesh rotation={[Math.PI / 2, 0, 0]}><torusGeometry args={[0.85, 0.035, 10, 28]} /><meshStandardMaterial color="#FACC15" emissive="#F59E0B" emissiveIntensity={1.1} metalness={0.8} /></mesh>
+          <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, -0.18, 0]}><torusGeometry args={[0.52, 0.028, 10, 24]} /><meshStandardMaterial color="#FEF08A" emissive="#FDE047" emissiveIntensity={1.3} /></mesh>
+          <pointLight position={[0, -0.2, 0]} intensity={2.0} distance={9} color="#FEF3C7" />
         </group>
 
-        <RoundedBox args={[1.35, 1.45, 0.20]} position={[-3.5, 0.72, 1.15]} radius={0.02} castShadow receiveShadow>
-          <meshStandardMaterial color="#F8FAFC" />
-        </RoundedBox>
-        <RoundedBox args={[1.38, 0.06, 0.24]} position={[-3.5, 1.46, 1.15]} radius={0.01}>
-          <meshStandardMaterial map={oakTex} />
-        </RoundedBox>
-        <RoundedBox args={[1.35, 1.45, 0.20]} position={[1.65, 0.72, 1.15]} radius={0.02} castShadow receiveShadow>
-          <meshStandardMaterial color="#F8FAFC" />
-        </RoundedBox>
-        <RoundedBox args={[1.38, 0.06, 0.24]} position={[1.65, 1.46, 1.15]} radius={0.01}>
-          <meshStandardMaterial map={oakTex} />
-        </RoundedBox>
+        {/* 방풍 가벽 2개 */}
+        <RoundedBox args={[1.35, 1.45, 0.20]} position={[-3.5, 0.72, 1.15]} radius={0.02} castShadow receiveShadow><meshStandardMaterial color="#F8FAFC" /></RoundedBox>
+        <RoundedBox args={[1.38, 0.06, 0.24]} position={[-3.5, 1.46, 1.15]} radius={0.01}><meshStandardMaterial map={oakTex} /></RoundedBox>
+        <RoundedBox args={[1.35, 1.45, 0.20]} position={[1.65, 0.72, 1.15]} radius={0.02} castShadow receiveShadow><meshStandardMaterial color="#F8FAFC" /></RoundedBox>
+        <RoundedBox args={[1.38, 0.06, 0.24]} position={[1.65, 1.46, 1.15]} radius={0.01}><meshStandardMaterial map={oakTex} /></RoundedBox>
 
+        {/* 좌측 4인용 크롬 가죽 대기석 & 다과 테이블 */}
         <group position={[-3.48, 0.08, -2.0]}>
           <FourSeaterChromeLobbyBench
             position={[0, 0, 0]}
             rotationY={Math.PI / 2}
             onSit={(offsetZ, seatNum) => {
-              onSitOnSofa({
-                x: -3.48,
-                z: -2.0 - offsetZ,
-                rotY: Math.PI / 2,
-                rowLabel: `1F 로비 4인용 가죽 대기 의자 (${seatNum}번석)`
-              });
+              onSitOnSofa({ x: -3.48, z: -2.0 - offsetZ, rotY: Math.PI / 2, rowLabel: `1F 로비 4인용 가죽 대기 의자 (${seatNum}번석)` });
             }}
           />
 
-          <group
-            position={[-0.60, 1.38, 0]}
-            rotation={[0, Math.PI / 2, 0]}
-            onClick={(e) => {
-              e.stopPropagation();
-              if (onOpenBrochureModal) onOpenBrochureModal();
-            }}
-          >
-            <RoundedBox args={[1.85, 0.92, 0.04]} radius={0.015} castShadow>
-              <meshStandardMaterial map={oakTex} />
-            </RoundedBox>
-            <mesh position={[0, 0, 0.025]}>
-              <planeGeometry args={[1.72, 0.80]} />
-              <meshStandardMaterial color="#D6B892" roughness={0.8} />
-            </mesh>
+          <group position={[-0.60, 1.38, 0]} rotation={[0, Math.PI / 2, 0]} onClick={(e) => { e.stopPropagation(); if (onOpenBrochureModal) onOpenBrochureModal(); }}>
+            <RoundedBox args={[1.85, 0.92, 0.04]} radius={0.015} castShadow><meshStandardMaterial map={oakTex} /></RoundedBox>
+            <mesh position={[0, 0, 0.025]}><planeGeometry args={[1.72, 0.80]} /><meshStandardMaterial color="#D6B892" roughness={0.8} /></mesh>
             {[-0.55, -0.18, 0.18, 0.55].map((nx, ni) => (
-              <RoundedBox key={ni} args={[0.26, 0.34, 0.01]} position={[nx, 0.05, 0.03]} radius={0.005}>
-                <meshBasicMaterial color={ni % 2 === 0 ? '#FFFFFF' : '#FEF9C3'} />
-              </RoundedBox>
+              <RoundedBox key={ni} args={[0.26, 0.34, 0.01]} position={[nx, 0.05, 0.03]} radius={0.005}><meshBasicMaterial color={ni % 2 === 0 ? '#FFFFFF' : '#FEF9C3'} /></RoundedBox>
             ))}
           </group>
 
           <group position={[1.05, 0, 0]}>
-            <RoundedBox args={[0.68, 0.055, 1.65]} position={[0, 0.52, 0]} radius={0.02} castShadow receiveShadow>
-              <meshStandardMaterial map={oakTex} roughness={0.3} />
-            </RoundedBox>
-            <RoundedBox args={[0.56, 0.42, 1.52]} position={[0, 0.28, 0]} radius={0.015} castShadow>
-              <meshStandardMaterial map={oakTex} roughness={0.4} />
-            </RoundedBox>
-            <group position={[-0.12, 0.55, 0.52]}>
-              <mesh position={[0, 0.08, 0]} castShadow>
-                <cylinderGeometry args={[0.045, 0.045, 0.16, 16]} />
-                <meshStandardMaterial color="#BAE6FD" transparent opacity={0.8} />
-              </mesh>
-            </group>
-            <RoundedBox args={[0.24, 0.04, 0.32]} position={[0.08, 0.56, -0.35]} radius={0.005}>
-              <meshStandardMaterial color="#FFFFFF" />
-            </RoundedBox>
+            <RoundedBox args={[0.68, 0.055, 1.65]} position={[0, 0.52, 0]} radius={0.02} castShadow receiveShadow><meshStandardMaterial map={oakTex} roughness={0.32} /></RoundedBox>
+            <RoundedBox args={[0.56, 0.42, 1.52]} position={[0, 0.28, 0]} radius={0.015} castShadow><meshStandardMaterial map={oakTex} roughness={0.4} /></RoundedBox>
+            <mesh position={[-0.12, 0.63, 0.52]} castShadow><cylinderGeometry args={[0.045, 0.045, 0.16, 12]} /><meshStandardMaterial color="#BAE6FD" transparent opacity={0.8} /></mesh>
+            <RoundedBox args={[0.24, 0.04, 0.32]} position={[0.08, 0.56, -0.35]} radius={0.005}><meshStandardMaterial color="#FFFFFF" /></RoundedBox>
           </group>
 
           {showRoomSigns && (
-            <Billboard position={[0.2, 1.65, 0]}>
-              <mesh>
-                <planeGeometry args={[1.18, 0.52]} />
-                <meshBasicMaterial map={signs.lounge} transparent />
-              </mesh>
-            </Billboard>
+            <Billboard position={[0.2, 1.65, 0]}><mesh><planeGeometry args={[1.18, 0.52]} /><meshBasicMaterial map={signs.lounge} transparent /></mesh></Billboard>
           )}
         </group>
 
+        {/* 북쪽 안내데스크 & 홍보물 키오스크 & 화분 3종 */}
         <group position={[-0.8, 0.08, -3.2]}>
           <group position={[0, 1.55, -1.05]}>
-            <RoundedBox args={[2.8, 1.65, 0.06]} radius={0.02} castShadow>
-              <meshStandardMaterial map={walnutTex} roughness={0.35} />
-            </RoundedBox>
-            <mesh position={[0, 0.12, 0.045]}>
-              <boxGeometry args={[0.09, 0.72, 0.03]} />
-              <meshStandardMaterial color="#FACC15" emissive="#F59E0B" emissiveIntensity={1.2} metalness={0.85} />
-            </mesh>
-            <mesh position={[0, 0.24, 0.045]}>
-              <boxGeometry args={[0.46, 0.09, 0.03]} />
-              <meshStandardMaterial color="#FACC15" emissive="#F59E0B" emissiveIntensity={1.2} metalness={0.85} />
-            </mesh>
+            <RoundedBox args={[2.8, 1.65, 0.06]} radius={0.02} castShadow><meshStandardMaterial map={walnutTex} roughness={0.38} /></RoundedBox>
+            <mesh position={[0, 0.12, 0.045]}><boxGeometry args={[0.09, 0.72, 0.03]} /><meshStandardMaterial color="#FACC15" emissive="#F59E0B" emissiveIntensity={1.1} metalness={0.85} /></mesh>
+            <mesh position={[0, 0.24, 0.045]}><boxGeometry args={[0.46, 0.09, 0.03]} /><meshStandardMaterial color="#FACC15" emissive="#F59E0B" emissiveIntensity={1.1} metalness={0.85} /></mesh>
           </group>
 
-          <RoundedBox args={[2.0, 0.90, 0.66]} position={[0, 0.45, 0]} radius={0.03} castShadow receiveShadow>
-            <meshStandardMaterial color="#F8FAFC" roughness={0.25} />
-          </RoundedBox>
+          <RoundedBox args={[2.0, 0.90, 0.66]} position={[0, 0.45, 0]} radius={0.03} castShadow receiveShadow><meshStandardMaterial color="#F8FAFC" roughness={0.25} /></RoundedBox>
           {Array.from({ length: 11 }).map((_, si) => (
-            <RoundedBox
-              key={si}
-              args={[0.05, 0.84, 0.03]}
-              position={[-0.85 + si * 0.17, 0.45, 0.33]}
-              radius={0.01}
-              castShadow
-            >
-              <meshStandardMaterial map={oakTex} />
-            </RoundedBox>
+            <RoundedBox key={si} args={[0.05, 0.84, 0.03]} position={[-0.85 + si * 0.17, 0.45, 0.33]} radius={0.01}><meshStandardMaterial map={oakTex} /></RoundedBox>
           ))}
-          <RoundedBox args={[2.12, 0.07, 0.74]} position={[0, 0.92, 0]} radius={0.02} castShadow>
-            <meshStandardMaterial map={walnutTex} roughness={0.25} />
-          </RoundedBox>
+          <RoundedBox args={[2.12, 0.07, 0.74]} position={[0, 0.92, 0]} radius={0.02} castShadow><meshStandardMaterial map={walnutTex} roughness={0.28} /></RoundedBox>
 
-          <group
-            position={[-0.95, 0, 0.55]}
-            onClick={(e) => {
-              e.stopPropagation();
-              if (onOpenBrochureModal) onOpenBrochureModal();
-            }}
-          >
-            <RoundedBox args={[0.46, 1.38, 0.10]} position={[0, 0.69, 0]} rotation={[-0.12, 0.25, 0]} radius={0.02} castShadow>
-              <meshStandardMaterial color="#0F172A" metalness={0.7} roughness={0.2} />
-            </RoundedBox>
-            <mesh position={[0.01, 0.78, 0.055]} rotation={[-0.12, 0.25, 0]}>
-              <planeGeometry args={[0.38, 0.82]} />
-              <meshBasicMaterial map={exteriorTextures.blueLedSign} />
-            </mesh>
-            <RoundedBox args={[0.36, 0.85, 0.28]} position={[0.45, 0.42, 0]} radius={0.02} castShadow>
-              <meshStandardMaterial map={oakTex} />
-            </RoundedBox>
+          {/* 데스크 위 미니 십자가 스탠드 & 방명록 */}
+          <group position={[0.62, 0.96, 0.06]}>
+            <RoundedBox args={[0.14, 0.025, 0.10]} position={[0, 0.012, 0]} radius={0.005}><meshStandardMaterial color="#78350F" /></RoundedBox>
+            <mesh position={[0, 0.14, 0]}><boxGeometry args={[0.025, 0.24, 0.02]} /><meshStandardMaterial color="#EAB308" metalness={0.8} /></mesh>
+            <mesh position={[0, 0.18, 0]}><boxGeometry args={[0.14, 0.025, 0.02]} /><meshStandardMaterial color="#EAB308" metalness={0.8} /></mesh>
+          </group>
+          <RoundedBox args={[0.32, 0.03, 0.22]} position={[-0.32, 0.97, 0.08]} radius={0.005}><meshStandardMaterial color="#FEF3C7" /></RoundedBox>
+
+          {/* 디지털 주보 키오스크 */}
+          <group position={[-0.95, 0, 0.55]} onClick={(e) => { e.stopPropagation(); if (onOpenBrochureModal) onOpenBrochureModal(); }}>
+            <RoundedBox args={[0.46, 1.38, 0.10]} position={[0, 0.69, 0]} rotation={[-0.12, 0.25, 0]} radius={0.02} castShadow><meshStandardMaterial color="#0F172A" metalness={0.7} roughness={0.2} /></RoundedBox>
+            <mesh position={[0.01, 0.78, 0.055]} rotation={[-0.12, 0.25, 0]}><planeGeometry args={[0.38, 0.82]} /><meshBasicMaterial map={exteriorTextures.blueLedSign} /></mesh>
+            <RoundedBox args={[0.36, 0.85, 0.28]} position={[0.45, 0.42, 0]} radius={0.02} castShadow><meshStandardMaterial map={oakTex} /></RoundedBox>
             {[0.45, 0.62, 0.78].map((py, pi) => (
-              <RoundedBox key={pi} args={[0.28, 0.16, 0.03]} position={[0.45, py, 0.12]} rotation={[-0.25, 0, 0]} radius={0.005}>
-                <meshBasicMaterial color={['#FEF08A', '#BAE6FD', '#FBCFE8'][pi]} />
-              </RoundedBox>
+              <RoundedBox key={pi} args={[0.28, 0.16, 0.03]} position={[0.45, py, 0.12]} rotation={[-0.25, 0, 0]} radius={0.005}><meshBasicMaterial color={['#FEF08A', '#BAE6FD', '#FBCFE8'][pi]} /></RoundedBox>
             ))}
           </group>
 
           {showRoomSigns && (
             <Billboard position={[-0.65, 1.85, 0.55]}>
-              <mesh
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (onOpenBrochureModal) onOpenBrochureModal();
-                }}
-              >
-                <planeGeometry args={[1.18, 0.50]} />
-                <meshBasicMaterial map={signs.brochure} transparent />
+              <mesh onClick={(e) => { e.stopPropagation(); if (onOpenBrochureModal) onOpenBrochureModal(); }}>
+                <planeGeometry args={[1.18, 0.50]} /><meshBasicMaterial map={signs.brochure} transparent />
               </mesh>
             </Billboard>
           )}
 
+          {/* 미니 커피 자판기 */}
           <group position={[1.45, 0, -0.25]}>
-            <RoundedBox args={[0.58, 1.25, 0.52]} position={[0, 0.625, 0]} radius={0.02} castShadow>
-              <meshStandardMaterial color="#18181B" roughness={0.3} />
-            </RoundedBox>
-            <mesh position={[0, 0.82, 0.265]}>
-              <planeGeometry args={[0.44, 0.48]} />
-              <meshBasicMaterial color="#FEF3C7" />
-            </mesh>
+            <RoundedBox args={[0.58, 1.25, 0.52]} position={[0, 0.625, 0]} radius={0.02} castShadow><meshStandardMaterial color="#18181B" roughness={0.32} /></RoundedBox>
+            <mesh position={[0, 0.82, 0.265]}><planeGeometry args={[0.44, 0.48]} /><meshBasicMaterial color="#FEF3C7" /></mesh>
+            <RoundedBox args={[0.36, 0.22, 0.06]} position={[0, 0.36, 0.25]} radius={0.01}><meshStandardMaterial color="#334155" /></RoundedBox>
           </group>
 
+          {/* 고도화 관엽식물 3종 */}
           <BotanicalMultiLeafPlant position={[-1.55, 0, 0.15]} variant="ficus_tree" scale={1.08} />
           <BotanicalMultiLeafPlant position={[2.05, 0, 0.15]} variant="dracaena" scale={1.0} />
           <BotanicalMultiLeafPlant position={[-2.15, 0, 2.85]} variant="palm" scale={1.05} />
         </group>
 
-        <group
+        {/* 고도화 클래식 원목 교회 장의자 */}
+        <ClassicChurchPew
           position={[0.25, 0.08, 1.65]}
-          onClick={(e) => {
-            e.stopPropagation();
-            onSitOnSofa({ x: 0.25, z: 1.65, rotY: 0, rowLabel: '1F 로비 클래식 원목 벤치석' });
-          }}
-        >
-          <RoundedBox args={[1.55, 0.06, 0.44]} position={[0, 0.36, 0]} radius={0.015} castShadow receiveShadow>
-            <meshStandardMaterial map={oakTex} />
-          </RoundedBox>
-          <RoundedBox args={[1.50, 0.05, 0.40]} position={[0, 0.40, 0]} radius={0.015}>
-            <meshStandardMaterial color="#5C3418" />
-          </RoundedBox>
-          <RoundedBox args={[1.55, 0.42, 0.06]} position={[0, 0.58, -0.19]} rotation={[-0.12, 0, 0]} radius={0.015} castShadow>
-            <meshStandardMaterial map={oakTex} />
-          </RoundedBox>
-          {[-0.74, 0.74].map((bx, bi) => (
-            <RoundedBox key={bi} args={[0.06, 0.52, 0.46]} position={[bx, 0.26, 0]} radius={0.01} castShadow>
-              <meshStandardMaterial map={oakTex} />
-            </RoundedBox>
-          ))}
-        </group>
+          width={1.65}
+          onSit={() => onSitOnSofa({ x: 0.25, z: 1.65, rotY: 0, rowLabel: '1F 로비 클래식 원목 장의자석' })}
+        />
       </group>
 
-      {/* 4. 좌측 벽 주차장 연결 측면 출입문 & 하단 정문 외관 */}
-      <RoundedBox args={[0.20, 1.5, 5.8]} position={[-4.2, 0.75, -1.5]} radius={0.02} castShadow receiveShadow>
-        <meshStandardMaterial color="#F1F5F9" />
-      </RoundedBox>
-      <RoundedBox args={[0.20, 1.5, 1.4]} position={[-4.2, 0.75, 3.7]} radius={0.02} castShadow receiveShadow>
-        <meshStandardMaterial color="#F1F5F9" />
-      </RoundedBox>
+      {/* 4. 좌측 벽 & 정문 외관 */}
+      <RoundedBox args={[0.20, 1.5, 5.8]} position={[-4.2, 0.75, -1.5]} radius={0.02} castShadow receiveShadow><meshStandardMaterial color="#F1F5F9" /></RoundedBox>
+      <RoundedBox args={[0.20, 1.5, 1.4]} position={[-4.2, 0.75, 3.7]} radius={0.02} castShadow receiveShadow><meshStandardMaterial color="#F1F5F9" /></RoundedBox>
       <group position={[-4.2, 0, 2.2]}>
-        <RoundedBox args={[0.22, 2.15, 0.10]} position={[0, 1.08, -0.7]} radius={0.01}>
-          <meshStandardMaterial color="#1E293B" />
-        </RoundedBox>
-        <RoundedBox args={[0.22, 2.15, 0.10]} position={[0, 1.08, 0.7]} radius={0.01}>
-          <meshStandardMaterial color="#1E293B" />
-        </RoundedBox>
-        <mesh position={[-0.25, 1.05, -0.35]} rotation={[0, 0.55, 0]}>
-          <boxGeometry args={[0.06, 2.0, 0.72]} />
-          <meshStandardMaterial color="#BAE6FD" transparent opacity={0.55} />
-        </mesh>
+        <RoundedBox args={[0.22, 2.15, 0.10]} position={[0, 1.08, -0.7]} radius={0.01}><meshStandardMaterial color="#1E293B" /></RoundedBox>
+        <RoundedBox args={[0.22, 2.15, 0.10]} position={[0, 1.08, 0.7]} radius={0.01}><meshStandardMaterial color="#1E293B" /></RoundedBox>
+        <mesh position={[-0.25, 1.05, -0.35]} rotation={[0, 0.55, 0]}><boxGeometry args={[0.06, 2.0, 0.72]} /><meshStandardMaterial color="#BAE6FD" transparent opacity={0.55} /></mesh>
       </group>
 
       <SmartCutawayWall1F wallSide="south" minOpacity={0.22}>
         <group position={[0, 0, 4.4]}>
           <group position={[-2.45, 1.15, 0.08]}>
-            <RoundedBox args={[1.15, 2.2, 0.16]} radius={0.02} castShadow>
-              <meshStandardMaterial color="#18181B" />
-            </RoundedBox>
-            <mesh position={[0, 0, 0.09]}>
-              <planeGeometry args={[1.05, 2.08]} />
-              <meshBasicMaterial map={exteriorTextures.blueLedSign} />
-            </mesh>
+            <RoundedBox args={[1.15, 2.2, 0.16]} radius={0.02} castShadow><meshStandardMaterial color="#18181B" /></RoundedBox>
+            <mesh position={[0, 0, 0.09]}><planeGeometry args={[1.05, 2.08]} /><meshBasicMaterial map={exteriorTextures.blueLedSign} /></mesh>
           </group>
-
           <group position={[-0.7, 0, 0]}>
-            <RoundedBox args={[2.35, 0.12, 0.24]} position={[0, 2.22, 0]} radius={0.01}>
-              <meshStandardMaterial color="#18181B" />
-            </RoundedBox>
-            <mesh position={[-0.85, 1.1, 0.35]} rotation={[0, -0.5, 0]}>
-              <boxGeometry args={[0.95, 2.1, 0.06]} />
-              <meshStandardMaterial color="#BAE6FD" transparent opacity={0.5} />
-            </mesh>
-            <mesh position={[0.85, 1.1, 0.35]} rotation={[0, 0.5, 0]}>
-              <boxGeometry args={[0.95, 2.1, 0.06]} />
-              <meshStandardMaterial color="#BAE6FD" transparent opacity={0.5} />
-            </mesh>
-
+            <RoundedBox args={[2.35, 0.12, 0.24]} position={[0, 2.22, 0]} radius={0.01}><meshStandardMaterial color="#18181B" /></RoundedBox>
+            <mesh position={[-0.85, 1.1, 0.35]} rotation={[0, -0.5, 0]}><boxGeometry args={[0.95, 2.1, 0.06]} /><meshStandardMaterial color="#BAE6FD" transparent opacity={0.5} /></mesh>
+            <mesh position={[0.85, 1.1, 0.35]} rotation={[0, 0.5, 0]}><boxGeometry args={[0.95, 2.1, 0.06]} /><meshStandardMaterial color="#BAE6FD" transparent opacity={0.5} /></mesh>
             {[-1.12, 1.12].map((gx, gi) => (
-              <RoundedBox key={gi} args={[0.18, 2.15, 0.18]} position={[gx, 1.08, 0.12]} radius={0.04}>
-                <meshStandardMaterial color="#15803D" />
-              </RoundedBox>
+              <RoundedBox key={gi} args={[0.18, 2.15, 0.18]} position={[gx, 1.08, 0.12]} radius={0.04}><meshStandardMaterial color="#15803D" /></RoundedBox>
             ))}
-            <RoundedBox args={[2.4, 0.20, 0.20]} position={[0, 2.18, 0.12]} radius={0.04}>
-              <meshStandardMaterial color="#15803D" />
-            </RoundedBox>
-
-            <RoundedBox
-              args={[3.6, 0.45, 0.95]}
-              position={[-0.45, 2.52, 0.38]}
-              rotation={[0.32, 0, 0]}
-              radius={0.03}
-              castShadow
-            >
-              <meshStandardMaterial color="#064E3B" roughness={0.6} />
-            </RoundedBox>
-            <mesh position={[-0.45, 3.12, 0.15]}>
-              <planeGeometry args={[3.4, 0.95]} />
-              <meshBasicMaterial map={exteriorTextures.churchSign} />
-            </mesh>
+            <RoundedBox args={[2.4, 0.20, 0.20]} position={[0, 2.18, 0.12]} radius={0.04}><meshStandardMaterial color="#15803D" /></RoundedBox>
+            <RoundedBox args={[3.6, 0.45, 0.95]} position={[-0.45, 2.52, 0.38]} rotation={[0.32, 0, 0]} radius={0.03} castShadow><meshStandardMaterial color="#064E3B" roughness={0.6} /></RoundedBox>
+            <mesh position={[-0.45, 3.12, 0.15]}><planeGeometry args={[3.4, 0.95]} /><meshBasicMaterial map={exteriorTextures.churchSign} /></mesh>
           </group>
-
           <group position={[2.65, 0, 0]}>
-            <RoundedBox args={[4.3, 2.8, 0.24]} position={[0, 1.4, 0]} radius={0.02} castShadow receiveShadow>
-              <meshStandardMaterial color="#E7E5E4" />
-            </RoundedBox>
-            <mesh position={[0.2, 1.65, 0.14]}>
-              <planeGeometry args={[2.6, 1.35]} />
-              <meshBasicMaterial map={exteriorTextures.purpleBanner} />
-            </mesh>
+            <RoundedBox args={[4.3, 2.8, 0.24]} position={[0, 1.4, 0]} radius={0.02} castShadow receiveShadow><meshStandardMaterial color="#E7E5E4" /></RoundedBox>
+            <mesh position={[0.2, 1.65, 0.14]}><planeGeometry args={[2.6, 1.35]} /><meshBasicMaterial map={exteriorTextures.purpleBanner} /></mesh>
           </group>
         </group>
       </SmartCutawayWall1F>
 
-      {/* 5. 우측 3단 수직 코어 (스테인리스 자동 개폐 엘리베이터 · 계단 · B1F계단) */}
+      {/* 5. 우측 3단 수직 코어 */}
       <AnimatedStainlessElevator1F
         position={[3.05, 0.08, -2.85]}
         rotationY={-Math.PI / 2}
@@ -2294,93 +1936,38 @@ function OneFloorMasterpieceDiorama({
         showRoomSigns={showRoomSigns}
       />
 
-      <group
-        position={[3.55, 0, -0.1]}
-        onClick={(e) => {
-          e.stopPropagation();
-          onSelectZone(ZONES_1F[4]);
-        }}
-      >
-        <RoundedBox args={[2.3, 0.1, 2.6]} position={[0, 0.05, 0]} radius={0.01} receiveShadow>
-          <meshStandardMaterial color="#E2E8F0" />
-        </RoundedBox>
+      <group position={[3.55, 0, -0.1]} onClick={(e) => { e.stopPropagation(); onSelectZone(ZONES_1F[4]); }}>
+        <RoundedBox args={[2.3, 0.1, 2.6]} position={[0, 0.05, 0]} radius={0.01} receiveShadow><meshStandardMaterial color="#E2E8F0" /></RoundedBox>
         {Array.from({ length: 7 }).map((_, i) => (
-          <RoundedBox
-            key={`up1_${i}`}
-            args={[0.28, 0.12 + i * 0.10, 1.6]}
-            position={[-0.8 + i * 0.26, (0.12 + i * 0.10) / 2, 0]}
-            radius={0.01}
-            castShadow
-            receiveShadow
-          >
+          <RoundedBox key={`up1_${i}`} args={[0.28, 0.12 + i * 0.10, 1.6]} position={[-0.8 + i * 0.26, (0.12 + i * 0.10) / 2, 0]} radius={0.01} castShadow receiveShadow>
             <meshStandardMaterial color={i % 2 === 0 ? '#F8FAFC' : '#94A3B8'} />
           </RoundedBox>
         ))}
-        <RoundedBox args={[2.4, 1.35, 0.16]} position={[0, 0.68, -1.35]} radius={0.01} castShadow>
-          <meshStandardMaterial color="#F1F5F9" />
-        </RoundedBox>
-        <RoundedBox args={[2.4, 1.35, 0.16]} position={[0, 0.68, 1.35]} radius={0.01} castShadow>
-          <meshStandardMaterial color="#F1F5F9" />
-        </RoundedBox>
-        {showRoomSigns && (
-          <Billboard position={[0, 1.95, 0]}>
-            <mesh>
-              <planeGeometry args={[1.15, 0.52]} />
-              <meshBasicMaterial map={signs.upStairs} transparent />
-            </mesh>
-          </Billboard>
-        )}
+        <RoundedBox args={[2.4, 1.35, 0.16]} position={[0, 0.68, -1.35]} radius={0.01} castShadow><meshStandardMaterial color="#F1F5F9" /></RoundedBox>
+        <RoundedBox args={[2.4, 1.35, 0.16]} position={[0, 0.68, 1.35]} radius={0.01} castShadow><meshStandardMaterial color="#F1F5F9" /></RoundedBox>
+        {showRoomSigns && <Billboard position={[0, 1.95, 0]}><mesh><planeGeometry args={[1.15, 0.52]} /><meshBasicMaterial map={signs.upStairs} transparent /></mesh></Billboard>}
       </group>
 
-      <group
-        position={[3.55, 0, 2.85]}
-        onClick={(e) => {
-          e.stopPropagation();
-          onSelectZone(ZONES_1F[5]);
-        }}
-      >
-        <RoundedBox args={[2.3, 0.1, 2.7]} position={[0, 0.05, 0]} radius={0.01} receiveShadow>
-          <meshStandardMaterial color="#CBD5E1" />
-        </RoundedBox>
+      <group position={[3.55, 0, 2.85]} onClick={(e) => { e.stopPropagation(); onSelectZone(ZONES_1F[5]); }}>
+        <RoundedBox args={[2.3, 0.1, 2.7]} position={[0, 0.05, 0]} radius={0.01} receiveShadow><meshStandardMaterial color="#CBD5E1" /></RoundedBox>
         {Array.from({ length: 6 }).map((_, i) => (
-          <RoundedBox
-            key={`b1_${i}`}
-            args={[0.28, 0.48 - i * 0.07, 1.5]}
-            position={[-0.7 + i * 0.26, (0.48 - i * 0.07) / 2, 0]}
-            radius={0.01}
-            castShadow
-          >
+          <RoundedBox key={`b1_${i}`} args={[0.28, 0.48 - i * 0.07, 1.5]} position={[-0.7 + i * 0.26, (0.48 - i * 0.07) / 2, 0]} radius={0.01} castShadow>
             <meshStandardMaterial color={i % 2 === 0 ? '#94A3B8' : '#64748B'} />
           </RoundedBox>
         ))}
-        <RoundedBox args={[0.16, 1.4, 1.2]} position={[-1.2, 0.7, -0.75]} radius={0.01} castShadow>
-          <meshStandardMaterial color="#F1F5F9" />
-        </RoundedBox>
-        <RoundedBox args={[0.08, 1.85, 0.92]} position={[-1.2, 0.92, 0.35]} rotation={[0, -0.45, 0]} radius={0.015} castShadow>
-          <meshStandardMaterial color="#64748B" />
-        </RoundedBox>
-        {showRoomSigns && (
-          <Billboard position={[0, 1.95, 0]}>
-            <mesh>
-              <planeGeometry args={[1.15, 0.52]} />
-              <meshBasicMaterial map={signs.b1Stairs} transparent />
-            </mesh>
-          </Billboard>
-        )}
+        <RoundedBox args={[0.16, 1.4, 1.2]} position={[-1.2, 0.7, -0.75]} radius={0.01} castShadow><meshStandardMaterial color="#F1F5F9" /></RoundedBox>
+        <RoundedBox args={[0.08, 1.85, 0.92]} position={[-1.2, 0.92, 0.35]} rotation={[0, -0.45, 0]} radius={0.015} castShadow><meshStandardMaterial color="#64748B" /></RoundedBox>
+        {showRoomSigns && <Billboard position={[0, 1.95, 0]}><mesh><planeGeometry args={[1.15, 0.52]} /><meshBasicMaterial map={signs.b1Stairs} transparent /></mesh></Billboard>}
       </group>
 
       <SmartCutawayWall1F wallSide="north">
-        <RoundedBox args={[9.2, 2.5, 0.24]} position={[0.3, 1.25, -4.4]} radius={0.02} receiveShadow>
-          <meshStandardMaterial color="#F1F5F9" />
-        </RoundedBox>
+        <RoundedBox args={[9.2, 2.5, 0.24]} position={[0.3, 1.25, -4.4]} radius={0.02} receiveShadow><meshStandardMaterial color="#F1F5F9" /></RoundedBox>
       </SmartCutawayWall1F>
       <SmartCutawayWall1F wallSide="east">
-        <RoundedBox args={[0.24, 2.5, 9.0]} position={[4.8, 1.25, 0.0]} radius={0.02} receiveShadow>
-          <meshStandardMaterial color="#F1F5F9" />
-        </RoundedBox>
+        <RoundedBox args={[0.24, 2.5, 9.0]} position={[4.8, 1.25, 0.0]} radius={0.02} receiveShadow><meshStandardMaterial color="#F1F5F9" /></RoundedBox>
       </SmartCutawayWall1F>
 
-      {/* 6. 로비 NPC */}
+      {/* 6. 로비 NPC (전 층 공용 캐릭터) */}
       {NPCS_1F.map((npc, idx) => {
         const isTalking = idx === activeNpcChatIdx % NPCS_1F.length;
         const msgList = npc.dialogues || [];
@@ -2388,7 +1975,7 @@ function OneFloorMasterpieceDiorama({
         const isBlessingNow = holyLightEvent && holyLightEvent.pastorName === npc.name;
 
         return (
-          <SmoothChibiAvatar1F
+          <SharedChibiAvatar
             key={npc.id}
             position={[npc.x, 0.08, npc.z]}
             patrolZ={npc.patrolZ || null}
@@ -2404,30 +1991,19 @@ function OneFloorMasterpieceDiorama({
             hairColor={npc.hair}
             speechBubbleText={msg}
             seedOffset={idx * 1.5}
-            onClick={(e) => {
-              e.stopPropagation();
-              if (onSelectNpcForChat) onSelectNpcForChat(npc);
-            }}
+            onClick={(e) => { e.stopPropagation(); if (onSelectNpcForChat) onSelectNpcForChat(npc); }}
           />
         );
       })}
 
-      {/* 7. 🌐 실시간 멀티플레이어로 접속한 다른 성도들 렌더링 */}
+      {/* 7. 멀티플레이어 원격 성도 */}
       {(remotePeers || []).map((peer) => (
-        <RemoteMultiplayerAvatar1F
-          key={peer.clientId}
-          peer={peer}
-          onClickPeer={onSelectRemotePeer}
-        />
+        <RemoteMultiplayerAvatar1F key={peer.clientId} peer={peer} onClickPeer={onSelectRemotePeer} />
       ))}
 
-      {/* 8. ✨ 축도(Benediction) 발동 시 캐릭터에게 쏟아지는 홀리라이트 이펙트 */}
+      {/* 8. 축도 홀리라이트 */}
       {holyLightEvent && (
-        <HolyLightBeamEffect
-          targetPos={holyLightEvent.targetPos}
-          pastorName={holyLightEvent.pastorName}
-          targetName={holyLightEvent.targetName}
-        />
+        <HolyLightBeamEffect targetPos={holyLightEvent.targetPos} pastorName={holyLightEvent.pastorName} targetName={holyLightEvent.targetName} />
       )}
 
       {/* 9. 7대 상호작용 마커 */}
@@ -2437,13 +2013,9 @@ function OneFloorMasterpieceDiorama({
           zone={z}
           isSelected={activeZoneId === z.id}
           onSelect={(sel) => {
-            if (sel.isSeatZone && sel.seatTarget) {
-              onSitOnSofa(sel.seatTarget);
-            } else if (sel.isBrochureZone && onOpenBrochureModal) {
-              onOpenBrochureModal();
-            } else {
-              onSelectZone(sel);
-            }
+            if (sel.isSeatZone && sel.seatTarget) onSitOnSofa(sel.seatTarget);
+            else if (sel.isBrochureZone && onOpenBrochureModal) onOpenBrochureModal();
+            else onSelectZone(sel);
           }}
         />
       ))}
@@ -2452,7 +2024,7 @@ function OneFloorMasterpieceDiorama({
 }
 
 // =====================================================================
-// 🚶‍♂️ 내 플레이어 아바타 컨트롤러 (동적 유저 간 충돌 방어 포함)
+// 🚶‍♂️ 모바일 최적화 플레이어 컨트롤러 (useFrame 내 setState 병목 완전 제거!)
 // =====================================================================
 function PlayerController1F({
   waypoints,
@@ -2466,50 +2038,39 @@ function PlayerController1F({
   remotePeers,
   onPositionUpdate
 }) {
+  const playerGroupRef = useRef();
   const wpIndexRef = useRef(0);
-  const [renderState, setRenderState] = useState({
-    pos: [playerIdxRef.current[0], 0.08, playerIdxRef.current[2]],
-    rotY: Math.PI,
-    walking: false
-  });
+  const walkingRef = useRef(false);
+  const [isWalkingState, setIsWalkingState] = useState(false);
 
-  useEffect(() => {
-    wpIndexRef.current = 0;
-  }, [waypoints]);
+  useEffect(() => { wpIndexRef.current = 0; }, [waypoints]);
 
   const nameTagTex = useMemo(() => {
     const isPastor = isAuthorizedPastor(playerName, playerOffice);
     return makeCanvasTexture((ctx, w, h) => {
       ctx.fillStyle = isPastor ? 'rgba(88, 28, 135, 0.96)' : 'rgba(30, 33, 40, 0.95)';
-      ctx.beginPath();
-      ctx.roundRect(6, 6, w - 12, h - 12, 48);
-      ctx.fill();
-      ctx.lineWidth = 4;
-      ctx.strokeStyle = isPastor ? '#FACC15' : 'rgba(56, 189, 248, 0.65)';
-      ctx.stroke();
-
+      ctx.beginPath(); ctx.roundRect(6, 6, w - 12, h - 12, 48); ctx.fill();
+      ctx.lineWidth = 4; ctx.strokeStyle = isPastor ? '#FACC15' : 'rgba(56, 189, 248, 0.65)'; ctx.stroke();
       ctx.fillStyle = isPastor ? '#FACC15' : '#38BDF8';
-      ctx.beginPath();
-      ctx.arc(48, h / 2, 15, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.fillStyle = '#FFFFFF';
-      ctx.font = '900 35px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
+      ctx.beginPath(); ctx.arc(48, h / 2, 15, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#FFFFFF'; ctx.font = '900 35px sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText(`나 · ${isPastor ? '✝️' : ''}${playerName}`, w / 2 + 18, h / 2 + 2);
-    }, 540, 110);
+    }, 460, 96);
   }, [playerName, playerOffice]);
 
+  useEffect(() => () => nameTagTex.dispose(), [nameTagTex]);
+
   useFrame((_, delta) => {
+    if (!playerGroupRef.current) return;
+
     if (seatedInfo) {
       playerIdxRef.current = [seatedInfo.x, 0.10, seatedInfo.z];
-      if (renderState.walking || renderState.pos[0] !== seatedInfo.x || renderState.pos[2] !== seatedInfo.z) {
-        setRenderState({
-          pos: [seatedInfo.x, 0.10, seatedInfo.z],
-          rotY: seatedInfo.rotY ?? Math.PI / 2,
-          walking: false
-        });
+      playerGroupRef.current.position.set(seatedInfo.x, 0.10, seatedInfo.z);
+      playerGroupRef.current.rotation.y = seatedInfo.rotY ?? Math.PI / 2;
+      if (walkingRef.current) {
+        walkingRef.current = false;
+        setIsWalkingState(false);
       }
       return;
     }
@@ -2526,44 +2087,48 @@ function PlayerController1F({
 
     if (dist > 0.08) {
       const step = Math.min(dist, delta * 4.2);
-      const rawNx = cx + (dx / dist) * step;
-      const rawNz = cz + (dz / dist) * step;
-      const [nx, nz] = resolveCollision1F(rawNx, rawNz, 0.28, remotePeers);
+      const [nx, nz] = resolveCollision1F(cx + (dx / dist) * step, cz + (dz / dist) * step, 0.28, remotePeers);
       const ny = nx >= -4.2 && nz <= 4.4 ? 0.08 : 0.02;
-      playerIdxRef.current = [nx, ny, nz];
       const angle = Math.atan2(dx, dz);
-      setRenderState({
-        pos: [nx, ny, nz],
-        rotY: angle,
-        walking: true
-      });
+
+      playerIdxRef.current = [nx, ny, nz];
+      playerGroupRef.current.position.set(nx, ny, nz);
+      playerGroupRef.current.rotation.y = angle;
+
+      if (!walkingRef.current) {
+        walkingRef.current = true;
+        setIsWalkingState(true);
+      }
       onPositionUpdate(nx, nz, angle);
     } else {
       if (wpIndexRef.current < waypoints.length - 1) {
         wpIndexRef.current += 1;
-      } else if (renderState.walking) {
-        setRenderState((prev) => ({ ...prev, walking: false }));
+      } else if (walkingRef.current) {
+        walkingRef.current = false;
+        setIsWalkingState(false);
       }
     }
   });
 
   return (
-    <SmoothChibiAvatar1F
-      position={renderState.pos}
-      rotationY={renderState.rotY}
-      gender={avatarConfig.gender}
-      hairStyle={avatarConfig.hairStyle}
-      isSkirt={Boolean(avatarConfig.isSkirt)}
-      hasSunglasses={Boolean(avatarConfig.hasSunglasses)}
-      isWalking={renderState.walking}
-      isSeated={Boolean(seatedInfo)}
-      emote={emote}
-      shirtColor={avatarConfig.shirtColor}
-      pantsColor={avatarConfig.pantsColor}
-      hairColor={avatarConfig.hairColor}
-      nameTagTexture={nameTagTex}
-      speechBubbleText={myChatBubble ? `${playerName}: ${myChatBubble}` : null}
-    />
+    <group ref={playerGroupRef} position={[playerIdxRef.current[0], 0.08, playerIdxRef.current[2]]} rotation={[0, Math.PI, 0]}>
+      <SharedChibiAvatar
+        position={[0, 0, 0]}
+        rotationY={0}
+        gender={avatarConfig.gender}
+        hairStyle={avatarConfig.hairStyle}
+        isSkirt={Boolean(avatarConfig.isSkirt)}
+        hasSunglasses={Boolean(avatarConfig.hasSunglasses)}
+        isWalking={isWalkingState}
+        isSeated={Boolean(seatedInfo)}
+        emote={emote}
+        shirtColor={avatarConfig.shirtColor}
+        pantsColor={avatarConfig.pantsColor}
+        hairColor={avatarConfig.hairColor}
+        nameTagTexture={nameTagTex}
+        speechBubbleText={myChatBubble ? `${playerName}: ${myChatBubble}` : null}
+      />
+    </group>
   );
 }
 
@@ -2575,13 +2140,8 @@ function InitialCameraSetup1F({ controlsRef }) {
     if (initRef.current) return;
     initRef.current = true;
     const isMobile = size.width < 640;
-    if (isMobile) {
-      camera.position.set(-2.5, 14.5, 14.5);
-      camera.fov = 42;
-    } else {
-      camera.position.set(-2.2, 11.8, 12.2);
-      camera.fov = 36;
-    }
+    camera.position.set(isMobile ? -2.5 : -2.2, isMobile ? 14.5 : 11.8, isMobile ? 14.5 : 12.2);
+    camera.fov = isMobile ? 42 : 36;
     camera.updateProjectionMatrix();
     if (controlsRef.current) {
       controlsRef.current.target.set(-1.2, 0.5, 0.5);
@@ -2607,20 +2167,14 @@ const DEFAULT_AVATAR_CONFIG = {
 
 export default function VirtualChurchLobby({ setActiveScreen, onChangeFloor }) {
   const authUser = useAppStore((state) => state.authUser);
+  const isMobile = useMemo(() => (typeof window !== 'undefined' ? window.innerWidth < 768 : false), []);
+
   const playerName =
-    authUser?.name ||
-    authUser?.user_name ||
-    authUser?.nickname ||
-    localStorage.getItem('login_user_name') ||
-    '정신동';
+    authUser?.name || authUser?.user_name || authUser?.nickname || localStorage.getItem('login_user_name') || '정신동';
   const playerOffice =
-    authUser?.office ||
-    authUser?.role ||
-    localStorage.getItem('login_user_office') ||
-    '성도';
+    authUser?.office || authUser?.role || localStorage.getItem('login_user_office') || '성도';
   const canPlayerBless = isAuthorizedPastor(playerName, playerOffice);
 
-  // 고유 세션 키 & 두 사람이 동시에 들어와도 서로 겹치지 않도록 원형 분산 스폰 오프셋 부여
   const clientIdRef = useRef(`peer1f_${playerName}_${Math.random().toString(36).slice(2, 8)}`);
   const initialSpawnPos = useMemo(() => {
     const randAngle = Math.random() * Math.PI * 2;
@@ -2641,31 +2195,23 @@ export default function VirtualChurchLobby({ setActiveScreen, onChangeFloor }) {
   const lastSyncTimeRef = useRef(0);
   const peersMapRef = useRef({});
 
-  // 메타버스 최초 입장 시 무조건 1층 로비로 시작화면 강제 고정
   useEffect(() => {
     const hasEnteredSession = sessionStorage.getItem('gtc_metaverse_session_entered');
     if (!hasEnteredSession) {
       sessionStorage.setItem('gtc_metaverse_session_entered', '1');
       localStorage.setItem('metaverse_active_floor', '1F');
-      if (typeof onChangeFloor === 'function') {
-        onChangeFloor('1F');
-      }
+      if (typeof onChangeFloor === 'function') onChangeFloor('1F');
     }
   }, [onChangeFloor]);
 
-  // 아바타 커스터마이징 상태 & 3D 프리뷰 모달 내 포즈 상태
   const [avatarConfig, setAvatarConfig] = useState(() => {
     try {
       const saved = localStorage.getItem('gtc_metaverse_avatar_v1');
       return saved ? { ...DEFAULT_AVATAR_CONFIG, ...JSON.parse(saved) } : DEFAULT_AVATAR_CONFIG;
-    } catch {
-      return DEFAULT_AVATAR_CONFIG;
-    }
+    } catch { return DEFAULT_AVATAR_CONFIG; }
   });
-  const [showAvatarModal, setShowAvatarModal] = useState(() => {
-    return !localStorage.getItem('gtc_metaverse_avatar_v1');
-  });
-  const [previewEmote, setPreviewEmote] = useState('wave');
+  const [showAvatarModal, setShowAvatarModal] = useState(() => !localStorage.getItem('gtc_metaverse_avatar_v1'));
+  const [previewEmote, setPreviewEmote] = useState(null);
 
   const [waypoints, setWaypoints] = useState([[initialSpawnPos[0], initialSpawnPos[2]]]);
   const [seatedInfo, setSeatedInfo] = useState(null);
@@ -2675,14 +2221,10 @@ export default function VirtualChurchLobby({ setActiveScreen, onChangeFloor }) {
   const [myChatBubble, setMyChatBubble] = useState('');
   const [quickChatInput, setQuickChatInput] = useState('');
 
-  // 실시간 멀티플레이어 접속자 리스트 & 선택된 상대방 유저
   const [remotePeers, setRemotePeers] = useState([]);
   const [selectedRemotePeer, setSelectedRemotePeer] = useState(null);
-
-  // 축도 홀리라이트(Holy Light) 이벤트 상태
   const [holyLightEvent, setHolyLightEvent] = useState(null);
 
-  // 교회 홍보물 & 디지털 주보 & 로비 방명록 모달
   const [showBrochureModal, setShowBrochureModal] = useState(false);
   const [guestbookInput, setGuestbookInput] = useState('');
   const [guestbookList, setGuestbookList] = useState([
@@ -2699,15 +2241,11 @@ export default function VirtualChurchLobby({ setActiveScreen, onChangeFloor }) {
 
   const [activeNpcChatIdx, setActiveNpcChatIdx] = useState(0);
   useEffect(() => {
-    const timer = setInterval(() => {
-      setActiveNpcChatIdx((prev) => (prev + 1) % NPCS_1F.length);
-    }, 3800);
+    const timer = setInterval(() => setActiveNpcChatIdx((prev) => (prev + 1) % NPCS_1F.length), 3800);
     return () => clearInterval(timer);
   }, []);
 
-  // =====================================================================
-  // 🌐 무결점 멀티플레이어 엔진 (Supabase Presence + Broadcast + Heartbeat + Local BroadcastChannel)
-  // =====================================================================
+  // 멀티플레이어 동기화
   const buildMyPayload = useCallback(
     (override = {}) => {
       const [px, , pz] = playerIdxRef.current;
@@ -2741,25 +2279,16 @@ export default function VirtualChurchLobby({ setActiveScreen, onChangeFloor }) {
       const payload = buildMyPayload(override);
       if (channelRef.current) {
         channelRef.current.track(payload).catch(() => {});
-        channelRef.current
-          .send({
-            type: 'broadcast',
-            event: 'player_sync',
-            payload
-          })
-          .catch(() => {});
+        channelRef.current.send({ type: 'broadcast', event: 'player_sync', payload }).catch(() => {});
       }
       if (localBcRef.current) {
-        try {
-          localBcRef.current.postMessage({ type: 'player_sync', payload });
-        } catch (_) {}
+        try { localBcRef.current.postMessage({ type: 'player_sync', payload }); } catch (_) {}
       }
     },
     [buildMyPayload]
   );
 
   useEffect(() => {
-    // 1) 같은 PC/브라우저 다중 탭 테스트까지 100% 보장하는 로컬 BroadcastChannel
     if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
       const bc = new BroadcastChannel('gtc_metaverse_lobby_1f_bc');
       localBcRef.current = bc;
@@ -2783,17 +2312,11 @@ export default function VirtualChurchLobby({ setActiveScreen, onChangeFloor }) {
       .select('*')
       .order('created_at', { ascending: false })
       .limit(15)
-      .then(({ data }) => {
-        if (data && data.length > 0) setGuestbookList(data);
-      })
+      .then(({ data }) => { if (data && data.length > 0) setGuestbookList(data); })
       .catch(() => {});
 
-    // 2) Supabase Realtime 글로벌 채널 구독 (broadcast self: false)
     const channel = supabase.channel('metaverse_lobby_1f', {
-      config: {
-        presence: { key: clientIdRef.current },
-        broadcast: { self: false }
-      }
+      config: { presence: { key: clientIdRef.current }, broadcast: { self: false } }
     });
     channelRef.current = channel;
 
@@ -2804,17 +2327,13 @@ export default function VirtualChurchLobby({ setActiveScreen, onChangeFloor }) {
           if (key === clientIdRef.current) return;
           const items = state[key];
           if (items && items.length > 0) {
-            const latest = items[items.length - 1];
-            peersMapRef.current[key] = { ...latest, clientId: key, ts: Date.now() };
+            peersMapRef.current[key] = { ...items[items.length - 1], clientId: key, ts: Date.now() };
           }
         });
         syncRemotePeersState();
       })
       .on('presence', { event: 'leave' }, ({ key }) => {
-        if (key && peersMapRef.current[key]) {
-          delete peersMapRef.current[key];
-          syncRemotePeersState();
-        }
+        if (key && peersMapRef.current[key]) { delete peersMapRef.current[key]; syncRemotePeersState(); }
       })
       .on('broadcast', { event: 'player_sync' }, ({ payload }) => {
         if (!payload || payload.clientId === clientIdRef.current) return;
@@ -2828,9 +2347,7 @@ export default function VirtualChurchLobby({ setActiveScreen, onChangeFloor }) {
         setTimeout(() => setHolyLightEvent(null), 7000);
       })
       .on('broadcast', { event: 'guestbook_new' }, ({ payload }) => {
-        if (payload) {
-          setGuestbookList((prev) => [payload, ...prev.slice(0, 19)]);
-        }
+        if (payload) setGuestbookList((prev) => [payload, ...prev.slice(0, 19)]);
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
@@ -2840,28 +2357,18 @@ export default function VirtualChurchLobby({ setActiveScreen, onChangeFloor }) {
         }
       });
 
-    // 3) 1.5초 주기 하트비트 브로드캐스트 (누가 먼저 들어왔든 1.5초 이내 100% 상호 발견 보장!)
     const heartbeat = setInterval(() => {
       const payload = buildMyPayload();
-      if (channelRef.current) {
-        channelRef.current.send({ type: 'broadcast', event: 'player_sync', payload }).catch(() => {});
-      }
-      if (localBcRef.current) {
-        try {
-          localBcRef.current.postMessage({ type: 'player_sync', payload });
-        } catch (_) {}
-      }
+      if (channelRef.current) channelRef.current.send({ type: 'broadcast', event: 'player_sync', payload }).catch(() => {});
+      if (localBcRef.current) { try { localBcRef.current.postMessage({ type: 'player_sync', payload }); } catch (_) {} }
       syncRemotePeersState();
-    }, 1500);
+    }, 1800);
 
     return () => {
       clearInterval(heartbeat);
       if (localBcRef.current) {
         try {
-          localBcRef.current.postMessage({
-            type: 'player_leave',
-            payload: { clientId: clientIdRef.current }
-          });
+          localBcRef.current.postMessage({ type: 'player_leave', payload: { clientId: clientIdRef.current } });
           localBcRef.current.close();
         } catch (_) {}
       }
@@ -2899,24 +2406,13 @@ export default function VirtualChurchLobby({ setActiveScreen, onChangeFloor }) {
         targetPos: targetCoords || [playerIdxRef.current[0], 0.08, playerIdxRef.current[2]],
         ts: Date.now()
       };
-
       playHolyBlessingSound();
       setHolyLightEvent(eventPayload);
       triggerSocialAction('pray', `아멘! ${pastorDisplayName}의 축도를 감사히 받습니다 🙏`);
-
       if (channelRef.current) {
-        channelRef.current
-          .send({
-            type: 'broadcast',
-            event: 'holy_blessing',
-            payload: eventPayload
-          })
-          .catch(() => {});
+        channelRef.current.send({ type: 'broadcast', event: 'holy_blessing', payload: eventPayload }).catch(() => {});
       }
-
-      setTimeout(() => {
-        setHolyLightEvent(null);
-      }, 7000);
+      setTimeout(() => setHolyLightEvent(null), 7000);
     },
     [triggerSocialAction]
   );
@@ -2942,25 +2438,15 @@ export default function VirtualChurchLobby({ setActiveScreen, onChangeFloor }) {
     setGuestbookList((prev) => [newEntry, ...prev]);
     setGuestbookInput('');
     triggerSocialAction('wave', msg);
-
-    if (channelRef.current) {
-      channelRef.current.send({ type: 'broadcast', event: 'guestbook_new', payload: newEntry }).catch(() => {});
-    }
-    if (supabase) {
-      try {
-        await supabase.from('metaverse_guestbook').insert([{ user_name: newEntry.user_name, message: msg }]);
-      } catch (_) {}
-    }
+    if (channelRef.current) channelRef.current.send({ type: 'broadcast', event: 'guestbook_new', payload: newEntry }).catch(() => {});
+    if (supabase) { try { await supabase.from('metaverse_guestbook').insert([{ user_name: newEntry.user_name, message: msg }]); } catch (_) {} }
   };
 
-  const handleSitOnSofa = useCallback(
-    (seatData) => {
-      setSeatedInfo(seatData);
-      setWaypoints([[seatData.x, seatData.z]]);
-      setTimeout(() => broadcastMyState(), 100);
-    },
-    [broadcastMyState]
-  );
+  const handleSitOnSofa = useCallback((seatData) => {
+    setSeatedInfo(seatData);
+    setWaypoints([[seatData.x, seatData.z]]);
+    setTimeout(() => broadcastMyState(), 100);
+  }, [broadcastMyState]);
 
   const handleStandUp = useCallback(() => {
     setSeatedInfo(null);
@@ -2968,33 +2454,21 @@ export default function VirtualChurchLobby({ setActiveScreen, onChangeFloor }) {
     setTimeout(() => broadcastMyState(), 100);
   }, [broadcastMyState]);
 
-  const handleWalkTo = useCallback(
-    (tx, tz) => {
-      if (seatedInfo) setSeatedInfo(null);
-      const [sx, , sz] = playerIdxRef.current;
-      const nextPath = computeSmartPath1F(sx, sz, tx, tz);
-      setWaypoints(nextPath);
-    },
-    [seatedInfo]
-  );
+  const handleWalkTo = useCallback((tx, tz) => {
+    if (seatedInfo) setSeatedInfo(null);
+    const [sx, , sz] = playerIdxRef.current;
+    setWaypoints(computeSmartPath1F(sx, sz, tx, tz));
+  }, [seatedInfo]);
 
-  const handleSelectNpcForChat = useCallback(
-    (npc) => {
-      setChatReplyText(
-        (npc.dialogues && npc.dialogues[0]) ||
-          '할렐루야! 좋은나무교회 1층 로비에 오신 것을 진심으로 환영합니다 😊'
-      );
-      setSelectedChatNpc(npc);
-      triggerSocialAction('wave');
-    },
-    [triggerSocialAction]
-  );
+  const handleSelectNpcForChat = useCallback((npc) => {
+    setChatReplyText((npc.dialogues && npc.dialogues[0]) || '할렐루야! 좋은나무교회 1층 로비에 오신 것을 진심으로 환영합니다 😊');
+    setSelectedChatNpc(npc);
+    triggerSocialAction('wave');
+  }, [triggerSocialAction]);
 
   const handleJumpToFloor = (fl) => {
     setModalZone(null);
-    if (typeof onChangeFloor === 'function') {
-      onChangeFloor(fl);
-    }
+    if (typeof onChangeFloor === 'function') onChangeFloor(fl);
   };
 
   useEffect(() => {
@@ -3002,58 +2476,39 @@ export default function VirtualChurchLobby({ setActiveScreen, onChangeFloor }) {
     const mini = minimapRef.current;
     if (!mini) return;
     const ctx = mini.getContext('2d');
-    const w = mini.width;
-    const h = mini.height;
+    const w = mini.width, h = mini.height;
     ctx.clearRect(0, 0, w, h);
-
-    ctx.fillStyle = '#1E2026';
-    ctx.fillRect(0, 0, w, h);
-
-    ctx.fillStyle = '#334155';
-    ctx.fillRect(6, 12, 34, 62);
-    ctx.fillStyle = '#E5E0D5';
-    ctx.fillRect(42, 10, 44, 64);
-    ctx.fillStyle = '#10B981';
-    ctx.fillRect(88, 10, 20, 20);
-    ctx.fillStyle = '#0284C7';
-    ctx.fillRect(88, 32, 20, 20);
-    ctx.fillStyle = '#6366F1';
-    ctx.fillRect(88, 54, 20, 20);
+    ctx.fillStyle = '#1E2026'; ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = '#334155'; ctx.fillRect(6, 12, 34, 62);
+    ctx.fillStyle = '#E5E0D5'; ctx.fillRect(42, 10, 44, 64);
+    ctx.fillStyle = '#10B981'; ctx.fillRect(88, 10, 20, 20);
+    ctx.fillStyle = '#0284C7'; ctx.fillRect(88, 32, 20, 20);
+    ctx.fillStyle = '#6366F1'; ctx.fillRect(88, 54, 20, 20);
 
     remotePeers.forEach((p) => {
-      const px = (((p.x || 0) + 10.5) / 16.0) * w;
-      const py = (((p.z || 0) + 5.0) / 13.0) * h;
       ctx.beginPath();
-      ctx.arc(px, py, 3.2, 0, Math.PI * 2);
-      ctx.fillStyle = '#34D399';
-      ctx.fill();
+      ctx.arc((((p.x || 0) + 10.5) / 16.0) * w, (((p.z || 0) + 5.0) / 13.0) * h, 3.2, 0, Math.PI * 2);
+      ctx.fillStyle = '#34D399'; ctx.fill();
     });
 
     const [cx, , cz] = playerIdxRef.current;
-    const mx = ((cx + 10.5) / 16.0) * w;
-    const my = ((cz + 5.0) / 13.0) * h;
     ctx.beginPath();
-    ctx.arc(mx, my, 4.2, 0, Math.PI * 2);
-    ctx.fillStyle = '#FACC15';
-    ctx.fill();
-    ctx.strokeStyle = '#FFFFFF';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
+    ctx.arc(((cx + 10.5) / 16.0) * w, ((cz + 5.0) / 13.0) * h, 4.2, 0, Math.PI * 2);
+    ctx.fillStyle = '#FACC15'; ctx.fill();
+    ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 1.5; ctx.stroke();
   }, [waypoints, seatedInfo, isMapDrawerOpen, remotePeers]);
 
-  const handlePositionUpdate = (px, pz, rotAngle) => {
+  const handlePositionUpdate = useCallback((px, pz, rotAngle) => {
     playerRotRef.current = rotAngle;
     const found = ZONES_1F.find((z) => Math.hypot(px - z.pos[0], pz - z.pos[2]) < 1.35) || null;
-    if (found?.id !== activeZone?.id) {
-      setActiveZone(found);
-    }
+    setActiveZone((prev) => (prev?.id === found?.id ? prev : found));
 
     const now = Date.now();
-    if (now - lastSyncTimeRef.current > 120) {
+    if (now - lastSyncTimeRef.current > 150) {
       lastSyncTimeRef.current = now;
       broadcastMyState();
     }
-  };
+  }, [broadcastMyState]);
 
   const darkPillStyle = {
     backgroundColor: 'rgba(30, 32, 38, 0.94)',
@@ -3062,42 +2517,23 @@ export default function VirtualChurchLobby({ setActiveScreen, onChangeFloor }) {
   };
 
   return (
-    <div
-      translate="no"
-      style={{ backgroundColor: '#2B2C30' }}
-      className="notranslate w-full h-full relative overflow-hidden select-none font-sans"
-    >
-      {/* 1. 좌측 상단: 슬림 헤더 & 실시간 접속자 배지 & 아바타 꾸미기 & 목사님 축도 버튼 */}
+    <div translate="no" style={{ backgroundColor: '#2B2C30' }} className="notranslate w-full h-full relative overflow-hidden select-none font-sans">
+      {/* 1. 좌측 상단 HUD */}
       <div className="absolute top-3 left-3 z-20 flex flex-col gap-1.5 pointer-events-auto max-w-[72vw]">
         <div className="flex flex-wrap items-center gap-1.5">
-          <div
-            onClick={() => setActiveScreen && setActiveScreen('home')}
-            style={darkPillStyle}
-            className="px-3.5 py-2 rounded-2xl backdrop-blur-md shadow-xl border flex items-center gap-2 cursor-pointer w-max"
-          >
-            <span style={{ color: '#FFFFFF' }} className="text-xs sm:text-sm font-black tracking-tight">
-              ◀ 1F 정문 로비 · 주차장
-            </span>
+          <div onClick={() => setActiveScreen && setActiveScreen('home')} style={darkPillStyle} className="px-3.5 py-2 rounded-2xl backdrop-blur-md shadow-xl border flex items-center gap-2 cursor-pointer w-max">
+            <span style={{ color: '#FFFFFF' }} className="text-xs sm:text-sm font-black tracking-tight">◀ 1F 정문 로비 · 주차장</span>
           </div>
-
-          <div
-            style={darkPillStyle}
-            className="px-3 py-2 rounded-2xl border shadow-xl flex items-center gap-1.5 text-xs font-black"
-          >
+          <div style={darkPillStyle} className="px-3 py-2 rounded-2xl border shadow-xl flex items-center gap-1.5 text-xs font-black">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
             <span className="text-emerald-300">동시접속 {remotePeers.length + 1}명</span>
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5">
-          <button
-            onClick={() => setShowAvatarModal(true)}
-            style={{ backgroundColor: '#6366F1', color: '#FFFFFF' }}
-            className="px-3 py-1.5 rounded-full text-[11px] font-black shadow-lg cursor-pointer"
-          >
+          <button onClick={() => setShowAvatarModal(true)} style={{ backgroundColor: '#6366F1', color: '#FFFFFF' }} className="px-3 py-1.5 rounded-full text-[11px] font-black shadow-lg cursor-pointer">
             👕 3D 아바타 꾸미기
           </button>
-
           <button
             onClick={() => triggerHolyBenediction(canPlayerBless ? `${playerName} 목사님` : '이성현·방희곤·최수경 목사님', playerName, playerIdxRef.current)}
             style={{ backgroundColor: '#D97706', color: '#FFFFFF' }}
@@ -3105,82 +2541,43 @@ export default function VirtualChurchLobby({ setActiveScreen, onChangeFloor }) {
           >
             ✨ {canPlayerBless ? '성도 축도 선포(홀리라이트)' : '목사님 축도 받기'}
           </button>
-
-          <button
-            onClick={() => setShowBrochureModal(true)}
-            style={{ backgroundColor: '#EC4899', color: '#FFFFFF' }}
-            className="px-3 py-1.5 rounded-full text-[11px] font-black shadow-lg cursor-pointer"
-          >
+          <button onClick={() => setShowBrochureModal(true)} style={{ backgroundColor: '#EC4899', color: '#FFFFFF' }} className="px-3 py-1.5 rounded-full text-[11px] font-black shadow-lg cursor-pointer">
             📰 홍보물·주보·방명록
           </button>
-
-          <button
-            onClick={() => handleJumpToFloor('2F')}
-            style={{ backgroundColor: '#F59E0B', color: '#030712' }}
-            className="px-3 py-1.5 rounded-full text-[11px] font-black shadow-lg cursor-pointer"
-          >
+          <button onClick={() => handleJumpToFloor('2F')} style={{ backgroundColor: '#F59E0B', color: '#030712' }} className="px-3 py-1.5 rounded-full text-[11px] font-black shadow-lg cursor-pointer">
             ☕ 2F 북카페·목양실
           </button>
-
-          <button
-            onClick={() => handleJumpToFloor('3F')}
-            style={{ backgroundColor: '#10B981', color: '#030712' }}
-            className="px-3 py-1.5 rounded-full text-[11px] font-black shadow-lg cursor-pointer"
-          >
+          <button onClick={() => handleJumpToFloor('3F')} style={{ backgroundColor: '#10B981', color: '#030712' }} className="px-3 py-1.5 rounded-full text-[11px] font-black shadow-lg cursor-pointer">
             🛗 3F 본당 이동
           </button>
-
-          <button
-            onClick={() => setShowRoomSigns((prev) => !prev)}
-            style={darkPillStyle}
-            className="px-2.5 py-1.5 rounded-full text-[11px] font-bold border shadow-lg cursor-pointer"
-          >
-            <span style={{ color: showRoomSigns ? '#34D399' : '#9CA3AF' }}>
-              {showRoomSigns ? '🏷️ 간판 켜짐' : '🏷️ 간판 숨김'}
-            </span>
+          <button onClick={() => setShowRoomSigns((prev) => !prev)} style={darkPillStyle} className="px-2.5 py-1.5 rounded-full text-[11px] font-bold border shadow-lg cursor-pointer">
+            <span style={{ color: showRoomSigns ? '#34D399' : '#9CA3AF' }}>{showRoomSigns ? '🏷️ 간판 켜짐' : '🏷️ 간판 숨김'}</span>
           </button>
         </div>
       </div>
 
-      {/* 2. 우측 상단: 접이식 미니맵 & 실시간 접속 성도 목록 드로어 */}
+      {/* 2. 우측 상단 미니맵 드로어 */}
       <div className="absolute top-3 right-3 z-20 flex flex-col items-end gap-2 pointer-events-auto">
-        <button
-          onClick={() => setIsMapDrawerOpen((prev) => !prev)}
-          style={darkPillStyle}
-          className="px-3.5 py-2 rounded-2xl border shadow-xl text-xs font-black flex items-center gap-1.5 cursor-pointer"
-        >
+        <button onClick={() => setIsMapDrawerOpen((prev) => !prev)} style={darkPillStyle} className="px-3.5 py-2 rounded-2xl border shadow-xl text-xs font-black flex items-center gap-1.5 cursor-pointer">
           <span>{isMapDrawerOpen ? '✕ 맵·목록 닫기' : `🗺️ 1F 맵·접속자(${remotePeers.length + 1}) ▼`}</span>
         </button>
 
         {isMapDrawerOpen && (
-          <div
-            style={darkPillStyle}
-            className="p-2.5 rounded-2xl border shadow-2xl flex flex-col items-center gap-2 w-52 animate-fade-in"
-          >
+          <div style={darkPillStyle} className="p-2.5 rounded-2xl border shadow-2xl flex flex-col items-center gap-2 w-52 animate-fade-in">
             <canvas ref={minimapRef} width={114} height={94} className="rounded-xl border border-white/10" />
-
-            {/* 현재 접속 중인 성도 리스트 */}
             <div className="w-full border-t border-white/10 pt-1.5">
-              <span className="text-[10px] font-black text-emerald-400 block mb-1">
-                🟢 현재 1층 접속 성도 ({remotePeers.length + 1}명)
-              </span>
+              <span className="text-[10px] font-black text-emerald-400 block mb-1">🟢 현재 1층 접속 성도 ({remotePeers.length + 1}명)</span>
               <div className="flex flex-col gap-1 max-h-24 overflow-y-auto hide-scrollbar">
                 <div className="px-2 py-1 rounded-lg bg-amber-500/20 text-[11px] font-black text-amber-300 flex justify-between">
-                  <span>나 · {playerName}</span>
-                  <span>{playerOffice}</span>
+                  <span>나 · {playerName}</span><span>{playerOffice}</span>
                 </div>
                 {remotePeers.map((peer) => (
                   <button
                     key={peer.clientId}
-                    onClick={() => {
-                      handleWalkTo(peer.x || -0.8, (peer.z || 2.2) + 0.6);
-                      setSelectedRemotePeer(peer);
-                      setIsMapDrawerOpen(false);
-                    }}
+                    onClick={() => { handleWalkTo(peer.x || -0.8, (peer.z || 2.2) + 0.6); setSelectedRemotePeer(peer); setIsMapDrawerOpen(false); }}
                     className="px-2 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/40 text-left text-[11px] font-bold text-emerald-200 flex justify-between cursor-pointer"
                   >
-                    <span className="truncate">{peer.name}</span>
-                    <span className="text-[10px] text-emerald-400">만나기 ➔</span>
+                    <span className="truncate">{peer.name}</span><span className="text-[10px] text-emerald-400">만나기 ➔</span>
                   </button>
                 ))}
               </div>
@@ -3193,11 +2590,7 @@ export default function VirtualChurchLobby({ setActiveScreen, onChangeFloor }) {
                   onClick={() => {
                     if (z.isSeatZone && z.seatTarget) handleSitOnSofa(z.seatTarget);
                     else if (z.isBrochureZone) setShowBrochureModal(true);
-                    else {
-                      handleWalkTo(z.pos[0], z.pos[2]);
-                      setActiveZone(z);
-                      setModalZone(z);
-                    }
+                    else { handleWalkTo(z.pos[0], z.pos[2]); setActiveZone(z); setModalZone(z); }
                     setIsMapDrawerOpen(false);
                   }}
                   className="px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-emerald-600/40 text-left text-[11px] font-bold flex items-center justify-between cursor-pointer"
@@ -3210,13 +2603,10 @@ export default function VirtualChurchLobby({ setActiveScreen, onChangeFloor }) {
         )}
       </div>
 
-      {/* 3. 하단: 소셜 상호동작 & 실시간 한줄 채팅 & 공간 이동 바 */}
+      {/* 3. 하단 소셜 바 & 공간 이동 바 */}
       <div className="absolute bottom-2.5 left-2.5 right-2.5 sm:bottom-4 sm:left-4 sm:right-4 z-20 flex flex-col gap-1.5 pointer-events-none">
         <div className="flex flex-wrap items-center justify-between gap-1.5 pointer-events-auto">
-          <div
-            style={darkPillStyle}
-            className="p-1 rounded-2xl border shadow-2xl flex items-center gap-1 overflow-x-auto hide-scrollbar"
-          >
+          <div style={darkPillStyle} className="p-1 rounded-2xl border shadow-2xl flex items-center gap-1 overflow-x-auto hide-scrollbar">
             {[
               { label: '👋 인사', emote: 'wave', msg: '할렐루야! 반갑습니다 성도님 👋' },
               { label: '💬 안부묻기', emote: 'wave', msg: '성도님 한 주간 평안하셨나요? 사랑하고 축복합니다 😊' },
@@ -3224,11 +2614,7 @@ export default function VirtualChurchLobby({ setActiveScreen, onChangeFloor }) {
               { label: '🙏 기도하기', emote: 'pray', msg: '두 손 모아 간절히 주님께 기도합니다 🙏' },
               { label: '🙌 할렐루야', emote: 'praise', msg: '할렐루야! 아멘! 주님께 영광 돌립니다 🙌✨' }
             ].map((act, idx) => (
-              <button
-                key={idx}
-                onClick={() => triggerSocialAction(act.emote, act.msg)}
-                className="px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-emerald-500/30 text-[11px] font-black text-white whitespace-nowrap cursor-pointer transition-colors"
-              >
+              <button key={idx} onClick={() => triggerSocialAction(act.emote, act.msg)} className="px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-emerald-500/30 text-[11px] font-black text-white whitespace-nowrap cursor-pointer transition-colors">
                 {act.label}
               </button>
             ))}
@@ -3244,28 +2630,14 @@ export default function VirtualChurchLobby({ setActiveScreen, onChangeFloor }) {
             style={darkPillStyle}
             className="flex items-center gap-1 px-2.5 py-1 rounded-2xl border shadow-2xl w-full sm:w-64"
           >
-            <input
-              type="text"
-              value={quickChatInput}
-              onChange={(e) => setQuickChatInput(e.target.value)}
-              placeholder="로비 말풍선 대화 입력..."
-              className="flex-1 bg-transparent text-xs font-bold text-white outline-none placeholder:text-zinc-400"
-            />
-            <button
-              type="submit"
-              className="px-2.5 py-1 rounded-xl bg-emerald-500 text-stone-950 text-[11px] font-black cursor-pointer shrink-0"
-            >
-              전송
-            </button>
+            <input type="text" value={quickChatInput} onChange={(e) => setQuickChatInput(e.target.value)} placeholder="로비 말풍선 대화 입력..." className="flex-1 bg-transparent text-xs font-bold text-white outline-none placeholder:text-zinc-400" />
+            <button type="submit" className="px-2.5 py-1 rounded-xl bg-emerald-500 text-stone-950 text-[11px] font-black cursor-pointer shrink-0">전송</button>
           </form>
         </div>
 
         <div className="flex items-center gap-1.5 pointer-events-auto">
           {showBottomDock ? (
-            <div
-              style={darkPillStyle}
-              className="p-1 rounded-2xl border shadow-2xl flex items-center gap-1 overflow-x-auto hide-scrollbar"
-            >
+            <div style={darkPillStyle} className="p-1 rounded-2xl border shadow-2xl flex items-center gap-1 overflow-x-auto hide-scrollbar">
               {[
                 { icon: '🏛️', label: '정문현관', onClick: () => handleWalkTo(-0.8, 3.6) },
                 { icon: '🪑', label: seatedInfo ? '일어나기' : '로비대기석', onClick: () => { if (seatedInfo) handleStandUp(); else handleSitOnSofa({ x: -3.48, z: -2.0, rotY: Math.PI / 2, rowLabel: '1F 로비 4인용 가죽 대기석' }); } },
@@ -3273,74 +2645,52 @@ export default function VirtualChurchLobby({ setActiveScreen, onChangeFloor }) {
                 { icon: '📰', label: '홍보물·주보', onClick: () => setShowBrochureModal(true) },
                 { icon: '🛗', label: '엘리베이터', onClick: () => { handleWalkTo(1.8, -2.8); setModalZone(ZONES_1F[3]); } }
               ].map((item, idx) => (
-                <button
-                  key={idx}
-                  onClick={item.onClick}
-                  className="px-2.5 py-1.5 rounded-xl hover:bg-white/10 flex items-center gap-1 shrink-0 cursor-pointer"
-                >
+                <button key={idx} onClick={item.onClick} className="px-2.5 py-1.5 rounded-xl hover:bg-white/10 flex items-center gap-1 shrink-0 cursor-pointer">
                   <span className="text-sm">{item.icon}</span>
-                  <span style={{ color: '#FFFFFF' }} className="text-[11px] font-extrabold whitespace-nowrap">
-                    {item.label}
-                  </span>
+                  <span style={{ color: '#FFFFFF' }} className="text-[11px] font-extrabold whitespace-nowrap">{item.label}</span>
                 </button>
               ))}
-              <button
-                onClick={() => setShowBottomDock(false)}
-                style={{ color: '#9CA3AF' }}
-                className="px-2 py-1 text-xs font-bold cursor-pointer"
-              >
-                ✕
-              </button>
+              <button onClick={() => setShowBottomDock(false)} style={{ color: '#9CA3AF' }} className="px-2 py-1 text-xs font-bold cursor-pointer">✕</button>
             </div>
           ) : (
-            <button
-              onClick={() => setShowBottomDock(true)}
-              style={darkPillStyle}
-              className="px-3 py-2 rounded-full border shadow-xl text-xs font-black cursor-pointer"
-            >
-              🏛️ 로비 메뉴 ▲
-            </button>
+            <button onClick={() => setShowBottomDock(true)} style={darkPillStyle} className="px-3 py-2 rounded-full border shadow-xl text-xs font-black cursor-pointer">🏛️ 로비 메뉴 ▲</button>
           )}
         </div>
       </div>
 
-      {/* 4. 메인 3D 캔버스 */}
+      {/* 4. 모바일 최적화 메인 3D 캔버스 */}
       <Canvas
         shadows
-        gl={{ toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.18 }}
+        dpr={isMobile ? [1, 1.25] : [1, 1.75]}
+        gl={{
+          antialias: !isMobile,
+          powerPreference: 'high-performance',
+          toneMapping: THREE.ACESFilmicToneMapping,
+          toneMappingExposure: 1.08
+        }}
       >
-        <PerspectiveCamera makeDefault position={[-2.2, 11.8, 12.2]} fov={36} near={0.1} far={250} />
+        <PerspectiveCamera makeDefault position={[-2.2, 11.8, 12.2]} fov={36} near={0.1} far={220} />
         <InitialCameraSetup1F controlsRef={controlsRef} />
 
-        <ambientLight intensity={1.35} color="#FFFDF9" />
-        <hemisphereLight args={['#FFFBEB', '#94A3B8', 1.15]} />
+        <ambientLight intensity={1.15} color="#FFFDF9" />
+        <hemisphereLight args={['#FFFBEB', '#94A3B8', 0.95]} />
         <directionalLight
           position={[-8, 15, 12]}
-          intensity={1.55}
+          intensity={1.38}
           color="#FFF7ED"
           castShadow
-          shadow-mapSize={[2048, 2048]}
-          shadow-bias={-0.0004}
+          shadow-mapSize={isMobile ? [1024, 1024] : [2048, 2048]}
+          shadow-bias={-0.0005}
         />
 
-        <mesh
-          rotation={[-Math.PI / 2, 0, 0]}
-          position={[-2, 0.01, 1.5]}
-          onClick={(e) => {
-            e.stopPropagation();
-            handleWalkTo(e.point.x, e.point.z);
-          }}
-        >
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-2, 0.01, 1.5]} onClick={(e) => { e.stopPropagation(); handleWalkTo(e.point.x, e.point.z); }}>
           <planeGeometry args={[20.0, 16.0]} />
           <meshBasicMaterial transparent opacity={0} />
         </mesh>
 
         <OneFloorMasterpieceDiorama
           activeZoneId={activeZone?.id}
-          onSelectZone={(z) => {
-            handleWalkTo(z.pos[0], z.pos[2]);
-            setModalZone(z);
-          }}
+          onSelectZone={(z) => { handleWalkTo(z.pos[0], z.pos[2]); setModalZone(z); }}
           onSitOnSofa={handleSitOnSofa}
           onSelectNpcForChat={handleSelectNpcForChat}
           onOpenBrochureModal={() => setShowBrochureModal(true)}
@@ -3366,7 +2716,9 @@ export default function VirtualChurchLobby({ setActiveScreen, onChangeFloor }) {
           onPositionUpdate={handlePositionUpdate}
         />
 
-        <ContactShadows position={[0, 0.01, 0]} opacity={0.35} scale={26} blur={2.2} far={4} />
+        {/* frames={1} 로 최초 1회만 베이킹하여 모바일 GPU 부하 대폭 감소 */}
+        {!isMobile && <ContactShadows frames={1} resolution={256} position={[0, 0.01, 0]} opacity={0.32} scale={26} blur={2.0} far={4} />}
+
         <OrbitControls
           ref={controlsRef}
           enableRotate={true}
@@ -3381,46 +2733,27 @@ export default function VirtualChurchLobby({ setActiveScreen, onChangeFloor }) {
         />
       </Canvas>
 
-      {/* ================================================================= */}
-      {/* 🎮 5. 게임 캐릭터 생성창 스타일 3D 라이브 쇼케이스 아바타 커스터마이징 모달 */}
-      {/* ================================================================= */}
+      {/* 5. 3D 캐릭터 커스터마이징 모달 (독립된 previewEmote로 표정/포즈 실시간 확인) */}
       {showAvatarModal && (
-        <div
-          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-fade-in"
-          onClick={() => setShowAvatarModal(false)}
-        >
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-fade-in" onClick={() => setShowAvatarModal(false)}>
           <div
             style={{ backgroundColor: '#0F1420', color: '#FFFFFF' }}
             className="w-full max-w-lg border border-indigo-500/50 rounded-3xl p-4 sm:p-5 shadow-[0_25px_80px_rgba(0,0,0,0.85)] space-y-3.5 text-left max-h-[92vh] overflow-y-auto hide-scrollbar"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* 모달 헤더 */}
             <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
               <div>
-                <span className="text-[10px] font-mono font-black text-indigo-400 tracking-wider block">
-                  3D CHARACTER CUSTOMIZER STUDIO
-                </span>
-                <h3 className="text-sm sm:text-base font-black text-white">
-                  🎮 내 메타버스 캐릭터 생성 & 스타일링
-                </h3>
+                <span className="text-[10px] font-mono font-black text-indigo-400 tracking-wider block">3D CHARACTER CUSTOMIZER STUDIO</span>
+                <h3 className="text-sm sm:text-base font-black text-white">🎮 내 메타버스 캐릭터 생성 & 표정 확인</h3>
               </div>
-              <button
-                onClick={() => setShowAvatarModal(false)}
-                className="px-2.5 py-1 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-bold text-zinc-400 hover:text-white cursor-pointer"
-              >
-                ✕ 닫기
-              </button>
+              <button onClick={() => setShowAvatarModal(false)} className="px-2.5 py-1 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-bold text-zinc-400 hover:text-white cursor-pointer">✕ 닫기</button>
             </div>
 
-            {/* 🌟 상단: 실시간 3D 캐릭터 회전 쇼케이스 뷰어 (마우스로 360도 회전 & 포즈 미리보기) */}
             <div className="relative w-full h-56 sm:h-64 rounded-2xl overflow-hidden border border-indigo-500/40 bg-gradient-to-b from-indigo-950/80 via-slate-900 to-black shadow-inner">
               <div className="absolute top-2.5 left-3 z-10 pointer-events-none">
-                <span className="px-2.5 py-1 rounded-full bg-black/60 border border-white/15 text-[10px] font-black text-emerald-300">
-                  🔄 드래그하여 360° 회전 · 실시간 미리보기
-                </span>
+                <span className="px-2.5 py-1 rounded-full bg-black/60 border border-white/15 text-[10px] font-black text-emerald-300">🔄 드래그하여 360° 회전 · 전 층 동일 적용</span>
               </div>
 
-              {/* 프리뷰 포즈 테스트 버튼 */}
               <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1 bg-black/70 backdrop-blur-md px-2 py-1 rounded-full border border-white/15">
                 {[
                   { label: '🧍 기본', val: null },
@@ -3432,68 +2765,43 @@ export default function VirtualChurchLobby({ setActiveScreen, onChangeFloor }) {
                   <button
                     key={idx}
                     type="button"
-                    onClick={() => setEmote(p.val)}
-                    className={`px-2 py-0.5 rounded-full text-[10px] font-black cursor-pointer transition-all ${
-                      emote === p.val
-                        ? 'bg-indigo-500 text-white shadow'
-                        : 'text-zinc-300 hover:text-white'
-                    }`}
+                    onClick={() => setPreviewEmote(p.val)}
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-black cursor-pointer transition-all ${previewEmote === p.val ? 'bg-indigo-500 text-white shadow' : 'text-zinc-300 hover:text-white'}`}
                   >
                     {p.label}
                   </button>
                 ))}
               </div>
 
-              {/* 3D 아바타 프리뷰 전용 미니 Canvas */}
-              <Canvas shadows camera={{ position: [0, 0.95, 2.35], fov: 34 }}>
-                <ambientLight intensity={1.45} color="#FFFDF9" />
-                <directionalLight position={[2, 4, 3]} intensity={1.6} color="#FFF7ED" castShadow />
-                <pointLight position={[-2, 2, -2]} intensity={1.2} color="#818CF8" />
+              <Canvas dpr={[1, 1.5]} camera={{ position: [0, 0.95, 2.35], fov: 34 }}>
+                <ambientLight intensity={1.3} color="#FFFDF9" />
+                <directionalLight position={[2, 4, 3]} intensity={1.4} color="#FFF7ED" />
+                <pointLight position={[-2, 2, -2]} intensity={1.1} color="#818CF8" />
 
-                {/* 캐릭터가 서 있는 회전 쇼케이스 원형 포디움 단상 */}
                 <group position={[0, -0.52, 0]}>
-                  <mesh position={[0, -0.04, 0]} receiveShadow>
-                    <cylinderGeometry args={[0.58, 0.66, 0.08, 36]} />
-                    <meshStandardMaterial color="#1E293B" metalness={0.7} roughness={0.25} />
-                  </mesh>
-                  <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.005, 0]}>
-                    <ringGeometry args={[0.50, 0.56, 36]} />
-                    <meshBasicMaterial color="#38BDF8" />
-                  </mesh>
+                  <mesh position={[0, -0.04, 0]}><cylinderGeometry args={[0.58, 0.66, 0.08, 24]} /><meshStandardMaterial color="#1E293B" metalness={0.7} roughness={0.25} /></mesh>
+                  <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.005, 0]}><ringGeometry args={[0.50, 0.56, 24]} /><meshBasicMaterial color="#38BDF8" /></mesh>
 
-                  {/* 실시간으로 모양과 색상이 바뀌는 내 3D 아바타 */}
-                  <SmoothChibiAvatar1F
+                  <SharedChibiAvatar
                     position={[0, 0, 0]}
                     rotationY={0}
                     gender={avatarConfig.gender}
                     hairStyle={avatarConfig.hairStyle}
                     isSkirt={Boolean(avatarConfig.isSkirt)}
                     hasSunglasses={Boolean(avatarConfig.hasSunglasses)}
-                    emote={emote}
+                    emote={previewEmote}
                     shirtColor={avatarConfig.shirtColor}
                     pantsColor={avatarConfig.pantsColor}
                     hairColor={avatarConfig.hairColor}
                   />
                 </group>
 
-                <OrbitControls
-                  enablePan={false}
-                  enableZoom={true}
-                  minDistance={1.6}
-                  maxDistance={3.4}
-                  minPolarAngle={Math.PI / 3}
-                  maxPolarAngle={Math.PI / 2.05}
-                  autoRotate={!emote}
-                  autoRotateSpeed={2.2}
-                />
+                <OrbitControls enablePan={false} enableZoom={true} minDistance={1.6} maxDistance={3.4} minPolarAngle={Math.PI / 3} maxPolarAngle={Math.PI / 2.05} autoRotate={!previewEmote} autoRotateSpeed={2.0} />
               </Canvas>
             </div>
 
-            {/* 1. 성별 & 의상 형태 */}
             <div className="space-y-1.5">
-              <label className="text-[11px] font-bold text-zinc-300 block">
-                1. 성별 및 체형·의상 스타일
-              </label>
+              <label className="text-[11px] font-bold text-zinc-300 block">1. 성별 및 체형·의상 스타일</label>
               <div className="grid grid-cols-3 gap-2">
                 {[
                   { label: '👨 남성 캐주얼/정장', gender: 'male', isSkirt: false, defaultHair: 'parted' },
@@ -3502,23 +2810,7 @@ export default function VirtualChurchLobby({ setActiveScreen, onChangeFloor }) {
                 ].map((opt, i) => {
                   const active = avatarConfig.gender === opt.gender && avatarConfig.isSkirt === opt.isSkirt;
                   return (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() =>
-                        setAvatarConfig((prev) => ({
-                          ...prev,
-                          gender: opt.gender,
-                          isSkirt: opt.isSkirt,
-                          hairStyle: opt.defaultHair
-                        }))
-                      }
-                      className={`py-2 px-2 rounded-xl text-[11px] font-black border cursor-pointer transition-all ${
-                        active
-                          ? 'bg-indigo-600 border-indigo-400 text-white shadow-md'
-                          : 'bg-white/5 border-white/10 text-zinc-400 hover:text-white'
-                      }`}
-                    >
+                    <button key={i} type="button" onClick={() => setAvatarConfig((prev) => ({ ...prev, gender: opt.gender, isSkirt: opt.isSkirt, hairStyle: opt.defaultHair }))} className={`py-2 px-2 rounded-xl text-[11px] font-black border cursor-pointer ${active ? 'bg-indigo-600 border-indigo-400 text-white shadow-md' : 'bg-white/5 border-white/10 text-zinc-400 hover:text-white'}`}>
                       {opt.label}
                     </button>
                   );
@@ -3526,224 +2818,82 @@ export default function VirtualChurchLobby({ setActiveScreen, onChangeFloor }) {
               </div>
             </div>
 
-            {/* 2. 헤어스타일 선택 */}
             <div className="space-y-1.5">
-              <label className="text-[11px] font-bold text-zinc-300 block">
-                2. 헤어스타일 (머리 모양)
-              </label>
+              <label className="text-[11px] font-bold text-zinc-300 block">2. 헤어스타일 (머리 모양)</label>
               <div className="grid grid-cols-5 gap-1.5">
                 {[
-                  { id: 'parted', label: '가르마펌' },
-                  { id: 'short', label: '댄디 숏컷' },
-                  { id: 'bob', label: '단발 보브' },
-                  { id: 'long_wave', label: '긴 웨이브' },
-                  { id: 'bun', label: '올림머리' }
+                  { id: 'parted', label: '가르마펌' }, { id: 'short', label: '댄디 숏컷' }, { id: 'bob', label: '단발 보브' },
+                  { id: 'long_wave', label: '긴 웨이브' }, { id: 'bun', label: '올림머리' }
                 ].map((h) => (
-                  <button
-                    key={h.id}
-                    type="button"
-                    onClick={() => setAvatarConfig((prev) => ({ ...prev, hairStyle: h.id }))}
-                    className={`py-2 rounded-xl text-[10.5px] font-bold border cursor-pointer transition-all ${
-                      avatarConfig.hairStyle === h.id
-                        ? 'bg-amber-400 border-white text-stone-950 font-black shadow-md'
-                        : 'bg-white/5 border-white/10 text-zinc-300 hover:text-white'
-                    }`}
-                  >
+                  <button key={h.id} type="button" onClick={() => setAvatarConfig((prev) => ({ ...prev, hairStyle: h.id }))} className={`py-2 rounded-xl text-[10.5px] font-bold border cursor-pointer ${avatarConfig.hairStyle === h.id ? 'bg-amber-400 border-white text-stone-950 font-black shadow-md' : 'bg-white/5 border-white/10 text-zinc-300 hover:text-white'}`}>
                     {h.label}
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* 3. 상의 색상 */}
             <div className="space-y-1.5">
-              <label className="text-[11px] font-bold text-zinc-300 block">
-                3. 상의(셔츠·블라우스·자켓) 색상
-              </label>
+              <label className="text-[11px] font-bold text-zinc-300 block">3. 상의 색상</label>
               <div className="flex items-center gap-2 flex-wrap">
-                {[
-                  '#FACC15',
-                  '#38BDF8',
-                  '#EC4899',
-                  '#10B981',
-                  '#6366F1',
-                  '#EF4444',
-                  '#A855F7',
-                  '#F97316',
-                  '#1E293B',
-                  '#F8FAFC'
-                ].map((col) => (
-                  <button
-                    key={col}
-                    type="button"
-                    onClick={() => setAvatarConfig((prev) => ({ ...prev, shirtColor: col }))}
-                    style={{ backgroundColor: col }}
-                    className={`w-7 h-7 rounded-full border-2 cursor-pointer transition-transform ${
-                      avatarConfig.shirtColor === col
-                        ? 'border-white scale-120 shadow-[0_0_12px_rgba(255,255,255,0.8)]'
-                        : 'border-transparent opacity-80 hover:opacity-100'
-                    }`}
-                  />
+                {['#FACC15', '#38BDF8', '#EC4899', '#10B981', '#6366F1', '#EF4444', '#A855F7', '#F97316', '#1E293B', '#F8FAFC'].map((col) => (
+                  <button key={col} type="button" onClick={() => setAvatarConfig((prev) => ({ ...prev, shirtColor: col }))} style={{ backgroundColor: col }} className={`w-7 h-7 rounded-full border-2 cursor-pointer transition-transform ${avatarConfig.shirtColor === col ? 'border-white scale-115 shadow-[0_0_10px_rgba(255,255,255,0.8)]' : 'border-transparent opacity-80'}`} />
                 ))}
               </div>
             </div>
 
-            {/* 4. 하의/스커트 색상 & 5. 머리 색상 + 선글라스 */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-zinc-300 block">
-                  4. 하의/스커트 색상
-                </label>
+                <label className="text-[11px] font-bold text-zinc-300 block">4. 하의/스커트 색상</label>
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  {[
-                    '#1E293B',
-                    '#0284C7',
-                    '#FCE7F3',
-                    '#FEF08A',
-                    '#CCFBF1',
-                    '#E0E7FF',
-                    '#334155',
-                    '#F8FAFC'
-                  ].map((col) => (
-                    <button
-                      key={col}
-                      type="button"
-                      onClick={() => setAvatarConfig((prev) => ({ ...prev, pantsColor: col }))}
-                      style={{ backgroundColor: col }}
-                      className={`w-6 h-6 rounded-full border-2 cursor-pointer transition-transform ${
-                        avatarConfig.pantsColor === col
-                          ? 'border-white scale-115 shadow-md'
-                          : 'border-transparent opacity-80'
-                      }`}
-                    />
+                  {['#1E293B', '#0284C7', '#FCE7F3', '#FEF08A', '#CCFBF1', '#E0E7FF', '#334155', '#F8FAFC'].map((col) => (
+                    <button key={col} type="button" onClick={() => setAvatarConfig((prev) => ({ ...prev, pantsColor: col }))} style={{ backgroundColor: col }} className={`w-6 h-6 rounded-full border-2 cursor-pointer ${avatarConfig.pantsColor === col ? 'border-white scale-115' : 'border-transparent opacity-80'}`} />
                   ))}
                 </div>
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-zinc-300 block">
-                  5. 머리 염색 & 선글라스
-                </label>
+                <label className="text-[11px] font-bold text-zinc-300 block">5. 머리 염색 & 선글라스</label>
                 <div className="flex items-center gap-1.5 flex-wrap">
                   {['#18181B', '#451A03', '#78350F', '#B45309', '#EAB308', '#64748B'].map((col) => (
-                    <button
-                      key={col}
-                      type="button"
-                      onClick={() => setAvatarConfig((prev) => ({ ...prev, hairColor: col }))}
-                      style={{ backgroundColor: col }}
-                      className={`w-6 h-6 rounded-full border-2 cursor-pointer transition-transform ${
-                        avatarConfig.hairColor === col
-                          ? 'border-white scale-115 shadow-md'
-                          : 'border-transparent opacity-80'
-                      }`}
-                    />
+                    <button key={col} type="button" onClick={() => setAvatarConfig((prev) => ({ ...prev, hairColor: col }))} style={{ backgroundColor: col }} className={`w-6 h-6 rounded-full border-2 cursor-pointer ${avatarConfig.hairColor === col ? 'border-white scale-115' : 'border-transparent opacity-80'}`} />
                   ))}
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setAvatarConfig((prev) => ({ ...prev, hasSunglasses: !prev.hasSunglasses }))
-                    }
-                    className={`px-2.5 py-1 rounded-lg text-[10px] font-black border cursor-pointer transition-all ${
-                      avatarConfig.hasSunglasses
-                        ? 'bg-amber-400 text-stone-950 border-white shadow'
-                        : 'bg-white/10 text-zinc-300 border-white/10'
-                    }`}
-                  >
+                  <button type="button" onClick={() => setAvatarConfig((prev) => ({ ...prev, hasSunglasses: !prev.hasSunglasses }))} className={`px-2.5 py-1 rounded-lg text-[10px] font-black border cursor-pointer ${avatarConfig.hasSunglasses ? 'bg-amber-400 text-stone-950 border-white' : 'bg-white/10 text-zinc-300 border-white/10'}`}>
                     🕶️ 선글라스 {avatarConfig.hasSunglasses ? 'ON' : 'OFF'}
                   </button>
                 </div>
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => handleSaveAvatarCustomization(avatarConfig)}
-              style={{ backgroundColor: '#10B981', color: '#030712' }}
-              className="w-full py-3 rounded-2xl font-black text-xs sm:text-sm cursor-pointer shadow-lg hover:opacity-95 active:scale-99 transition-all"
-            >
+            <button type="button" onClick={() => handleSaveAvatarCustomization(avatarConfig)} style={{ backgroundColor: '#10B981', color: '#030712' }} className="w-full py-3 rounded-2xl font-black text-xs sm:text-sm cursor-pointer shadow-lg">
               ✨ 이 캐릭터 스타일로 저장하고 메타버스 입장하기
             </button>
           </div>
         </div>
       )}
 
-      {/* ================================================================= */}
-      {/* 🤝 6. 다른 실제 접속 성도(Remote Peer) 클릭 시 열리는 상호 호환 모달 */}
-      {/* ================================================================= */}
+      {/* 6. 다른 접속 성도 클릭 모달 */}
       {selectedRemotePeer && (
-        <div
-          className="fixed inset-0 z-50 bg-black/65 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in"
-          onClick={() => setSelectedRemotePeer(null)}
-        >
-          <div
-            style={{ backgroundColor: '#111827', color: '#FFFFFF' }}
-            className="w-full max-w-sm border border-emerald-500/40 rounded-3xl p-5 shadow-2xl space-y-3.5 text-left"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <div className="fixed inset-0 z-50 bg-black/65 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in" onClick={() => setSelectedRemotePeer(null)}>
+          <div style={{ backgroundColor: '#111827', color: '#FFFFFF' }} className="w-full max-w-sm border border-emerald-500/40 rounded-3xl p-5 shadow-2xl space-y-3.5 text-left" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <div>
-                <span className="text-[10px] font-bold text-emerald-400 block">
-                  실시간 접속 성도 인터랙션
-                </span>
-                <h3 className="text-base font-black text-white">
-                  {selectedRemotePeer.name} ({selectedRemotePeer.office || '성도'})
-                </h3>
+                <span className="text-[10px] font-bold text-emerald-400 block">실시간 접속 성도 인터랙션</span>
+                <h3 className="text-base font-black text-white">{selectedRemotePeer.name} ({selectedRemotePeer.office || '성도'})</h3>
               </div>
-              <button
-                onClick={() => setSelectedRemotePeer(null)}
-                className="text-xs font-bold text-zinc-400 cursor-pointer"
-              >
-                ✕ 닫기
-              </button>
+              <button onClick={() => setSelectedRemotePeer(null)} className="text-xs font-bold text-zinc-400 cursor-pointer">✕ 닫기</button>
             </div>
 
             <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={() => {
-                  triggerSocialAction('wave', `${selectedRemotePeer.name}님 반갑습니다! 샬롬 👋`);
-                  setSelectedRemotePeer(null);
-                }}
-                className="p-2.5 rounded-xl bg-white/10 hover:bg-emerald-600/40 text-xs font-bold text-white cursor-pointer"
-              >
-                👋 반갑게 인사하기
-              </button>
-              <button
-                onClick={() => {
-                  triggerSocialAction('wave', `${selectedRemotePeer.name}님 한 주간 평안하셨나요? 😊`);
-                  setSelectedRemotePeer(null);
-                }}
-                className="p-2.5 rounded-xl bg-white/10 hover:bg-emerald-600/40 text-xs font-bold text-white cursor-pointer"
-              >
-                💬 안부 묻기
-              </button>
-              <button
-                onClick={() => {
-                  triggerSocialAction('pray', `${selectedRemotePeer.name}님의 가정과 일터를 위해 함께 기도합니다 🙏`);
-                  setSelectedRemotePeer(null);
-                }}
-                className="p-2.5 rounded-xl bg-white/10 hover:bg-indigo-600/40 text-xs font-bold text-white cursor-pointer"
-              >
-                🙏 함께 중보기도
-              </button>
-              <button
-                onClick={() => {
-                  triggerSocialAction('dance', `${selectedRemotePeer.name}님과 함께 기쁨의 워십댄스! 💃🎵`);
-                  setSelectedRemotePeer(null);
-                }}
-                className="p-2.5 rounded-xl bg-white/10 hover:bg-pink-600/40 text-xs font-bold text-white cursor-pointer"
-              >
-                💃 함께 춤추기
-              </button>
+              <button onClick={() => { triggerSocialAction('wave', `${selectedRemotePeer.name}님 반갑습니다! 샬롬 👋`); setSelectedRemotePeer(null); }} className="p-2.5 rounded-xl bg-white/10 hover:bg-emerald-600/40 text-xs font-bold text-white cursor-pointer">👋 반갑게 인사하기</button>
+              <button onClick={() => { triggerSocialAction('wave', `${selectedRemotePeer.name}님 한 주간 평안하셨나요? 😊`); setSelectedRemotePeer(null); }} className="p-2.5 rounded-xl bg-white/10 hover:bg-emerald-600/40 text-xs font-bold text-white cursor-pointer">💬 안부 묻기</button>
+              <button onClick={() => { triggerSocialAction('pray', `${selectedRemotePeer.name}님의 가정과 일터를 위해 함께 기도합니다 🙏`); setSelectedRemotePeer(null); }} className="p-2.5 rounded-xl bg-white/10 hover:bg-indigo-600/40 text-xs font-bold text-white cursor-pointer">🙏 함께 중보기도</button>
+              <button onClick={() => { triggerSocialAction('dance', `${selectedRemotePeer.name}님과 함께 기쁨의 워십댄스! 💃🎵`); setSelectedRemotePeer(null); }} className="p-2.5 rounded-xl bg-white/10 hover:bg-pink-600/40 text-xs font-bold text-white cursor-pointer">💃 함께 춤추기</button>
             </div>
 
             {canPlayerBless && (
               <button
                 onClick={() => {
-                  triggerHolyBenediction(
-                    `${playerName} 목사님`,
-                    selectedRemotePeer.name,
-                    [selectedRemotePeer.x || -0.8, 0.08, selectedRemotePeer.z || 2.2]
-                  );
+                  triggerHolyBenediction(`${playerName} 목사님`, selectedRemotePeer.name, [selectedRemotePeer.x || -0.8, 0.08, selectedRemotePeer.z || 2.2]);
                   setSelectedRemotePeer(null);
                 }}
                 style={{ backgroundColor: '#F59E0B', color: '#030712' }}
@@ -3756,98 +2906,44 @@ export default function VirtualChurchLobby({ setActiveScreen, onChangeFloor }) {
         </div>
       )}
 
-      {/* ================================================================= */}
-      {/* 📰 7. 교회 홍보 브로슈어 & 디지털 주보 & 실시간 방명록 모달 */}
-      {/* ================================================================= */}
+      {/* 7. 홍보물·주보·방명록 모달 */}
       {showBrochureModal && (
-        <div
-          className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
-          onClick={() => setShowBrochureModal(false)}
-        >
-          <div
-            style={{ backgroundColor: '#111827', color: '#FFFFFF' }}
-            className="w-full max-w-md border border-pink-500/40 rounded-3xl p-5 shadow-2xl space-y-4 text-left max-h-[86vh] overflow-y-auto hide-scrollbar"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in" onClick={() => setShowBrochureModal(false)}>
+          <div style={{ backgroundColor: '#111827', color: '#FFFFFF' }} className="w-full max-w-md border border-pink-500/40 rounded-3xl p-5 shadow-2xl space-y-4 text-left max-h-[86vh] overflow-y-auto hide-scrollbar" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <div>
-                <span className="text-[10px] font-mono font-bold text-pink-400 block">
-                  GOOD TREE CHURCH KIOSK
-                </span>
-                <h3 className="text-base font-black text-white">
-                  📰 교회 홍보 브로슈어 & 로비 방명록
-                </h3>
+                <span className="text-[10px] font-mono font-bold text-pink-400 block">GOOD TREE CHURCH KIOSK</span>
+                <h3 className="text-base font-black text-white">📰 교회 홍보 브로슈어 & 로비 방명록</h3>
               </div>
-              <button
-                onClick={() => setShowBrochureModal(false)}
-                className="text-xs font-bold text-zinc-400 cursor-pointer"
-              >
-                ✕ 닫기
-              </button>
+              <button onClick={() => setShowBrochureModal(false)} className="text-xs font-bold text-zinc-400 cursor-pointer">✕ 닫기</button>
             </div>
 
             <div className="p-3.5 rounded-2xl bg-gradient-to-br from-indigo-950 to-slate-900 border border-indigo-500/40 space-y-2">
-              <span className="px-2 py-0.5 rounded bg-amber-400 text-stone-950 text-[10px] font-black">
-                2026 좋은나무교회 비전 브로슈어
-              </span>
-              <h4 className="text-sm font-black text-white">
-                "기적이 상식이 되는 5일의 기도 · 말씀과 성령 공동체"
-              </h4>
+              <span className="px-2 py-0.5 rounded bg-amber-400 text-stone-950 text-[10px] font-black">2026 좋은나무교회 비전 브로슈어</span>
+              <h4 className="text-sm font-black text-white">"기적이 상식이 되는 5일의 기도 · 말씀과 성령 공동체"</h4>
               <p className="text-xs text-zinc-300 leading-relaxed">
-                • <b>교역자:</b> 이성현 목사 · 방희곤 목사 · 최수경 목사
-                <br />• <b>주일 대예배:</b> 1부 09:00 / 2부 11:00 (3층 대예배당)
-                <br />• <b>2층 커뮤니티:</b> 좋은나무 스페셜티 북카페 & 담임목사 목양실
+                • <b>교역자:</b> 이성현 목사 · 방희곤 목사 · 최수경 목사<br />
+                • <b>주일 대예배:</b> 1부 09:00 / 2부 11:00 (3층 대예배당)<br />
+                • <b>2층 커뮤니티:</b> 좋은나무 스페셜티 북카페 & 담임목사 목양실
               </p>
               <div className="flex gap-2 pt-1">
-                <button
-                  onClick={() => {
-                    setShowBrochureModal(false);
-                    if (setActiveScreen) setActiveScreen('sermon');
-                  }}
-                  className="flex-1 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black cursor-pointer"
-                >
-                  📝 온라인 예배노트 열기
-                </button>
-                <button
-                  onClick={() => {
-                    setShowBrochureModal(false);
-                    if (setActiveScreen) setActiveScreen('qt');
-                  }}
-                  className="flex-1 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black cursor-pointer"
-                >
-                  📖 오늘의 QT 묵상
-                </button>
+                <button onClick={() => { setShowBrochureModal(false); if (setActiveScreen) setActiveScreen('sermon'); }} className="flex-1 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black cursor-pointer">📝 온라인 예배노트 열기</button>
+                <button onClick={() => { setShowBrochureModal(false); if (setActiveScreen) setActiveScreen('qt'); }} className="flex-1 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black cursor-pointer">📖 오늘의 QT 묵상</button>
               </div>
             </div>
 
             <div className="space-y-2">
-              <span className="text-xs font-black text-amber-300 block">
-                ✍️ 1층 로비 방문 성도 한줄 방명록
-              </span>
+              <span className="text-xs font-black text-amber-300 block">✍️ 1층 로비 방문 성도 한줄 방명록</span>
               <form onSubmit={handleAddGuestbookEntry} className="flex gap-1.5">
-                <input
-                  type="text"
-                  value={guestbookInput}
-                  onChange={(e) => setGuestbookInput(e.target.value)}
-                  placeholder="반가운 안부나 기도제목을 남겨주세요..."
-                  className="flex-1 px-3 py-2 rounded-xl bg-black border border-white/15 text-xs text-white outline-none"
-                />
-                <button
-                  type="submit"
-                  className="px-3.5 py-2 rounded-xl bg-amber-500 text-stone-950 font-black text-xs cursor-pointer shrink-0"
-                >
-                  등록
-                </button>
+                <input type="text" value={guestbookInput} onChange={(e) => setGuestbookInput(e.target.value)} placeholder="반가운 안부나 기도제목을 남겨주세요..." className="flex-1 px-3 py-2 rounded-xl bg-black border border-white/15 text-xs text-white outline-none" />
+                <button type="submit" className="px-3.5 py-2 rounded-xl bg-amber-500 text-stone-950 font-black text-xs cursor-pointer shrink-0">등록</button>
               </form>
-
               <div className="space-y-1.5 max-h-44 overflow-y-auto pr-1 hide-scrollbar">
                 {guestbookList.map((g) => (
                   <div key={g.id} className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-xs">
                     <div className="flex justify-between items-center mb-0.5">
                       <span className="font-black text-emerald-400">{g.user_name}</span>
-                      <span className="text-[10px] font-mono text-zinc-500">
-                        {String(g.created_at).slice(0, 10)}
-                      </span>
+                      <span className="text-[10px] font-mono text-zinc-500">{String(g.created_at).slice(0, 10)}</span>
                     </div>
                     <p className="text-zinc-200">{g.message}</p>
                   </div>
@@ -3858,49 +2954,24 @@ export default function VirtualChurchLobby({ setActiveScreen, onChangeFloor }) {
         </div>
       )}
 
-      {/* ================================================================= */}
-      {/* 💬 8. NPC 클릭 시 열리는 1:1 환영 대화 & 목사님 축도 & 주차팀 인사 모달 */}
-      {/* ================================================================= */}
+      {/* 8. NPC 1:1 대화 & 축도 모달 */}
       {selectedChatNpc && (
-        <div
-          className="fixed inset-0 z-50 bg-black/65 backdrop-blur-xs flex items-end sm:items-center justify-center p-3 sm:p-4 animate-fade-in"
-          onClick={() => setSelectedChatNpc(null)}
-        >
-          <div
-            style={{ backgroundColor: '#111827', color: '#FFFFFF' }}
-            className="w-full max-w-md border border-emerald-500/40 rounded-3xl p-5 shadow-2xl space-y-3.5 text-left"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <div className="fixed inset-0 z-50 bg-black/65 backdrop-blur-xs flex items-end sm:items-center justify-center p-3 sm:p-4 animate-fade-in" onClick={() => setSelectedChatNpc(null)}>
+          <div style={{ backgroundColor: '#111827', color: '#FFFFFF' }} className="w-full max-w-md border border-emerald-500/40 rounded-3xl p-5 shadow-2xl space-y-3.5 text-left" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <div className="flex items-center gap-2.5">
-                <div
-                  style={{ backgroundColor: selectedChatNpc.shirt || '#10B981' }}
-                  className="w-9 h-9 rounded-2xl flex items-center justify-center text-base font-black text-white shadow-md"
-                >
+                <div style={{ backgroundColor: selectedChatNpc.shirt || '#10B981' }} className="w-9 h-9 rounded-2xl flex items-center justify-center text-base font-black text-white shadow-md">
                   {selectedChatNpc.name.slice(0, 1)}
                 </div>
                 <div>
-                  <span style={{ color: '#34D399' }} className="text-[10.5px] font-bold block">
-                    {selectedChatNpc.role || '1층 로비 안내위원'}
-                  </span>
-                  <h3 style={{ color: '#FFFFFF' }} className="text-sm sm:text-base font-black">
-                    {selectedChatNpc.name}
-                  </h3>
+                  <span style={{ color: '#34D399' }} className="text-[10.5px] font-bold block">{selectedChatNpc.role || '1층 로비 안내위원'}</span>
+                  <h3 style={{ color: '#FFFFFF' }} className="text-sm sm:text-base font-black">{selectedChatNpc.name}</h3>
                 </div>
               </div>
-              <button
-                onClick={() => setSelectedChatNpc(null)}
-                style={{ color: '#9CA3AF' }}
-                className="text-xs font-bold cursor-pointer px-2 py-1"
-              >
-                ✕ 닫기
-              </button>
+              <button onClick={() => setSelectedChatNpc(null)} style={{ color: '#9CA3AF' }} className="text-xs font-bold cursor-pointer px-2 py-1">✕ 닫기</button>
             </div>
 
-            <div
-              style={{ backgroundColor: 'rgba(16, 185, 129, 0.12)', borderColor: 'rgba(16, 185, 129, 0.35)' }}
-              className="p-3.5 rounded-2xl border text-xs sm:text-[13px] leading-relaxed font-medium text-emerald-100"
-            >
+            <div style={{ backgroundColor: 'rgba(16, 185, 129, 0.12)', borderColor: 'rgba(16, 185, 129, 0.35)' }} className="p-3.5 rounded-2xl border text-xs sm:text-[13px] leading-relaxed font-medium text-emerald-100">
               "{chatReplyText}"
             </div>
 
@@ -3921,9 +2992,7 @@ export default function VirtualChurchLobby({ setActiveScreen, onChangeFloor }) {
             {selectedChatNpc.isParkingTeam && (
               <button
                 onClick={() => {
-                  setChatReplyText(
-                    `충성! ${playerName} 성도님! 오늘도 주님 안에서 안전하고 복된 주일 되십시오! 🫡🚗`
-                  );
+                  setChatReplyText(`충성! ${playerName} 성도님! 오늘도 주님 안에서 안전하고 복된 주일 되십시오! 🫡🚗`);
                   triggerSocialAction('wave', '주차봉사팀 집사님 늘 수고해주셔서 감사합니다! 👋');
                 }}
                 className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs cursor-pointer"
@@ -3933,80 +3002,30 @@ export default function VirtualChurchLobby({ setActiveScreen, onChangeFloor }) {
             )}
 
             <div className="pt-2 border-t border-white/10 flex flex-wrap gap-1.5">
-              <button
-                onClick={() => {
-                  setSelectedChatNpc(null);
-                  handleJumpToFloor('2F');
-                }}
-                style={{ backgroundColor: 'rgba(255,255,255,0.1)', color: '#FDE047' }}
-                className="flex-1 py-2.5 px-3 rounded-xl font-black text-xs cursor-pointer"
-              >
-                ☕ 2F 북카페·목양실
-              </button>
-              <button
-                onClick={() => {
-                  setSelectedChatNpc(null);
-                  handleJumpToFloor('3F');
-                }}
-                style={{ backgroundColor: '#10B981', color: '#030712' }}
-                className="flex-1 py-2.5 px-3 rounded-xl font-black text-xs cursor-pointer"
-              >
-                🛗 3F 대예배당 올라가기
-              </button>
+              <button onClick={() => { setSelectedChatNpc(null); handleJumpToFloor('2F'); }} style={{ backgroundColor: 'rgba(255,255,255,0.1)', color: '#FDE047' }} className="flex-1 py-2.5 px-3 rounded-xl font-black text-xs cursor-pointer">☕ 2F 북카페·목양실</button>
+              <button onClick={() => { setSelectedChatNpc(null); handleJumpToFloor('3F'); }} style={{ backgroundColor: '#10B981', color: '#030712' }} className="flex-1 py-2.5 px-3 rounded-xl font-black text-xs cursor-pointer">🛗 3F 대예배당 올라가기</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ================================================================= */}
-      {/* 🛗 9. 구역 상세 안내 & 전 층(1F~7F) 이동 엘리베이터 모달 */}
-      {/* ================================================================= */}
+      {/* 9. 구역 안내 & 엘리베이터 층 이동 모달 */}
       {modalZone && (
-        <div
-          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4"
-          onClick={() => setModalZone(null)}
-        >
-          <div
-            style={{ backgroundColor: '#111827', color: '#FFFFFF' }}
-            className="w-full max-w-md border border-white/20 rounded-3xl p-5 shadow-2xl space-y-4 text-left"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4" onClick={() => setModalZone(null)}>
+          <div style={{ backgroundColor: '#111827', color: '#FFFFFF' }} className="w-full max-w-md border border-white/20 rounded-3xl p-5 shadow-2xl space-y-4 text-left" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
-              <span
-                style={{ backgroundColor: '#10B981', color: '#030712' }}
-                className="px-2.5 py-1 rounded-full font-black text-xs"
-              >
-                {modalZone.badge}
-              </span>
-              <button
-                onClick={() => setModalZone(null)}
-                style={{ color: '#9CA3AF' }}
-                className="text-xs font-bold cursor-pointer"
-              >
-                ✕ 닫기
-              </button>
+              <span style={{ backgroundColor: '#10B981', color: '#030712' }} className="px-2.5 py-1 rounded-full font-black text-xs">{modalZone.badge}</span>
+              <button onClick={() => setModalZone(null)} style={{ color: '#9CA3AF' }} className="text-xs font-bold cursor-pointer">✕ 닫기</button>
             </div>
-
-            <h3 style={{ color: '#FFFFFF' }} className="text-base sm:text-lg font-black">
-              {modalZone.title}
-            </h3>
-            <p style={{ color: '#D1D5DB' }} className="text-xs leading-relaxed break-keep">
-              {modalZone.desc}
-            </p>
+            <h3 style={{ color: '#FFFFFF' }} className="text-base sm:text-lg font-black">{modalZone.title}</h3>
+            <p style={{ color: '#D1D5DB' }} className="text-xs leading-relaxed break-keep">{modalZone.desc}</p>
 
             {modalZone.stats && (
-              <div
-                style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}
-                className="rounded-2xl p-3 border border-white/10 space-y-2"
-              >
+              <div style={{ backgroundColor: 'rgba(255,255,255,0.06)' }} className="rounded-2xl p-3 border border-white/10 space-y-2">
                 {modalZone.stats.map((st, i) => (
                   <div key={i} className="flex justify-between text-xs">
-                    <span style={{ color: '#9CA3AF' }} className="font-bold">
-                      {st.label}
-                    </span>
-                    <span style={{ color: '#FCD34D' }} className="font-black">
-                      {st.val}
-                    </span>
+                    <span style={{ color: '#9CA3AF' }} className="font-bold">{st.label}</span>
+                    <span style={{ color: '#FCD34D' }} className="font-black">{st.val}</span>
                   </div>
                 ))}
               </div>
@@ -4015,16 +3034,7 @@ export default function VirtualChurchLobby({ setActiveScreen, onChangeFloor }) {
             {modalZone.actions && modalZone.actions.length > 0 && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
                 {modalZone.actions.map((act, i) => (
-                  <button
-                    key={i}
-                    onClick={() => {
-                      setModalZone(null);
-                      if (act.jumpFloor) handleJumpToFloor(act.jumpFloor);
-                      else if (setActiveScreen && act.screen) setActiveScreen(act.screen);
-                    }}
-                    style={{ backgroundColor: '#2563EB', color: '#FFFFFF' }}
-                    className="py-2.5 px-3 rounded-xl font-black text-xs cursor-pointer shadow-md"
-                  >
+                  <button key={i} onClick={() => { setModalZone(null); if (act.jumpFloor) handleJumpToFloor(act.jumpFloor); else if (setActiveScreen && act.screen) setActiveScreen(act.screen); }} style={{ backgroundColor: '#2563EB', color: '#FFFFFF' }} className="py-2.5 px-3 rounded-xl font-black text-xs cursor-pointer shadow-md">
                     {act.label}
                   </button>
                 ))}
@@ -4033,9 +3043,7 @@ export default function VirtualChurchLobby({ setActiveScreen, onChangeFloor }) {
 
             {modalZone.isElevator && (
               <div className="space-y-1.5 pt-1">
-                <span style={{ color: '#34D399' }} className="text-xs font-bold block">
-                  🛗 스테인리스 자동문이 열렸습니다. 이동하실 층을 선택하세요:
-                </span>
+                <span style={{ color: '#34D399' }} className="text-xs font-bold block">🛗 스테인리스 자동문이 열렸습니다. 이동하실 층을 선택하세요:</span>
                 {[
                   { fl: '1F', label: '1F 메인 로비 & 필로티 주차장 (현재 층)' },
                   { fl: '2F', label: '2F 좋은나무 북카페 · 담임목사 목양실 · 행정사무실' },
@@ -4043,16 +3051,10 @@ export default function VirtualChurchLobby({ setActiveScreen, onChangeFloor }) {
                   { fl: '4F', label: '4F 영유아 예배실 (온돌 마루 자모실 · 코너 TV)' },
                   { fl: '5F', label: '5F 소예배·찬양홀 · 조리실 · 워십댄스실' },
                   { fl: '6F', label: '6F 다음세대 교육관 · 새가족반 (유아·유치·초등)' },
-                  { fl: '7F', label: '7F 루프탑 하늘정원 · 김포 한강신도시 전망대' }
+                  { fl: '7F', label: '7F 루프탑 하늘정원 · 좋은나무 빌리지' }
                 ].map((item) => (
-                  <button
-                    key={item.fl}
-                    onClick={() => handleJumpToFloor(item.fl)}
-                    style={{ backgroundColor: 'rgba(255,255,255,0.1)', color: '#FFFFFF' }}
-                    className="w-full p-2.5 rounded-xl hover:bg-emerald-600 text-left text-xs font-black flex justify-between cursor-pointer transition-colors"
-                  >
-                    <span>{item.label}</span>
-                    <span>탑승 이동 ➔</span>
+                  <button key={item.fl} onClick={() => handleJumpToFloor(item.fl)} style={{ backgroundColor: 'rgba(255,255,255,0.1)', color: '#FFFFFF' }} className="w-full p-2.5 rounded-xl hover:bg-emerald-600 text-left text-xs font-black flex justify-between cursor-pointer transition-colors">
+                    <span>{item.label}</span><span>탑승 이동 ➔</span>
                   </button>
                 ))}
               </div>

@@ -1,3284 +1,1581 @@
-// src/metaverse/SkyGarden7F.js
+// src/metaverse/SkyGarden7F.js (Sandbox Master Edition — 물주기·채굴·터널·아날로그 조이스틱·월드확장)
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { PerspectiveCamera, OrbitControls, RoundedBox, ContactShadows, Billboard, Sky } from '@react-three/drei';
+import { PerspectiveCamera, OrbitControls, RoundedBox, Billboard, Sky } from '@react-three/drei';
 import * as THREE from 'three';
 import { useAppStore } from '../store/useAppStore';
 import { supabase } from '../lib/supabase';
+import {
+  BLOCK_CATALOG,
+  PROP_CATALOG,
+  NPC_CATALOG,
+  CROP_CATALOG,
+  ANIMAL_CATALOG,
+  FISH_CATALOG,
+  VILLAGE_QUESTS,
+  MATERIAL_META,
+  BLOCK_MAP_META,
+  CROP_MAP_META,
+  ANIMAL_MAP_META,
+  blockKey,
+  createBlockTextures,
+  buildCulledGeometries,
+  generateBiomeWorld,
+  expandWorldTerrain,
+  getSurfaceBelow,
+  getSurfaceInfo,
+  canPlayerMoveTo,
+  isCellOccupied,
+  getFenceConnections,
+  detectRoomAt
+} from './voxel/VoxelEngine';
 
-// =====================================================================
-// 👑 축도 권한 목사님 판별 & 기본 아바타 설정
-// =====================================================================
-const BLESSING_PASTORS = ['이성현', '방희곤', '최수경'];
+const STORAGE_KEY_WORLD = 'gtc_openworld_7f_sandbox_v8';
+const STORAGE_KEY_META = 'gtc_openworld_7f_meta_v8';
 
-const isAuthorizedPastor = (name = '', office = '') => {
-  const clean = String(name).trim();
-  if (BLESSING_PASTORS.some((p) => clean.includes(p))) return true;
-  if (String(office).includes('목사')) return true;
-  return false;
-};
-
-const DEFAULT_AVATAR_CONFIG = {
+const DEFAULT_AVATAR = {
   gender: 'male',
   hairStyle: 'parted',
   isSkirt: false,
-  shirtColor: '#FACC15',
-  pantsColor: '#0284C7',
-  hairColor: '#27272A',
-  hasSunglasses: false
+  shirtColor: '#3B82F6',
+  pantsColor: '#1E293B',
+  hairColor: '#27272A'
 };
 
-// =====================================================================
-// 🔔 사운드 신시사이저 (엘리베이터 차임벨 · 축도 홀리라이트)
-// =====================================================================
-const playElevatorDingSound = () => {
-  try {
-    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    if (!AudioCtx) return;
-    const ctx = new AudioCtx();
-    const now = ctx.currentTime;
-
-    [659.25, 523.25].forEach((freq, idx) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, now + idx * 0.22);
-      gain.gain.setValueAtTime(0.08, now + idx * 0.22);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.22 + 0.45);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(now + idx * 0.22);
-      osc.stop(now + idx * 0.22 + 0.45);
-    });
-  } catch (_) {}
+const DEFAULT_META = {
+  hearts: 50,
+  quests: {},
+  openedChests: {},
+  materials: { wood: 14, stone: 14, dirt: 12, coal: 4, iron: 4, gold: 4, crystal: 2, glass: 8, cloth: 6, straw: 4, crop: 2 },
+  props: { hay_bale: 2, fruit_basket: 2, well: 1, campfire: 1, fence_wood: 6 }
 };
 
-const playHolyBlessingSound = () => {
-  try {
-    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    if (!AudioCtx) return;
-    const ctx = new AudioCtx();
-    const now = ctx.currentTime;
-
-    [349.23, 440.0, 523.25, 659.25, 698.46, 880.0, 1046.5].forEach((freq, idx) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(freq, now + idx * 0.11);
-      gain.gain.setValueAtTime(0.06, now + idx * 0.11);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.11 + 1.8);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(now + idx * 0.11);
-      osc.stop(now + idx * 0.11 + 1.8);
-    });
-  } catch (_) {}
-};
+const NPC_META_MAP = NPC_CATALOG.reduce((acc, n) => { acc[n.id] = n; return acc; }, {});
+const FISH_META_MAP = FISH_CATALOG.reduce((acc, f) => { acc[f.id] = f; return acc; }, {});
 
 // =====================================================================
-// 🎨 고해상도 건축 시각화(ArchViz) 프로시저럴 텍스처 엔진
+// 만화풍 3단계 셀 셰이딩(Toon) 그라데이션 & 통합 사운드 엔진
 // =====================================================================
-function makeCanvasTexture(drawFn, width = 512, height = 256, repeatX = 1, repeatY = 1) {
-  const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext('2d');
-  drawFn(ctx, width, height);
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  if (repeatX > 1 || repeatY > 1) {
-    tex.wrapS = THREE.RepeatWrapping;
-    tex.wrapT = THREE.RepeatWrapping;
-    tex.repeat.set(repeatX, repeatY);
-  }
+function createToonGradient() {
+  const data = new Uint8Array([115, 195, 255]);
+  const tex = new THREE.DataTexture(data, 3, 1, THREE.RedFormat);
+  tex.minFilter = THREE.NearestFilter;
+  tex.magFilter = THREE.NearestFilter;
   tex.needsUpdate = true;
   return tex;
 }
 
-// 🏢 image_864f03.jpg & image_864ee5.jpg 완벽 고증: 현대 하이엔드 아파트 입면 텍스처
-function makeArchVizApartmentTexture(frameHex = '#F8FAFC', accentHex = '#475569', isNight = false) {
-  return makeCanvasTexture((ctx, w, h) => {
-    // 베이스 콘크리트/알루미늄 루버 패널
-    ctx.fillStyle = frameHex;
-    ctx.fillRect(0, 0, w, h);
-
-    // 좌우 수직 다크 그레이 코어 밴드 (image_864ee5.jpg 특유의 투톤 수직 라인)
-    ctx.fillStyle = accentHex;
-    ctx.fillRect(0, 0, 36, h);
-    ctx.fillRect(w - 36, 0, 36, h);
-    ctx.fillRect(w * 0.48, 0, 20, h);
-
-    const floors = 18;
-    const cols = 6;
-    const fH = h / floors;
-    const cW = (w - 84) / cols;
-
-    for (let r = 0; r < floors; r++) {
-      const y = r * fH;
-      // 층간 화이트 수평 슬래브 띠
-      ctx.fillStyle = frameHex;
-      ctx.fillRect(32, y, w - 64, 5);
-
-      for (let c = 0; c < cols; c++) {
-        const x = 42 + c * cW + (c >= 3 ? 12 : 0);
-        const isLit = isNight && ((r * 11 + c * 7) % 5 === 0 || (r + c) % 6 === 0);
-
-        // 통유리 커튼월 & 발코니 유리창 (낮에는 깊이감 있는 다크 슬레이트 블루/차콜)
-        const glassGrad = ctx.createLinearGradient(x, y + 6, x + cW - 10, y + fH - 3);
-        if (isLit) {
-          glassGrad.addColorStop(0, '#FEF08A');
-          glassGrad.addColorStop(1, '#F59E0B');
-        } else {
-          glassGrad.addColorStop(0, '#1E293B');
-          glassGrad.addColorStop(0.5, '#334155');
-          glassGrad.addColorStop(1, '#0F172A');
-        }
-        ctx.fillStyle = glassGrad;
-        ctx.fillRect(x + 3, y + 6, cW - 10, fH - 8);
-
-        // 유리 난간 수평 바 & 세로 창살
-        ctx.fillStyle = 'rgba(226, 232, 240, 0.75)';
-        ctx.fillRect(x + 3, y + fH * 0.62, cW - 10, 2);
-        ctx.fillRect(x + (cW - 10) / 2, y + 6, 2, fH - 8);
-      }
-    }
-  }, 512, 1024);
-}
-
-// ☀️ image_864f03.jpg 완벽 고증: 옥상 태양광 발전 모듈(Solar Panel Grid) 텍스처
-function makeSolarPanelRoofTexture() {
-  return makeCanvasTexture((ctx, w, h) => {
-    ctx.fillStyle = '#0F172A';
-    ctx.fillRect(0, 0, w, h);
-
-    ctx.fillStyle = '#1E3A8A';
-    ctx.fillRect(10, 10, w - 20, h - 20);
-
-    ctx.strokeStyle = '#93C5FD';
-    ctx.lineWidth = 3;
-    const rows = 4;
-    const cols = 6;
-    for (let r = 0; r <= rows; r++) {
-      ctx.beginPath();
-      ctx.moveTo(10, 10 + (r * (h - 20)) / rows);
-      ctx.lineTo(w - 10, 10 + (r * (h - 20)) / rows);
-      ctx.stroke();
-    }
-    for (let c = 0; c <= cols; c++) {
-      ctx.beginPath();
-      ctx.moveTo(10 + (c * (w - 20)) / cols, 10);
-      ctx.lineTo(10 + (c * (w - 20)) / cols, h - 10);
-      ctx.stroke();
-    }
-  }, 256, 256);
-}
-
-// ⛪ 좋은나무교회 우측 코발트블루 유리 커튼월 타워 텍스처
-function makeBlueCurtainWallTexture() {
-  return makeCanvasTexture((ctx, w, h) => {
-    const grad = ctx.createLinearGradient(0, 0, w, h);
-    grad.addColorStop(0, '#0284C7');
-    grad.addColorStop(0.45, '#1D4ED8');
-    grad.addColorStop(0.8, '#0369A1');
-    grad.addColorStop(1, '#1E3A8A');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, w, h);
-
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
-    ctx.beginPath();
-    ctx.moveTo(0, h * 0.18);
-    ctx.lineTo(w, 0);
-    ctx.lineTo(w, h * 0.42);
-    ctx.lineTo(0, h * 0.62);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.strokeStyle = '#090D16';
-    ctx.lineWidth = 5;
-    for (let x = 0; x <= w; x += w / 3) {
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, h);
-      ctx.stroke();
-    }
-    for (let y = 0; y <= h; y += h / 14) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(w, y);
-      ctx.stroke();
-    }
-  }, 256, 1024);
-}
-
-// 🌍 교회 좌측 외벽 대형 세계지도 선교 벽화 텍스처
-function makeWorldMissionMuralTexture() {
-  return makeCanvasTexture((ctx, w, h) => {
-    ctx.fillStyle = '#27272A';
-    ctx.fillRect(0, 0, w, h);
-    ctx.strokeStyle = '#3F3F46';
-    ctx.lineWidth = 8;
-    ctx.strokeRect(6, 6, w - 12, h - 12);
-
-    ctx.fillStyle = '#52525B';
-    ctx.beginPath();
-    ctx.ellipse(w * 0.62, h * 0.42, 110, 58, -0.1, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.ellipse(w * 0.52, h * 0.66, 45, 52, 0.2, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.ellipse(w * 0.24, h * 0.36, 48, 44, 0.3, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.ellipse(w * 0.30, h * 0.72, 34, 48, -0.2, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = '#E4E4E7';
-    ctx.font = '900 22px serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('온 열방에 복음을 전하는 좋은나무교회', w / 2, h - 26);
-  }, 512, 360);
-}
-
-function makeWoodDeckTexture() {
-  return makeCanvasTexture((ctx, w, h) => {
-    ctx.fillStyle = '#8C5832';
-    ctx.fillRect(0, 0, w, h);
-    const slats = 16;
-    const sH = h / slats;
-    for (let i = 0; i < slats; i++) {
-      ctx.fillStyle = i % 2 === 0 ? '#9A633A' : '#7D4E2B';
-      ctx.fillRect(0, i * sH, w, sH - 3);
-      ctx.fillStyle = '#3E2411';
-      ctx.fillRect(0, (i + 1) * sH - 3, w, 3);
-    }
-  }, 512, 512);
-}
-
-function makeBrushedSteelTexture() {
-  return makeCanvasTexture((ctx, w, h) => {
-    const grad = ctx.createLinearGradient(0, 0, w, h);
-    grad.addColorStop(0, '#CBD5E1');
-    grad.addColorStop(0.3, '#F8FAFC');
-    grad.addColorStop(0.5, '#94A3B8');
-    grad.addColorStop(0.75, '#E2E8F0');
-    grad.addColorStop(1, '#CBD5E1');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, w, h);
-  }, 256, 256);
-}
-
-function makeRoomSignTexture(title, subTitle, badgeColor = '#10B981') {
-  return makeCanvasTexture((ctx, w, h) => {
-    ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
-    ctx.beginPath();
-    ctx.roundRect(12, 12, w - 24, h - 24, 34);
-    ctx.fill();
-    ctx.lineWidth = 6;
-    ctx.strokeStyle = badgeColor;
-    ctx.stroke();
-
-    ctx.fillStyle = badgeColor;
-    ctx.font = '900 22px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(subTitle, w / 2, 54);
-
-    ctx.fillStyle = '#FFFFFF';
-    ctx.font = '900 42px sans-serif';
-    ctx.fillText(title, w / 2, 122);
-  }, 440, 175);
-}
-
-// =====================================================================
-// 📍 7층 하늘정원 & 펜트하우스 홀 6대 인터랙션 존 정의
-// =====================================================================
-const ZONES_7F = [
-  {
-    id: 'zone_7f_elev',
-    code: '01',
-    subCode: '7F엘베',
-    name: '7F 옥상 펜트하우스 엘리베이터 & 계단 홀',
-    prompt: '01 엘리베이터 탑승 (1F~6F 전 층 이동)',
-    pos: [3.2, 0, -2.4],
-    isElevator: true,
-    badge: '01 7F 엘리베이터·계단',
-    title: '🛗 7층 하늘정원 펜트하우스 엘리베이터 & 계단 홀',
-    desc: '6층 교육관에서 올라오면 처음 도착하는 7층 실내 코어 홀입니다. 스테인리스 자동 개폐 엘리베이터와 계단실을 통해 1F~6F 모든 층으로 즉시 이동할 수 있습니다.'
-  },
-  {
-    id: 'zone_7f_wreath',
-    code: '02',
-    subCode: '축하화환',
-    name: '좋은나무교회 축하 3단 화환 & 비품 코너',
-    prompt: '02 좋은나무교회 축하 화환 보기',
-    pos: [4.2, 0, 0.2],
-    badge: '02 축하화환 코너',
-    title: '🌺 좋은나무교회 창립·입당 축하 3단 화환 코너',
-    desc: '7층 계단실 옆에 보관된 좋은나무교회 축하 화환과 성전 관리 비품들이 정갈하게 놓여 있는 공간입니다.'
-  },
-  {
-    id: 'zone_7f_passage_door',
-    code: '03',
-    subCode: '하늘정원통로',
-    name: '옥상 야외 하늘정원 연결 통로 & 자동 개폐문',
-    prompt: '03 문 열고 야외 하늘정원으로 나가기',
-    pos: [1.6, 0, -0.5],
-    isPassageDoor: true,
-    badge: '03 하늘정원 출입통로',
-    title: '🚪 7층 실내 코어 ➔ 야외 하늘정원 연결 통로',
-    desc: '엘리베이터 홀에서 이 통로 문을 지나면 탁 트인 7층 야외 하늘정원과 김포 한강신도시(마산동) 파노라마 조감도가 펼쳐집니다!'
-  },
-  {
-    id: 'zone_7f_pergola',
-    code: '04',
-    subCode: '파고라쉼터',
-    name: '하늘정원 원목 파고라(Pergola) & 스트링라이트 라운지',
-    prompt: '04 파고라 벤치에 앉아 커피 마시며 담소 나누기',
-    pos: [-1.4, 0, -1.2],
-    seatTarget: { x: -1.4, z: -1.65, rotY: 0, rowLabel: '7F 하늘정원 파고라 원목 벤치석' },
-    isSeatZone: true,
-    badge: '04 파고라 가든 라운지',
-    title: '🌿 루프탑 원목 파고라 & 에디슨 전구 힐링 쉼터',
-    desc: '따뜻한 웜화이트 스트링 라이트가 반짝이는 원목 파고라 아래에서 성도님들과 시원한 바람을 맞으며 차와 담소를 나누는 쉼터입니다.'
-  },
-  {
-    id: 'zone_7f_observatory',
-    code: '05',
-    subCode: '전망대·망원경',
-    name: '북쪽 김포한강8로 & 한강신도시 마스터플랜 전망대',
-    prompt: '05 전망 망원경으로 교회 전경 & 주변 도시 조감도 보기',
-    pos: [-1.2, 0, 3.6],
-    isObservatory: true,
-    badge: '05 한강신도시 전망대',
-    title: '🔭 김포한강8로 & 주변 대단지 아파트·학교·공원 3D 조감도 전망대',
-    desc: '전망 망원경을 클릭하면 카메라가 마스터플랜 드론 조감도로 전환되어 우리 좋은나무교회 전체 외관과 건너편 경남아너스빌, 동일스위트, e편한세상, 은여울중학교, 은여울공원 수목원을 한눈에 조망합니다!'
-  },
-  {
-    id: 'zone_7f_prayer_cross',
-    code: '06',
-    subCode: '옥상기도처',
-    name: '옥상 십자가 첨탑 아래 중보기도단 & 목사님 축도',
-    prompt: '06 하늘정원에서 목사님 축도(홀리라이트) 받기',
-    pos: [-4.2, 0, 1.8],
-    isBlessingZone: true,
-    badge: '06 하늘정원 기도·축도처',
-    title: '✝️ 김포 땅과 열방을 품고 기도하는 하늘정원 축도처',
-    desc: '이성현·방희곤·최수경 목사님과 함께 김포 한강신도시의 복음화와 가정을 위해 기도하며 하늘에서 내려오는 황금빛 축도(홀리라이트)를 받는 은혜의 자리입니다.'
+let sharedAudioCtx = null;
+function getAudioCtx() {
+  if (typeof window === 'undefined') return null;
+  if (!sharedAudioCtx) {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (AudioCtx) sharedAudioCtx = new AudioCtx();
   }
-];
-
-// =====================================================================
-// 🚧 7층 옥상 난간 & 펜트하우스 벽체 물리 충돌(AABB) 및 통로 통과 네비게이션
-// =====================================================================
-const SOLID_WALL_BOXES_7F = [
-  { minX: 1.75, maxX: 2.15, minZ: -4.5, maxZ: -1.38 },
-  { minX: 1.75, maxX: 2.15, minZ: 0.38, maxZ: 2.2 },
-  { minX: 1.8, maxX: 5.5, minZ: 1.85, maxZ: 2.25 },
-  { minX: 2.4, maxX: 4.3, minZ: -4.4, maxZ: -3.1 }
-];
-
-function resolveCollision7F(nx, nz, radius = 0.28) {
-  let x = Math.max(-5.6, Math.min(4.8, nx));
-  let z = Math.max(-3.9, Math.min(4.1, nz));
-
-  for (const box of SOLID_WALL_BOXES_7F) {
-    const closestX = Math.max(box.minX, Math.min(x, box.maxX));
-    const closestZ = Math.max(box.minZ, Math.min(z, box.maxZ));
-    const dx = x - closestX;
-    const dz = z - closestZ;
-    const distSq = dx * dx + dz * dz;
-
-    if (distSq < radius * radius) {
-      const dist = Math.sqrt(distSq) || 0.001;
-      const overlap = radius - dist;
-      x += (dx / dist) * overlap;
-      z += (dz / dist) * overlap;
-    }
-  }
-  return [x, z];
+  if (sharedAudioCtx && sharedAudioCtx.state === 'suspended') sharedAudioCtx.resume().catch(() => {});
+  return sharedAudioCtx;
 }
 
-function computeSmartPath7F(sx, sz, rawEx, rawEz) {
-  const [ex, ez] = resolveCollision7F(rawEx, rawEz);
-  const startInside = sx > 1.95 && sz < 2.0;
-  const endInside = ex > 1.95 && ez < 2.0;
+const playSfx = (type = 'place', muted = false) => {
+  if (muted) return;
+  try {
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+    const now = ctx.currentTime;
 
-  if (startInside !== endInside) {
-    return [
-      [2.5, -0.5],
-      [1.2, -0.5],
-      [ex, ez]
-    ];
-  }
-  return [[ex, ez]];
-}
-
-// =====================================================================
-// 👥 7층 하늘정원 목사님 & 성도 NPC 데이터
-// =====================================================================
-const NPCS_7F = [
-  {
-    id: 'pastor_lee_7f',
-    name: '이성현 담임목사님 (하늘정원)',
-    role: '좋은나무교회 담임목사 · 도시 축복기도',
-    isPastor: true,
-    canBless: true,
-    x: -3.2,
-    y: 0,
-    z: 2.6,
-    rotY: 0.25,
-    gender: 'male',
-    hairStyle: 'parted',
-    shirt: '#1E293B',
-    pants: '#0F172A',
-    hair: '#18181B',
-    dialogues: [
-      '할렐루야! 7층 하늘정원에서 내려다보는 김포 한강신도시 마스터플랜 전경이 참 웅장하지요? 🌿',
-      '저 건너편 경남아너스빌과 동일스위트, e편한세상, 은여울중학교의 모든 가정에 주님의 평강이 임하길 기도합니다 ✝️',
-      '저를 클릭하시면 하늘정원의 축복을 담아 [✨ 거룩한 축도(홀리라이트)]를 내려드립니다 🙏'
-    ]
-  },
-  {
-    id: 'pastor_bang_7f',
-    name: '방희곤 목사님',
-    role: '좋은나무교회 목사 · 축도 사역',
-    isPastor: true,
-    canBless: true,
-    x: -0.6,
-    y: 0,
-    z: -1.65,
-    rotY: 0,
-    seated: true,
-    gender: 'male',
-    hairStyle: 'short',
-    shirt: '#0284C7',
-    pants: '#1E293B',
-    hair: '#27272A',
-    dialogues: [
-      '옥상 파고라 그늘 아래 앉아 솔솔 부는 바람을 맞으며 성도님들과 교제하니 참 평안합니다 ☕',
-      '언제든 축도와 중보기도가 필요하시면 말씀해 주세요!'
-    ]
-  },
-  {
-    id: 'pastor_choi_7f',
-    name: '최수경 목사님',
-    role: '좋은나무교회 목사 · 축도 사역',
-    isPastor: true,
-    canBless: true,
-    x: -2.2,
-    y: 0,
-    z: -1.65,
-    rotY: 0,
-    seated: true,
-    gender: 'female',
-    hairStyle: 'bob',
-    isSkirt: true,
-    shirt: '#8B5CF6',
-    pants: '#EDE9FE',
-    hair: '#3F2305',
-    dialogues: [
-      '상단의 [🦅 마스터플랜 드론 조감도] 버튼을 눌러보세요! 현대 건축 조감도처럼 우리 교회와 주변 아파트 단지가 한눈에 펼쳐져요 🥰'
-    ]
-  },
-  {
-    id: 'member_7f_1',
-    name: '김권사 (정원가꾸기)',
-    role: '하늘정원 원예봉사팀',
-    x: 0.4,
-    y: 0,
-    z: 2.2,
-    patrolZ: [-0.2, 2.8],
-    gender: 'female',
-    hairStyle: 'bun',
-    isSkirt: true,
-    autoWave: true,
-    shirt: '#EC4899',
-    pants: '#FCE7F3',
-    hair: '#451A03',
-    dialogues: [
-      '아파트 옥상마다 태양광 패널과 에코 잔디 정원이 올라가 있고 단지 산책로까지 진짜 조감도 같네요! 🌺🌿'
-    ]
-  }
-];
-
-// =====================================================================
-// ✨ 축도(Benediction) 시 하늘에서 내려쬐는 홀리라이트(Holy Light) 이펙트
-// =====================================================================
-function HolyLightBeamEffect7F({ targetPos, pastorName, targetName }) {
-  const beamRef = useRef();
-  const ring1Ref = useRef();
-  const ring2Ref = useRef();
-  const particlesRef = useRef();
-
-  const blessingBannerTex = useMemo(() => {
-    return makeCanvasTexture((ctx, w, h) => {
-      ctx.clearRect(0, 0, w, h);
-      const grad = ctx.createLinearGradient(0, 0, w, 0);
-      grad.addColorStop(0, 'rgba(120, 53, 15, 0.94)');
-      grad.addColorStop(0.5, 'rgba(217, 119, 6, 0.98)');
-      grad.addColorStop(1, 'rgba(120, 53, 15, 0.94)');
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.roundRect(10, 10, w - 20, h - 20, 32);
-      ctx.fill();
-      ctx.lineWidth = 5;
-      ctx.strokeStyle = '#FEF08A';
-      ctx.stroke();
-
-      ctx.fillStyle = '#FEF08A';
-      ctx.font = '900 22px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(`✝️ ${pastorName || '목사님'}의 7F 하늘정원 축도`, w / 2, 46);
-
-      ctx.fillStyle = '#FFFFFF';
-      ctx.font = '900 27px serif';
-      ctx.fillText(`${targetName} 성도님과 김포 땅 위에 하나님의 크신 은혜와`, w / 2, 88);
-      ctx.fillText(`하늘의 신령한 복이 영원토록 함께할지어다! 아멘 🙏`, w / 2, 126);
-    }, 640, 156);
-  }, [pastorName, targetName]);
-
-  useFrame(({ clock }) => {
-    const t = clock.elapsedTime;
-    if (beamRef.current) {
-      const pulse = 1 + Math.sin(t * 5) * 0.08;
-      beamRef.current.scale.set(pulse, 1, pulse);
-      beamRef.current.material.opacity = 0.38 + Math.sin(t * 4) * 0.08;
-    }
-    if (ring1Ref.current) {
-      ring1Ref.current.rotation.z = t * 1.8;
-      const s = 1 + Math.sin(t * 3) * 0.12;
-      ring1Ref.current.scale.set(s, s, 1);
-    }
-    if (ring2Ref.current) {
-      ring2Ref.current.rotation.z = -t * 2.2;
-      ring2Ref.current.position.y = 0.5 + ((t * 0.8) % 2.2);
-    }
-    if (particlesRef.current) {
-      particlesRef.current.rotation.y = t * 1.2;
-      particlesRef.current.position.y = (t * 0.9) % 2.0;
-    }
-  });
-
-  if (!targetPos) return null;
-
-  return (
-    <group position={[targetPos[0], 0.05, targetPos[2]]}>
-      <mesh ref={beamRef} position={[0, 3.2, 0]}>
-        <cylinderGeometry args={[0.92, 0.65, 6.4, 32, 1, true]} />
-        <meshBasicMaterial
-          color="#FDE047"
-          transparent
-          opacity={0.4}
-          side={THREE.DoubleSide}
-          depthWrite={false}
-          blending={THREE.AdditiveBlending}
-        />
-      </mesh>
-      <mesh position={[0, 3.2, 0]}>
-        <cylinderGeometry args={[0.38, 0.28, 6.4, 24, 1, true]} />
-        <meshBasicMaterial
-          color="#FFFFFF"
-          transparent
-          opacity={0.48}
-          side={THREE.DoubleSide}
-          depthWrite={false}
-          blending={THREE.AdditiveBlending}
-        />
-      </mesh>
-
-      <mesh ref={ring1Ref} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
-        <ringGeometry args={[0.52, 0.76, 36]} />
-        <meshBasicMaterial color="#FACC15" side={THREE.DoubleSide} transparent opacity={0.9} />
-      </mesh>
-
-      <mesh ref={ring2Ref} rotation={[-Math.PI / 2, 0, 0]} position={[0, 1.0, 0]}>
-        <ringGeometry args={[0.45, 0.54, 32]} />
-        <meshBasicMaterial color="#FFFFFF" side={THREE.DoubleSide} transparent opacity={0.85} />
-      </mesh>
-
-      <group ref={particlesRef}>
-        {Array.from({ length: 12 }).map((_, i) => {
-          const ang = (i / 12) * Math.PI * 2;
-          const rad = 0.36 + (i % 3) * 0.12;
-          const py = (i / 12) * 2.2;
-          return (
-            <mesh key={i} position={[Math.cos(ang) * rad, py, Math.sin(ang) * rad]}>
-              <sphereGeometry args={[0.042, 8, 8]} />
-              <meshBasicMaterial color={i % 2 === 0 ? '#FFFFFF' : '#FDE047'} />
-            </mesh>
-          );
-        })}
-      </group>
-
-      <pointLight position={[0, 2.6, 0]} intensity={5.5} distance={6.5} color="#FDE047" />
-
-      <Billboard position={[0, 2.35, 0]}>
-        <mesh renderOrder={30}>
-          <planeGeometry args={[2.5, 0.62]} />
-          <meshBasicMaterial map={blessingBannerTex} transparent depthTest={false} />
-        </mesh>
-      </Billboard>
-    </group>
-  );
-}
-
-// =====================================================================
-// 🟢 바닥 초록색 홀로그램 마커
-// =====================================================================
-function HologramMarker7F({ zone, isSelected, onSelect }) {
-  const pulseRef = useRef();
-
-  const badgeTex = useMemo(() => {
-    return makeCanvasTexture((ctx, w, h) => {
-      ctx.clearRect(0, 0, w, h);
-      const grad = ctx.createRadialGradient(w * 0.4, h * 0.35, 10, w / 2, h / 2, 95);
-      grad.addColorStop(0, '#34D399');
-      grad.addColorStop(1, '#059669');
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.arc(w / 2 - 24, h / 2, 72, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.lineWidth = 4;
-      ctx.strokeStyle = '#A7F3D0';
-      ctx.stroke();
-
-      ctx.fillStyle = '#FFFFFF';
-      ctx.font = '900 58px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(zone.code, w / 2 - 24, h / 2 + 4);
-
-      if (zone.subCode) {
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
-        ctx.beginPath();
-        ctx.roundRect(w / 2 + 24, h / 2 + 6, 118, 44, 14);
-        ctx.fill();
-        ctx.fillStyle = '#ECFDF5';
-        ctx.font = 'bold 20px sans-serif';
-        ctx.fillText(zone.subCode, w / 2 + 83, h / 2 + 28);
-      }
-    }, 365, 220);
-  }, [zone.code, zone.subCode]);
-
-  useFrame(({ clock }) => {
-    if (pulseRef.current) {
-      const s = 1 + Math.sin(clock.elapsedTime * 3.2) * 0.05;
-      pulseRef.current.scale.set(s, s, 1);
-    }
-  });
-
-  return (
-    <group
-      position={zone.pos}
-      onClick={(e) => {
-        e.stopPropagation();
-        onSelect(zone);
-      }}
-    >
-      <mesh ref={pulseRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.025, 0]}>
-        <ringGeometry args={[0.42, 0.52, 40]} />
-        <meshBasicMaterial color="#34D399" />
-      </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.018, 0]}>
-        <circleGeometry args={[0.42, 40]} />
-        <meshBasicMaterial color="#10B981" transparent opacity={isSelected ? 0.45 : 0.24} />
-      </mesh>
-      <Billboard position={[0.06, 0.38, 0]}>
-        <mesh>
-          <planeGeometry args={[0.78, 0.44]} />
-          <meshBasicMaterial map={badgeTex} transparent depthWrite={false} />
-        </mesh>
-      </Billboard>
-    </group>
-  );
-}
-
-// =====================================================================
-// 🚶‍♀️ 전 층 통일 유선형(Sphere/Capsule) 아바타
-// =====================================================================
-function wrapKoreanSpeechText(text, maxCharsPerLine = 19) {
-  if (!text) return [];
-  const words = text.split(' ');
-  const lines = [];
-  let current = '';
-
-  words.forEach((word) => {
-    const candidate = current ? `${current} ${word}` : word;
-    if (candidate.length > maxCharsPerLine) {
-      if (current) lines.push(current);
-      if (word.length > maxCharsPerLine) {
-        lines.push(word.slice(0, maxCharsPerLine));
-        current = word.slice(maxCharsPerLine);
-      } else {
-        current = word;
-      }
-    } else {
-      current = candidate;
-    }
-  });
-  if (current) lines.push(current);
-  return lines.slice(0, 3);
-}
-
-function CharacterHairStyle7F({ style = 'short', hairColor = '#27272A' }) {
-  if (style === 'long_wave') {
-    return (
-      <group>
-        <mesh position={[0, 0.05, -0.02]} scale={[1.06, 0.96, 1.06]} castShadow>
-          <sphereGeometry args={[0.21, 24, 24]} />
-          <meshStandardMaterial color={hairColor} roughness={0.48} />
-        </mesh>
-        <mesh position={[-0.16, -0.08, -0.02]} rotation={[0, 0, 0.1]} castShadow>
-          <capsuleGeometry args={[0.055, 0.24, 12, 16]} />
-          <meshStandardMaterial color={hairColor} roughness={0.48} />
-        </mesh>
-        <mesh position={[0.16, -0.08, -0.02]} rotation={[0, 0, -0.1]} castShadow>
-          <capsuleGeometry args={[0.055, 0.24, 12, 16]} />
-          <meshStandardMaterial color={hairColor} roughness={0.48} />
-        </mesh>
-        <mesh position={[0, -0.10, -0.12]} scale={[1.25, 1.0, 0.6]} castShadow>
-          <capsuleGeometry args={[0.12, 0.24, 12, 16]} />
-          <meshStandardMaterial color={hairColor} roughness={0.48} />
-        </mesh>
-      </group>
-    );
-  }
-
-  if (style === 'bob') {
-    return (
-      <group>
-        <mesh position={[0, 0.05, -0.01]} scale={[1.08, 0.96, 1.06]} castShadow>
-          <sphereGeometry args={[0.212, 24, 24]} />
-          <meshStandardMaterial color={hairColor} roughness={0.45} />
-        </mesh>
-        <mesh position={[-0.15, -0.04, 0.0]} castShadow>
-          <capsuleGeometry args={[0.05, 0.12, 12, 16]} />
-          <meshStandardMaterial color={hairColor} roughness={0.45} />
-        </mesh>
-        <mesh position={[0.15, -0.04, 0.0]} castShadow>
-          <capsuleGeometry args={[0.05, 0.12, 12, 16]} />
-          <meshStandardMaterial color={hairColor} roughness={0.45} />
-        </mesh>
-      </group>
-    );
-  }
-
-  if (style === 'bun') {
-    return (
-      <group>
-        <mesh position={[0, 0.05, -0.02]} scale={[1.05, 0.94, 1.05]} castShadow>
-          <sphereGeometry args={[0.21, 24, 24]} />
-          <meshStandardMaterial color={hairColor} roughness={0.48} />
-        </mesh>
-        <mesh position={[0, 0.12, -0.19]} castShadow>
-          <sphereGeometry args={[0.09, 20, 20]} />
-          <meshStandardMaterial color={hairColor} roughness={0.45} />
-        </mesh>
-      </group>
-    );
-  }
-
-  return (
-    <group>
-      <mesh position={[0, 0.05, -0.02]} scale={[1.05, 0.92, 1.05]} castShadow>
-        <sphereGeometry args={[0.21, 24, 24]} />
-        <meshStandardMaterial color={hairColor} roughness={0.48} />
-      </mesh>
-      <mesh position={[0, 0.09, 0.06]} scale={[0.96, 0.65, 0.82]} castShadow>
-        <sphereGeometry args={[0.19, 20, 20]} />
-        <meshStandardMaterial color={hairColor} roughness={0.48} />
-      </mesh>
-    </group>
-  );
-}
-
-function SmoothChibiAvatar7F({
-  position = [0, 0, 0],
-  targetPosition = null,
-  patrolZ = null,
-  rotationY = 0,
-  isWalking = false,
-  isSeated = false,
-  gender = 'male',
-  hairStyle = 'short',
-  isSkirt = false,
-  autoWave = false,
-  hasSunglasses = false,
-  emote = null,
-  shirtColor = '#FACC15',
-  pantsColor = '#2563EB',
-  hairColor = '#B45309',
-  skinColor = '#FDE68A',
-  nameTagTexture = null,
-  speechBubbleText = null,
-  onClick = null,
-  seedOffset = 0
-}) {
-  const outerGroupRef = useRef();
-  const rootRef = useRef();
-  const headGroupRef = useRef();
-  const leftArmRef = useRef();
-  const rightArmRef = useRef();
-  const leftLegRef = useRef();
-  const rightLegRef = useRef();
-
-  const isFemale = gender === 'female' || isSkirt;
-  const patrolState = useRef({ z: position[2], dir: 1, pauseTimer: 0 });
-
-  const bubbleData = useMemo(() => {
-    if (!speechBubbleText) return null;
-    const colonIdx = speechBubbleText.indexOf(':');
-    const speakerName = colonIdx > -1 ? speechBubbleText.slice(0, colonIdx).trim() : '';
-    const bodyText = colonIdx > -1 ? speechBubbleText.slice(colonIdx + 1).trim() : speechBubbleText;
-    const wrappedLines = wrapKoreanSpeechText(bodyText, 19);
-
-    const tex = makeCanvasTexture((ctx, w, h) => {
-      ctx.clearRect(0, 0, w, h);
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.98)';
-      ctx.beginPath();
-      ctx.roundRect(14, 10, w - 28, h - 34, 28);
-      ctx.fill();
-      ctx.lineWidth = 5;
-      ctx.strokeStyle = '#10B981';
-      ctx.stroke();
-
-      ctx.beginPath();
-      ctx.moveTo(w / 2 - 14, h - 24);
-      ctx.lineTo(w / 2 + 14, h - 24);
-      ctx.lineTo(w / 2, h - 4);
-      ctx.closePath();
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.98)';
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.textAlign = 'center';
-      let startY = speakerName ? 44 : 54;
-
-      if (speakerName) {
-        ctx.fillStyle = '#059669';
-        ctx.font = '900 22px sans-serif';
-        ctx.fillText(speakerName, w / 2, startY);
-        startY += 32;
-      }
-
-      ctx.fillStyle = '#0F172A';
-      ctx.font = '800 24px sans-serif';
-      wrappedLines.forEach((line, idx) => {
-        ctx.fillText(line, w / 2, startY + idx * 30);
+    if (type === 'fanfare' || type === 'harvest') {
+      const notes = type === 'fanfare' ? [523.25, 659.25, 783.99, 1046.5] : [587.33, 880.0];
+      notes.forEach((freq, i) => {
+        const osc = ctx.createOscillator(), gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, now + i * 0.08);
+        gain.gain.setValueAtTime(0.055, now + i * 0.08);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.26);
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.start(now + i * 0.08); osc.stop(now + i * 0.08 + 0.27);
       });
-    }, 540, 175);
-
-    return { tex, planeW: 1.82, planeH: 0.59 };
-  }, [speechBubbleText]);
-
-  useFrame(({ clock }, delta) => {
-    const t = clock.elapsedTime + seedOffset;
-    let walkingNow = isWalking;
-
-    if (targetPosition && outerGroupRef.current) {
-      const curX = outerGroupRef.current.position.x;
-      const curZ = outerGroupRef.current.position.z;
-      const dx = targetPosition[0] - curX;
-      const dz = targetPosition[2] - curZ;
-      const dist = Math.hypot(dx, dz);
-      if (dist > 0.03) {
-        walkingNow = true;
-        outerGroupRef.current.position.x = THREE.MathUtils.lerp(curX, targetPosition[0], delta * 7.5);
-        outerGroupRef.current.position.z = THREE.MathUtils.lerp(curZ, targetPosition[2], delta * 7.5);
-      }
-      outerGroupRef.current.rotation.y = THREE.MathUtils.lerp(outerGroupRef.current.rotation.y, rotationY, delta * 8.0);
-    } else if (patrolZ && outerGroupRef.current) {
-      const st = patrolState.current;
-      if (st.pauseTimer > 0) {
-        st.pauseTimer -= delta;
-        walkingNow = false;
-      } else {
-        walkingNow = true;
-        st.z += st.dir * delta * 0.65;
-        if (st.z > patrolZ[1]) {
-          st.z = patrolZ[1];
-          st.dir = -1;
-          st.pauseTimer = 2.5;
-        } else if (st.z < patrolZ[0]) {
-          st.z = patrolZ[0];
-          st.dir = 1;
-          st.pauseTimer = 2.5;
-        }
-        outerGroupRef.current.position.z = st.z;
-        outerGroupRef.current.rotation.y = st.dir > 0 ? 0.2 : Math.PI - 0.2;
-      }
-    }
-
-    if (leftLegRef.current && rightLegRef.current) {
-      if (isSeated) {
-        leftLegRef.current.rotation.x = -Math.PI / 2.05;
-        rightLegRef.current.rotation.x = -Math.PI / 2.05;
-        leftLegRef.current.position.set(-0.085, 0.24, 0.11);
-        rightLegRef.current.position.set(0.085, 0.24, 0.11);
-      } else if (emote === 'dance') {
-        const kick = Math.sin(t * 14.0) * 0.65;
-        leftLegRef.current.rotation.x = kick;
-        rightLegRef.current.rotation.x = -kick;
-        leftLegRef.current.position.set(-0.085, 0.22, 0);
-        rightLegRef.current.position.set(0.085, 0.22, 0);
-      } else if (walkingNow) {
-        const sw = Math.sin(t * 9.5) * 0.56;
-        leftLegRef.current.rotation.x = sw;
-        rightLegRef.current.rotation.x = -sw;
-        leftLegRef.current.position.set(-0.085, 0.22, 0);
-        rightLegRef.current.position.set(0.085, 0.22, 0);
-      } else {
-        leftLegRef.current.rotation.x = 0;
-        rightLegRef.current.rotation.x = 0;
-        leftLegRef.current.position.set(-0.085, 0.22, 0);
-        rightLegRef.current.position.set(0.085, 0.22, 0);
-      }
-    }
-
-    if (leftArmRef.current && rightArmRef.current) {
-      if (emote === 'bless' || emote === 'praise') {
-        leftArmRef.current.rotation.x = -2.35 + Math.sin(t * 6) * 0.15;
-        rightArmRef.current.rotation.x = -2.35 - Math.sin(t * 6) * 0.15;
-        leftArmRef.current.rotation.z = 0.35;
-        rightArmRef.current.rotation.z = -0.35;
-      } else if (emote === 'pray') {
-        leftArmRef.current.rotation.x = -1.15;
-        rightArmRef.current.rotation.x = -1.15;
-        leftArmRef.current.rotation.z = -0.42;
-        rightArmRef.current.rotation.z = 0.42;
-      } else if (emote === 'dance') {
-        leftArmRef.current.rotation.z = 2.4 + Math.sin(t * 12) * 0.45;
-        rightArmRef.current.rotation.z = -2.4 + Math.cos(t * 12) * 0.45;
-      } else if (emote === 'wave' || autoWave || (patrolZ && !walkingNow)) {
-        rightArmRef.current.rotation.z = -2.35 + Math.sin(t * 10) * 0.32;
-        rightArmRef.current.rotation.x = 0.3;
-        leftArmRef.current.rotation.x = Math.sin(t * 2) * 0.08;
-      } else if (isSeated) {
-        leftArmRef.current.rotation.x = -0.42;
-        rightArmRef.current.rotation.x = -0.42;
-      } else if (walkingNow) {
-        const sw = Math.sin(t * 9.5) * 0.48;
-        leftArmRef.current.rotation.x = -sw;
-        rightArmRef.current.rotation.x = sw;
-      } else {
-        leftArmRef.current.rotation.x = Math.sin(t * 2) * 0.06;
-        rightArmRef.current.rotation.x = -Math.sin(t * 2) * 0.06;
-        leftArmRef.current.rotation.z = 0.14;
-        rightArmRef.current.rotation.z = -0.14;
-      }
-    }
-
-    if (headGroupRef.current) {
-      headGroupRef.current.rotation.x = Math.sin(t * 2.6) * 0.05;
-      headGroupRef.current.rotation.y = Math.cos(t * 1.4) * 0.07;
-    }
-    if (rootRef.current) {
-      const jump = emote === 'dance' ? Math.abs(Math.sin(t * 12)) * 0.15 : 0;
-      const bounce = walkingNow && !isSeated ? Math.abs(Math.sin(t * 9.5)) * 0.045 : Math.sin(t * 2.6) * 0.008;
-      rootRef.current.position.y = (isSeated ? 0.16 : 0) + bounce + jump;
-      rootRef.current.position.z = isSeated ? 0.04 : 0;
-    }
-  });
-
-  return (
-    <group
-      ref={outerGroupRef}
-      position={position}
-      rotation={[0, rotationY, 0]}
-      onClick={onClick}
-    >
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.015, 0]}>
-        <circleGeometry args={[0.25, 24]} />
-        <meshBasicMaterial color="#0F172A" transparent opacity={0.25} />
-      </mesh>
-
-      <group ref={rootRef}>
-        <group ref={leftLegRef} position={[-0.085, 0.22, 0]}>
-          <mesh position={[0, -0.08, 0]} castShadow>
-            <capsuleGeometry args={[0.052, 0.12, 12, 16]} />
-            <meshStandardMaterial color={isFemale ? skinColor : pantsColor} roughness={0.48} />
-          </mesh>
-          <mesh position={[0, -0.17, 0.02]} scale={[1.0, 0.7, 1.35]} castShadow>
-            <sphereGeometry args={[0.055, 14, 14]} />
-            <meshStandardMaterial color={isFemale ? '#881337' : '#18181B'} roughness={0.4} />
-          </mesh>
-        </group>
-        <group ref={rightLegRef} position={[0.085, 0.22, 0]}>
-          <mesh position={[0, -0.08, 0]} castShadow>
-            <capsuleGeometry args={[0.052, 0.12, 12, 16]} />
-            <meshStandardMaterial color={isFemale ? skinColor : pantsColor} roughness={0.48} />
-          </mesh>
-          <mesh position={[0, -0.17, 0.02]} scale={[1.0, 0.7, 1.35]} castShadow>
-            <sphereGeometry args={[0.055, 14, 14]} />
-            <meshStandardMaterial color={isFemale ? '#881337' : '#18181B'} roughness={0.4} />
-          </mesh>
-        </group>
-
-        {isFemale ? (
-          <group>
-            <mesh position={[0, 0.45, 0]} castShadow receiveShadow>
-              <cylinderGeometry args={[0.135, 0.12, 0.24, 24]} />
-              <meshStandardMaterial color={shirtColor} roughness={0.45} />
-            </mesh>
-            <mesh position={[0, 0.54, 0]} scale={[1.15, 0.55, 0.88]} castShadow>
-              <sphereGeometry args={[0.135, 20, 20]} />
-              <meshStandardMaterial color={shirtColor} roughness={0.45} />
-            </mesh>
-            <mesh position={[0, 0.28, 0]} castShadow receiveShadow>
-              <cylinderGeometry args={[0.125, 0.23, 0.24, 28]} />
-              <meshStandardMaterial color={pantsColor || shirtColor} roughness={0.48} />
-            </mesh>
-          </group>
-        ) : (
-          <group>
-            <mesh position={[0, 0.39, 0]} scale={[1.18, 1.0, 0.85]} castShadow receiveShadow>
-              <capsuleGeometry args={[0.145, 0.16, 16, 24]} />
-              <meshStandardMaterial color={shirtColor} roughness={0.42} />
-            </mesh>
-            <mesh position={[0, 0.51, 0.115]} rotation={[0.15, 0, 0]}>
-              <coneGeometry args={[0.045, 0.10, 3]} />
-              <meshStandardMaterial color="#FFFFFF" />
-            </mesh>
-          </group>
-        )}
-
-        <group ref={leftArmRef} position={[-0.20, 0.50, 0]}>
-          <mesh position={[0, -0.09, 0]} castShadow>
-            <capsuleGeometry args={[0.044, 0.15, 12, 16]} />
-            <meshStandardMaterial color={shirtColor} roughness={0.45} />
-          </mesh>
-          <mesh position={[0, -0.21, 0]} castShadow>
-            <sphereGeometry args={[0.046, 14, 14]} />
-            <meshStandardMaterial color={skinColor} roughness={0.4} />
-          </mesh>
-        </group>
-        <group ref={rightArmRef} position={[0.20, 0.50, 0]}>
-          <mesh position={[0, -0.09, 0]} castShadow>
-            <capsuleGeometry args={[0.044, 0.15, 12, 16]} />
-            <meshStandardMaterial color={shirtColor} roughness={0.45} />
-          </mesh>
-          <mesh position={[0, -0.21, 0]} castShadow>
-            <sphereGeometry args={[0.046, 14, 14]} />
-            <meshStandardMaterial color={skinColor} roughness={0.4} />
-          </mesh>
-        </group>
-
-        <group ref={headGroupRef} position={[0, 0.77, 0]}>
-          <mesh scale={[1.04, 0.98, 1.0]} castShadow receiveShadow>
-            <sphereGeometry args={[0.205, 28, 28]} />
-            <meshStandardMaterial color={skinColor} roughness={0.38} />
-          </mesh>
-          <CharacterHairStyle7F
-            style={hairStyle || (isFemale ? 'long_wave' : 'short')}
-            hairColor={hairColor}
-          />
-          {hasSunglasses ? (
-            <group position={[0, 0.01, 0.195]}>
-              <RoundedBox args={[0.13, 0.075, 0.025]} position={[-0.075, 0, 0]} radius={0.02}>
-                <meshStandardMaterial color="#18181B" roughness={0.2} />
-              </RoundedBox>
-              <RoundedBox args={[0.13, 0.075, 0.025]} position={[0.075, 0, 0]} radius={0.02}>
-                <meshStandardMaterial color="#18181B" roughness={0.2} />
-              </RoundedBox>
-            </group>
-          ) : (
-            <>
-              <mesh position={[-0.075, 0.0, 0.195]}>
-                <sphereGeometry args={[0.024, 14, 14]} />
-                <meshBasicMaterial color="#18181B" />
-              </mesh>
-              <mesh position={[0.075, 0.0, 0.195]}>
-                <sphereGeometry args={[0.024, 14, 14]} />
-                <meshBasicMaterial color="#18181B" />
-              </mesh>
-            </>
-          )}
-        </group>
-
-        {nameTagTexture && (
-          <Billboard position={[0, 1.25, 0]}>
-            <mesh renderOrder={12}>
-              <planeGeometry args={[1.52, 0.34]} />
-              <meshBasicMaterial map={nameTagTexture} transparent depthTest={false} />
-            </mesh>
-          </Billboard>
-        )}
-
-        {bubbleData && (
-          <Billboard position={[0, 1.54, 0]}>
-            <mesh renderOrder={15}>
-              <planeGeometry args={[bubbleData.planeW, bubbleData.planeH]} />
-              <meshBasicMaterial map={bubbleData.tex} transparent depthTest={false} />
-            </mesh>
-          </Billboard>
-        )}
-      </group>
-    </group>
-  );
-}
-
-function RemoteMultiplayerAvatar7F({ peer, onClickPeer }) {
-  const nameTagTex = useMemo(() => {
-    const isPastor = isAuthorizedPastor(peer.name, peer.office);
-    return makeCanvasTexture((ctx, w, h) => {
-      ctx.fillStyle = isPastor ? 'rgba(88, 28, 135, 0.96)' : 'rgba(15, 23, 42, 0.94)';
-      ctx.beginPath();
-      ctx.roundRect(6, 6, w - 12, h - 12, 48);
-      ctx.fill();
-      ctx.lineWidth = 4;
-      ctx.strokeStyle = isPastor ? '#FACC15' : '#34D399';
-      ctx.stroke();
-
-      ctx.fillStyle = isPastor ? '#FACC15' : '#34D399';
-      ctx.beginPath();
-      ctx.arc(48, h / 2, 14, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.fillStyle = '#FFFFFF';
-      ctx.font = '900 34px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(`${isPastor ? '✝️ ' : ''}${peer.name || '성도'}`, w / 2 + 16, h / 2 + 2);
-    }, 520, 110);
-  }, [peer.name, peer.office]);
-
-  return (
-    <SmoothChibiAvatar7F
-      position={[peer.x || 2.8, 0, peer.z || -0.5]}
-      targetPosition={[peer.x || 2.8, 0, peer.z || -0.5]}
-      rotationY={peer.rotY || 0}
-      gender={peer.avatar?.gender || 'male'}
-      hairStyle={peer.avatar?.hairStyle || 'parted'}
-      isSkirt={Boolean(peer.avatar?.isSkirt)}
-      hasSunglasses={Boolean(peer.avatar?.hasSunglasses)}
-      isSeated={Boolean(peer.seated)}
-      emote={peer.emote || null}
-      shirtColor={peer.avatar?.shirtColor || '#38BDF8'}
-      pantsColor={peer.avatar?.pantsColor || '#1E293B'}
-      hairColor={peer.avatar?.hairColor || '#27272A'}
-      nameTagTexture={nameTagTex}
-      speechBubbleText={peer.chatMsg ? `${peer.name}: ${peer.chatMsg}` : null}
-      onClick={(e) => {
-        e.stopPropagation();
-        if (onClickPeer) onClickPeer(peer);
-      }}
-    />
-  );
-}
-
-// =====================================================================
-// 🏙️ [조감도 `image_864f03.jpg` & `image_864ee5.jpg` 완벽 고증!]
-// 현대 한국 브랜드 대단지 아파트 타워 (수직 핀 프레임 + 태양광 패널/옥상 녹화 루프탑 + L자/판상형/타워형 매스)
-// =====================================================================
-function ModernArchVizApartmentTower({
-  position,
-  rotationY = 0,
-  width = 9.2,
-  depth = 3.2,
-  height = 26.0,
-  wingWidth = 0,
-  wingDepth = 0,
-  roofType = 'solar', // 'solar' (image_864f03) | 'green' (image_864ee5)
-  facadeTex,
-  solarTex
-}) {
-  return (
-    <group position={position} rotation={[0, rotationY, 0]}>
-      {/* 1~2층 화강석 석재 포디움 기단 & 필로티 로비 */}
-      <RoundedBox args={[width + 0.3, 2.2, depth + 0.3]} position={[0, 1.1, 0]} radius={0.03} castShadow receiveShadow>
-        <meshStandardMaterial color="#D6D3D1" roughness={0.5} />
-      </RoundedBox>
-
-      {/* 메인 아파트 타워 코어 */}
-      <mesh position={[0, height / 2 + 2.2, 0]} castShadow receiveShadow>
-        <boxGeometry args={[width, height, depth]} />
-        <meshStandardMaterial map={facadeTex} roughness={0.35} metalness={0.1} />
-      </mesh>
-
-      {/* 건축 조감도 특유의 입체 화이트 수직 멀리언 핀(Architectural Vertical Fins) 4줄 */}
-      {[-width * 0.46, -width * 0.16, width * 0.16, width * 0.46].map((fx, fi) => (
-        <mesh key={fi} position={[fx, height / 2 + 2.4, 0]} castShadow>
-          <boxGeometry args={[0.24, height + 0.6, depth + 0.22]} />
-          <meshStandardMaterial color="#F8FAFC" roughness={0.3} />
-        </mesh>
-      ))}
-
-      {/* 옥상 크라운 파라펫 프레임 & 옥상 녹화(Green Roof) 또는 태양광 모듈(Solar Grid) */}
-      <RoundedBox args={[width + 0.36, 0.9, depth + 0.36]} position={[0, height + 2.5, 0]} radius={0.02} castShadow>
-        <meshStandardMaterial color="#F8FAFC" roughness={0.3} />
-      </RoundedBox>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, height + 2.98, 0]} receiveShadow>
-        <planeGeometry args={[width - 0.3, depth - 0.3]} />
-        {roofType === 'solar' ? (
-          <meshStandardMaterial map={solarTex} metalness={0.6} roughness={0.2} />
-        ) : (
-          <meshStandardMaterial color="#65A30D" roughness={0.85} />
-        )}
-      </mesh>
-
-      {/* 옥상 엘리베이터 권상기실 펜트하우스 코어 (평지붕 모던 박스) */}
-      <RoundedBox args={[2.6, 1.6, 2.2]} position={[-width * 0.15, height + 3.7, 0]} radius={0.03} castShadow>
-        <meshStandardMaterial color="#E2E8F0" roughness={0.35} />
-      </RoundedBox>
-
-      {/* ㄱ자/L자 꺾임 날개 동 (wingWidth가 있을 때) */}
-      {wingWidth > 0 && (
-        <group position={[width / 2 - wingWidth / 2, 0, depth / 2 + wingDepth / 2]}>
-          <RoundedBox args={[wingWidth + 0.25, 2.2, wingDepth + 0.25]} position={[0, 1.1, 0]} radius={0.03} castShadow>
-            <meshStandardMaterial color="#D6D3D1" />
-          </RoundedBox>
-          <mesh position={[0, height / 2 + 2.2, 0]} castShadow receiveShadow>
-            <boxGeometry args={[wingWidth, height, wingDepth]} />
-            <meshStandardMaterial map={facadeTex} roughness={0.35} />
-          </mesh>
-          <RoundedBox args={[wingWidth + 0.3, 0.9, wingDepth + 0.3]} position={[0, height + 2.5, 0]} radius={0.02} castShadow>
-            <meshStandardMaterial color="#F8FAFC" />
-          </RoundedBox>
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, height + 2.98, 0]}>
-            <planeGeometry args={[wingWidth - 0.3, wingDepth - 0.3]} />
-            {roofType === 'solar' ? (
-              <meshStandardMaterial map={solarTex} metalness={0.6} roughness={0.2} />
-            ) : (
-              <meshStandardMaterial color="#65A30D" roughness={0.85} />
-            )}
-          </mesh>
-        </group>
-      )}
-    </group>
-  );
-}
-
-// 🏙️ `image_864f03.jpg` & `image_864ee5.jpg` 외곽의 반투명 화이트/그레이 주변 도시 컨텍스트 매스 군락 (90여 동)
-function SurroundingWhiteContextCityMasses() {
-  const blocks = useMemo(() => {
-    const list = [];
-    // 동·서·남·북 외곽을 둘러싸는 도시 블록 매스 자동 생성
-    for (let i = 0; i < 88; i++) {
-      const angle = (i / 88) * Math.PI * 2;
-      const radius = 64 + (i % 4) * 18 + Math.sin(i * 3) * 8;
-      const bx = Math.cos(angle) * radius;
-      const bz = Math.sin(angle) * radius;
-      const bw = 5.5 + (i % 5) * 2.2;
-      const bd = 4.2 + ((i * 3) % 4) * 1.8;
-      const bh = 7.0 + ((i * 7) % 6) * 4.2;
-      const rot = (i % 3) * 0.45;
-      list.push({ bx, bz, bw, bd, bh, rot });
-    }
-    return list;
-  }, []);
-
-  return (
-    <group>
-      {blocks.map((b, idx) => (
-        <mesh
-          key={idx}
-          position={[b.bx, b.bh / 2, b.bz]}
-          rotation={[0, b.rot, 0]}
-          castShadow
-          receiveShadow
-        >
-          <boxGeometry args={[b.bw, b.bh, b.bd]} />
-          <meshStandardMaterial
-            color={idx % 2 === 0 ? '#E2E8F0' : '#CBD5E1'}
-            roughness={0.75}
-            transparent
-            opacity={0.82}
-          />
-        </mesh>
-      ))}
-    </group>
-  );
-}
-
-// 🌳 조감도(`image_864f03.jpg`) 스타일 다층 풍성한 단지 조경수 컴포넌트
-function RichMasterplanTrees({ positions = [] }) {
-  const palette = ['#2D5A27', '#3A6B33', '#4D7C0F', '#1E4620', '#3F6212'];
-  return (
-    <group>
-      {positions.map(([tx, ty, tz, s = 1.0], idx) => {
-        const col1 = palette[idx % palette.length];
-        const col2 = palette[(idx + 2) % palette.length];
-        return (
-          <group key={idx} position={[tx, ty, tz]} scale={[s, s, s]}>
-            <mesh position={[0, 0.7, 0]} castShadow>
-              <cylinderGeometry args={[0.12, 0.20, 1.4, 7]} />
-              <meshStandardMaterial color="#4A3525" />
-            </mesh>
-            <mesh position={[0, 1.9, 0]} castShadow receiveShadow>
-              <dodecahedronGeometry args={[1.05, 1]} />
-              <meshStandardMaterial color={col1} roughness={0.85} />
-            </mesh>
-            <mesh position={[0.35, 2.35, 0.22]} castShadow>
-              <dodecahedronGeometry args={[0.78, 1]} />
-              <meshStandardMaterial color={col2} roughness={0.85} />
-            </mesh>
-            <mesh position={[-0.32, 2.15, -0.25]} castShadow>
-              <dodecahedronGeometry args={[0.72, 1]} />
-              <meshStandardMaterial color={col1} roughness={0.85} />
-            </mesh>
-          </group>
-        );
-      })}
-    </group>
-  );
-}
-
-// 🚗 김포한강8로 도로 위를 실시간으로 달리는 3D 도시 자동차들
-function MovingCityTrafficCars() {
-  const car1Ref = useRef();
-  const car2Ref = useRef();
-  const car3Ref = useRef();
-  const busRef = useRef();
-
-  useFrame((_, delta) => {
-    if (car1Ref.current) {
-      car1Ref.current.position.x += delta * 9.5;
-      if (car1Ref.current.position.x > 68) car1Ref.current.position.x = -68;
-    }
-    if (car2Ref.current) {
-      car2Ref.current.position.x -= delta * 8.2;
-      if (car2Ref.current.position.x < -68) car2Ref.current.position.x = 68;
-    }
-    if (car3Ref.current) {
-      car3Ref.current.position.x += delta * 11.5;
-      if (car3Ref.current.position.x > 68) car3Ref.current.position.x = -68;
-    }
-    if (busRef.current) {
-      busRef.current.position.x -= delta * 6.5;
-      if (busRef.current.position.x < -68) busRef.current.position.x = 68;
-    }
-  });
-
-  return (
-    <group position={[0, -17.9, 13.5]} rotation={[0, 0.14, 0]}>
-      <group ref={car1Ref} position={[-25, 0.35, 1.4]}>
-        <RoundedBox args={[1.8, 0.55, 0.92]} radius={0.08} castShadow>
-          <meshStandardMaterial color="#F8FAFC" />
-        </RoundedBox>
-        <RoundedBox args={[1.1, 0.42, 0.84]} position={[-0.1, 0.42, 0]} radius={0.06}>
-          <meshStandardMaterial color="#1E293B" />
-        </RoundedBox>
-      </group>
-
-      <group ref={car2Ref} position={[18, 0.32, -1.4]}>
-        <RoundedBox args={[1.75, 0.48, 0.88]} radius={0.08} castShadow>
-          <meshStandardMaterial color="#38BDF8" />
-        </RoundedBox>
-        <RoundedBox args={[1.0, 0.38, 0.80]} position={[0.1, 0.38, 0]} radius={0.06}>
-          <meshStandardMaterial color="#0F172A" />
-        </RoundedBox>
-      </group>
-
-      <group ref={car3Ref} position={[5, 0.30, 1.4]}>
-        <RoundedBox args={[1.7, 0.44, 0.88]} radius={0.08} castShadow>
-          <meshStandardMaterial color="#EF4444" />
-        </RoundedBox>
-      </group>
-
-      <group ref={busRef} position={[-12, 0.68, -1.4]}>
-        <RoundedBox args={[3.8, 1.15, 1.12]} radius={0.08} castShadow>
-          <meshStandardMaterial color="#16A34A" />
-        </RoundedBox>
-        <RoundedBox args={[3.82, 0.42, 1.14]} position={[0, 0.22, 0]} radius={0.02}>
-          <meshStandardMaterial color="#F8FAFC" />
-        </RoundedBox>
-      </group>
-    </group>
-  );
-}
-
-// 🌺 7층 계단실 옆 좋은나무교회 축하 3단 화환 컴포넌트
-function ChurchCelebrationWreath3D({ position, rotationY = 0, onClick }) {
-  const ribbonTex = useMemo(() => {
-    return makeCanvasTexture((ctx, w, h) => {
-      ctx.fillStyle = '#DC2626';
-      ctx.fillRect(0, 0, w, h);
-      ctx.strokeStyle = '#FACC15';
-      ctx.lineWidth = 6;
-      ctx.strokeRect(4, 4, w - 8, h - 8);
-      ctx.fillStyle = '#FFFFFF';
-      ctx.font = '900 28px serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('祝 좋은나무교회 부흥', w / 2, h / 2 + 8);
-    }, 320, 72);
-  }, []);
-
-  return (
-    <group position={position} rotation={[0, rotationY, 0]} onClick={onClick}>
-      {[-0.22, 0.22].map((lx, li) => (
-        <mesh key={li} position={[lx, 0.75, -0.1]} rotation={[0.15, 0, li === 0 ? -0.12 : 0.12]} castShadow>
-          <cylinderGeometry args={[0.018, 0.018, 1.55, 8]} />
-          <meshStandardMaterial color="#166534" />
-        </mesh>
-      ))}
-      {[0.72, 1.25].map((wy, wi) => (
-        <group key={wi} position={[0, wy, 0]}>
-          <mesh castShadow>
-            <torusGeometry args={[wi === 0 ? 0.34 : 0.28, 0.10, 12, 24]} />
-            <meshStandardMaterial color="#15803D" />
-          </mesh>
-          {Array.from({ length: 10 }).map((_, fi) => {
-            const ang = (fi / 10) * Math.PI * 2;
-            const rad = wi === 0 ? 0.34 : 0.28;
-            return (
-              <mesh key={fi} position={[Math.cos(ang) * rad, Math.sin(ang) * rad, 0.06]} castShadow>
-                <sphereGeometry args={[0.065, 10, 10]} />
-                <meshStandardMaterial color={['#EF4444', '#FACC15', '#F472B6', '#FFFFFF'][fi % 4]} />
-              </mesh>
-            );
-          })}
-        </group>
-      ))}
-      <mesh position={[0, 1.0, 0.14]}>
-        <planeGeometry args={[0.72, 0.16]} />
-        <meshBasicMaterial map={ribbonTex} />
-      </mesh>
-    </group>
-  );
-}
-
-// 🛗 7층 브러시드 스테인리스 자동 개폐 엘리베이터
-function AnimatedStainlessElevator7F({ position, rotationY = 0, playerIdxRef, forceOpen, onClickElevator, signTex, showRoomSigns }) {
-  const leftDoorRef = useRef();
-  const rightDoorRef = useRef();
-  const wasOpenRef = useRef(false);
-  const steelTex = useMemo(() => makeBrushedSteelTexture(), []);
-
-  useFrame((_, delta) => {
-    if (!leftDoorRef.current || !rightDoorRef.current) return;
-    const [px, , pz] = playerIdxRef.current || [0, 0, 0];
-    const dist = Math.hypot(px - position[0], pz - (position[2] + 0.8));
-    const isOpen = forceOpen || dist < 2.1;
-
-    if (isOpen && !wasOpenRef.current) {
-      wasOpenRef.current = true;
-      playElevatorDingSound();
-    } else if (!isOpen && wasOpenRef.current) {
-      wasOpenRef.current = false;
-    }
-
-    const targetLeftX = isOpen ? -0.88 : -0.32;
-    const targetRightX = isOpen ? 0.88 : 0.32;
-
-    leftDoorRef.current.position.x = THREE.MathUtils.lerp(leftDoorRef.current.position.x, targetLeftX, delta * 6.5);
-    rightDoorRef.current.position.x = THREE.MathUtils.lerp(rightDoorRef.current.position.x, targetRightX, delta * 6.5);
-  });
-
-  return (
-    <group
-      position={position}
-      rotation={[0, rotationY, 0]}
-      onClick={(e) => {
-        e.stopPropagation();
-        if (onClickElevator) onClickElevator();
-      }}
-    >
-      <group position={[0, 0, -0.42]}>
-        <RoundedBox args={[1.62, 0.06, 0.78]} position={[0, 0.03, 0]} radius={0.01}>
-          <meshStandardMaterial color="#F8FAFC" />
-        </RoundedBox>
-        <RoundedBox args={[1.62, 2.12, 0.06]} position={[0, 1.06, -0.36]} radius={0.01}>
-          <meshStandardMaterial color="#D49552" />
-        </RoundedBox>
-        <pointLight position={[0, 1.85, 0]} intensity={1.5} distance={3.2} color="#FFFBEB" />
-      </group>
-
-      <group position={[0, 1.02, 0.04]}>
-        <RoundedBox ref={leftDoorRef} args={[0.64, 2.02, 0.05]} position={[-0.32, 0, 0]} radius={0.008} castShadow>
-          <meshStandardMaterial map={steelTex} color="#E2E8F0" metalness={0.85} roughness={0.2} />
-        </RoundedBox>
-        <RoundedBox ref={rightDoorRef} args={[0.64, 2.02, 0.05]} position={[0.32, 0, 0]} radius={0.008} castShadow>
-          <meshStandardMaterial map={steelTex} color="#E2E8F0" metalness={0.85} roughness={0.2} />
-        </RoundedBox>
-      </group>
-
-      <RoundedBox args={[0.26, 2.28, 0.24]} position={[-0.78, 1.14, 0]} radius={0.015} castShadow>
-        <meshStandardMaterial map={steelTex} color="#F1F5F9" metalness={0.88} roughness={0.18} />
-      </RoundedBox>
-      <RoundedBox args={[0.26, 2.28, 0.24]} position={[0.78, 1.14, 0]} radius={0.015} castShadow>
-        <meshStandardMaterial map={steelTex} color="#F1F5F9" metalness={0.88} roughness={0.18} />
-      </RoundedBox>
-      <RoundedBox args={[1.84, 0.26, 0.25]} position={[0, 2.15, 0]} radius={0.015} castShadow>
-        <meshStandardMaterial map={steelTex} color="#F1F5F9" metalness={0.88} roughness={0.18} />
-      </RoundedBox>
-
-      {showRoomSigns && (
-        <Billboard position={[0, 2.55, 0]}>
-          <mesh>
-            <planeGeometry args={[1.18, 0.52]} />
-            <meshBasicMaterial map={signTex} transparent />
-          </mesh>
-        </Billboard>
-      )}
-    </group>
-  );
-}
-
-// 🚪 7층 엘리베이터 홀 ➔ 야외 하늘정원 연결 통로 자동 개폐문
-function AnimatedRooftopPassageDoor7F({ position, playerIdxRef, forceOpen, onClickDoor }) {
-  const doorPivotRef = useRef();
-
-  useFrame((_, delta) => {
-    if (!doorPivotRef.current) return;
-    const [px, , pz] = playerIdxRef.current || [0, 0, 0];
-    const dist = Math.hypot(px - position[0], pz - position[2]);
-    const shouldOpen = forceOpen || dist < 2.2;
-    const targetRot = shouldOpen ? 1.35 : 0.15;
-    doorPivotRef.current.rotation.y = THREE.MathUtils.lerp(doorPivotRef.current.rotation.y, targetRot, delta * 6.0);
-  });
-
-  return (
-    <group
-      position={position}
-      onClick={(e) => {
-        e.stopPropagation();
-        if (onClickDoor) onClickDoor();
-      }}
-    >
-      <RoundedBox args={[0.24, 2.32, 0.14]} position={[0, 1.16, -0.78]} radius={0.01}>
-        <meshStandardMaterial color="#1E293B" />
-      </RoundedBox>
-      <RoundedBox args={[0.24, 2.32, 0.14]} position={[0, 1.16, 0.78]} radius={0.01}>
-        <meshStandardMaterial color="#1E293B" />
-      </RoundedBox>
-      <RoundedBox args={[0.65, 0.14, 1.78]} position={[-0.15, 2.28, 0]} radius={0.02} castShadow>
-        <meshStandardMaterial color="#059669" />
-      </RoundedBox>
-
-      <group ref={doorPivotRef} position={[0, 1.10, -0.70]}>
-        <RoundedBox args={[0.07, 2.12, 1.36]} position={[0, 0, 0.68]} radius={0.01} castShadow>
-          <meshStandardMaterial color="#78350F" roughness={0.4} />
-        </RoundedBox>
-        <mesh position={[0, 0.25, 0.68]} rotation={[0, Math.PI / 2, 0]}>
-          <planeGeometry args={[0.72, 1.05]} />
-          <meshStandardMaterial color="#BAE6FD" transparent opacity={0.65} roughness={0.1} />
-        </mesh>
-        <RoundedBox args={[0.14, 0.04, 0.18]} position={[0, -0.05, 1.22]} radius={0.01}>
-          <meshStandardMaterial color="#FACC15" metalness={0.85} />
-        </RoundedBox>
-      </group>
-    </group>
-  );
-}
-
-// =====================================================================
-// 🏙️ 7층 하늘정원 + 좋은나무교회 전체 외관 + 건축 마스터플랜 조감도(`image_864f03.jpg` & `image_864ee5.jpg`) 씬
-// =====================================================================
-function SevenFloorCityRTMasterScene({
-  activeZoneId,
-  onSelectZone,
-  onSitOnBench,
-  onToggleDroneView,
-  onSelectNpcForChat,
-  activeNpcChatIdx,
-  showRoomSigns,
-  timeOfDay,
-  playerIdxRef,
-  isElevatorModalOpen,
-  isPassageDoorForcedOpen,
-  remotePeers,
-  onSelectRemotePeer,
-  holyLightEvent
-}) {
-  const isNight = timeOfDay === 'night' || timeOfDay === 'sunset';
-
-  const woodDeckTex = useMemo(() => makeWoodDeckTexture(), []);
-  const blueCurtainTex = useMemo(() => makeBlueCurtainWallTexture(), []);
-  const worldMapMuralTex = useMemo(() => makeWorldMissionMuralTexture(), []);
-  const solarTex = useMemo(() => makeSolarPanelRoofTexture(), []);
-
-  // 현대 하이엔드 브랜드 아파트 외벽 텍스처 3종
-  const aptModernWhiteTex = useMemo(() => makeArchVizApartmentTexture('#F8FAFC', '#334155', isNight), [isNight]);
-  const aptModernSandTex = useMemo(() => makeArchVizApartmentTexture('#F5F2EB', '#57534E', isNight), [isNight]);
-  const aptModernCoolGreyTex = useMemo(() => makeArchVizApartmentTexture('#F1F5F9', '#1E293B', isNight), [isNight]);
-
-  const churchExteriorSignTex = useMemo(() => {
-    return makeCanvasTexture((ctx, w, h) => {
-      ctx.clearRect(0, 0, w, h);
-      ctx.fillStyle = '#FFFFFF';
-      ctx.font = '900 64px serif';
-      ctx.textAlign = 'center';
-      ctx.shadowColor = 'rgba(0,0,0,0.65)';
-      ctx.shadowBlur = 10;
-      ctx.fillText('좋은나무교회', w / 2, h / 2 + 18);
-    }, 512, 140);
-  }, []);
-
-  const purpleBannerTex = useMemo(() => {
-    return makeCanvasTexture((ctx, w, h) => {
-      const grad = ctx.createLinearGradient(0, 0, w, 0);
-      grad.addColorStop(0, '#581C87');
-      grad.addColorStop(1, '#7E22CE');
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, w, h);
-      ctx.strokeStyle = '#E9D5FF';
-      ctx.lineWidth = 4;
-      ctx.strokeRect(8, 8, w - 16, h - 16);
-      ctx.fillStyle = '#FFFFFF';
-      ctx.font = '900 32px serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('{ 당신이 더 행복했으면 좋겠습니다 }', w / 2, h / 2 + 10);
-    }, 560, 120);
-  }, []);
-
-  const cityLabels = useMemo(() => ({
-    gyeongnam: makeRoomSignTexture('경남아너스빌 아파트', '976세대 · 북쪽 단지', '#3B82F6'),
-    dongil: makeRoomSignTexture('동일스위트 더파크뷰 1단지', '1,021세대 · 북서쪽 단지', '#10B981'),
-    daelim: makeRoomSignTexture('e편한세상 한강신도시2차', '807세대 · 동남쪽 단지', '#F59E0B'),
-    school: makeRoomSignTexture('은여울중학교 🏫', '인조잔디 운동장 · 동북쪽', '#0284C7'),
-    park: makeRoomSignTexture('은여울공원 · 수목원 🌲', '산책로 · 잔디마당 · 야외무대', '#16A34A')
-  }), []);
-
-  const signs7F = useMemo(() => ({
-    elevator: makeRoomSignTexture('7F 엘리베이터·계단 🛗', '전 층(1F~6F) 즉시 이동', '#10B981'),
-    passage: makeRoomSignTexture('하늘정원 출입통로 🚪', '클릭 시 야외 옥상으로 이동', '#059669'),
-    pergola: makeRoomSignTexture('루프탑 파고라 쉼터 🌿', '클릭 시 벤치 착석 · 티타임', '#F59E0B'),
-    observatory: makeRoomSignTexture('한강신도시 전망대 🔭', '클릭 시 마스터플랜 조감도', '#38BDF8'),
-    blessing: makeRoomSignTexture('하늘정원 축도처 ✨', '목사님 축도(홀리라이트)', '#8B5CF6')
-  }), []);
-
-  return (
-    <group>
-      {/* ================================================================= */}
-      {/* ⛪ PART A. 좋은나무교회 7층 전체 건물 외관 (Y = -18.0m 지면 ~ Y = 0.0m 7층 옥상) */}
-      {/* ================================================================= */}
-      <group position={[0, 0, 0]}>
-        <RoundedBox args={[12.8, 14.6, 9.6]} position={[-0.2, -7.3, 0]} radius={0.05} castShadow receiveShadow>
-          <meshStandardMaterial color="#D6D3CD" roughness={0.55} />
-        </RoundedBox>
-
-        {/* 정면(북쪽 +Z 방향) 다크그레이 화강석 파사드 & 4줄 세로 슬릿 창문 & 2층 통유리창 */}
-        <group position={[1.1, -6.2, 4.92]}>
-          <RoundedBox args={[6.2, 12.2, 0.36]} radius={0.03} castShadow receiveShadow>
-            <meshStandardMaterial color="#33363B" roughness={0.4} metalness={0.2} />
-          </RoundedBox>
-          <mesh position={[0, 4.15, 0.20]}>
-            <planeGeometry args={[3.2, 0.88]} />
-            <meshBasicMaterial map={churchExteriorSignTex} transparent />
-          </mesh>
-          {[-2.1, -0.7, 0.7, 2.1].map((wx, wi) => (
-            <mesh key={wi} position={[wx, 1.35, 0.19]}>
-              <planeGeometry args={[0.42, 3.6]} />
-              <meshStandardMaterial color="#0284C7" metalness={0.85} roughness={0.1} />
-            </mesh>
-          ))}
-          <mesh position={[0, -2.55, 0.19]}>
-            <planeGeometry args={[5.4, 2.4]} />
-            <meshStandardMaterial color="#0369A1" metalness={0.88} roughness={0.08} />
-          </mesh>
-          <mesh position={[0, -4.85, 0.20]}>
-            <planeGeometry args={[4.2, 0.85]} />
-            <meshBasicMaterial map={purpleBannerTex} />
-          </mesh>
-        </group>
-
-        {/* 1층 필로티 주차장 기둥 & 정문 어닝 */}
-        <group position={[0, -18.0, 0]}>
-          {[-2.0, 0.8, 3.6].map((px, pi) => (
-            <RoundedBox key={pi} args={[0.68, 3.5, 0.68]} position={[px, 1.75, 4.5]} radius={0.02} castShadow>
-              <meshStandardMaterial color="#57534E" />
-            </RoundedBox>
-          ))}
-          <RoundedBox args={[2.6, 0.45, 0.85]} position={[-3.4, 2.8, 4.95]} rotation={[0.25, 0, 0]} radius={0.02}>
-            <meshStandardMaterial color="#064E3B" />
-          </RoundedBox>
-          <mesh position={[-4.4, 1.4, 4.92]}>
-            <planeGeometry args={[0.85, 2.2]} />
-            <meshBasicMaterial color="#0284C7" />
-          </mesh>
-        </group>
-
-        {/* 우측(-X 코너) 코발트블루 통유리 커튼월 타워 & 최상단 크롬 십자가 첨탑 */}
-        <group position={[-4.85, -7.2, 3.35]}>
-          <RoundedBox args={[3.1, 21.6, 3.2]} position={[0, 0, 0]} radius={0.04} castShadow receiveShadow>
-            <meshStandardMaterial color="#E7E5E0" roughness={0.4} />
-          </RoundedBox>
-          <mesh position={[-0.1, 0.2, 1.62]}>
-            <planeGeometry args={[2.3, 19.8]} />
-            <meshBasicMaterial map={blueCurtainTex} />
-          </mesh>
-          <mesh position={[-1.56, 0.2, 0.2]} rotation={[0, -Math.PI / 2, 0]}>
-            <planeGeometry args={[2.3, 19.8]} />
-            <meshBasicMaterial map={blueCurtainTex} />
-          </mesh>
-          <group position={[-0.6, 11.2, 1.55]}>
-            <mesh position={[0, 1.6, 0]} castShadow>
-              <boxGeometry args={[0.18, 3.6, 0.18]} />
-              <meshStandardMaterial
-                color="#F8FAFC"
-                emissive={isNight ? '#FDE047' : '#CBD5E1'}
-                emissiveIntensity={isNight ? 1.8 : 0.35}
-                metalness={0.8}
-              />
-            </mesh>
-            <mesh position={[0, 2.35, 0]} castShadow>
-              <boxGeometry args={[1.65, 0.18, 0.18]} />
-              <meshStandardMaterial
-                color="#F8FAFC"
-                emissive={isNight ? '#FDE047' : '#CBD5E1'}
-                emissiveIntensity={isNight ? 1.8 : 0.35}
-                metalness={0.8}
-              />
-            </mesh>
-          </group>
-        </group>
-
-        {/* 좌측(+X 코너) 계단실 타워 & 대형 세계지도 선교 벽화 */}
-        <group position={[5.15, -7.8, 0.4]}>
-          <RoundedBox args={[2.8, 20.4, 8.8]} radius={0.04} castShadow receiveShadow>
-            <meshStandardMaterial color="#A8A29E" roughness={0.55} />
-          </RoundedBox>
-          <mesh position={[1.42, 1.5, 0.5]} rotation={[0, Math.PI / 2, 0]}>
-            <planeGeometry args={[5.8, 3.8]} />
-            <meshBasicMaterial map={worldMapMuralTex} />
-          </mesh>
-        </group>
-      </group>
-
-      {/* ================================================================= */}
-      {/* 🌿 PART B. 7층 루프탑(옥상) 실내 펜트하우스 홀 & 야외 하늘정원 (Y = 0.0m) */}
-      {/* ================================================================= */}
-      <group position={[0, 0, 0]}>
-        <RoundedBox args={[12.6, 0.24, 9.4]} position={[-0.2, -0.12, 0]} radius={0.03} receiveShadow>
-          <meshStandardMaterial color="#CBD5E1" roughness={0.6} />
-        </RoundedBox>
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-1.85, 0.01, 0.2]} receiveShadow>
-          <planeGeometry args={[7.4, 8.4]} />
-          <meshStandardMaterial map={woodDeckTex} roughness={0.45} />
-        </mesh>
-        <RoundedBox args={[3.4, 0.04, 3.6]} position={[-3.6, 0.02, 2.1]} radius={0.08} receiveShadow>
-          <meshStandardMaterial color="#4D7C0F" roughness={0.8} />
-        </RoundedBox>
-
-        {/* 동쪽 7층 실내 엘리베이터·계단 펜트하우스 코어 & 축하 화환 & 옥상 출입 통로 */}
-        <group>
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[3.5, 0.012, -1.2]} receiveShadow>
-            <planeGeometry args={[3.2, 6.4]} />
-            <meshStandardMaterial color="#F1F5F9" roughness={0.3} />
-          </mesh>
-
-          <AnimatedStainlessElevator7F
-            position={[3.4, 0.02, -3.5]}
-            rotationY={0}
-            playerIdxRef={playerIdxRef}
-            forceOpen={isElevatorModalOpen}
-            onClickElevator={() => onSelectZone(ZONES_7F[0])}
-            signTex={signs7F.elevator}
-            showRoomSigns={showRoomSigns}
-          />
-
-          <group
-            position={[3.8, 0, 1.1]}
-            onClick={(e) => {
-              e.stopPropagation();
-              onSelectZone(ZONES_7F[0]);
-            }}
-          >
-            {Array.from({ length: 5 }).map((_, si) => (
-              <RoundedBox
-                key={si}
-                args={[0.28, 0.12, 1.2]}
-                position={[-0.6 + si * 0.28, -si * 0.06, 0]}
-                radius={0.01}
-              >
-                <meshStandardMaterial color={si % 2 === 0 ? '#E2E8F0' : '#94A3B8'} />
-              </RoundedBox>
-            ))}
-          </group>
-
-          <ChurchCelebrationWreath3D
-            position={[4.55, 0.02, -0.35]}
-            rotationY={-Math.PI / 2}
-            onClick={(e) => {
-              e.stopPropagation();
-              onSelectZone(ZONES_7F[1]);
-            }}
-          />
-
-          <RoundedBox args={[0.18, 2.35, 3.0]} position={[1.95, 1.18, -2.9]} radius={0.015} castShadow receiveShadow>
-            <meshStandardMaterial color="#F8FAFC" />
-          </RoundedBox>
-          <RoundedBox args={[0.18, 2.35, 1.8]} position={[1.95, 1.18, 1.25]} radius={0.015} castShadow receiveShadow>
-            <meshStandardMaterial color="#F8FAFC" />
-          </RoundedBox>
-          <RoundedBox args={[3.4, 2.35, 0.18]} position={[3.55, 1.18, 2.05]} radius={0.015} castShadow receiveShadow>
-            <meshStandardMaterial color="#F8FAFC" />
-          </RoundedBox>
-
-          <AnimatedRooftopPassageDoor7F
-            position={[1.95, 0, -0.5]}
-            playerIdxRef={playerIdxRef}
-            forceOpen={isPassageDoorForcedOpen}
-            onClickDoor={() => onSelectZone(ZONES_7F[2])}
-          />
-          {showRoomSigns && (
-            <Billboard position={[1.95, 2.65, -0.5]}>
-              <mesh>
-                <planeGeometry args={[1.22, 0.52]} />
-                <meshBasicMaterial map={signs7F.passage} transparent />
-              </mesh>
-            </Billboard>
-          )}
-        </group>
-
-        {/* 야외 하늘정원 중앙: 원목 파고라(Pergola) 캐노피 & 에디슨 스트링 라이트 */}
-        <group position={[-1.4, 0, -1.65]}>
-          {[
-            [-1.5, -1.1],
-            [1.5, -1.1],
-            [-1.5, 1.1],
-            [1.5, 1.1]
-          ].map(([px, pz], pi) => (
-            <RoundedBox key={pi} args={[0.14, 2.35, 0.14]} position={[px, 1.18, pz]} radius={0.02} castShadow>
-              <meshStandardMaterial color="#5C381E" roughness={0.5} />
-            </RoundedBox>
-          ))}
-          <RoundedBox args={[3.3, 0.12, 0.14]} position={[0, 2.32, -1.1]} radius={0.02} castShadow>
-            <meshStandardMaterial color="#5C381E" />
-          </RoundedBox>
-          <RoundedBox args={[3.3, 0.12, 0.14]} position={[0, 2.32, 1.1]} radius={0.02} castShadow>
-            <meshStandardMaterial color="#5C381E" />
-          </RoundedBox>
-          {[-1.3, -0.85, -0.4, 0, 0.4, 0.85, 1.3].map((rx, ri) => (
-            <RoundedBox key={ri} args={[0.08, 0.10, 2.45]} position={[rx, 2.40, 0]} radius={0.015} castShadow>
-              <meshStandardMaterial color="#784727" />
-            </RoundedBox>
-          ))}
-
-          {[-1.1, -0.55, 0, 0.55, 1.1].map((lx, li) => (
-            <React.Fragment key={li}>
-              <mesh position={[lx, 2.24, -0.45]}>
-                <sphereGeometry args={[0.04, 10, 10]} />
-                <meshBasicMaterial color="#FEF08A" />
-              </mesh>
-              <mesh position={[lx, 2.24, 0.45]}>
-                <sphereGeometry args={[0.04, 10, 10]} />
-                <meshBasicMaterial color="#FEF08A" />
-              </mesh>
-            </React.Fragment>
-          ))}
-          <pointLight position={[0, 2.1, 0]} intensity={1.8} distance={5.0} color="#FDE047" />
-
-          <RoundedBox args={[1.65, 0.06, 0.76]} position={[0, 0.58, 0]} radius={0.02} castShadow receiveShadow>
-            <meshStandardMaterial color="#D49552" />
-          </RoundedBox>
-          {[-0.65, 0.65].map((tx, ti) => (
-            <RoundedBox
-              key={ti}
-              args={[0.58, 0.07, 0.52]}
-              position={[tx, 0.34, -0.68]}
-              radius={0.02}
-              castShadow
-              onClick={(e) => {
-                e.stopPropagation();
-                onSitOnBench({
-                  x: -1.4 + tx,
-                  z: -1.65 - 0.68,
-                  rotY: 0,
-                  rowLabel: '7F 하늘정원 파고라 원목 벤치석'
-                });
-              }}
-            >
-              <meshStandardMaterial color="#A86B2D" />
-            </RoundedBox>
-          ))}
-
-          {showRoomSigns && (
-            <Billboard position={[0, 2.75, 0]}>
-              <mesh>
-                <planeGeometry args={[1.25, 0.52]} />
-                <meshBasicMaterial map={signs7F.pergola} transparent />
-              </mesh>
-            </Billboard>
-          )}
-        </group>
-
-        {/* 북쪽 전망 난간: 크롬 쌍안경 전망 망원경 2대 */}
-        <group
-          position={[-1.2, 0, 3.85]}
-          onClick={(e) => {
-            e.stopPropagation();
-            if (onToggleDroneView) onToggleDroneView();
-          }}
-        >
-          {[-0.65, 0.65].map((bx, bi) => (
-            <group key={bi} position={[bx, 0, 0]}>
-              <mesh position={[0, 0.55, 0]} castShadow>
-                <cylinderGeometry args={[0.04, 0.08, 1.1, 14]} />
-                <meshStandardMaterial color="#E2E8F0" metalness={0.85} roughness={0.2} />
-              </mesh>
-              <RoundedBox args={[0.22, 0.14, 0.36]} position={[0, 1.14, 0.05]} rotation={[0.2, 0, 0]} radius={0.03} castShadow>
-                <meshStandardMaterial color="#0284C7" metalness={0.7} roughness={0.2} />
-              </RoundedBox>
-            </group>
-          ))}
-          {showRoomSigns && (
-            <Billboard position={[0, 1.95, 0]}>
-              <mesh>
-                <planeGeometry args={[1.28, 0.52]} />
-                <meshBasicMaterial map={signs7F.observatory} transparent />
-              </mesh>
-            </Billboard>
-          )}
-        </group>
-
-        {/* 옥상 둘레 강화유리 & 스테인리스 안전 난간 */}
-        <RoundedBox args={[12.4, 0.06, 0.08]} position={[-0.2, 1.05, 4.45]} radius={0.02}>
-          <meshStandardMaterial color="#E2E8F0" metalness={0.85} />
-        </RoundedBox>
-        <mesh position={[-0.2, 0.52, 4.45]}>
-          <boxGeometry args={[12.2, 0.98, 0.03]} />
-          <meshStandardMaterial color="#BAE6FD" transparent opacity={0.35} roughness={0.08} />
-        </mesh>
-
-        {[
-          [-4.8, 0.6],
-          [-4.8, -1.8],
-          [0.8, 3.8],
-          [3.2, 3.8]
-        ].map(([px, pz], pi) => (
-          <group key={pi} position={[px, 0, pz]}>
-            <RoundedBox args={[1.25, 0.42, 0.65]} position={[0, 0.21, 0]} radius={0.03} castShadow>
-              <meshStandardMaterial color="#F8FAFC" />
-            </RoundedBox>
-            <mesh position={[-0.25, 0.68, 0]} castShadow>
-              <dodecahedronGeometry args={[0.36, 1]} />
-              <meshStandardMaterial color="#2D5A27" />
-            </mesh>
-            <mesh position={[0.25, 0.58, 0.05]} castShadow>
-              <sphereGeometry args={[0.24, 12, 12]} />
-              <meshStandardMaterial color={pi % 2 === 0 ? '#F472B6' : '#FACC15'} />
-            </mesh>
-          </group>
-        ))}
-
-        {showRoomSigns && (
-          <Billboard position={[-3.2, 2.05, 2.6]}>
-            <mesh
-              onClick={(e) => {
-                e.stopPropagation();
-                if (onSelectNpcForChat) onSelectNpcForChat(NPCS_7F[0]);
-              }}
-            >
-              <planeGeometry args={[1.25, 0.52]} />
-              <meshBasicMaterial map={signs7F.blessing} transparent />
-            </mesh>
-          </Billboard>
-        )}
-      </group>
-
-      {/* ================================================================= */}
-      {/* 🏙️ PART C. 《건축 마스터플랜 조감도 (`image_864f03.jpg` & `image_864ee5.jpg`)》 스타일 주변 3D 도시 (Y = -18.0m) */}
-      {/* ================================================================= */}
-      <group position={[0, -18.0, 0]}>
-        {/* 1) 조감도 스타일 라이트 실버그레이 어반 컨텍스트 베이스 대지 (원색 초록 잔디 완전 탈피!) */}
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.15, 0]} receiveShadow>
-          <planeGeometry args={[320, 320]} />
-          <meshStandardMaterial color={isNight ? '#1E293B' : '#E2E4E8'} roughness={0.85} />
-        </mesh>
-
-        {/* 주변 외곽을 가득 채우는 화이트/그레이 컨텍스트 빌딩 매스 88동 (`image_864f03.jpg` 외곽 재현!) */}
-        <SurroundingWhiteContextCityMasses />
-
-        {/* 2) 도시 간선 도로망 (김포한강8로 & 단지 교차로 차콜 아스팔트 + 보도블록 연석) */}
-        <group position={[0, 0.02, 13.5]} rotation={[0, 0.14, 0]}>
-          {/* 보행자 보도블록 연석 */}
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow>
-            <planeGeometry args={[220, 11.2]} />
-            <meshStandardMaterial color="#CBD5E1" roughness={0.7} />
-          </mesh>
-          {/* 메인 차콜 아스팔트 도로 */}
-          <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-            <planeGeometry args={[220, 8.6]} />
-            <meshStandardMaterial color="#475569" roughness={0.8} />
-          </mesh>
-          {/* 스쿨존 테라코타 레드 포장 구간 */}
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[6, 0.01, 0]} receiveShadow>
-            <planeGeometry args={[34, 8.2]} />
-            <meshStandardMaterial color="#88292F" roughness={0.8} />
-          </mesh>
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
-            <planeGeometry args={[220, 0.16]} />
-            <meshBasicMaterial color="#FDE047" />
-          </mesh>
-          {/* 남북 교차 도로망 */}
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-22, -0.005, 18]} receiveShadow>
-            <planeGeometry args={[7.2, 110]} />
-            <meshStandardMaterial color="#475569" roughness={0.8} />
-          </mesh>
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[24, -0.005, 18]} receiveShadow>
-            <planeGeometry args={[7.2, 110]} />
-            <meshStandardMaterial color="#475569" roughness={0.8} />
-          </mesh>
-        </group>
-
-        <MovingCityTrafficCars />
-
-        {/* 3) 북쪽 단지(+Z): 경남아너스빌 아파트 마스터플랜 (976세대 — 샌드베이지 보행 데크 + 잔디 플라자 + 태양광 루프탑) */}
-        <group position={[0, 0, 34]}>
-          {/* 단지 조경 포디움 베이스 & 샌드베이지 보행 산책로 (`image_864f03.jpg` 단지 바닥 완벽 재현!) */}
-          <RoundedBox args={[42, 0.25, 32]} position={[1, 0.12, 6]} radius={0.1} receiveShadow>
-            <meshStandardMaterial color="#EDE8DC" roughness={0.75} />
-          </RoundedBox>
-          {/* 유기적인 잔디 조경 패치들 */}
-          <RoundedBox args={[16, 0.28, 12]} position={[-9, 0.14, 2]} radius={0.2} receiveShadow>
-            <meshStandardMaterial color="#557A2B" roughness={0.85} />
-          </RoundedBox>
-          <RoundedBox args={[18, 0.28, 14]} position={[10, 0.14, 9]} radius={0.2} receiveShadow>
-            <meshStandardMaterial color="#4A6E22" roughness={0.85} />
-          </RoundedBox>
-          {/* 단지 중앙 원형 커뮤니티 광장 */}
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[2, 0.30, 5]}>
-            <circleGeometry args={[4.8, 32]} />
-            <meshStandardMaterial color="#D6C7B2" />
-          </mesh>
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[2, 0.32, 5]}>
-            <circleGeometry args={[3.2, 32]} />
-            <meshStandardMaterial color="#5C8D32" />
-          </mesh>
-
-          <ModernArchVizApartmentTower position={[-12, 0.2, -4]} rotationY={-0.65} width={9.5} depth={3.2} height={26} wingWidth={3.2} wingDepth={4.8} roofType="solar" facadeTex={aptModernWhiteTex} solarTex={solarTex} />
-          <ModernArchVizApartmentTower position={[2, 0.2, -3]} rotationY={0.65} width={9.5} depth={3.2} height={28} wingWidth={3.2} wingDepth={4.8} roofType="solar" facadeTex={aptModernWhiteTex} solarTex={solarTex} />
-          <ModernArchVizApartmentTower position={[15, 0.2, 0]} rotationY={-0.55} width={9.5} depth={3.2} height={25} wingWidth={3.2} wingDepth={4.5} roofType="green" facadeTex={aptModernWhiteTex} solarTex={solarTex} />
-          <ModernArchVizApartmentTower position={[-8, 0.2, 13]} rotationY={0.55} width={10.5} depth={3.2} height={30} wingWidth={3.2} wingDepth={5.0} roofType="solar" facadeTex={aptModernWhiteTex} solarTex={solarTex} />
-          <ModernArchVizApartmentTower position={[10, 0.2, 15]} rotationY={-0.6} width={10.0} depth={3.2} height={27} roofType="green" facadeTex={aptModernWhiteTex} solarTex={solarTex} />
-
-          <RichMasterplanTrees
-            positions={[
-              [-16, 0.2, 3, 1.1], [-5, 0.2, 3, 1.2], [7, 0.2, 4, 1.1],
-              [-2, 0.2, 10, 1.3], [4, 0.2, 12, 1.0], [16, 0.2, 9, 1.2],
-              [-14, 0.2, 12, 1.2], [0, 0.2, -8, 1.0], [12, 0.2, -6, 1.1]
-            ]}
-          />
-
-          {showRoomSigns && (
-            <Billboard position={[2, 34, 4]}>
-              <mesh>
-                <planeGeometry args={[5.8, 2.3]} />
-                <meshBasicMaterial map={cityLabels.gyeongnam} transparent />
-              </mesh>
-            </Billboard>
-          )}
-        </group>
-
-        {/* 4) 북서쪽 단지(좌측 +X, +Z): 동일스위트 더파크뷰 1단지 (1,021세대) & 연녹색 옥상 스트리트 상가 */}
-        <group position={[40, 0, 22]}>
-          <RoundedBox args={[36, 0.25, 32]} position={[2, 0.12, 12]} radius={0.1} receiveShadow>
-            <meshStandardMaterial color="#E6E1D6" roughness={0.75} />
-          </RoundedBox>
-          <RoundedBox args={[26, 0.28, 20]} position={[2, 0.14, 14]} radius={0.2} receiveShadow>
-            <meshStandardMaterial color="#4D7525" roughness={0.85} />
-          </RoundedBox>
-
-          {/* 스트리트 상가 포디움 */}
-          <RoundedBox args={[18, 4.2, 4.8]} position={[-10, 2.1, -3]} rotation={[0, 0.14, 0]} radius={0.04} castShadow receiveShadow>
-            <meshStandardMaterial color="#F1F5F9" />
-          </RoundedBox>
-          <RoundedBox args={[17.6, 0.2, 4.4]} position={[-10, 4.3, -3]} rotation={[0, 0.14, 0]} radius={0.02}>
-            <meshStandardMaterial color="#65A30D" />
-          </RoundedBox>
-
-          <ModernArchVizApartmentTower position={[-6, 0.2, 8]} rotationY={0.7} width={10} depth={3.2} height={27} wingWidth={3.2} wingDepth={4.5} roofType="green" facadeTex={aptModernCoolGreyTex} solarTex={solarTex} />
-          <ModernArchVizApartmentTower position={[8, 0.2, 6]} rotationY={-0.6} width={10.5} depth={3.2} height={29} roofType="solar" facadeTex={aptModernCoolGreyTex} solarTex={solarTex} />
-          <ModernArchVizApartmentTower position={[0, 0.2, 22]} rotationY={0.65} width={11} depth={3.2} height={28} wingWidth={3.2} wingDepth={5.0} roofType="green" facadeTex={aptModernCoolGreyTex} solarTex={solarTex} />
-          <ModernArchVizApartmentTower position={[15, 0.2, 18]} rotationY={0.7} width={10} depth={3.2} height={25} roofType="solar" facadeTex={aptModernCoolGreyTex} solarTex={solarTex} />
-
-          <RichMasterplanTrees
-            positions={[
-              [-12, 0.2, 4, 1.1], [1, 0.2, 12, 1.3], [8, 0.2, 14, 1.1],
-              [-6, 0.2, 16, 1.2], [12, 0.2, 9, 1.0]
-            ]}
-          />
-
-          {showRoomSigns && (
-            <Billboard position={[2, 34, 12]}>
-              <mesh>
-                <planeGeometry args={[6.2, 2.4]} />
-                <meshBasicMaterial map={cityLabels.dongil} transparent />
-              </mesh>
-            </Billboard>
-          )}
-        </group>
-
-        {/* 5) 동쪽 & 남동쪽 단지(우측 -X): GS더프레시·뚜레쥬르 상가 & e편한세상 한강신도시2차 (807세대) */}
-        <group position={[-34, 0, -4]}>
-          <RoundedBox args={[36, 0.25, 34]} position={[-4, 0.12, -4]} radius={0.1} receiveShadow>
-            <meshStandardMaterial color="#EDE8DC" roughness={0.75} />
-          </RoundedBox>
-          <RoundedBox args={[24, 0.28, 22]} position={[-5, 0.14, -5]} radius={0.2} receiveShadow>
-            <meshStandardMaterial color="#527A28" roughness={0.85} />
-          </RoundedBox>
-
-          {/* GS더프레시 & 뚜레쥬르 연도형 상가 */}
-          <RoundedBox args={[7.5, 5.5, 5.5]} position={[16, 2.75, 7]} rotation={[0, 0.14, 0]} radius={0.04} castShadow receiveShadow>
-            <meshStandardMaterial color="#F8FAFC" />
-          </RoundedBox>
-          <RoundedBox args={[6.8, 4.8, 5.2]} position={[6, 2.4, 9]} rotation={[0, 0.14, 0]} radius={0.04} castShadow receiveShadow>
-            <meshStandardMaterial color="#E2E8F0" />
-          </RoundedBox>
-
-          <ModernArchVizApartmentTower position={[6, 0.2, -6]} rotationY={-0.7} width={9.5} depth={3.2} height={25} roofType="solar" facadeTex={aptModernSandTex} solarTex={solarTex} />
-          <ModernArchVizApartmentTower position={[-6, 0.2, -2]} rotationY={-0.7} width={10} depth={3.2} height={28} wingWidth={3.2} wingDepth={4.5} roofType="green" facadeTex={aptModernSandTex} solarTex={solarTex} />
-          <ModernArchVizApartmentTower position={[-18, 0.2, 2]} rotationY={0.65} width={10.5} depth={3.2} height={29} wingWidth={3.2} wingDepth={4.8} roofType="solar" facadeTex={aptModernSandTex} solarTex={solarTex} />
-          <ModernArchVizApartmentTower position={[-4, 0.2, -18]} rotationY={0.65} width={11} depth={3.2} height={26} roofType="green" facadeTex={aptModernSandTex} solarTex={solarTex} />
-
-          <RichMasterplanTrees
-            positions={[
-              [2, 0.2, 2, 1.2], [-2, 0.2, -9, 1.3], [-12, 0.2, -6, 1.1],
-              [-10, 0.2, 5, 1.2], [5, 0.2, -14, 1.1]
-            ]}
-          />
-
-          {showRoomSigns && (
-            <Billboard position={[-6, 33, -6]}>
-              <mesh>
-                <planeGeometry args={[6.0, 2.3]} />
-                <meshBasicMaterial map={cityLabels.daelim} transparent />
-              </mesh>
-            </Billboard>
-          )}
-        </group>
-
-        {/* 6) 동북쪽(-X, +Z): 은여울중학교 (교사동 + 인조잔디 축구장 + 육상 트랙) */}
-        <group position={[-44, 0, 36]}>
-          <RoundedBox args={[28, 0.22, 24]} position={[2, 0.11, 2]} radius={0.08} receiveShadow>
-            <meshStandardMaterial color="#E5E0D5" />
-          </RoundedBox>
-          <RoundedBox args={[16, 7.5, 4.2]} position={[4, 3.75, 10]} radius={0.04} castShadow receiveShadow>
-            <meshStandardMaterial color="#F8FAFC" />
-          </RoundedBox>
-          <RoundedBox args={[6.5, 6.2, 8.5]} position={[10, 3.1, 1]} radius={0.04} castShadow receiveShadow>
-            <meshStandardMaterial color="#E2E8F0" />
-          </RoundedBox>
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-4, 0.25, 0]} receiveShadow>
-            <planeGeometry args={[16, 12]} />
-            <meshStandardMaterial color="#D6C4A8" roughness={0.85} />
-          </mesh>
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-4, 0.27, 0]}>
-            <planeGeometry args={[11.5, 7.8]} />
-            <meshStandardMaterial color="#4D7C0F" />
-          </mesh>
-
-          {showRoomSigns && (
-            <Billboard position={[0, 14, 4]}>
-              <mesh>
-                <planeGeometry args={[5.4, 2.2]} />
-                <meshBasicMaterial map={cityLabels.school} transparent />
-              </mesh>
-            </Billboard>
-          )}
-        </group>
-
-        {/* 7) 남쪽(교회 뒤편 -Z): 은여울공원 · 수목원 · 산책로 · 야외무대 · 잔디마당 (`image_864f03.jpg` 우측 녹지 공원 감성!) */}
-        <group position={[4, 0, -26]}>
-          {/* 공원 베이스 녹지 매트 & 베이지 산책로 데크 */}
-          <RoundedBox args={[52, 0.22, 34]} position={[4, 0.11, -4]} radius={0.3} receiveShadow>
-            <meshStandardMaterial color="#3F6212" roughness={0.9} />
-          </RoundedBox>
-          {/* 조감도 특유의 밝은 샌드베이지 보행 산책로 라인 */}
-          <RoundedBox args={[48, 0.26, 2.2]} position={[4, 0.13, 6]} rotation={[0, -0.08, 0]} radius={0.05} receiveShadow>
-            <meshStandardMaterial color="#E7DFD3" />
-          </RoundedBox>
-          <RoundedBox args={[2.2, 0.26, 28]} position={[-2, 0.13, -4]} rotation={[0, 0.15, 0]} radius={0.05} receiveShadow>
-            <meshStandardMaterial color="#E7DFD3" />
-          </RoundedBox>
-
-          {/* 원형 잔디광장 & 야외무대 돔 */}
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-8, 0.28, -8]} receiveShadow>
-            <circleGeometry args={[7.2, 32]} />
-            <meshStandardMaterial color="#65A30D" roughness={0.85} />
-          </mesh>
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-8, 0.26, -8]}>
-            <ringGeometry args={[7.2, 8.4, 32]} />
-            <meshStandardMaterial color="#E7DFD3" />
-          </mesh>
-          <mesh position={[-11, 1.2, -6]} castShadow>
-            <sphereGeometry args={[2.2, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2]} />
-            <meshStandardMaterial color="#F8FAFC" />
-          </mesh>
-
-          <RichMasterplanTrees
-            positions={[
-              [6, 0.2, 8, 1.3], [12, 0.2, 9, 1.4], [18, 0.2, 4, 1.2], [22, 0.2, 8, 1.3],
-              [4, 0.2, -2, 1.5], [10, 0.2, -4, 1.3], [16, 0.2, -6, 1.4], [24, 0.2, -2, 1.2],
-              [-4, 0.2, 3, 1.2], [-14, 0.2, 4, 1.4], [-18, 0.2, -2, 1.3], [-16, 0.2, -12, 1.2],
-              [2, 0.2, -12, 1.4], [9, 0.2, -14, 1.3], [18, 0.2, -13, 1.5]
-            ]}
-          />
-
-          {showRoomSigns && (
-            <Billboard position={[6, 12, -4]}>
-              <mesh>
-                <planeGeometry args={[5.6, 2.2]} />
-                <meshBasicMaterial map={cityLabels.park} transparent />
-              </mesh>
-            </Billboard>
-          )}
-        </group>
-      </group>
-
-      {/* ================================================================= */}
-      {/* 👥 PART D. 7층 하늘정원 NPC & 실시간 멀티플레이어 성도 & 축도 홀리라이트 */}
-      {/* ================================================================= */}
-      {NPCS_7F.map((npc, idx) => {
-        const isTalking = idx === activeNpcChatIdx % NPCS_7F.length;
-        const msgList = npc.dialogues || [];
-        const msg = isTalking && msgList.length > 0 ? `${npc.name}: ${msgList[activeNpcChatIdx % msgList.length]}` : null;
-        const isBlessingNow = holyLightEvent && holyLightEvent.pastorName === npc.name;
-
-        return (
-          <SmoothChibiAvatar7F
-            key={npc.id}
-            position={[npc.x, npc.y || 0, npc.z]}
-            patrolZ={npc.patrolZ || null}
-            rotationY={npc.rotY || 0}
-            isSeated={Boolean(npc.seated)}
-            emote={isBlessingNow ? 'bless' : null}
-            gender={npc.gender}
-            hairStyle={npc.hairStyle}
-            isSkirt={Boolean(npc.isSkirt)}
-            autoWave={Boolean(npc.autoWave)}
-            shirtColor={npc.shirt}
-            pantsColor={npc.pants}
-            hairColor={npc.hair}
-            speechBubbleText={msg}
-            seedOffset={idx * 1.5}
-            onClick={(e) => {
-              e.stopPropagation();
-              if (onSelectNpcForChat) onSelectNpcForChat(npc);
-            }}
-          />
-        );
-      })}
-
-      {(remotePeers || []).map((peer) => (
-        <RemoteMultiplayerAvatar7F
-          key={peer.clientId}
-          peer={peer}
-          onClickPeer={onSelectRemotePeer}
-        />
-      ))}
-
-      {holyLightEvent && (
-        <HolyLightBeamEffect7F
-          targetPos={holyLightEvent.targetPos}
-          pastorName={holyLightEvent.pastorName}
-          targetName={holyLightEvent.targetName}
-        />
-      )}
-
-      {ZONES_7F.map((z) => (
-        <HologramMarker7F
-          key={z.id}
-          zone={z}
-          isSelected={activeZoneId === z.id}
-          onSelect={(sel) => {
-            if (sel.isSeatZone && sel.seatTarget) {
-              onSitOnBench(sel.seatTarget);
-            } else if (sel.isObservatory && onToggleDroneView) {
-              onToggleDroneView();
-            } else if (sel.isBlessingZone && onSelectNpcForChat) {
-              onSelectNpcForChat(NPCS_7F[0]);
-            } else {
-              onSelectZone(sel);
-            }
-          }}
-        />
-      ))}
-    </group>
-  );
-}
-
-// =====================================================================
-// 🚶‍♂️ 플레이어 아바타 컨트롤러
-// =====================================================================
-function PlayerController7F({
-  waypoints,
-  playerIdxRef,
-  seatedInfo,
-  playerName,
-  playerOffice,
-  avatarConfig,
-  emote,
-  myChatBubble,
-  controlsRef,
-  cameraViewMode,
-  onPositionUpdate
-}) {
-  const wpIndexRef = useRef(0);
-  const [renderState, setRenderState] = useState({
-    pos: [2.8, 0, -0.5],
-    rotY: -Math.PI / 2,
-    walking: false
-  });
-
-  useEffect(() => {
-    wpIndexRef.current = 0;
-  }, [waypoints]);
-
-  const nameTagTex = useMemo(() => {
-    const isPastor = isAuthorizedPastor(playerName, playerOffice);
-    return makeCanvasTexture((ctx, w, h) => {
-      ctx.fillStyle = isPastor ? 'rgba(88, 28, 135, 0.96)' : 'rgba(30, 33, 40, 0.95)';
-      ctx.beginPath();
-      ctx.roundRect(6, 6, w - 12, h - 12, 48);
-      ctx.fill();
-      ctx.lineWidth = 4;
-      ctx.strokeStyle = isPastor ? '#FACC15' : 'rgba(56, 189, 248, 0.65)';
-      ctx.stroke();
-
-      ctx.fillStyle = isPastor ? '#FACC15' : '#38BDF8';
-      ctx.beginPath();
-      ctx.arc(48, h / 2, 15, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.fillStyle = '#FFFFFF';
-      ctx.font = '900 35px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(`나 · ${isPastor ? '✝️' : ''}${playerName}`, w / 2 + 18, h / 2 + 2);
-    }, 540, 110);
-  }, [playerName, playerOffice]);
-
-  useFrame(({ camera }, delta) => {
-    if (seatedInfo) {
-      playerIdxRef.current = [seatedInfo.x, 0, seatedInfo.z];
-      if (renderState.walking || renderState.pos[0] !== seatedInfo.x || renderState.rotY !== seatedInfo.rotY) {
-        setRenderState({
-          pos: [seatedInfo.x, 0, seatedInfo.z],
-          rotY: seatedInfo.rotY ?? 0,
-          walking: false
-        });
-      }
-      if (cameraViewMode === 'follow' && controlsRef?.current) {
-        controlsRef.current.target.lerp(new THREE.Vector3(seatedInfo.x, 0.85, seatedInfo.z), delta * 4.5);
-        controlsRef.current.update();
-      }
       return;
     }
 
-    if (!waypoints || waypoints.length === 0) return;
-    const currentTarget = waypoints[Math.min(wpIndexRef.current, waypoints.length - 1)];
-    if (!currentTarget) return;
-
-    const [cx, , cz] = playerIdxRef.current;
-    const [tx, tz] = currentTarget;
-    const dx = tx - cx;
-    const dz = tz - cz;
-    const dist = Math.hypot(dx, dz);
-
-    if (dist > 0.08) {
-      const step = Math.min(dist, delta * 4.2);
-      const rawNx = cx + (dx / dist) * step;
-      const rawNz = cz + (dz / dist) * step;
-      const [nx, nz] = resolveCollision7F(rawNx, rawNz);
-      playerIdxRef.current = [nx, 0, nz];
-      const angle = Math.atan2(dx, dz);
-      setRenderState({
-        pos: [nx, 0, nz],
-        rotY: angle,
-        walking: true
-      });
-      onPositionUpdate(nx, nz, angle);
-
-      if (cameraViewMode === 'follow' && controlsRef?.current) {
-        camera.position.x += (nx - cx) * 0.85;
-        camera.position.z += (nz - cz) * 0.85;
-        controlsRef.current.target.lerp(new THREE.Vector3(nx, 0.95, nz), delta * 6.0);
-        controlsRef.current.update();
-      }
-    } else {
-      if (wpIndexRef.current < waypoints.length - 1) {
-        wpIndexRef.current += 1;
-      } else if (renderState.walking) {
-        setRenderState((prev) => ({ ...prev, walking: false }));
-      }
+    if (type === 'step' || type === 'splash' || type === 'water') {
+      const dur = type === 'water' ? 0.22 : type === 'splash' ? 0.14 : 0.06;
+      const bufSize = Math.floor(ctx.sampleRate * dur);
+      const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+      const ch = buf.getChannelData(0);
+      for (let i = 0; i < bufSize; i++) ch[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufSize * 0.4));
+      const src = ctx.createBufferSource(); src.buffer = buf;
+      const filter = ctx.createBiquadFilter();
+      filter.type = type === 'step' ? 'lowpass' : 'bandpass';
+      filter.frequency.setValueAtTime(type === 'water' ? 1200 : type === 'splash' ? 950 : 320, now);
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(type === 'water' ? 0.06 : 0.035, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+      src.connect(filter); filter.connect(gain); gain.connect(ctx.destination);
+      src.start(now);
+      return;
     }
-  });
 
-  return (
-    <SmoothChibiAvatar7F
-      position={renderState.pos}
-      rotationY={renderState.rotY}
-      gender={avatarConfig.gender}
-      hairStyle={avatarConfig.hairStyle}
-      isSkirt={Boolean(avatarConfig.isSkirt)}
-      hasSunglasses={Boolean(avatarConfig.hasSunglasses)}
-      isWalking={renderState.walking}
-      isSeated={Boolean(seatedInfo)}
-      emote={emote}
-      shirtColor={avatarConfig.shirtColor}
-      pantsColor={avatarConfig.pantsColor}
-      hairColor={avatarConfig.hairColor}
-      nameTagTexture={nameTagTex}
-      speechBubbleText={myChatBubble ? `${playerName}: ${myChatBubble}` : null}
-    />
-  );
+    const osc = ctx.createOscillator(), gain = ctx.createGain();
+    if (type === 'jump') {
+      osc.type = 'sine'; osc.frequency.setValueAtTime(240, now); osc.frequency.exponentialRampToValueAtTime(490, now + 0.11);
+      gain.gain.setValueAtTime(0.045, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+    } else if (type === 'hit') {
+      osc.type = 'square'; osc.frequency.setValueAtTime(160, now); osc.frequency.exponentialRampToValueAtTime(90, now + 0.06);
+      gain.gain.setValueAtTime(0.045, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+    } else if (type === 'door') {
+      osc.type = 'triangle'; osc.frequency.setValueAtTime(165, now); osc.frequency.exponentialRampToValueAtTime(255, now + 0.09);
+      gain.gain.setValueAtTime(0.055, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+    } else {
+      osc.type = type === 'place' ? 'triangle' : 'sawtooth';
+      osc.frequency.setValueAtTime(type === 'place' ? 210 : 195, now);
+      osc.frequency.exponentialRampToValueAtTime(type === 'place' ? 370 : 82, now + 0.07);
+      gain.gain.setValueAtTime(0.05, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+    }
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(now); osc.stop(now + 0.13);
+  } catch (_) {}
+};
+
+const playAnimalSfx = (animalType, muted = false) => {
+  if (muted) return;
+  try {
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator(), gain = ctx.createGain();
+    if (animalType === 'sheep') {
+      osc.type = 'sawtooth';
+      for (let i = 0; i < 6; i++) osc.frequency.setValueAtTime(i % 2 === 0 ? 310 : 275, now + i * 0.045);
+      gain.gain.setValueAtTime(0.04, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
+      osc.connect(gain); gain.connect(ctx.destination); osc.start(now); osc.stop(now + 0.34);
+    } else if (animalType === 'dog') {
+      [0, 0.14].forEach((off) => {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = 'triangle'; o.frequency.setValueAtTime(340, now + off); o.frequency.exponentialRampToValueAtTime(160, now + off + 0.1);
+        g.gain.setValueAtTime(0.06, now + off); g.gain.exponentialRampToValueAtTime(0.001, now + off + 0.11);
+        o.connect(g); g.connect(ctx.destination); o.start(now + off); o.stop(now + off + 0.12);
+      });
+    } else if (animalType === 'cat') {
+      osc.type = 'sine'; osc.frequency.setValueAtTime(580, now); osc.frequency.exponentialRampToValueAtTime(860, now + 0.12); osc.frequency.exponentialRampToValueAtTime(480, now + 0.32);
+      gain.gain.setValueAtTime(0.045, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.34);
+      osc.connect(gain); gain.connect(ctx.destination); osc.start(now); osc.stop(now + 0.35);
+    } else {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(animalType === 'cow' || animalType === 'polar_bear' ? 120 : animalType === 'chick' ? 1400 : 380, now);
+      osc.frequency.exponentialRampToValueAtTime(animalType === 'chick' ? 1800 : 220, now + 0.18);
+      gain.gain.setValueAtTime(0.05, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+      osc.connect(gain); gain.connect(ctx.destination); osc.start(now); osc.stop(now + 0.22);
+    }
+  } catch (_) {}
+};
+
+function makeNameTagTex(label, color = '#38BDF8') {
+  const canvas = document.createElement('canvas');
+  canvas.width = 420; canvas.height = 96;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+  ctx.beginPath(); ctx.roundRect(6, 6, 408, 84, 42); ctx.fill();
+  ctx.lineWidth = 4; ctx.strokeStyle = color; ctx.stroke();
+  ctx.fillStyle = '#FFFFFF'; ctx.font = '900 30px sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(label, 210, 50);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.needsUpdate = true;
+  return tex;
 }
 
-function InitialCameraSetup7F({ controlsRef }) {
-  const { camera, size } = useThree();
-  const initRef = useRef(false);
+// =====================================================================
+// 1. 360° 모바일·태블릿 아날로그 가상 조이스틱
+// =====================================================================
+function AnalogJoystick({ joyVecRef }) {
+  const baseRef = useRef(null);
+  const [knob, setKnob] = useState({ x: 0, y: 0 });
+  const activeIdRef = useRef(null);
 
-  useEffect(() => {
-    if (initRef.current) return;
-    initRef.current = true;
-    const isMobile = size.width < 640;
-    if (isMobile) {
-      camera.position.set(1.5, 12.5, -13.5);
-      camera.fov = 42;
-    } else {
-      camera.position.set(1.2, 10.5, -11.5);
-      camera.fov = 38;
-    }
-    camera.updateProjectionMatrix();
-    if (controlsRef.current) {
-      controlsRef.current.target.set(-0.5, 0.5, 0.5);
-      controlsRef.current.update();
-    }
-  }, [size.width, camera, controlsRef]);
-
-  return null;
-}
-
-export default function SkyGarden7F({ setActiveScreen, onChangeFloor, onExitHome }) {
-  const authUser = useAppStore((state) => state.authUser);
-  const playerName = authUser?.name || localStorage.getItem('login_user_name') || '정신동';
-  const playerOffice = authUser?.office || localStorage.getItem('login_user_office') || '성도';
-  const canPlayerBless = isAuthorizedPastor(playerName, playerOffice);
-
-  const clientIdRef = useRef(`peer7f_${playerName}_${Math.random().toString(36).slice(2, 8)}`);
-  const controlsRef = useRef();
-  const minimapRef = useRef(null);
-  const playerIdxRef = useRef([2.8, 0, -0.5]);
-  const playerRotRef = useRef(-Math.PI / 2);
-  const channelRef = useRef(null);
-  const lastSyncTimeRef = useRef(0);
-
-  const [avatarConfig] = useState(() => {
-    try {
-      const saved = localStorage.getItem('gtc_metaverse_avatar_v1');
-      return saved ? { ...DEFAULT_AVATAR_CONFIG, ...JSON.parse(saved) } : DEFAULT_AVATAR_CONFIG;
-    } catch {
-      return DEFAULT_AVATAR_CONFIG;
-    }
-  });
-
-  const [waypoints, setWaypoints] = useState([[2.8, -0.5]]);
-  const [seatedInfo, setSeatedInfo] = useState(null);
-  const [activeZone, setActiveZone] = useState(ZONES_7F[2]);
-  const [modalZone, setModalZone] = useState(null);
-  const [emote, setEmote] = useState(null);
-  const [myChatBubble, setMyChatBubble] = useState('');
-  const [quickChatInput, setQuickChatInput] = useState('');
-
-  const [cameraViewMode, setCameraViewMode] = useState('follow');
-  const [timeOfDay, setTimeOfDay] = useState('day');
-  const [isPassageDoorForcedOpen, setIsPassageDoorForcedOpen] = useState(false);
-
-  const [remotePeers, setRemotePeers] = useState([]);
-  const [selectedRemotePeer, setSelectedRemotePeer] = useState(null);
-  const [holyLightEvent, setHolyLightEvent] = useState(null);
-
-  const [selectedChatNpc, setSelectedChatNpc] = useState(null);
-  const [chatReplyText, setChatReplyText] = useState('');
-
-  const [isMapDrawerOpen, setIsMapDrawerOpen] = useState(false);
-  const [showRoomSigns, setShowRoomSigns] = useState(true);
-  const [showBottomDock, setShowBottomDock] = useState(true);
-
-  const [activeNpcChatIdx, setActiveNpcChatIdx] = useState(0);
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setActiveNpcChatIdx((prev) => (prev + 1) % NPCS_7F.length);
-    }, 4200);
-    return () => clearInterval(timer);
-  }, []);
-
-  const broadcastMyState = useCallback(
-    (override = {}) => {
-      if (!channelRef.current) return;
-      const [px, , pz] = playerIdxRef.current;
-      const payload = {
-        clientId: clientIdRef.current,
-        name: playerName,
-        office: playerOffice,
-        x: Number(px.toFixed(2)),
-        z: Number(pz.toFixed(2)),
-        rotY: Number((playerRotRef.current || 0).toFixed(2)),
-        seated: Boolean(seatedInfo),
-        emote: override.emote !== undefined ? override.emote : emote,
-        chatMsg: override.chatMsg !== undefined ? override.chatMsg : myChatBubble,
-        avatar: avatarConfig,
-        ts: Date.now()
-      };
-      channelRef.current.track(payload).catch(() => {});
-    },
-    [playerName, playerOffice, seatedInfo, emote, myChatBubble, avatarConfig]
-  );
-
-  useEffect(() => {
-    if (!supabase) return;
-    const channel = supabase.channel('metaverse_skygarden_7f', {
-      config: { presence: { key: clientIdRef.current } }
-    });
-    channelRef.current = channel;
-
-    channel
-      .on('presence', { event: 'sync' }, () => {
-        const state = channel.presenceState();
-        const peers = [];
-        Object.keys(state).forEach((key) => {
-          if (key === clientIdRef.current) return;
-          const items = state[key];
-          if (items && items.length > 0) {
-            peers.push(items[items.length - 1]);
-          }
-        });
-        setRemotePeers(peers);
-      })
-      .on('broadcast', { event: 'holy_blessing_7f' }, ({ payload }) => {
-        if (!payload) return;
-        playHolyBlessingSound();
-        setHolyLightEvent(payload);
-        setTimeout(() => setHolyLightEvent(null), 7000);
-      })
-      .subscribe(async (status) => {
-        if (status === 'SUBSCRIBED') {
-          const [px, , pz] = playerIdxRef.current;
-          await channel.track({
-            clientId: clientIdRef.current,
-            name: playerName,
-            office: playerOffice,
-            x: px,
-            z: pz,
-            rotY: -Math.PI / 2,
-            seated: false,
-            emote: null,
-            chatMsg: '',
-            avatar: avatarConfig,
-            ts: Date.now()
-          });
-        }
-      });
-
-    return () => {
-      supabase.removeChannel(channel);
-      channelRef.current = null;
-    };
-  }, [playerName, playerOffice, avatarConfig]);
-
-  const triggerSocialAction = useCallback(
-    (emoteType, chatText = '') => {
-      setEmote(emoteType);
-      if (chatText) setMyChatBubble(chatText);
-      broadcastMyState({ emote: emoteType, chatMsg: chatText });
-
-      setTimeout(() => {
-        setEmote(null);
-        broadcastMyState({ emote: null, chatMsg: chatText });
-      }, 4200);
-
-      if (chatText) {
-        setTimeout(() => {
-          setMyChatBubble('');
-          broadcastMyState({ emote: null, chatMsg: '' });
-        }, 5500);
-      }
-    },
-    [broadcastMyState]
-  );
-
-  const triggerHolyBenediction7F = useCallback(
-    (pastorDisplayName, targetDisplayName, targetCoords) => {
-      const eventPayload = {
-        pastorName: pastorDisplayName,
-        targetName: targetDisplayName,
-        targetPos: targetCoords || [playerIdxRef.current[0], 0, playerIdxRef.current[2]],
-        ts: Date.now()
-      };
-
-      playHolyBlessingSound();
-      setHolyLightEvent(eventPayload);
-      triggerSocialAction('pray', `아멘! 7층 하늘정원에서 ${pastorDisplayName}의 거룩한 축도를 받습니다 🙏`);
-
-      if (channelRef.current) {
-        channelRef.current
-          .send({
-            type: 'broadcast',
-            event: 'holy_blessing_7f',
-            payload: eventPayload
-          })
-          .catch(() => {});
-      }
-
-      setTimeout(() => {
-        setHolyLightEvent(null);
-      }, 7000);
-    },
-    [triggerSocialAction]
-  );
-
-  // 🦅 건축 마스터플랜 조감도 시점 전환
-  const handleToggleDroneCityView = useCallback(() => {
-    if (!controlsRef.current) return;
-    if (cameraViewMode === 'follow') {
-      setCameraViewMode('drone');
-      controlsRef.current.object.position.set(-28, 24, 34);
-      controlsRef.current.target.set(0, -6, 6);
-      controlsRef.current.update();
-    } else {
-      setCameraViewMode('follow');
-      const [px, , pz] = playerIdxRef.current;
-      controlsRef.current.object.position.set(px + 2, 10.5, pz - 11.5);
-      controlsRef.current.target.set(px, 0.8, pz);
-      controlsRef.current.update();
-    }
-  }, [cameraViewMode]);
-
-  const handleSitOnBench = useCallback(
-    (seatData) => {
-      setSeatedInfo(seatData);
-      setIsPassageDoorForcedOpen(true);
-      setWaypoints([[seatData.x, seatData.z]]);
-      setTimeout(() => broadcastMyState(), 100);
-    },
-    [broadcastMyState]
-  );
-
-  const handleStandUp = useCallback(() => {
-    setSeatedInfo(null);
-    setTimeout(() => broadcastMyState(), 100);
-  }, [broadcastMyState]);
-
-  const handleWalkTo = useCallback(
-    (tx, tz) => {
-      if (seatedInfo) setSeatedInfo(null);
-      const [sx, , sz] = playerIdxRef.current;
-      const nextPath = computeSmartPath7F(sx, sz, tx, tz);
-      setWaypoints(nextPath);
-    },
-    [seatedInfo]
-  );
-
-  const handleSelectNpcForChat = useCallback(
-    (npc) => {
-      setChatReplyText(
-        (npc.dialogues && npc.dialogues[0]) ||
-          '할렐루야! 7층 루프탑 하늘정원에 오신 것을 환영합니다 🌿'
-      );
-      setSelectedChatNpc(npc);
-      triggerSocialAction('wave');
-    },
-    [triggerSocialAction]
-  );
-
-  useEffect(() => {
-    if (!isMapDrawerOpen) return;
-    const mini = minimapRef.current;
-    if (!mini) return;
-    const ctx = mini.getContext('2d');
-    const w = mini.width;
-    const h = mini.height;
-    ctx.clearRect(0, 0, w, h);
-
-    ctx.fillStyle = '#1E2026';
-    ctx.fillRect(0, 0, w, h);
-    ctx.fillStyle = '#8C5832';
-    ctx.fillRect(10, 10, 62, 74);
-    ctx.fillStyle = '#4D7C0F';
-    ctx.fillRect(14, 52, 28, 28);
-    ctx.fillStyle = '#64748B';
-    ctx.fillRect(74, 10, 30, 56);
-
-    remotePeers.forEach((p) => {
-      const px = (((p.x || 0) + 6.5) / 13.0) * w;
-      const py = (((p.z || 0) + 5.0) / 10.0) * h;
-      ctx.beginPath();
-      ctx.arc(px, py, 3.2, 0, Math.PI * 2);
-      ctx.fillStyle = '#34D399';
-      ctx.fill();
-    });
-
-    const [cx, , cz] = playerIdxRef.current;
-    const mx = ((cx + 6.5) / 13.0) * w;
-    const my = ((cz + 5.0) / 10.0) * h;
-    ctx.beginPath();
-    ctx.arc(mx, my, 4.2, 0, Math.PI * 2);
-    ctx.fillStyle = '#FACC15';
-    ctx.fill();
-  }, [waypoints, seatedInfo, isMapDrawerOpen, remotePeers]);
-
-  const handlePositionUpdate = (px, pz, rotAngle) => {
-    playerRotRef.current = rotAngle;
-    const found = ZONES_7F.find((z) => Math.hypot(px - z.pos[0], pz - z.pos[2]) < 1.35) || null;
-    if (found?.id !== activeZone?.id) {
-      setActiveZone(found);
-    }
-
-    const now = Date.now();
-    if (now - lastSyncTimeRef.current > 200) {
-      lastSyncTimeRef.current = now;
-      broadcastMyState();
-    }
+  const updateFromClient = (clientX, clientY) => {
+    if (!baseRef.current) return;
+    const rect = baseRef.current.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const maxR = rect.width * 0.36;
+    let dx = clientX - cx, dy = clientY - cy;
+    const dist = Math.hypot(dx, dy);
+    if (dist > maxR) { dx = (dx / dist) * maxR; dy = (dy / dist) * maxR; }
+    setKnob({ x: dx, y: dy });
+    joyVecRef.current = { x: dx / maxR, z: dy / maxR };
   };
 
-  // 조감도(`image_864f03.jpg`) 특유의 대기 원근감 안개 및 배경 색상
-  const atmosphereColor =
-    timeOfDay === 'night'
-      ? '#0F172A'
-      : timeOfDay === 'sunset'
-      ? '#FDBA74'
-      : '#DDE6F0';
-
-  const darkPillStyle = {
-    backgroundColor: 'rgba(20, 24, 32, 0.94)',
-    color: '#FFFFFF',
-    borderColor: 'rgba(255, 255, 255, 0.18)'
+  const reset = () => {
+    activeIdRef.current = null;
+    setKnob({ x: 0, y: 0 });
+    joyVecRef.current = { x: 0, z: 0 };
   };
 
   return (
     <div
-      translate="no"
-      style={{ backgroundColor: atmosphereColor }}
-      className="notranslate w-full h-full relative overflow-hidden select-none font-sans transition-colors duration-700"
+      ref={baseRef}
+      onPointerDown={(e) => {
+        e.stopPropagation();
+        activeIdRef.current = e.pointerId;
+        e.currentTarget.setPointerCapture(e.pointerId);
+        updateFromClient(e.clientX, e.clientY);
+      }}
+      onPointerMove={(e) => {
+        if (activeIdRef.current !== e.pointerId) return;
+        e.stopPropagation();
+        updateFromClient(e.clientX, e.clientY);
+      }}
+      onPointerUp={(e) => { if (activeIdRef.current === e.pointerId) { e.stopPropagation(); reset(); } }}
+      onPointerCancel={reset}
+      className="absolute bottom-20 left-4 z-20 w-24 h-24 rounded-full bg-slate-900/55 border-2 border-white/25 backdrop-blur-sm flex items-center justify-center touch-none select-none shadow-xl"
     >
-      {/* 1. 좌측 상단: 슬림 헤더 & 실시간 접속자 & 하늘정원 통로/마스터플랜 드론뷰/축도/시간대 전환 */}
-      <div className="absolute top-3 left-3 z-20 flex flex-col gap-1.5 pointer-events-auto max-w-[78vw]">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <div
-            onClick={() => (onExitHome ? onExitHome() : setActiveScreen && setActiveScreen('home'))}
-            style={darkPillStyle}
-            className="px-3.5 py-2 rounded-2xl backdrop-blur-md shadow-xl border flex items-center gap-2 cursor-pointer w-max"
-          >
-            <span style={{ color: '#FFFFFF' }} className="text-xs sm:text-sm font-black tracking-tight">
-              ◀ 7F 루프탑 하늘정원 · 한강신도시 전망대
-            </span>
-          </div>
+      <div
+        style={{ transform: `translate(${knob.x}px, ${knob.y}px)` }}
+        className="w-10 h-10 rounded-full bg-white/85 border-2 border-sky-400 shadow-lg pointer-events-none"
+      />
+    </div>
+  );
+}
 
-          <div
-            style={darkPillStyle}
-            className="px-3 py-2 rounded-2xl border shadow-xl flex items-center gap-1.5 text-xs font-black"
-          >
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-            <span className="text-emerald-300">7F 접속 {remotePeers.length + 1}명</span>
-          </div>
-        </div>
+// =====================================================================
+// 2. 카메라 프리셋(뒷통수 RPG / 와이드) & 줌 컨트롤러
+// =====================================================================
+function CameraActionBridge({ controlsRef, playerPosRef, playerRotRef, camCommandRef }) {
+  const { camera } = useThree();
+  useFrame(() => {
+    const cmd = camCommandRef.current;
+    if (!cmd || !controlsRef.current) return;
+    camCommandRef.current = null;
+    const [px, py, pz] = playerPosRef.current;
+    const ctrl = controlsRef.current;
+    if (cmd.type === 'behind') {
+      const rot = playerRotRef.current;
+      camera.position.set(px - Math.sin(rot) * 6.2, py + 4.4, pz - Math.cos(rot) * 6.2);
+      ctrl.target.set(px, py + 1.0, pz);
+      ctrl.update();
+    } else if (cmd.type === 'wide') {
+      camera.position.set(px, py + 15.5, pz + 18.5);
+      ctrl.target.set(px, py + 1.0, pz);
+      ctrl.update();
+    } else if (cmd.type === 'zoom') {
+      const offset = new THREE.Vector3().subVectors(camera.position, ctrl.target);
+      offset.setLength(THREE.MathUtils.clamp(offset.length() * cmd.factor, 2.5, 52));
+      camera.position.copy(ctrl.target).add(offset);
+      ctrl.update();
+    }
+  });
+  return null;
+}
 
-        <div className="flex flex-wrap items-center gap-1.5">
-          <button
-            onClick={() => {
-              setIsPassageDoorForcedOpen(true);
-              handleWalkTo(-1.4, 1.2);
-            }}
-            style={{ backgroundColor: '#10B981', color: '#030712' }}
-            className="px-3 py-1.5 rounded-full text-[11px] font-black shadow-lg cursor-pointer"
-          >
-            🚪 통로 열고 야외 하늘정원 나가기
-          </button>
+// =====================================================================
+// 3. 물주기 연동 6종 작물 (물 안 주면 💧 표시 & 35%에서 대기)
+// =====================================================================
+const STALK_OFFSETS = [
+  [-0.28, -0.28], [0, -0.28], [0.28, -0.28],
+  [-0.28, 0], [0, 0], [0.28, 0],
+  [-0.28, 0.28], [0, 0.28], [0.28, 0.28]
+];
 
-          <button
-            onClick={handleToggleDroneCityView}
-            style={{ backgroundColor: cameraViewMode === 'drone' ? '#F59E0B' : '#0284C7', color: cameraViewMode === 'drone' ? '#030712' : '#FFFFFF' }}
-            className="px-3 py-1.5 rounded-full text-[11px] font-black shadow-lg cursor-pointer"
-          >
-            {cameraViewMode === 'drone' ? '🚶‍♂️ 내 캐릭터 3인칭 시점 복귀' : '🦅 마스터플랜 교회·도시 드론 조감도'}
-          </button>
+function GrowingCrop3D({ crop, nowTs, mode, toonMap, onWaterCrop, onHarvest, onRemove }) {
+  const meta = CROP_MAP_META[crop.type] || CROP_CATALOG[0];
+  const elapsed = (nowTs - (crop.plantedAt || 0)) / 1000;
+  const rawProgress = Math.min(1, elapsed / meta.growSec);
+  // 물을 주지 않으면 35% 이상 자라지 않음!
+  const progress = crop.watered ? rawProgress : Math.min(0.35, rawProgress);
+  const isRipe = crop.watered && progress >= 1;
+  const scaleY = 0.24 + progress * 0.76;
+  const swayRef = useRef();
 
-          <button
-            onClick={() => triggerHolyBenediction7F('이성현 담임목사님', playerName, playerIdxRef.current)}
-            style={{ backgroundColor: '#8B5CF6', color: '#FFFFFF' }}
-            className="px-3 py-1.5 rounded-full text-[11px] font-black shadow-lg cursor-pointer"
-          >
-            ✨ 하늘정원 축도(홀리라이트)
-          </button>
+  useFrame(({ clock }) => {
+    if (swayRef.current) {
+      const t = clock.elapsedTime;
+      swayRef.current.rotation.z = Math.sin(t * 2.3 + crop.x * 0.7 + crop.z * 0.5) * 0.085;
+      swayRef.current.rotation.x = Math.cos(t * 1.8 + crop.z * 0.6) * 0.05;
+    }
+  });
 
-          <button
-            onClick={() =>
-              setTimeOfDay((prev) => (prev === 'day' ? 'sunset' : prev === 'sunset' ? 'night' : 'day'))
-            }
-            style={darkPillStyle}
-            className="px-2.5 py-1.5 rounded-full text-[11px] font-bold border shadow-lg cursor-pointer"
-          >
-            <span>
-              {timeOfDay === 'day' ? '☀️ 낮 조감도' : timeOfDay === 'sunset' ? '🌅 노을 조감도' : '🌙 도시 야경'}
-            </span>
-          </button>
-
-          <button
-            onClick={() => setShowRoomSigns((prev) => !prev)}
-            style={darkPillStyle}
-            className="px-2.5 py-1.5 rounded-full text-[11px] font-bold border shadow-lg cursor-pointer"
-          >
-            <span style={{ color: showRoomSigns ? '#34D399' : '#9CA3AF' }}>
-              {showRoomSigns ? '🏷️ 도시명칭 켜짐' : '🏷️ 도시명칭 숨김'}
-            </span>
-          </button>
-        </div>
-      </div>
-
-      {/* 2. 우측 상단: 접이식 미니맵 & 구역 목록 드로어 */}
-      <div className="absolute top-3 right-3 z-20 flex flex-col items-end gap-2 pointer-events-auto">
-        <button
-          onClick={() => setIsMapDrawerOpen((prev) => !prev)}
-          style={darkPillStyle}
-          className="px-3.5 py-2 rounded-2xl border shadow-xl text-xs font-black flex items-center gap-1.5 cursor-pointer"
-        >
-          <span>{isMapDrawerOpen ? '✕ 맵·목록 닫기' : '🗺️ 7F 맵·구역목록 ▼'}</span>
-        </button>
-
-        {isMapDrawerOpen && (
-          <div
-            style={darkPillStyle}
-            className="p-2.5 rounded-2xl border shadow-2xl flex flex-col items-center gap-2 w-48 animate-fade-in"
-          >
-            <canvas ref={minimapRef} width={114} height={94} className="rounded-xl border border-white/10" />
-            <div className="w-full flex flex-col gap-1 max-h-[38vh] overflow-y-auto hide-scrollbar pr-0.5">
-              {ZONES_7F.map((z) => (
-                <button
-                  key={z.id}
-                  onClick={() => {
-                    if (z.isSeatZone && z.seatTarget) handleSitOnBench(z.seatTarget);
-                    else if (z.isObservatory) handleToggleDroneCityView();
-                    else if (z.isPassageDoor) {
-                      setIsPassageDoorForcedOpen(true);
-                      handleWalkTo(-1.2, 0.5);
-                    } else {
-                      handleWalkTo(z.pos[0], z.pos[2]);
-                      setActiveZone(z);
-                      setModalZone(z);
-                    }
-                    setIsMapDrawerOpen(false);
-                  }}
-                  className="px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-emerald-600/40 text-left text-[11px] font-bold flex items-center justify-between cursor-pointer"
-                >
-                  <span style={{ color: '#FFFFFF' }} className="truncate">{z.badge}</span>
-                </button>
-              ))}
-            </div>
-          </div>
+  return (
+    <group
+      position={[crop.x, crop.y - 0.5, crop.z]}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (mode === 'break') onRemove(crop.id);
+        else if (mode === 'water') onWaterCrop(crop);
+        else if (isRipe) onHarvest(crop);
+        else if (!crop.watered) onWaterCrop(crop);
+      }}
+    >
+      <group ref={swayRef} scale={[1, scaleY, 1]}>
+        {(crop.type === 'rice' || crop.type === 'wheat') && (
+          <group>
+            {STALK_OFFSETS.map(([ox, oz], i) => (
+              <group key={i} position={[ox, 0, oz]} rotation={[(i % 3 - 1) * 0.09, i * 0.7, ((i % 2) - 0.5) * 0.14]}>
+                <mesh position={[0, 0.34, 0]} castShadow><cylinderGeometry args={[0.016, 0.024, 0.68, 5]} /><meshToonMaterial color={isRipe ? meta.color : meta.stem} gradientMap={toonMap} /></mesh>
+                {progress > 0.45 && (
+                  <mesh position={[0.055, 0.64, 0]} rotation={[0, 0, -0.72]} castShadow><capsuleGeometry args={[0.032, 0.15, 4, 6]} /><meshToonMaterial color={meta.color} gradientMap={toonMap} /></mesh>
+                )}
+              </group>
+            ))}
+          </group>
         )}
+
+        {crop.type === 'corn' && (
+          <group>
+            {[[-0.18, -0.14], [0.18, 0.14], [-0.14, 0.18], [0.16, -0.16]].map(([ox, oz], i) => (
+              <group key={i} position={[ox, 0, oz]} rotation={[0, i * 1.4, 0]}>
+                <mesh position={[0, 0.48, 0]} castShadow><cylinderGeometry args={[0.028, 0.042, 0.96, 6]} /><meshToonMaterial color={meta.stem} gradientMap={toonMap} /></mesh>
+                <mesh position={[0.10, 0.34, 0]} rotation={[0, 0, -0.85]}><coneGeometry args={[0.055, 0.28, 4]} /><meshToonMaterial color="#3F8C36" gradientMap={toonMap} /></mesh>
+                {progress > 0.5 && <mesh position={[0.06, 0.56, 0.04]} rotation={[0.25, 0, -0.35]} castShadow><capsuleGeometry args={[0.048, 0.14, 5, 6]} /><meshToonMaterial color={meta.color} gradientMap={toonMap} /></mesh>}
+              </group>
+            ))}
+          </group>
+        )}
+
+        {crop.type === 'strawberry' && (
+          <group>
+            {[[-0.18, -0.15], [0.18, -0.14], [0, 0.17], [-0.15, 0.15], [0.15, 0.13]].map(([ox, oz], i) => (
+              <mesh key={i} position={[ox, 0.13, oz]} castShadow><dodecahedronGeometry args={[0.15, 0]} /><meshToonMaterial color={i % 2 === 0 ? '#3F8C36' : '#2E6E27'} gradientMap={toonMap} /></mesh>
+            ))}
+            {progress > 0.55 && [[-0.22, 0.13, 0.06], [0.21, 0.14, -0.07], [0.02, 0.16, 0.22]].map(([bx, by, bz], i) => (
+              <mesh key={i} position={[bx, by, bz]} rotation={[Math.PI, 0, 0]} castShadow><coneGeometry args={[0.055, 0.11, 6]} /><meshToonMaterial color={meta.color} gradientMap={toonMap} /></mesh>
+            ))}
+          </group>
+        )}
+
+        {crop.type === 'pumpkin' && (
+          <group>
+            <mesh position={[-0.26, 0.07, 0.22]} rotation={[-Math.PI / 2, 0, 0]}><circleGeometry args={[0.20, 8]} /><meshToonMaterial color="#3D7A2F" gradientMap={toonMap} /></mesh>
+            <mesh position={[0.26, 0.07, -0.20]} rotation={[-Math.PI / 2, 0, 0]}><circleGeometry args={[0.18, 8]} /><meshToonMaterial color="#2E6322" gradientMap={toonMap} /></mesh>
+            {progress > 0.4 && (
+              <group position={[0, 0.24, 0]}>
+                {[0, 1, 2, 3, 4].map((ri) => (<mesh key={ri} rotation={[0, (ri / 5) * Math.PI, 0]} scale={[1.18, 0.84, 0.68]} castShadow><sphereGeometry args={[0.24, 8, 8]} /><meshToonMaterial color={meta.color} gradientMap={toonMap} /></mesh>))}
+                <mesh position={[0, 0.23, 0]}><cylinderGeometry args={[0.028, 0.048, 0.13, 6]} /><meshToonMaterial color="#3D5A20" gradientMap={toonMap} /></mesh>
+              </group>
+            )}
+          </group>
+        )}
+
+        {crop.type === 'sunflower' && (
+          <group>
+            {[[-0.16, -0.10], [0.16, 0.10]].map(([ox, oz], i) => (
+              <group key={i} position={[ox, 0, oz]}>
+                <mesh position={[0, 0.42, 0]} castShadow><cylinderGeometry args={[0.028, 0.04, 0.84, 6]} /><meshToonMaterial color={meta.stem} gradientMap={toonMap} /></mesh>
+                {progress > 0.5 && (
+                  <group position={[0, 0.84, 0.05]} rotation={[0.28, 0, 0]}>
+                    <mesh rotation={[Math.PI / 2, 0, 0]}><cylinderGeometry args={[0.11, 0.11, 0.05, 8]} /><meshToonMaterial color="#4A2B14" gradientMap={toonMap} /></mesh>
+                    {[0, 1, 2, 3, 4, 5, 6, 7].map((pi) => {
+                      const a = (pi / 8) * Math.PI * 2;
+                      return <mesh key={pi} position={[Math.cos(a) * 0.15, Math.sin(a) * 0.15, 0]} rotation={[0, 0, a - Math.PI / 2]}><coneGeometry args={[0.042, 0.12, 4]} /><meshToonMaterial color={meta.color} gradientMap={toonMap} /></mesh>;
+                    })}
+                  </group>
+                )}
+              </group>
+            ))}
+          </group>
+        )}
+      </group>
+
+      {/* 물 필요 표시 (파란 물방울) / 수확 가능 표시 (황금 다이아) */}
+      {!crop.watered && (
+        <mesh position={[0, 0.85, 0]}>
+          <coneGeometry args={[0.075, 0.16, 6]} />
+          <meshBasicMaterial color="#38BDF8" />
+        </mesh>
+      )}
+      {isRipe && (
+        <mesh position={[0, 1.14, 0]}>
+          <octahedronGeometry args={[0.09, 0]} />
+          <meshBasicMaterial color="#FDE047" />
+        </mesh>
+      )}
+    </group>
+  );
+}
+
+// =====================================================================
+// 4. 10종 동물 · 5종 물고기 · 보물상자
+// =====================================================================
+function RoamingAnimal3D({ animal, blockMap, mode, toonMap, onPet, onRemove }) {
+  const meta = ANIMAL_MAP_META[animal.type] || ANIMAL_CATALOG[0];
+  const groupRef = useRef();
+  const tailRef = useRef();
+  const stateRef = useRef({ x: animal.x, z: animal.z, dirX: 0, dirZ: 0, timer: Math.random() * 2 });
+
+  useFrame(({ clock }, delta) => {
+    const st = stateRef.current;
+    st.timer -= delta;
+    if (st.timer <= 0) {
+      if (Math.random() < 0.45) { st.dirX = 0; st.dirZ = 0; st.timer = 1.6 + Math.random() * 2; }
+      else { const ang = Math.random() * Math.PI * 2; st.dirX = Math.cos(ang); st.dirZ = Math.sin(ang); st.timer = 1.8 + Math.random() * 2.2; }
+    }
+    const speed = animal.type === 'rabbit' || animal.type === 'fox' ? 1.45 : animal.type === 'penguin' ? 0.72 : 0.9;
+    const nx = st.x + st.dirX * speed * delta, nz = st.z + st.dirZ * speed * delta;
+    if (Math.hypot(nx - animal.x, nz - animal.z) < 4.2) {
+      const surf = getSurfaceInfo(blockMap, nx, nz);
+      if (!surf.isWater) { st.x = nx; st.z = nz; }
+      else { st.dirX *= -1; st.dirZ *= -1; }
+    } else { st.dirX *= -1; st.dirZ *= -1; }
+
+    if (groupRef.current) {
+      const surf = getSurfaceInfo(blockMap, st.x, st.z);
+      const moving = st.dirX !== 0 || st.dirZ !== 0;
+      const hop = moving ? Math.abs(Math.sin(clock.elapsedTime * 7.5)) * (animal.type === 'rabbit' ? 0.24 : 0.10) : 0;
+      groupRef.current.position.set(st.x, surf.y + hop, st.z);
+      if (moving) groupRef.current.rotation.y = Math.atan2(st.dirX, st.dirZ);
+      if (animal.type === 'penguin') groupRef.current.rotation.z = moving ? Math.sin(clock.elapsedTime * 8) * 0.14 : 0;
+    }
+    if (tailRef.current) tailRef.current.rotation.y = Math.sin(clock.elapsedTime * 10) * 0.4;
+  });
+
+  const sc = (meta.scale || 0.9) * (1 + Math.min(0.28, ((animal.level || 1) - 1) * 0.06));
+  const t = animal.type;
+
+  return (
+    <group ref={groupRef} position={[animal.x, 0.5, animal.z]} scale={[sc, sc, sc]} onClick={(e) => { e.stopPropagation(); if (mode === 'break') onRemove(animal.id); else onPet(animal, meta); }}>
+      {t === 'penguin' ? (
+        <group>
+          <mesh position={[0, 0.42, 0]} castShadow><capsuleGeometry args={[0.24, 0.34, 8, 12]} /><meshToonMaterial color={meta.bodyColor} gradientMap={toonMap} /></mesh>
+          <mesh position={[0, 0.38, 0.15]} scale={[0.78, 0.85, 0.5]}><sphereGeometry args={[0.22, 10, 10]} /><meshToonMaterial color={meta.accent} gradientMap={toonMap} /></mesh>
+          <mesh position={[0, 0.64, 0.26]} rotation={[Math.PI / 2, 0, 0]}><coneGeometry args={[0.06, 0.14, 6]} /><meshToonMaterial color="#EA580C" gradientMap={toonMap} /></mesh>
+        </group>
+      ) : t === 'chick' ? (
+        <group>
+          <mesh position={[0, 0.28, 0]} castShadow><sphereGeometry args={[0.24, 10, 10]} /><meshToonMaterial color={meta.bodyColor} gradientMap={toonMap} /></mesh>
+          <mesh position={[0, 0.52, 0.08]} castShadow><sphereGeometry args={[0.16, 10, 10]} /><meshToonMaterial color={meta.bodyColor} gradientMap={toonMap} /></mesh>
+          <mesh position={[0, 0.50, 0.24]} rotation={[Math.PI / 2, 0, 0]}><coneGeometry args={[0.045, 0.10, 5]} /><meshToonMaterial color="#EA580C" gradientMap={toonMap} /></mesh>
+        </group>
+      ) : (
+        <group>
+          {t === 'sheep' ? (
+            <group>
+              <mesh position={[0, 0.38, 0]} castShadow><sphereGeometry args={[0.34, 10, 10]} /><meshToonMaterial color={meta.bodyColor} gradientMap={toonMap} /></mesh>
+              <mesh position={[0, 0.42, -0.18]}><sphereGeometry args={[0.28, 10, 10]} /><meshToonMaterial color={meta.bodyColor} gradientMap={toonMap} /></mesh>
+              <mesh position={[0, 0.42, 0.16]}><sphereGeometry args={[0.26, 10, 10]} /><meshToonMaterial color={meta.bodyColor} gradientMap={toonMap} /></mesh>
+            </group>
+          ) : (
+            <RoundedBox args={[0.50, 0.40, 0.72]} position={[0, 0.36, 0]} radius={0.14} castShadow><meshToonMaterial color={meta.bodyColor} gradientMap={toonMap} /></RoundedBox>
+          )}
+          <RoundedBox args={[0.35, 0.33, 0.36]} position={[0, 0.52, 0.38]} radius={0.10} castShadow><meshToonMaterial color={meta.headColor} gradientMap={toonMap} /></RoundedBox>
+          <mesh position={[-0.10, 0.56, 0.56]}><sphereGeometry args={[0.03, 6, 6]} /><meshBasicMaterial color="#18181B" /></mesh>
+          <mesh position={[0.10, 0.56, 0.56]}><sphereGeometry args={[0.03, 6, 6]} /><meshBasicMaterial color="#18181B" /></mesh>
+          {t === 'dog' && (<mesh ref={tailRef} position={[0, 0.48, -0.38]} rotation={[0.6, 0, 0]}><capsuleGeometry args={[0.045, 0.20, 4, 6]} /><meshToonMaterial color={meta.accent} gradientMap={toonMap} /></mesh>)}
+          {(t === 'cat' || t === 'fox') && (
+            <>
+              <mesh position={[-0.12, 0.74, 0.38]}><coneGeometry args={[0.08, t === 'fox' ? 0.24 : 0.18, 4]} /><meshToonMaterial color={meta.headColor} gradientMap={toonMap} /></mesh>
+              <mesh position={[0.12, 0.74, 0.38]}><coneGeometry args={[0.08, t === 'fox' ? 0.24 : 0.18, 4]} /><meshToonMaterial color={meta.headColor} gradientMap={toonMap} /></mesh>
+            </>
+          )}
+          {t === 'rabbit' && (
+            <>
+              <mesh position={[-0.09, 0.80, 0.36]}><capsuleGeometry args={[0.045, 0.24, 4, 6]} /><meshToonMaterial color={meta.bodyColor} gradientMap={toonMap} /></mesh>
+              <mesh position={[0.09, 0.80, 0.36]}><capsuleGeometry args={[0.045, 0.24, 4, 6]} /><meshToonMaterial color={meta.bodyColor} gradientMap={toonMap} /></mesh>
+            </>
+          )}
+          {t === 'cow' && (<RoundedBox args={[0.52, 0.22, 0.26]} position={[0, 0.42, -0.05]} radius={0.05}><meshToonMaterial color="#27272A" gradientMap={toonMap} /></RoundedBox>)}
+          {t === 'pig' && (<RoundedBox args={[0.17, 0.11, 0.09]} position={[0, 0.48, 0.58]} radius={0.03}><meshToonMaterial color={meta.accent} gradientMap={toonMap} /></RoundedBox>)}
+          {[[-0.16, 0.22], [0.16, 0.22], [-0.16, -0.22], [0.16, -0.22]].map(([lx, lz], i) => (
+            <mesh key={i} position={[lx, 0.12, lz]}><cylinderGeometry args={[0.055, 0.05, 0.24, 6]} /><meshToonMaterial color={meta.headColor} gradientMap={toonMap} /></mesh>
+          ))}
+        </group>
+      )}
+    </group>
+  );
+}
+
+function SwimmingFish3D({ fish, toonMap }) {
+  const meta = FISH_META_MAP[fish.type] || FISH_CATALOG[0];
+  const groupRef = useRef(), tailRef = useRef(), stRef = useRef({ z: fish.z, dir: 1 });
+  useFrame(({ clock }, delta) => {
+    const st = stRef.current;
+    st.z += st.dir * delta * 0.75;
+    const [minZ, maxZ] = fish.rangeZ || [-6, 6];
+    if (st.z > maxZ) { st.z = maxZ; st.dir = -1; }
+    if (st.z < minZ) { st.z = minZ; st.dir = 1; }
+    if (groupRef.current) {
+      groupRef.current.position.set(fish.x + Math.sin(clock.elapsedTime * 1.3 + fish.z) * 0.35, 0.18 + Math.sin(clock.elapsedTime * 2.5 + fish.x) * 0.04, st.z);
+      groupRef.current.rotation.y = st.dir > 0 ? 0 : Math.PI;
+    }
+    if (tailRef.current) tailRef.current.rotation.y = Math.sin(clock.elapsedTime * 10) * 0.45;
+  });
+  const s = meta.size || 0.9;
+  return (
+    <group ref={groupRef} position={[fish.x, 0.18, fish.z]} scale={[s, s, s]}>
+      <mesh scale={[0.55, 0.72, 1.35]}><sphereGeometry args={[0.16, 8, 8]} /><meshToonMaterial color={meta.body} gradientMap={toonMap} /></mesh>
+      <mesh position={[0, 0, 0.02]} scale={[0.58, 0.74, 0.35]}><sphereGeometry args={[0.16, 8, 8]} /><meshToonMaterial color={meta.stripe} gradientMap={toonMap} /></mesh>
+      <mesh ref={tailRef} position={[0, 0, -0.22]} rotation={[Math.PI / 2, 0, 0]}><coneGeometry args={[0.11, 0.18, 4]} /><meshToonMaterial color={meta.tail} gradientMap={toonMap} /></mesh>
+    </group>
+  );
+}
+
+function TreasureChest3D({ chest, opened, toonMap, onOpen }) {
+  const glowRef = useRef();
+  useFrame(({ clock }) => { if (glowRef.current && !opened) { glowRef.current.position.y = 0.85 + Math.sin(clock.elapsedTime * 3.5) * 0.12; glowRef.current.rotation.y = clock.elapsedTime * 2; } });
+  return (
+    <group position={[chest.x, chest.y - 0.5, chest.z]} onClick={(e) => { e.stopPropagation(); if (!opened) onOpen(chest); }}>
+      <RoundedBox args={[0.78, 0.48, 0.56]} position={[0, 0.24, 0]} radius={0.04} castShadow><meshToonMaterial color={opened ? '#6B3410' : '#9A4B16'} gradientMap={toonMap} /></RoundedBox>
+      <RoundedBox args={[0.82, 0.12, 0.60]} position={[0, opened ? 0.58 : 0.48, opened ? -0.18 : 0]} rotation={[opened ? -0.8 : 0, 0, 0]} radius={0.03}><meshToonMaterial color="#D9A026" gradientMap={toonMap} /></RoundedBox>
+      {!opened && (<mesh ref={glowRef} position={[0, 0.85, 0]}><octahedronGeometry args={[0.15, 0]} /><meshBasicMaterial color="#FDE047" /></mesh>)}
+    </group>
+  );
+}
+
+// =====================================================================
+// 5. 33종 아이템 렌더러 (볏짚더미 · 과일바구니 · 돌우물 · 모닥불 · 수레 · 꽃 4종 포함)
+// =====================================================================
+function WorldProp3D({ prop, propsList, mode, isNight, toonMap, onToggleDoor, onRemoveProp }) {
+  const flameRef = useRef();
+  const isFence = prop.type === 'fence_wood' || prop.type === 'fence_log' || prop.type === 'fence_stone';
+  const conn = useMemo(() => (isFence ? getFenceConnections(prop, propsList) : null), [isFence, prop, propsList]);
+  const hasAnyConn = conn && (conn.n || conn.s || conn.e || conn.w);
+
+  useFrame(({ clock }) => {
+    if (flameRef.current) {
+      const s = 0.9 + Math.sin(clock.elapsedTime * 11 + prop.x) * 0.18;
+      flameRef.current.scale.set(s, 1 + Math.cos(clock.elapsedTime * 9) * 0.2, s);
+    }
+  });
+
+  const renderFenceRail = (dx, dz, isStone, isLog) => {
+    const rotY = dx !== 0 ? 0 : Math.PI / 2;
+    const px = dx * 0.26, pz = dz * 0.26;
+    if (isStone) return <group key={`${dx}_${dz}`} position={[px, 0, pz]} rotation={[0, rotY, 0]}><RoundedBox args={[0.52, 0.50, 0.16]} position={[0, 0.25, 0]} radius={0.02}><meshToonMaterial color="#A8A196" gradientMap={toonMap} /></RoundedBox><RoundedBox args={[0.54, 0.08, 0.20]} position={[0, 0.52, 0]} radius={0.02}><meshToonMaterial color="#736C61" gradientMap={toonMap} /></RoundedBox></group>;
+    if (isLog) return <group key={`${dx}_${dz}`} position={[px, 0, pz]} rotation={[0, rotY, 0]}><mesh position={[0, 0.60, 0]} rotation={[0, 0, Math.PI / 2]}><cylinderGeometry args={[0.055, 0.055, 0.54, 6]} /><meshToonMaterial color="#8C5832" gradientMap={toonMap} /></mesh><mesh position={[0, 0.30, 0]} rotation={[0, 0, Math.PI / 2]}><cylinderGeometry args={[0.055, 0.055, 0.54, 6]} /><meshToonMaterial color="#8C5832" gradientMap={toonMap} /></mesh></group>;
+    return <group key={`${dx}_${dz}`} position={[px, 0, pz]} rotation={[0, rotY, 0]}><RoundedBox args={[0.52, 0.11, 0.075]} position={[0, 0.65, 0]} radius={0.02}><meshToonMaterial color="#A8703E" gradientMap={toonMap} /></RoundedBox><RoundedBox args={[0.52, 0.11, 0.075]} position={[0, 0.33, 0]} radius={0.02}><meshToonMaterial color="#A8703E" gradientMap={toonMap} /></RoundedBox></group>;
+  };
+
+  return (
+    <group
+      position={[prop.x, prop.y - 0.5, prop.z]}
+      rotation={[0, isFence && hasAnyConn ? 0 : (prop.rot || 0), 0]}
+      onClick={(e) => { e.stopPropagation(); if (mode === 'break') onRemoveProp(prop.id); else if (prop.type === 'door') onToggleDoor(prop.id); }}
+    >
+      {/* 신규 농사·마을 소품 6종 */}
+      {prop.type === 'hay_bale' && (
+        <group>
+          <mesh position={[0, 0.34, 0]} rotation={[0, 0, Math.PI / 2]} castShadow><cylinderGeometry args={[0.34, 0.34, 0.78, 12]} /><meshToonMaterial color="#D4A838" gradientMap={toonMap} /></mesh>
+          <mesh position={[-0.18, 0.34, 0]} rotation={[0, Math.PI / 2, 0]}><torusGeometry args={[0.345, 0.02, 6, 14]} /><meshToonMaterial color="#991B1B" gradientMap={toonMap} /></mesh>
+          <mesh position={[0.18, 0.34, 0]} rotation={[0, Math.PI / 2, 0]}><torusGeometry args={[0.345, 0.02, 6, 14]} /><meshToonMaterial color="#991B1B" gradientMap={toonMap} /></mesh>
+        </group>
+      )}
+      {prop.type === 'fruit_basket' && (
+        <group>
+          <mesh position={[0, 0.18, 0]} castShadow><cylinderGeometry args={[0.32, 0.24, 0.34, 12]} /><meshToonMaterial color="#A8703E" gradientMap={toonMap} /></mesh>
+          <mesh position={[-0.10, 0.36, 0.06]}><sphereGeometry args={[0.10, 8, 8]} /><meshToonMaterial color="#E11D48" gradientMap={toonMap} /></mesh>
+          <mesh position={[0.11, 0.36, 0.04]}><sphereGeometry args={[0.11, 8, 8]} /><meshToonMaterial color="#EA580C" gradientMap={toonMap} /></mesh>
+          <mesh position={[0, 0.38, -0.09]}><sphereGeometry args={[0.10, 8, 8]} /><meshToonMaterial color="#4ADE80" gradientMap={toonMap} /></mesh>
+          <mesh position={[0, 0.44, 0.02]}><sphereGeometry args={[0.09, 8, 8]} /><meshToonMaterial color="#FACC15" gradientMap={toonMap} /></mesh>
+        </group>
+      )}
+      {prop.type === 'well' && (
+        <group>
+          <mesh position={[0, 0.32, 0]} castShadow><cylinderGeometry args={[0.48, 0.52, 0.64, 12]} /><meshToonMaterial color="#8C8881" gradientMap={toonMap} /></mesh>
+          <mesh position={[0, 0.64, 0]} rotation={[-Math.PI / 2, 0, 0]}><circleGeometry args={[0.38, 12]} /><meshBasicMaterial color="#198EA8" /></mesh>
+          <mesh position={[-0.40, 0.95, 0]}><cylinderGeometry args={[0.05, 0.05, 1.25, 6]} /><meshToonMaterial color="#6B3F1D" gradientMap={toonMap} /></mesh>
+          <mesh position={[0.40, 0.95, 0]}><cylinderGeometry args={[0.05, 0.05, 1.25, 6]} /><meshToonMaterial color="#6B3F1D" gradientMap={toonMap} /></mesh>
+          <mesh position={[0, 1.68, 0]} rotation={[0, Math.PI / 4, 0]} castShadow><coneGeometry args={[0.76, 0.52, 4]} /><meshToonMaterial color="#B0392A" gradientMap={toonMap} /></mesh>
+        </group>
+      )}
+      {prop.type === 'campfire' && (
+        <group>
+          {[0, 1, 2, 3, 4, 5].map((i) => {
+            const a = (i / 6) * Math.PI * 2;
+            return <mesh key={i} position={[Math.cos(a) * 0.34, 0.08, Math.sin(a) * 0.34]}><dodecahedronGeometry args={[0.10, 0]} /><meshToonMaterial color="#736C61" gradientMap={toonMap} /></mesh>;
+          })}
+          <mesh position={[0, 0.12, 0]} rotation={[0.2, 0.5, Math.PI / 2]}><cylinderGeometry args={[0.06, 0.06, 0.56, 6]} /><meshToonMaterial color="#5C3619" gradientMap={toonMap} /></mesh>
+          <mesh position={[0, 0.12, 0]} rotation={[-0.2, -0.5, Math.PI / 2]}><cylinderGeometry args={[0.06, 0.06, 0.56, 6]} /><meshToonMaterial color="#5C3619" gradientMap={toonMap} /></mesh>
+          <group ref={flameRef} position={[0, 0.32, 0]}>
+            <mesh><coneGeometry args={[0.18, 0.44, 6]} /><meshBasicMaterial color="#F97316" /></mesh>
+            <mesh position={[0, -0.05, 0]}><coneGeometry args={[0.10, 0.28, 6]} /><meshBasicMaterial color="#FEF08A" /></mesh>
+          </group>
+          <pointLight position={[0, 0.65, 0]} intensity={isNight ? 4.5 : 1.2} distance={isNight ? 12 : 5} color="#FB923C" />
+        </group>
+      )}
+      {prop.type === 'cart' && (
+        <group>
+          <RoundedBox args={[0.88, 0.28, 1.15]} position={[0, 0.42, 0]} radius={0.03} castShadow><meshToonMaterial color="#8C5832" gradientMap={toonMap} /></RoundedBox>
+          <mesh position={[-0.48, 0.24, 0]} rotation={[0, 0, Math.PI / 2]}><cylinderGeometry args={[0.24, 0.24, 0.06, 12]} /><meshToonMaterial color="#4A2B14" gradientMap={toonMap} /></mesh>
+          <mesh position={[0.48, 0.24, 0]} rotation={[0, 0, Math.PI / 2]}><cylinderGeometry args={[0.24, 0.24, 0.06, 12]} /><meshToonMaterial color="#4A2B14" gradientMap={toonMap} /></mesh>
+          <mesh position={[0, 0.58, 0]}><sphereGeometry args={[0.24, 8, 8]} /><meshToonMaterial color="#D4A838" gradientMap={toonMap} /></mesh>
+        </group>
+      )}
+      {prop.type === 'bucket' && (
+        <group>
+          <mesh position={[0, 0.18, 0]} castShadow><cylinderGeometry args={[0.18, 0.14, 0.34, 10]} /><meshToonMaterial color="#8C5832" gradientMap={toonMap} /></mesh>
+          <mesh position={[0, 0.34, 0]} rotation={[-Math.PI / 2, 0, 0]}><circleGeometry args={[0.16, 10]} /><meshBasicMaterial color="#38BDF8" /></mesh>
+        </group>
+      )}
+
+      {/* 꽃밭 4종 */}
+      {(prop.type === 'flower_tulip' || prop.type === 'flower_lavender' || prop.type === 'flower_daisy' || prop.type === 'flower_rose') && (
+        <group>
+          {[[-0.18, -0.14], [0.16, -0.10], [0, 0.16], [-0.12, 0.14]].map(([fx, fz], i) => (
+            <group key={i} position={[fx, 0, fz]}>
+              <mesh position={[0, 0.18, 0]}><cylinderGeometry args={[0.018, 0.022, 0.36, 5]} /><meshToonMaterial color="#3F8C36" gradientMap={toonMap} /></mesh>
+              <mesh position={[0, 0.38, 0]}>
+                {prop.type === 'flower_lavender' ? <capsuleGeometry args={[0.04, 0.14, 4, 6]} /> : <sphereGeometry args={[0.08, 6, 6]} />}
+                <meshToonMaterial color={prop.type === 'flower_tulip' ? '#E11D48' : prop.type === 'flower_lavender' ? '#A855F7' : prop.type === 'flower_daisy' ? '#FFFFFF' : '#BE123C'} gradientMap={toonMap} />
+              </mesh>
+            </group>
+          ))}
+        </group>
+      )}
+
+      {/* 울타리 & 기존 소품 */}
+      {isFence && (
+        <group>
+          {prop.type === 'fence_stone' ? <RoundedBox args={[0.26, 0.80, 0.26]} position={[0, 0.40, 0]} radius={0.03}><meshToonMaterial color="#8F887B" gradientMap={toonMap} /></RoundedBox>
+            : prop.type === 'fence_log' ? <mesh position={[0, 0.44, 0]}><cylinderGeometry args={[0.095, 0.105, 0.88, 8]} /><meshToonMaterial color="#6B3F1D" gradientMap={toonMap} /></mesh>
+            : <group><RoundedBox args={[0.16, 0.84, 0.16]} position={[0, 0.42, 0]} radius={0.02}><meshToonMaterial color="#7D4D28" gradientMap={toonMap} /></RoundedBox><RoundedBox args={[0.20, 0.08, 0.20]} position={[0, 0.86, 0]} radius={0.02}><meshToonMaterial color="#5C3619" gradientMap={toonMap} /></RoundedBox></group>}
+          {hasAnyConn ? (<>{conn.e && renderFenceRail(1, 0, prop.type === 'fence_stone', prop.type === 'fence_log')}{conn.w && renderFenceRail(-1, 0, prop.type === 'fence_stone', prop.type === 'fence_log')}{conn.s && renderFenceRail(0, 1, prop.type === 'fence_stone', prop.type === 'fence_log')}{conn.n && renderFenceRail(0, -1, prop.type === 'fence_stone', prop.type === 'fence_log')}</>)
+            : (<>{renderFenceRail(1, 0, prop.type === 'fence_stone', prop.type === 'fence_log')}{renderFenceRail(-1, 0, prop.type === 'fence_stone', prop.type === 'fence_log')}</>)}
+        </group>
+      )}
+      {prop.type === 'door' && (
+        <group position={[0, 0, -0.45]} rotation={[0, prop.open ? 1.4 : 0, 0]}>
+          <RoundedBox args={[0.14, 1.94, 0.90]} position={[0, 0.97, 0.45]} radius={0.02} castShadow><meshToonMaterial color="#784622" gradientMap={toonMap} /></RoundedBox>
+          <mesh position={[0.09, 0.92, 0.74]}><sphereGeometry args={[0.055, 8, 8]} /><meshToonMaterial color="#EAB308" gradientMap={toonMap} /></mesh>
+        </group>
+      )}
+      {prop.type === 'cross' && (<group><RoundedBox args={[0.16, 1.75, 0.16]} position={[0, 0.875, 0]} radius={0.02}><meshToonMaterial color="#EAB308" gradientMap={toonMap} /></RoundedBox><RoundedBox args={[0.96, 0.16, 0.16]} position={[0, 1.24, 0]} radius={0.02}><meshToonMaterial color="#EAB308" gradientMap={toonMap} /></RoundedBox></group>)}
+      {prop.type === 'pulpit' && (<group><RoundedBox args={[0.70, 0.82, 0.42]} position={[0, 0.48, 0]} radius={0.02}><meshToonMaterial color="#B07443" gradientMap={toonMap} /></RoundedBox><RoundedBox args={[0.92, 0.08, 0.58]} position={[0, 0.92, 0]} rotation={[0.12, 0, 0]} radius={0.02}><meshToonMaterial color="#7D4D28" gradientMap={toonMap} /></RoundedBox></group>)}
+      {prop.type === 'offering' && (<RoundedBox args={[0.48, 0.88, 0.44]} position={[0, 0.44, 0]} radius={0.02}><meshToonMaterial color="#B07443" gradientMap={toonMap} /></RoundedBox>)}
+      {prop.type === 'pew' && (<group><RoundedBox args={[1.85, 0.08, 0.48]} position={[0, 0.38, 0]} radius={0.02}><meshToonMaterial color="#B07443" gradientMap={toonMap} /></RoundedBox><RoundedBox args={[1.80, 0.06, 0.42]} position={[0, 0.43, 0]} radius={0.02}><meshToonMaterial color="#991B1B" gradientMap={toonMap} /></RoundedBox><RoundedBox args={[1.85, 0.46, 0.07]} position={[0, 0.64, -0.22]} rotation={[-0.1, 0, 0]} radius={0.02}><meshToonMaterial color="#B07443" gradientMap={toonMap} /></RoundedBox></group>)}
+      {prop.type === 'piano' && (<group><RoundedBox args={[1.15, 0.42, 1.25]} position={[0, 0.68, 0]} radius={0.10}><meshToonMaterial color="#27272A" gradientMap={toonMap} /></RoundedBox><RoundedBox args={[1.05, 0.06, 0.24]} position={[0, 0.58, 0.64]} radius={0.01}><meshToonMaterial color="#EFEFEF" gradientMap={toonMap} /></RoundedBox></group>)}
+      {prop.type === 'drum' && (<group><mesh position={[0, 0.30, 0]} rotation={[Math.PI / 2, 0, 0]}><cylinderGeometry args={[0.28, 0.28, 0.38, 12]} /><meshToonMaterial color="#991B1B" gradientMap={toonMap} /></mesh><mesh position={[0, 0.92, 0]}><cylinderGeometry args={[0.20, 0.20, 0.015, 12]} /><meshToonMaterial color="#D9A026" gradientMap={toonMap} /></mesh></group>)}
+      {(prop.type === 'guitar_ac' || prop.type === 'guitar_el' || prop.type === 'cello') && (<RoundedBox args={[0.30, 0.52, 0.12]} position={[0, 0.40, 0]} radius={0.08}><meshToonMaterial color={prop.type === 'guitar_el' ? '#1D4ED8' : '#C27A3E'} gradientMap={toonMap} /></RoundedBox>)}
+      {prop.type === 'synth' && (<RoundedBox args={[1.15, 0.12, 0.38]} position={[0, 0.72, 0]} radius={0.02}><meshToonMaterial color="#1E293B" gradientMap={toonMap} /></RoundedBox>)}
+      {prop.type === 'speaker' && (<RoundedBox args={[0.48, 0.84, 0.42]} position={[0, 0.42, 0]} radius={0.03}><meshToonMaterial color="#27272A" gradientMap={toonMap} /></RoundedBox>)}
+      {prop.type === 'mic' && (<mesh position={[0, 0.58, 0]}><cylinderGeometry args={[0.015, 0.015, 1.12, 6]} /><meshToonMaterial color="#475569" gradientMap={toonMap} /></mesh>)}
+      {prop.type === 'torch' && (<group><mesh position={[0, 0.56, 0]}><cylinderGeometry args={[0.055, 0.075, 1.12, 8]} /><meshToonMaterial color="#4A2B14" gradientMap={toonMap} /></mesh><RoundedBox args={[0.28, 0.32, 0.28]} position={[0, 1.18, 0]} radius={0.05}><meshStandardMaterial color="#FEF08A" emissive="#F59E0B" emissiveIntensity={isNight ? 2.2 : 0.9} /></RoundedBox><pointLight position={[0, 1.32, 0]} intensity={isNight ? 3.8 : 0.8} distance={isNight ? 11 : 4.5} color="#FDBA74" /></group>)}
+      {prop.type === 'flower' && (<group><RoundedBox args={[0.42, 0.34, 0.42]} position={[0, 0.17, 0]} radius={0.05}><meshToonMaterial color="#A85224" gradientMap={toonMap} /></RoundedBox><mesh position={[0, 0.44, 0]}><dodecahedronGeometry args={[0.24, 0]} /><meshToonMaterial color="#3F8C36" gradientMap={toonMap} /></mesh></group>)}
+      {prop.type === 'table' && (<RoundedBox args={[0.94, 0.09, 0.94]} position={[0, 0.72, 0]} radius={0.03}><meshToonMaterial color="#C68E53" gradientMap={toonMap} /></RoundedBox>)}
+      {prop.type === 'chair' && (<RoundedBox args={[0.46, 0.06, 0.46]} position={[0, 0.38, 0]} radius={0.02}><meshToonMaterial color="#C68E53" gradientMap={toonMap} /></RoundedBox>)}
+      {prop.type === 'bed' && (<RoundedBox args={[0.92, 0.32, 1.55]} position={[0, 0.20, 0]} radius={0.04}><meshToonMaterial color="#B91C1C" gradientMap={toonMap} /></RoundedBox>)}
+      {prop.type === 'window' && (<RoundedBox args={[0.92, 0.96, 0.12]} position={[0, 0.48, 0]} radius={0.02}><meshToonMaterial color="#6B3410" gradientMap={toonMap} /></RoundedBox>)}
+      {prop.type === 'mirror' && (<RoundedBox args={[0.64, 1.48, 0.08]} position={[0, 0.74, 0]} radius={0.02}><meshToonMaterial color="#B07443" gradientMap={toonMap} /></RoundedBox>)}
+    </group>
+  );
+}
+
+// =====================================================================
+// 6. 강변 물레방아 · 뭉게구름 · 야경 달 · 복셀 메시 · 치비 아바타 · Ref 기반 PlayerRig
+// =====================================================================
+function AmbientWorldDetails({ biome, isNight, toonMap }) {
+  const cloudsRef = useRef(), wheelRef = useRef();
+  const stars = useMemo(() => Array.from({ length: 80 }).map((_, i) => {
+    const a = (i * 137.5) % 360, r = 42 + (i % 15) * 2;
+    return [Math.cos(a) * r, 18 + (i % 18), Math.sin(a) * r];
+  }), []);
+
+  useFrame(({ clock }, delta) => {
+    if (cloudsRef.current) cloudsRef.current.position.x = Math.sin(clock.elapsedTime * 0.06) * 4.5;
+    if (wheelRef.current) wheelRef.current.rotation.x += delta * 0.9;
+  });
+
+  return (
+    <group>
+      {isNight && (
+        <group>
+          <mesh position={[-18, 22, -26]}><sphereGeometry args={[2.8, 16, 16]} /><meshBasicMaterial color="#FEF3C7" /></mesh>
+          <pointLight position={[-16, 20, -24]} intensity={1.1} distance={80} color="#CBD5E1" />
+          {stars.map(([sx, sy, sz], i) => (<mesh key={i} position={[sx, sy, sz]}><sphereGeometry args={[0.12, 4, 4]} /><meshBasicMaterial color="#FFFFFF" /></mesh>))}
+        </group>
+      )}
+      <group ref={cloudsRef}>
+        {[[-10, 15, -8, 1.15], [8, 16.5, -12, 1.35], [14, 15.5, 6, 1.05]].map(([cx, cy, cz, s], i) => (
+          <group key={i} position={[cx, cy, cz]} scale={[s, s, s]}>
+            <mesh><sphereGeometry args={[1.1, 10, 8]} /><meshToonMaterial color={isNight ? '#334155' : '#F1F5F9'} transparent opacity={0.86} gradientMap={toonMap} /></mesh>
+            <mesh position={[1.0, -0.1, 0.2]}><sphereGeometry args={[0.85, 10, 8]} /><meshToonMaterial color={isNight ? '#334155' : '#F1F5F9'} transparent opacity={0.86} gradientMap={toonMap} /></mesh>
+          </group>
+        ))}
+      </group>
+      {biome === 'meadow' && (
+        <group>
+          <group position={[0, 0.56, 1.5]}>
+            {Array.from({ length: 13 }).map((_, i) => (<RoundedBox key={i} args={[0.42, 0.08, 2.05]} position={[-3 + i * 0.5, 0, 0]} radius={0.02} castShadow receiveShadow><meshToonMaterial color={i % 2 === 0 ? '#A8703E' : '#8C5832'} gradientMap={toonMap} /></RoundedBox>))}
+          </group>
+          <group position={[-2.2, 1.35, -3.5]}>
+            <mesh position={[-0.4, -0.4, 0]}><boxGeometry args={[0.25, 1.6, 0.25]} /><meshToonMaterial color="#5C3619" gradientMap={toonMap} /></mesh>
+            <group ref={wheelRef}>
+              <mesh rotation={[0, Math.PI / 2, 0]}><torusGeometry args={[1.15, 0.10, 6, 14]} /><meshToonMaterial color="#7D4D28" gradientMap={toonMap} /></mesh>
+              {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (<group key={i} rotation={[(i / 8) * Math.PI * 2, 0, 0]}><mesh><boxGeometry args={[0.10, 2.25, 0.10]} /><meshToonMaterial color="#6B3F1D" gradientMap={toonMap} /></mesh><mesh position={[0, 1.18, 0]}><boxGeometry args={[0.38, 0.16, 0.24]} /><meshToonMaterial color="#A8703E" gradientMap={toonMap} /></mesh></group>))}
+            </group>
+          </group>
+        </group>
+      )}
+    </group>
+  );
+}
+
+function VoxelWorldMesh({
+  blockMap, mode, isInsideChapel, selectedBlock, selectedProp, selectedCrop, selectedAnimal, selectedNpcType, propRot,
+  onAddBlock, onMineBlock, onAddProp, onPlantCrop, onWaterSoil, onAddAnimal, onAddNpc, onWalkTo
+}) {
+  const [hoverTarget, setHoverTarget] = useState(null);
+  const textures = useMemo(() => createBlockTextures(), []);
+  const geometries = useMemo(() => buildCulledGeometries(blockMap), [blockMap]);
+  useEffect(() => () => { Object.values(geometries).forEach((g) => g.dispose()); }, [geometries]);
+
+  const computeHitCoords = (e) => {
+    const n = e.face?.normal;
+    if (!n) return null;
+    const inX = Math.round(e.point.x - n.x * 0.45), inY = Math.round(e.point.y - n.y * 0.45), inZ = Math.round(e.point.z - n.z * 0.45);
+    return { inX, inY, inZ, outX: inX + Math.round(n.x), outY: inY + Math.round(n.y), outZ: inZ + Math.round(n.z) };
+  };
+
+  return (
+    <group>
+      {Object.entries(geometries).map(([type, geo]) => {
+        const meta = BLOCK_MAP_META[type] || BLOCK_CATALOG[0];
+        const isRoofFade = isInsideChapel && (type === 'roof_red' || type === 'roof_blue');
+        return (
+          <mesh
+            key={type}
+            geometry={geo}
+            castShadow={!meta.transparent && !isRoofFade}
+            receiveShadow
+            onPointerMove={(e) => {
+              if (mode === 'walk') return;
+              e.stopPropagation();
+              const c = computeHitCoords(e);
+              if (!c) return;
+              setHoverTarget(mode === 'break' || mode === 'water' ? [c.inX, c.inY, c.inZ] : [c.outX, c.outY, c.outZ]);
+            }}
+            onPointerOut={() => setHoverTarget(null)}
+            onClick={(e) => {
+              e.stopPropagation();
+              const c = computeHitCoords(e);
+              if (!c) return;
+              if (mode === 'walk') onWalkTo(e.point.x, e.point.z);
+              else if (mode === 'build') onAddBlock(c.outX, c.outY, c.outZ, selectedBlock);
+              else if (mode === 'prop') onAddProp(c.outX, c.outY, c.outZ, selectedProp, propRot);
+              else if (mode === 'farm') onPlantCrop(c.outX, c.outY, c.outZ, selectedCrop);
+              else if (mode === 'water') onWaterSoil(c.inX, c.inY, c.inZ);
+              else if (mode === 'animal') onAddAnimal(c.outX, c.outZ, selectedAnimal);
+              else if (mode === 'npc') onAddNpc(c.outX, c.outY - 0.5, c.outZ, selectedNpcType, propRot);
+              else if (mode === 'break') onMineBlock(c.inX, c.inY, c.inZ);
+            }}
+          >
+            <meshStandardMaterial
+              map={textures[type]}
+              color={meta.transparent ? meta.color : '#FFFFFF'}
+              roughness={meta.roughness ?? 0.92}
+              metalness={0}
+              transparent={Boolean(meta.transparent) || isRoofFade}
+              opacity={isRoofFade ? 0.22 : (meta.opacity ?? 1)}
+              emissive={meta.emissive || '#000000'}
+              emissiveIntensity={meta.emissiveIntensity || 0}
+            />
+          </mesh>
+        );
+      })}
+      {mode !== 'walk' && hoverTarget && (
+        <mesh position={hoverTarget}>
+          <boxGeometry args={[1.03, 1.03, 1.03]} />
+          <meshBasicMaterial color={mode === 'break' ? '#FB7185' : mode === 'water' ? '#38BDF8' : '#34D399'} wireframe transparent opacity={0.95} />
+        </mesh>
+      )}
+    </group>
+  );
+}
+
+function ChibiAvatar({ position, rotationY = 0, walking = false, swimming = false, playingBand = false, avatarConfig, nameTagTex, toonMap, scale = 1, onClick }) {
+  const rootRef = useRef(), leftLegRef = useRef(), rightLegRef = useRef(), leftArmRef = useRef(), rightArmRef = useRef();
+  useFrame(({ clock }) => {
+    const t = clock.elapsedTime;
+    if (swimming) {
+      if (rootRef.current) { rootRef.current.rotation.x = THREE.MathUtils.lerp(rootRef.current.rotation.x, Math.PI / 2.3, 0.15); rootRef.current.position.y = 0.25 + Math.sin(t * 4) * 0.05; }
+      const stroke = Math.sin(t * 8) * 0.9;
+      if (leftArmRef.current && rightArmRef.current) { leftArmRef.current.rotation.x = -2.2 + stroke; rightArmRef.current.rotation.x = -2.2 - stroke; }
+    } else {
+      if (rootRef.current) { rootRef.current.rotation.x = THREE.MathUtils.lerp(rootRef.current.rotation.x, 0, 0.18); rootRef.current.position.y = walking ? Math.abs(Math.sin(t * 10)) * 0.06 : playingBand ? Math.abs(Math.sin(t * 7)) * 0.08 : Math.sin(t * 2.5) * 0.015; }
+      const sw = walking ? Math.sin(t * 10) * 0.55 : 0;
+      if (leftLegRef.current && rightLegRef.current) { leftLegRef.current.rotation.x = sw; rightLegRef.current.rotation.x = -sw; }
+      if (leftArmRef.current && rightArmRef.current) { leftArmRef.current.rotation.x = playingBand ? -1.0 + Math.sin(t * 12) * 0.35 : -sw * 0.8; rightArmRef.current.rotation.x = playingBand ? -1.0 - Math.sin(t * 12) * 0.35 : sw * 0.8; }
+    }
+  });
+  return (
+    <group position={position} rotation={[0, rotationY, 0]} scale={[scale, scale, scale]} onClick={onClick}>
+      <group ref={rootRef}>
+        <group ref={leftLegRef} position={[-0.09, 0.22, 0]}><mesh position={[0, -0.09, 0]} castShadow><capsuleGeometry args={[0.055, 0.12, 6, 10]} /><meshToonMaterial color={avatarConfig.pantsColor} gradientMap={toonMap} /></mesh></group>
+        <group ref={rightLegRef} position={[0.09, 0.22, 0]}><mesh position={[0, -0.09, 0]} castShadow><capsuleGeometry args={[0.055, 0.12, 6, 10]} /><meshToonMaterial color={avatarConfig.pantsColor} gradientMap={toonMap} /></mesh></group>
+        <mesh position={[0, 0.42, 0]} castShadow><capsuleGeometry args={[0.15, 0.18, 8, 12]} /><meshToonMaterial color={avatarConfig.shirtColor} gradientMap={toonMap} /></mesh>
+        <group ref={leftArmRef} position={[-0.20, 0.50, 0]}><mesh position={[0, -0.10, 0]}><capsuleGeometry args={[0.045, 0.14, 6, 10]} /><meshToonMaterial color={avatarConfig.shirtColor} gradientMap={toonMap} /></mesh></group>
+        <group ref={rightArmRef} position={[0.20, 0.50, 0]}><mesh position={[0, -0.10, 0]}><capsuleGeometry args={[0.045, 0.14, 6, 10]} /><meshToonMaterial color={avatarConfig.shirtColor} gradientMap={toonMap} /></mesh></group>
+        <group position={[0, 0.78, 0]}>
+          <mesh castShadow><sphereGeometry args={[0.22, 14, 14]} /><meshToonMaterial color="#FFE4C4" gradientMap={toonMap} /></mesh>
+          <mesh position={[0, 0.06, -0.02]} scale={[1.06, 0.92, 1.06]}><sphereGeometry args={[0.225, 14, 14]} /><meshToonMaterial color={avatarConfig.hairColor} gradientMap={toonMap} /></mesh>
+          <mesh position={[-0.075, -0.01, 0.205]}><sphereGeometry args={[0.025, 6, 6]} /><meshBasicMaterial color="#18181B" /></mesh>
+          <mesh position={[0.075, -0.01, 0.205]}><sphereGeometry args={[0.025, 6, 6]} /><meshBasicMaterial color="#18181B" /></mesh>
+        </group>
+      </group>
+      {nameTagTex && <Billboard position={[0, 1.34, 0]}><mesh><planeGeometry args={[1.35, 0.31]} /><meshBasicMaterial map={nameTagTex} transparent depthTest={false} /></mesh></Billboard>}
+    </group>
+  );
+}
+
+function AutonomousNpcAvatar({ npc, blockMap, mode, isBandPlaying, toonMap, onSelectNpc, onRemoveNpc }) {
+  const meta = NPC_META_MAP[npc.type] || NPC_CATALOG[0];
+  const nameTagTex = useMemo(() => makeNameTagTex(meta.label, '#F59E0B'), [meta.label]);
+  const npcGroupRef = useRef();
+  const [walking, setWalking] = useState(false);
+  const roamRef = useRef({ x: npc.x, z: npc.z, dx: 0, dz: 0, timer: 1 + Math.random() * 2 });
+
+  useFrame((_, delta) => {
+    if (!npc.roam || !npcGroupRef.current) return;
+    const st = roamRef.current;
+    st.timer -= delta;
+    if (st.timer <= 0) {
+      if (Math.random() < 0.5) { st.dx = 0; st.dz = 0; st.timer = 2.0; setWalking(false); }
+      else { const a = Math.random() * Math.PI * 2; st.dx = Math.cos(a); st.dz = Math.sin(a); st.timer = 2.2; setWalking(true); }
+    }
+    if (st.dx !== 0 || st.dz !== 0) {
+      const nx = st.x + st.dx * 1.05 * delta, nz = st.z + st.dz * 1.05 * delta;
+      if (Math.hypot(nx - npc.x, nz - npc.z) < 3.0) {
+        const surf = getSurfaceInfo(blockMap, nx, nz);
+        if (!surf.isWater) { st.x = nx; st.z = nz; npcGroupRef.current.position.set(nx, surf.y, nz); npcGroupRef.current.rotation.y = Math.atan2(st.dx, st.dz); }
+      }
+    }
+  });
+
+  return (
+    <group ref={npcGroupRef} position={[npc.x, npc.y, npc.z]} rotation={[0, npc.rot || 0, 0]}>
+      <ChibiAvatar position={[0, 0, 0]} walking={walking} playingBand={Boolean(isBandPlaying && meta.isBand)} scale={meta.isKid ? 0.78 : 1} avatarConfig={{ shirtColor: meta.shirt, pantsColor: meta.pants, hairColor: meta.hair }} nameTagTex={nameTagTex} toonMap={toonMap} onClick={(e) => { e.stopPropagation(); if (mode === 'break') onRemoveNpc(npc.id); else onSelectNpc(meta); }} />
+    </group>
+  );
+}
+
+// 모바일 최적화 Ref 직접 이동 PlayerRig (매 프레임 setState 병목 제거!)
+function PlayerRig({ blockMap, propsList, worldRadius, walkTarget, clearWalkTarget, joyVecRef, jumpReqRef, playerPosRef, playerRotRef, playerName, avatarConfig, controlsRef, soundMuted, toonMap, onSwimChange, onInsideChapelChange, onSyncPos }) {
+  const playerGroupRef = useRef();
+  const keysRef = useRef({});
+  const vyRef = useRef(0);
+  const groundedRef = useRef(true);
+  const stepTimerRef = useRef(0);
+  const walkingRef = useRef(false);
+  const [walkingState, setWalkingState] = useState(false);
+  const [swimming, setSwimming] = useState(false);
+  const nameTagTex = useMemo(() => makeNameTagTex(`나 · ${playerName}`, '#38BDF8'), [playerName]);
+
+  useEffect(() => {
+    const down = (e) => { keysRef.current[e.code] = true; if (e.code === 'Space') { e.preventDefault(); jumpReqRef.current = true; } };
+    const up = (e) => { keysRef.current[e.code] = false; };
+    window.addEventListener('keydown', down); window.addEventListener('keyup', up);
+    return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up); };
+  }, [jumpReqRef]);
+
+  useFrame(({ camera }, delta) => {
+    if (!playerGroupRef.current) return;
+    const dt = Math.min(delta, 0.05);
+    const speed = swimming ? 3.8 : 5.4;
+    let vx = 0, vz = 0;
+    const k = keysRef.current;
+    if (k.KeyW || k.ArrowUp) vz -= 1;
+    if (k.KeyS || k.ArrowDown) vz += 1;
+    if (k.KeyA || k.ArrowLeft) vx -= 1;
+    if (k.KeyD || k.ArrowRight) vx += 1;
+    if (Math.abs(joyVecRef.current.x) > 0.08 || Math.abs(joyVecRef.current.z) > 0.08) { vx = joyVecRef.current.x; vz = joyVecRef.current.z; }
+
+    const [cx, cy, cz] = playerPosRef.current;
+    let wantX = cx, wantZ = cz, isMoving = false;
+
+    if (vx !== 0 || vz !== 0) {
+      if (walkTarget) clearWalkTarget();
+      const camDir = new THREE.Vector3(); camera.getWorldDirection(camDir); camDir.y = 0; camDir.normalize();
+      const camRight = new THREE.Vector3().crossVectors(camDir, new THREE.Vector3(0, 1, 0)).normalize();
+      const move = new THREE.Vector3().addScaledVector(camDir, -vz).addScaledVector(camRight, vx);
+      if (move.lengthSq() > 1) move.normalize();
+      wantX = cx + move.x * speed * dt; wantZ = cz + move.z * speed * dt;
+      const nextRot = Math.atan2(move.x, move.z);
+      playerRotRef.current = nextRot;
+      playerGroupRef.current.rotation.y = nextRot;
+      isMoving = true;
+    } else if (walkTarget) {
+      const dx = walkTarget[0] - cx, dz = walkTarget[1] - cz, dist = Math.hypot(dx, dz);
+      if (dist > 0.14) {
+        const step = Math.min(dist, speed * dt);
+        wantX = cx + (dx / dist) * step; wantZ = cz + (dz / dist) * step;
+        const nextRot = Math.atan2(dx, dz);
+        playerRotRef.current = nextRot;
+        playerGroupRef.current.rotation.y = nextRot;
+        isMoving = true;
+      } else clearWalkTarget();
+    }
+
+    if (jumpReqRef.current) {
+      jumpReqRef.current = false;
+      if (groundedRef.current || swimming) { vyRef.current = 7.4; groundedRef.current = false; playSfx('jump', soundMuted); }
+    }
+
+    vyRef.current -= 20.5 * dt;
+    let ny = cy + vyRef.current * dt;
+
+    let nx = cx, nz = cz;
+    if (isMoving) {
+      if (canPlayerMoveTo(blockMap, propsList, Math.max(cy, ny), wantX, cz, worldRadius)) nx = wantX;
+      if (canPlayerMoveTo(blockMap, propsList, Math.max(cy, ny), nx, wantZ, worldRadius)) nz = wantZ;
+      if (nx === cx && nz === cz && walkTarget) clearWalkTarget();
+    }
+
+    const surf = getSurfaceBelow(blockMap, nx, ny, nz);
+    if (ny <= surf.y) { ny = surf.y; vyRef.current = 0; groundedRef.current = true; }
+    else groundedRef.current = false;
+
+    if (surf.isWater !== swimming) { setSwimming(surf.isWater); onSwimChange(surf.isWater); }
+    onInsideChapelChange(nx >= 5.2 && nx <= 10.8 && nz >= 2.2 && nz <= 8.8);
+
+    const actuallyMoved = nx !== cx || nz !== cz;
+    if (actuallyMoved && (groundedRef.current || surf.isWater)) {
+      stepTimerRef.current += dt;
+      if (stepTimerRef.current >= (surf.isWater ? 0.45 : 0.34)) { stepTimerRef.current = 0; playSfx(surf.isWater ? 'splash' : 'step', soundMuted); }
+    }
+
+    if (actuallyMoved || Math.abs(ny - cy) > 0.004) {
+      playerPosRef.current = [nx, ny, nz];
+      playerGroupRef.current.position.set(nx, ny, nz);
+      if (walkingRef.current !== actuallyMoved) { walkingRef.current = actuallyMoved; setWalkingState(actuallyMoved); }
+      if (controlsRef.current) {
+        camera.position.x += nx - cx; camera.position.y += ny - cy; camera.position.z += nz - cz;
+        controlsRef.current.target.set(nx, ny + 0.9, nz);
+        controlsRef.current.update();
+      }
+      onSyncPos(nx, ny, nz);
+    } else if (walkingRef.current) { walkingRef.current = false; setWalkingState(false); }
+  });
+
+  return (
+    <group ref={playerGroupRef} position={[2, 0.5, 5]} rotation={[0, Math.PI, 0]}>
+      <ChibiAvatar position={[0, 0, 0]} walking={walkingState} swimming={swimming} avatarConfig={avatarConfig} nameTagTex={nameTagTex} toonMap={toonMap} />
+    </group>
+  );
+}
+
+// =====================================================================
+// 7. 메인 7층 오픈월드 빌더즈 (Sandbox Master Edition)
+// =====================================================================
+export default function SkyGarden7F({ setActiveScreen, onChangeFloor, onExitHome }) {
+  const authUser = useAppStore((s) => s.authUser);
+  const playerName = authUser?.name || localStorage.getItem('login_user_name') || '정신동';
+  const isMobile = useMemo(() => (typeof window !== 'undefined' ? window.innerWidth < 768 : false), []);
+  const toonMap = useMemo(() => createToonGradient(), []);
+
+  const clientIdRef = useRef(`ow7f_${playerName}_${Math.random().toString(36).slice(2, 8)}`);
+  const controlsRef = useRef();
+  const channelRef = useRef(null);
+  const lastSyncRef = useRef(0);
+  const playerPosRef = useRef([2, 0.5, 5]);
+  const playerRotRef = useRef(Math.PI);
+  const joyVecRef = useRef({ x: 0, z: 0 });
+  const jumpReqRef = useRef(false);
+  const camCommandRef = useRef(null);
+  const blockHpRef = useRef({});
+  const bandTimerRef = useRef(null);
+
+  const [avatarConfig] = useState(() => {
+    try { const s = localStorage.getItem('gtc_metaverse_avatar_v1'); return s ? { ...DEFAULT_AVATAR, ...JSON.parse(s) } : DEFAULT_AVATAR; }
+    catch { return DEFAULT_AVATAR; }
+  });
+
+  const [world, setWorld] = useState(() => {
+    try { const saved = localStorage.getItem(STORAGE_KEY_WORLD); if (saved) return JSON.parse(saved); } catch (_) {}
+    return generateBiomeWorld('meadow', 18);
+  });
+
+  const [meta, setMeta] = useState(() => {
+    try { const saved = localStorage.getItem(STORAGE_KEY_META); if (saved) return { ...DEFAULT_META, ...JSON.parse(saved) }; } catch (_) {}
+    return DEFAULT_META;
+  });
+
+  const [nowTs, setNowTs] = useState(() => Date.now());
+  useEffect(() => { const t = setInterval(() => setNowTs(Date.now()), 1000); return () => clearInterval(t); }, []);
+
+  const [soundMuted, setSoundMuted] = useState(false);
+  const [creativeMode, setCreativeMode] = useState(true);
+  const [camPreset, setCamPreset] = useState('behind');
+  const [mode, setMode] = useState('walk');
+  const [blockCat, setBlockCat] = useState('전체');
+  const [selectedBlock, setSelectedBlock] = useState('ivory_wall');
+  const [selectedProp, setSelectedProp] = useState('hay_bale');
+  const [selectedCrop, setSelectedCrop] = useState('rice');
+  const [selectedAnimal, setSelectedAnimal] = useState('sheep');
+  const [selectedNpcType, setSelectedNpcType] = useState('pastor');
+  const [propRot, setPropRot] = useState(0);
+
+  const [isSwimming, setIsSwimming] = useState(false);
+  const [isInsideChapel, setIsInsideChapel] = useState(false);
+  const [isBandPlaying, setIsBandPlaying] = useState(false);
+  const [walkTarget, setWalkTarget] = useState(null);
+  const [timeOfDay, setTimeOfDay] = useState('day');
+  const [toastMsg, setToastMsg] = useState('');
+
+  const [showCraftModal, setShowCraftModal] = useState(false);
+  const [showQuestModal, setShowQuestModal] = useState(false);
+  const [showBiomeModal, setShowBiomeModal] = useState(false);
+  const [showFloorModal, setShowFloorModal] = useState(false);
+  const [selectedNpcDialog, setSelectedNpcDialog] = useState(null);
+  const [remotePeers, setRemotePeers] = useState([]);
+
+  const worldRadius = world.radius || 18;
+
+  const showToast = useCallback((msg) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg((prev) => (prev === msg ? '' : prev)), 2800);
+  }, []);
+
+  const updateWorld = useCallback((updater, broadcast = true) => {
+    setWorld((prev) => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      try { localStorage.setItem(STORAGE_KEY_WORLD, JSON.stringify(next)); } catch (_) {}
+      if (broadcast && channelRef.current) {
+        channelRef.current.send({ type: 'broadcast', event: 'openworld_sync_7f', payload: { sender: clientIdRef.current, world: next } }).catch(() => {});
+      }
+      return next;
+    });
+  }, []);
+
+  const updateMeta = useCallback((updater) => {
+    setMeta((prev) => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      try { localStorage.setItem(STORAGE_KEY_META, JSON.stringify(next)); } catch (_) {}
+      return next;
+    });
+  }, []);
+
+  const completeQuest = useCallback((qid) => {
+    const q = VILLAGE_QUESTS.find((x) => x.id === qid);
+    if (!q) return;
+    setMeta((prev) => {
+      if (prev.quests[qid]) return prev;
+      const next = { ...prev, hearts: prev.hearts + q.reward, quests: { ...prev.quests, [qid]: true } };
+      try { localStorage.setItem(STORAGE_KEY_META, JSON.stringify(next)); } catch (_) {}
+      playSfx('fanfare', soundMuted);
+      showToast(`🎉 퀘스트 완료: [${q.title}] ❤️ +${q.reward}`);
+      return next;
+    });
+  }, [showToast, soundMuted]);
+
+  const toggleBandPlay = useCallback(() => {
+    if (isBandPlaying) { clearInterval(bandTimerRef.current); setIsBandPlaying(false); return; }
+    setIsBandPlaying(true);
+    completeQuest('q_band');
+    showToast('🎵 좋은나무 찬양악단 합주가 시작되었습니다!');
+    let step = 0;
+    const chords = [[261.63, 329.63, 392.0, 523.25], [220.0, 261.63, 329.63, 440.0], [174.61, 220.0, 261.63, 349.23], [196.0, 246.94, 293.66, 392.0]];
+    const playStep = () => {
+      if (soundMuted) return;
+      try {
+        const ctx = getAudioCtx(); if (!ctx) return;
+        const now = ctx.currentTime;
+        chords[step % chords.length].forEach((freq, i) => {
+          const osc = ctx.createOscillator(), gain = ctx.createGain();
+          osc.type = i === 0 ? 'sine' : 'triangle'; osc.frequency.setValueAtTime(freq, now + i * 0.04);
+          gain.gain.setValueAtTime(0.032, now + i * 0.04); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.72);
+          osc.connect(gain); gain.connect(ctx.destination); osc.start(now + i * 0.04); osc.stop(now + 0.75);
+        });
+        step++;
+      } catch (_) {}
+    };
+    playStep();
+    bandTimerRef.current = setInterval(playStep, 850);
+  }, [isBandPlaying, completeQuest, showToast, soundMuted]);
+
+  useEffect(() => () => clearInterval(bandTimerRef.current), []);
+
+  // 월드 확장 핸들러
+  const handleExpandWorld = () => {
+    const nextR = worldRadius < 24 ? 24 : worldRadius < 30 ? 30 : 30;
+    if (nextR === worldRadius) return showToast('이미 최대 크기(61×61)로 확장된 월드입니다!');
+    updateWorld((prev) => expandWorldTerrain(prev, nextR), true);
+    playSfx('fanfare', soundMuted);
+    showToast(`🗺️ 월드가 ${nextR * 2 + 1}×${nextR * 2 + 1} 크기로 확장되었습니다!`);
+  };
+
+  // 블록 설치 & 채굴(HP 내구도 시스템 + 지하 -4 지원)
+  const handleAddBlock = useCallback((x, y, z, type) => {
+    if (Math.abs(x) > worldRadius || Math.abs(z) > worldRadius || y < -4 || y > 16) return;
+    if (isCellOccupied(world.blocks, world.props, x, y, z, playerPosRef.current)) return showToast('이미 블록·가구 또는 캐릭터가 있는 위치입니다.');
+    updateWorld((prev) => ({ ...prev, blocks: { ...prev.blocks, [blockKey(x, y, z)]: type } }));
+    playSfx('place', soundMuted);
+  }, [world.blocks, world.props, worldRadius, updateWorld, showToast, soundMuted]);
+
+  const handleMineBlock = useCallback((x, y, z) => {
+    if (y <= -5) return showToast('단단한 지하 암반은 부술 수 없습니다!');
+    const k = blockKey(x, y, z);
+    const oldType = world.blocks[k];
+    if (!oldType) return;
+    const bMeta = BLOCK_MAP_META[oldType];
+    if (bMeta?.unbreakable) return showToast('단단한 지하 암반은 부술 수 없습니다!');
+
+    const maxHp = bMeta?.hp || 1;
+    const curHp = (blockHpRef.current[k] ?? maxHp) - 1;
+    if (curHp > 0) {
+      blockHpRef.current[k] = curHp;
+      playSfx('hit', soundMuted);
+      showToast(`⛏️ [${bMeta?.label}] 채굴 중... (남은 타격 ${curHp})`);
+      return;
+    }
+
+    delete blockHpRef.current[k];
+    updateWorld((prev) => { const nb = { ...prev.blocks }; delete nb[k]; return { ...prev, blocks: nb }; });
+    playSfx('break', soundMuted);
+    const dropKey = bMeta?.drop;
+    if (dropKey) {
+      updateMeta((prev) => ({ ...prev, materials: { ...prev.materials, [dropKey]: (prev.materials[dropKey] || 0) + 1 } }));
+      if (oldType.startsWith('ore_')) {
+        showToast(`💎 [${bMeta.label}] 채굴 성공! ${MATERIAL_META[dropKey]?.icon} +1`);
+        completeQuest('q_mine');
+      }
+    }
+  }, [world.blocks, updateWorld, updateMeta, showToast, soundMuted, completeQuest]);
+
+  // 물주기 (작물 또는 텃밭흙 클릭 시 젖은 흙으로 변경 & 성장 가속)
+  const handleWaterCrop = useCallback((crop) => {
+    updateWorld((prev) => ({
+      ...prev,
+      blocks: { ...prev.blocks, [blockKey(crop.x, crop.y - 1, crop.z)]: 'wet_soil' },
+      crops: prev.crops.map((c) => (c.id === crop.id ? { ...c, watered: true, plantedAt: Date.now() - 4000 } : c))
+    }));
+    playSfx('water', soundMuted);
+    showToast('💧 양동이로 시원하게 물을 주었습니다! 작물이 쑥쑥 자랍니다.');
+    completeQuest('q_water');
+  }, [updateWorld, soundMuted, showToast, completeQuest]);
+
+  const handleWaterSoil = useCallback((x, y, z) => {
+    const t = world.blocks[blockKey(x, y, z)];
+    if (t === 'farm_soil' || t === 'dirt' || t === 'grass') {
+      updateWorld((prev) => ({
+        ...prev,
+        blocks: { ...prev.blocks, [blockKey(x, y, z)]: 'wet_soil' },
+        crops: prev.crops.map((c) => (c.x === x && c.z === z ? { ...c, watered: true } : c))
+      }));
+      playSfx('water', soundMuted);
+      completeQuest('q_water');
+    }
+  }, [world.blocks, updateWorld, soundMuted, completeQuest]);
+
+  const handlePlantCrop = useCallback((x, y, z, cropType) => {
+    if (Math.abs(x) > worldRadius || Math.abs(z) > worldRadius) return;
+    const below = world.blocks[blockKey(x, y - 1, z)];
+    if (below !== 'farm_soil' && below !== 'wet_soil' && below !== 'grass' && below !== 'dirt') return showToast('잔디나 텃밭 위에 심어주세요!');
+    if (world.crops.some((c) => c.x === x && c.z === z)) return showToast('이미 작물이 심어져 있습니다.');
+    const isAlreadyWet = below === 'wet_soil';
+    updateWorld((prev) => ({
+      ...prev,
+      blocks: { ...prev.blocks, [blockKey(x, y - 1, z)]: isAlreadyWet ? 'wet_soil' : 'farm_soil' },
+      crops: [...prev.crops, { id: `cp_${Date.now()}`, type: cropType, x, y, z, plantedAt: Date.now(), watered: isAlreadyWet }]
+    }));
+    playSfx('place', soundMuted);
+    if (!isAlreadyWet) showToast('🌱 씨앗을 심었습니다! 🪣 물주기 모드로 물을 주세요.');
+  }, [world.blocks, world.crops, worldRadius, updateWorld, showToast, soundMuted]);
+
+  const handleHarvestCrop = useCallback((crop) => {
+    const cMeta = CROP_MAP_META[crop.type] || CROP_CATALOG[0];
+    updateWorld((prev) => ({ ...prev, crops: prev.crops.filter((c) => c.id !== crop.id) }));
+    updateMeta((prev) => {
+      const nextProps = { ...prev.props };
+      if (cMeta.bonusProp) nextProps[cMeta.bonusProp] = (nextProps[cMeta.bonusProp] || 0) + 1;
+      return {
+        ...prev,
+        hearts: prev.hearts + cMeta.heartReward,
+        materials: { ...prev.materials, [cMeta.harvestMat]: (prev.materials[cMeta.harvestMat] || 0) + 2 },
+        props: nextProps
+      };
+    });
+    playSfx('harvest', soundMuted);
+    const bonusText = cMeta.bonusProp === 'hay_bale' ? ' + 🌾 볏짚더미 획득!' : cMeta.bonusProp === 'fruit_basket' ? ' + 🧺 과일바구니 획득!' : '';
+    showToast(`${cMeta.icon} [${cMeta.label}] 수확! ❤️+${cMeta.heartReward}${bonusText}`);
+    completeQuest('q_harvest');
+  }, [updateWorld, updateMeta, showToast, soundMuted, completeQuest]);
+
+  const handleAddProp = useCallback((x, y, z, type, rot) => {
+    if (Math.abs(x) > worldRadius || Math.abs(z) > worldRadius || y < -4 || y > 16) return;
+    if (isCellOccupied(world.blocks, world.props, x, y, z, playerPosRef.current)) return showToast('다른 블록이나 가구와 겹칩니다.');
+    if (!creativeMode) {
+      const owned = meta.props[type] || 0;
+      if (owned <= 0) return showToast('보유한 아이템이 없습니다! 🔨 제작대에서 만들어 주세요.');
+      updateMeta((prev) => ({ ...prev, props: { ...prev.props, [type]: owned - 1 } }));
+    }
+    const nextProps = [...world.props, { id: `pr_${Date.now()}_${Math.random().toString(36).slice(2, 5)}`, type, x, y, z, rot, open: false }];
+    updateWorld((prev) => ({ ...prev, props: nextProps }));
+    playSfx('place', soundMuted);
+    const roomNotice = detectRoomAt(world.blocks, nextProps, x, y, z);
+    if (roomNotice) { playSfx('fanfare', soundMuted); showToast(roomNotice); }
+  }, [world.blocks, world.props, worldRadius, creativeMode, meta.props, updateWorld, updateMeta, showToast, soundMuted]);
+
+  const handleToggleDoor = useCallback((id) => { updateWorld((prev) => ({ ...prev, props: prev.props.map((p) => (p.id === id ? { ...p, open: !p.open } : p)) })); playSfx('door', soundMuted); }, [updateWorld, soundMuted]);
+  const handleRemoveProp = useCallback((id) => { updateWorld((prev) => ({ ...prev, props: prev.props.filter((p) => p.id !== id) })); playSfx('break', soundMuted); }, [updateWorld, soundMuted]);
+  const handleRemoveCrop = useCallback((id) => { updateWorld((prev) => ({ ...prev, crops: prev.crops.filter((c) => c.id !== id) })); playSfx('break', soundMuted); }, [updateWorld, soundMuted]);
+  const handleAddAnimal = useCallback((x, z, type) => { updateWorld((prev) => ({ ...prev, animals: [...prev.animals, { id: `ani_${Date.now()}`, type, x, z, level: 1 }] })); playAnimalSfx(type, soundMuted); }, [updateWorld, soundMuted]);
+  const handlePetAnimal = useCallback((animal, aMeta) => {
+    const nextLv = Math.min(5, (animal.level || 1) + 1);
+    updateWorld((prev) => ({ ...prev, animals: prev.animals.map((a) => (a.id === animal.id ? { ...a, level: nextLv } : a)) }));
+    updateMeta((prev) => ({ ...prev, hearts: prev.hearts + aMeta.heartReward }));
+    playAnimalSfx(animal.type, soundMuted);
+    showToast(`${aMeta.sound} ${aMeta.msg} (Lv.${nextLv} · ❤️+${aMeta.heartReward})`);
+    completeQuest('q_pet');
+  }, [updateWorld, updateMeta, showToast, soundMuted, completeQuest]);
+  const handleRemoveAnimal = useCallback((id) => { updateWorld((prev) => ({ ...prev, animals: prev.animals.filter((a) => a.id !== id) })); playSfx('break', soundMuted); }, [updateWorld, soundMuted]);
+  const handleAddNpc = useCallback((x, y, z, type, rot) => { updateWorld((prev) => ({ ...prev, npcs: [...prev.npcs, { id: `npc_${Date.now()}`, type, x, y, z, rot, roam: true }] })); playSfx('place', soundMuted); }, [updateWorld, soundMuted]);
+  const handleRemoveNpc = useCallback((id) => { updateWorld((prev) => ({ ...prev, npcs: prev.npcs.filter((n) => n.id !== id) })); playSfx('break', soundMuted); }, [updateWorld, soundMuted]);
+
+  const handleOpenChest = useCallback((chest) => {
+    if (meta.openedChests[chest.id]) return;
+    updateMeta((prev) => {
+      const nextMats = { ...prev.materials };
+      Object.entries(chest.reward || {}).forEach(([k, v]) => { nextMats[k] = (nextMats[k] || 0) + v; });
+      return { ...prev, hearts: prev.hearts + (chest.hearts || 25), materials: nextMats, openedChests: { ...prev.openedChests, [chest.id]: true } };
+    });
+    playSfx('fanfare', soundMuted);
+    showToast(`🎁 [${chest.label}] 발견! ❤️ +${chest.hearts}`);
+  }, [meta.openedChests, updateMeta, showToast, soundMuted]);
+
+  const handleCraftItem = (propItem) => {
+    const recipe = propItem.recipe || {};
+    for (const [mat, need] of Object.entries(recipe)) {
+      if ((meta.materials[mat] || 0) < need) return showToast(`${MATERIAL_META[mat]?.label || mat} 재료가 부족합니다!`);
+    }
+    updateMeta((prev) => {
+      const nextMats = { ...prev.materials };
+      Object.entries(recipe).forEach(([m, n]) => { nextMats[m] -= n; });
+      return { ...prev, materials: nextMats, props: { ...prev.props, [propItem.id]: (prev.props[propItem.id] || 0) + 1 } };
+    });
+    playSfx('fanfare', soundMuted);
+    showToast(`🔨 [${propItem.label}] 제작 완료!`);
+  };
+
+  const handleSwitchBiome = (biomeId) => {
+    updateWorld(generateBiomeWorld(biomeId, worldRadius), true);
+    setShowBiomeModal(false);
+    playSfx('fanfare', soundMuted);
+    showToast(`🌍 [${biomeId === 'meadow' ? '초원 고원' : biomeId === 'desert' ? '사막 오아시스' : '설원 마을'}] 이동!`);
+  };
+
+  useEffect(() => {
+    if (!supabase) return;
+    const ch = supabase.channel('metaverse_skygarden_7f', { config: { presence: { key: clientIdRef.current } } });
+    channelRef.current = ch;
+    ch.on('presence', { event: 'sync' }, () => {
+      const state = ch.presenceState(), peers = [];
+      Object.keys(state).forEach((k) => { if (k !== clientIdRef.current && state[k]?.length) peers.push(state[k][state[k].length - 1]); });
+      setRemotePeers(peers);
+    })
+      .on('broadcast', { event: 'openworld_sync_7f' }, ({ payload }) => { if (payload && payload.sender !== clientIdRef.current && payload.world) setWorld(payload.world); })
+      .subscribe((s) => { if (s === 'SUBSCRIBED') { const [px, py, pz] = playerPosRef.current; ch.track({ clientId: clientIdRef.current, name: playerName, x: px, y: py, z: pz, avatar: avatarConfig }); } });
+    return () => { supabase.removeChannel(ch); channelRef.current = null; };
+  }, [playerName, avatarConfig]);
+
+  const handleSyncPos = useCallback((x, y, z) => {
+    const now = Date.now();
+    if (now - lastSyncRef.current < 220 || !channelRef.current) return;
+    lastSyncRef.current = now;
+    channelRef.current.track({ clientId: clientIdRef.current, name: playerName, x: +x.toFixed(2), y: +y.toFixed(2), z: +z.toFixed(2), avatar: avatarConfig }).catch(() => {});
+  }, [playerName, avatarConfig]);
+
+  const stopUiEvent = (e) => e.stopPropagation();
+  const filteredBlocks = blockCat === '전체' ? BLOCK_CATALOG : BLOCK_CATALOG.filter((b) => b.cat === blockCat);
+  const villageLevel = Math.floor(meta.hearts / 50) + 1;
+  const isNight = timeOfDay === 'night';
+  const bgHex = isNight ? '#0B1324' : timeOfDay === 'sunset' ? '#D48C5E' : world.biome === 'snow' ? '#B5D2E8' : world.biome === 'desert' ? '#D9C088' : '#78B8DC';
+
+  return (
+    <div translate="no" style={{ backgroundColor: bgHex }} className="notranslate w-full h-full relative overflow-hidden select-none font-sans">
+      {toastMsg && (
+        <div className="fixed top-14 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-2xl bg-slate-900/95 border border-emerald-400/60 text-emerald-200 text-xs font-black shadow-2xl pointer-events-none whitespace-nowrap">
+          {toastMsg}
+        </div>
+      )}
+
+      {/* 1. 슬림 상단 HUD */}
+      <header onPointerDown={stopUiEvent} onTouchStart={stopUiEvent} className="absolute top-2.5 left-2.5 right-2.5 z-20 flex items-center justify-between gap-1.5 pointer-events-none">
+        <div className="flex items-center gap-1 pointer-events-auto">
+          <button type="button" onClick={() => (onExitHome ? onExitHome() : setActiveScreen && setActiveScreen('home'))} className="h-8 px-2.5 rounded-xl bg-slate-900/90 border border-white/15 text-white text-xs font-black cursor-pointer">◀ 7F</button>
+          <button type="button" onClick={() => setShowQuestModal(true)} className="h-8 px-2.5 rounded-xl bg-amber-500 text-stone-950 text-[11px] font-black shadow-md cursor-pointer">Lv.{villageLevel} · ❤️{meta.hearts}</button>
+          <button type="button" onClick={toggleBandPlay} className={`h-8 px-2 rounded-xl text-[11px] font-black cursor-pointer border ${isBandPlaying ? 'bg-pink-500 border-pink-300 text-white animate-pulse' : 'bg-slate-900/90 border-white/15 text-pink-300'}`}>🎵</button>
+          <button type="button" onClick={() => setSoundMuted((m) => !m)} className="h-8 px-2 rounded-xl bg-slate-900/90 border border-white/15 text-white text-[11px] cursor-pointer">{soundMuted ? '🔇' : '🔊'}</button>
+          {isSwimming && <span className="h-8 px-2 rounded-xl bg-sky-500 text-white text-[11px] font-black flex items-center">🏊</span>}
+        </div>
+
+        <div className="flex items-center gap-1 pointer-events-auto">
+          <button type="button" onClick={handleExpandWorld} className="h-8 px-2 rounded-xl bg-slate-900/90 border border-emerald-400/40 text-emerald-300 text-[11px] font-black cursor-pointer">🗺️ 확장</button>
+          <button type="button" onClick={() => { const next = camPreset === 'behind' ? 'wide' : 'behind'; setCamPreset(next); camCommandRef.current = { type: next }; }} className="h-8 px-2 rounded-xl bg-slate-900/90 border border-sky-400/40 text-sky-300 text-[11px] font-black cursor-pointer">🎥</button>
+          <button type="button" onClick={() => setShowCraftModal(true)} className="h-8 px-2 rounded-xl bg-slate-900/90 border border-amber-400/40 text-amber-300 text-[11px] font-black cursor-pointer">🔨</button>
+          <button type="button" onClick={() => setShowBiomeModal(true)} className="h-8 px-2 rounded-xl bg-slate-900/90 border border-emerald-400/40 text-emerald-300 text-[11px] font-black cursor-pointer">🌍</button>
+          <button type="button" onClick={() => setTimeOfDay((p) => (p === 'day' ? 'sunset' : p === 'sunset' ? 'night' : 'day'))} className="h-8 px-2 rounded-xl bg-slate-900/90 border border-white/15 text-white text-[11px] cursor-pointer">{timeOfDay === 'day' ? '☀️' : timeOfDay === 'sunset' ? '🌅' : '🌙'}</button>
+          <button type="button" onClick={() => setShowFloorModal(true)} className="h-8 px-2 rounded-xl bg-emerald-500 text-stone-950 text-[11px] font-black cursor-pointer">🛗</button>
+        </div>
+      </header>
+
+      {/* 우측 줌 버튼 */}
+      <div onPointerDown={stopUiEvent} onTouchStart={stopUiEvent} className="absolute right-3 top-1/2 -translate-y-1/2 z-20 flex flex-col gap-1.5 pointer-events-auto">
+        <button type="button" onClick={() => { camCommandRef.current = { type: 'zoom', factor: 0.78 }; }} className="w-9 h-9 rounded-xl bg-slate-900/85 border border-white/20 text-white font-black text-base shadow-lg cursor-pointer">＋</button>
+        <button type="button" onClick={() => { camCommandRef.current = { type: 'zoom', factor: 1.28 }; }} className="w-9 h-9 rounded-xl bg-slate-900/85 border border-white/20 text-white font-black text-base shadow-lg cursor-pointer">－</button>
       </div>
 
-      {/* 3. 하단: 하늘정원 소셜 동작 & 퀵 메뉴 바 */}
-      <div className="absolute bottom-2.5 left-2.5 right-2.5 sm:bottom-4 sm:left-4 sm:right-4 z-20 flex flex-col gap-1.5 pointer-events-none">
-        <div className="flex flex-wrap items-center justify-between gap-1.5 pointer-events-auto">
-          <div
-            style={darkPillStyle}
-            className="p-1 rounded-2xl border shadow-2xl flex items-center gap-1 overflow-x-auto hide-scrollbar"
-          >
+      {/* 2. 하단 8단 모드 독 (🪣 물주기 모드 추가!) */}
+      <div onPointerDown={stopUiEvent} onPointerMove={stopUiEvent} onTouchStart={stopUiEvent} onTouchMove={stopUiEvent} onWheel={stopUiEvent} className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 w-[96vw] max-w-[660px] flex flex-col gap-1.5 pointer-events-auto">
+        <div className="flex items-center justify-center gap-1 flex-wrap">
+          <div className="p-1 rounded-2xl bg-slate-950/92 border border-white/15 backdrop-blur-md flex items-center gap-0.5 overflow-x-auto hide-scrollbar touch-pan-x shadow-xl">
             {[
-              { label: '🙌 도시축복만세', emote: 'praise', msg: '할렐루야! 김포 한강신도시와 온 열방 위에 하나님의 나라가 임하소서! 🙌✨' },
-              { label: '🙏 중보기도', emote: 'pray', msg: '7층 하늘정원에서 우리 교회와 성도님들의 가정을 위해 간절히 기도합니다 🙏' },
-              { label: '💃 기쁨의춤', emote: 'dance', msg: '선선한 루프탑 바람을 맞으며 주님을 찬양합니다! 💃🎶' },
-              { label: '👋 반갑게인사', emote: 'wave', msg: '성도님 반갑습니다! 하늘정원 파고라에서 차 한잔 나누세요 👋🥰' }
-            ].map((act, idx) => (
-              <button
-                key={idx}
-                onClick={() => triggerSocialAction(act.emote, act.msg)}
-                className="px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-emerald-500/30 text-[11px] font-black text-white whitespace-nowrap cursor-pointer transition-colors"
-              >
-                {act.label}
+              { id: 'walk', label: '🚶 이동' }, { id: 'water', label: '🪣 물주기' }, { id: 'farm', label: '🌾 농사' },
+              { id: 'build', label: '🧱 블록' }, { id: 'prop', label: '🪑 아이템' }, { id: 'animal', label: '🐑 동물' },
+              { id: 'npc', label: '👥 NPC' }, { id: 'break', label: '⛏️ 채굴' }
+            ].map((m) => (
+              <button key={m.id} type="button" onClick={() => setMode(m.id)} className={`px-2.5 py-1.5 rounded-xl text-[11px] font-black whitespace-nowrap cursor-pointer shrink-0 ${mode === m.id ? (m.id === 'break' ? 'bg-rose-500 text-white' : m.id === 'water' || m.id === 'walk' ? 'bg-sky-500 text-white' : 'bg-emerald-500 text-stone-950') : 'text-slate-300'}`}>
+                {m.label}
               </button>
             ))}
           </div>
-
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (!quickChatInput.trim()) return;
-              triggerSocialAction('wave', quickChatInput.trim());
-              setQuickChatInput('');
-            }}
-            style={darkPillStyle}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-2xl border shadow-2xl w-full sm:w-64"
-          >
-            <input
-              type="text"
-              value={quickChatInput}
-              onChange={(e) => setQuickChatInput(e.target.value)}
-              placeholder="하늘정원 말풍선 대화 입력..."
-              className="flex-1 bg-transparent text-xs font-bold text-white outline-none placeholder:text-zinc-400"
-            />
-            <button
-              type="submit"
-              className="px-2.5 py-1 rounded-xl bg-emerald-500 text-stone-950 text-[11px] font-black cursor-pointer shrink-0"
-            >
-              전송
-            </button>
-          </form>
-        </div>
-
-        <div className="flex items-center gap-1.5 pointer-events-auto">
-          {showBottomDock ? (
-            <div
-              style={darkPillStyle}
-              className="p-1 rounded-2xl border shadow-2xl flex items-center gap-1 overflow-x-auto hide-scrollbar"
-            >
-              {[
-                { icon: '🚪', label: '하늘정원통로', onClick: () => { setIsPassageDoorForcedOpen(true); handleWalkTo(-1.2, 0.5); } },
-                { icon: '🌿', label: seatedInfo ? '일어나기' : '파고라벤치착석', onClick: () => { if (seatedInfo) handleStandUp(); else handleSitOnBench({ x: -1.4, z: -1.65, rotY: 0, rowLabel: '7F 하늘정원 파고라 벤치석' }); } },
-                { icon: '🔭', label: '전망대(드론조감도)', onClick: handleToggleDroneCityView },
-                { icon: '🌺', label: '축하화환', onClick: () => { handleWalkTo(3.6, 0.2); setModalZone(ZONES_7F[1]); } },
-                { icon: '🛗', label: '7F엘리베이터', onClick: () => { handleWalkTo(3.2, -2.4); setModalZone(ZONES_7F[0]); } }
-              ].map((item, idx) => (
-                <button
-                  key={idx}
-                  onClick={item.onClick}
-                  className="px-2.5 py-1.5 rounded-xl hover:bg-white/10 flex items-center gap-1 shrink-0 cursor-pointer"
-                >
-                  <span className="text-sm">{item.icon}</span>
-                  <span style={{ color: '#FFFFFF' }} className="text-[11px] font-extrabold whitespace-nowrap">
-                    {item.label}
-                  </span>
-                </button>
-              ))}
-              <button
-                onClick={() => setShowBottomDock(false)}
-                style={{ color: '#9CA3AF' }}
-                className="px-2 py-1 text-xs font-bold cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setShowBottomDock(true)}
-              style={darkPillStyle}
-              className="px-3 py-2 rounded-full border shadow-xl text-xs font-black cursor-pointer"
-            >
-              🌿 7F 하늘정원 메뉴 ▲
-            </button>
+          {(mode === 'prop' || mode === 'npc') && (
+            <button type="button" onClick={() => setPropRot((r) => (r + Math.PI / 2) % (Math.PI * 2))} className="px-2.5 py-2 rounded-xl bg-amber-500 text-stone-950 text-[11px] font-black shadow-lg cursor-pointer">🔄 {Math.round((propRot * 180) / Math.PI)}°</button>
           )}
         </div>
-      </div>
 
-      {/* 4. 메인 3D 캔버스 (대기 원근법 Fog + 물리 기반 Sky 탑재!) */}
-      <Canvas
-        shadows
-        gl={{ toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: timeOfDay === 'night' ? 0.92 : 1.12 }}
-      >
-        <color attach="background" args={[atmosphereColor]} />
-        <fog attach="fog" args={[atmosphereColor, 55, 165]} />
-
-        {timeOfDay !== 'night' && (
-          <Sky
-            distance={450000}
-            sunPosition={timeOfDay === 'sunset' ? [-40, 6, 30] : [-24, 38, 28]}
-            inclination={0.48}
-            azimuth={0.25}
-          />
+        {mode === 'build' && (
+          <div className="p-1.5 rounded-2xl bg-slate-950/94 border border-emerald-400/40 backdrop-blur-md space-y-1.5 shadow-2xl">
+            <div className="flex items-center gap-1 overflow-x-auto hide-scrollbar touch-pan-x">
+              {['전체', '지형', '광석', '벽체', '바닥', '특수'].map((cat) => (
+                <button key={cat} type="button" onClick={() => setBlockCat(cat)} className={`px-2.5 py-0.5 rounded-lg text-[10.5px] font-bold cursor-pointer shrink-0 ${blockCat === cat ? 'bg-emerald-500/30 text-emerald-300 border border-emerald-400/50' : 'text-slate-400'}`}>{cat}</button>
+              ))}
+            </div>
+            <div className="flex items-center gap-1 overflow-x-auto hide-scrollbar touch-pan-x">
+              {filteredBlocks.map((item) => (
+                <button key={item.id} type="button" onClick={() => setSelectedBlock(item.id)} className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold whitespace-nowrap cursor-pointer border shrink-0 ${selectedBlock === item.id ? 'bg-emerald-500 border-emerald-300 text-stone-950 font-black' : 'bg-white/10 border-white/10 text-white'}`}>
+                  {item.icon} {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
         )}
 
-        <PerspectiveCamera makeDefault position={[1.2, 10.5, -11.5]} fov={38} near={0.1} far={450} />
-        <InitialCameraSetup7F controlsRef={controlsRef} />
+        {mode === 'prop' && (
+          <div className="p-1.5 rounded-2xl bg-slate-950/94 border border-emerald-400/40 backdrop-blur-md flex items-center gap-1 overflow-x-auto hide-scrollbar touch-pan-x shadow-2xl">
+            {PROP_CATALOG.map((item) => (
+              <button key={item.id} type="button" onClick={() => setSelectedProp(item.id)} className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold whitespace-nowrap cursor-pointer border shrink-0 ${selectedProp === item.id ? 'bg-emerald-500 border-emerald-300 text-stone-950 font-black' : 'bg-white/10 border-white/10 text-white'}`}>
+                {item.icon} {item.label}
+              </button>
+            ))}
+          </div>
+        )}
 
-        <ambientLight
-          intensity={timeOfDay === 'night' ? 0.65 : timeOfDay === 'sunset' ? 1.05 : 1.35}
-          color={timeOfDay === 'night' ? '#93C5FD' : timeOfDay === 'sunset' ? '#FDBA74' : '#FFFDF9'}
-        />
-        <hemisphereLight
-          args={[
-            timeOfDay === 'night' ? '#1E3A8A' : '#F0F9FF',
-            '#CBD5E1',
-            timeOfDay === 'night' ? 0.55 : 1.1
-          ]}
-        />
-        <directionalLight
-          position={[-28, 42, 32]}
-          intensity={timeOfDay === 'night' ? 0.65 : 1.65}
-          color={timeOfDay === 'sunset' ? '#FB923C' : '#FFFBEB'}
-          castShadow
-          shadow-mapSize={[2048, 2048]}
-          shadow-camera-left={-75}
-          shadow-camera-right={75}
-          shadow-camera-top={75}
-          shadow-camera-bottom={-75}
-          shadow-bias={-0.0005}
+        {mode === 'farm' && (
+          <div className="p-1.5 rounded-2xl bg-slate-950/94 border border-lime-400/40 backdrop-blur-md flex items-center gap-1 overflow-x-auto hide-scrollbar touch-pan-x shadow-2xl">
+            {CROP_CATALOG.map((item) => (
+              <button key={item.id} type="button" onClick={() => setSelectedCrop(item.id)} className={`px-3 py-1.5 rounded-xl text-[11px] font-bold whitespace-nowrap cursor-pointer border shrink-0 ${selectedCrop === item.id ? 'bg-lime-400 border-lime-200 text-stone-950 font-black' : 'bg-white/10 border-white/10 text-white'}`}>
+                {item.icon} {item.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {mode === 'animal' && (
+          <div className="p-1.5 rounded-2xl bg-slate-950/94 border border-amber-400/40 backdrop-blur-md flex items-center gap-1 overflow-x-auto hide-scrollbar touch-pan-x shadow-2xl">
+            {ANIMAL_CATALOG.map((item) => (
+              <button key={item.id} type="button" onClick={() => setSelectedAnimal(item.id)} className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold whitespace-nowrap cursor-pointer border shrink-0 ${selectedAnimal === item.id ? 'bg-amber-400 border-amber-200 text-stone-950 font-black' : 'bg-white/10 border-white/10 text-white'}`}>
+                {item.icon} {item.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {mode === 'npc' && (
+          <div className="p-1.5 rounded-2xl bg-slate-950/94 border border-amber-400/40 backdrop-blur-md flex items-center gap-1 overflow-x-auto hide-scrollbar touch-pan-x shadow-2xl">
+            {NPC_CATALOG.map((item) => (
+              <button key={item.id} type="button" onClick={() => setSelectedNpcType(item.id)} className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold whitespace-nowrap cursor-pointer border shrink-0 ${selectedNpcType === item.id ? 'bg-amber-500 border-amber-300 text-stone-950 font-black' : 'bg-white/10 border-white/10 text-white'}`}>
+                {item.icon} {item.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* 3. 360° 아날로그 조이스틱 & 점프 버튼 */}
+      {mode === 'walk' && (
+        <>
+          <AnalogJoystick joyVecRef={joyVecRef} />
+          <button type="button" onPointerDown={(e) => { e.stopPropagation(); jumpReqRef.current = true; }} className="absolute bottom-20 right-4 z-20 px-4 py-3 rounded-2xl bg-sky-500/90 border border-white/30 text-white font-black text-xs shadow-xl cursor-pointer active:scale-95">
+            ⬆️ 점프
+          </button>
+        </>
+      )}
+
+      {/* 4. 메인 3D 캔버스 */}
+      <Canvas
+        shadows
+        dpr={isMobile ? [1, 1.25] : [1, 1.75]}
+        gl={{ antialias: !isMobile, powerPreference: 'high-performance', toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: isNight ? 0.72 : 0.88 }}
+      >
+        <color attach="background" args={[bgHex]} />
+        <fog attach="fog" args={[bgHex, 28, 86]} />
+        {!isNight && <Sky sunPosition={timeOfDay === 'sunset' ? [-20, 4, 15] : [-15, 22, 18]} inclination={0.48} azimuth={0.25} />}
+
+        <PerspectiveCamera makeDefault position={[2, 4.9, 11.2]} fov={46} near={0.1} far={180} />
+        <CameraActionBridge controlsRef={controlsRef} playerPosRef={playerPosRef} playerRotRef={playerRotRef} camCommandRef={camCommandRef} />
+
+        <ambientLight intensity={isNight ? 0.26 : 0.62} color={isNight ? '#64748B' : '#F6F1E7'} />
+        <hemisphereLight args={[isNight ? '#1E293B' : '#CBD5E1', '#634C36', isNight ? 0.22 : 0.44]} />
+        <directionalLight position={[-14, 24, 16]} intensity={isNight ? 0.2 : 0.92} color={timeOfDay === 'sunset' ? '#F59E0B' : '#FFF4E0'} castShadow shadow-mapSize={isMobile ? [1024, 1024] : [2048, 2048]} shadow-camera-left={-26} shadow-camera-right={26} shadow-camera-top={26} shadow-camera-bottom={-26} shadow-bias={-0.0006} />
+
+        <AmbientWorldDetails biome={world.biome} isNight={isNight} toonMap={toonMap} />
+
+        <VoxelWorldMesh
+          blockMap={world.blocks}
+          mode={mode}
+          isInsideChapel={isInsideChapel}
+          selectedBlock={selectedBlock}
+          selectedProp={selectedProp}
+          selectedCrop={selectedCrop}
+          selectedAnimal={selectedAnimal}
+          selectedNpcType={selectedNpcType}
+          propRot={propRot}
+          onAddBlock={handleAddBlock}
+          onMineBlock={handleMineBlock}
+          onAddProp={handleAddProp}
+          onPlantCrop={handlePlantCrop}
+          onWaterSoil={handleWaterSoil}
+          onAddAnimal={handleAddAnimal}
+          onAddNpc={handleAddNpc}
+          onWalkTo={(x, z) => setWalkTarget([x, z])}
         />
 
-        <mesh
-          rotation={[-Math.PI / 2, 0, 0]}
-          position={[0, 0.01, 0]}
-          onClick={(e) => {
-            e.stopPropagation();
-            handleWalkTo(e.point.x, e.point.z);
-          }}
-        >
-          <planeGeometry args={[12.6, 9.4]} />
-          <meshBasicMaterial transparent opacity={0} />
-        </mesh>
+        {(world.props || []).map((p) => <WorldProp3D key={p.id} prop={p} propsList={world.props || []} mode={mode} isNight={isNight} toonMap={toonMap} onToggleDoor={handleToggleDoor} onRemoveProp={handleRemoveProp} />)}
+        {(world.crops || []).map((c) => <GrowingCrop3D key={c.id} crop={c} nowTs={nowTs} mode={mode} toonMap={toonMap} onWaterCrop={handleWaterCrop} onHarvest={handleHarvestCrop} onRemove={handleRemoveCrop} />)}
+        {(world.animals || []).map((a) => <RoamingAnimal3D key={a.id} animal={a} blockMap={world.blocks} mode={mode} toonMap={toonMap} onPet={handlePetAnimal} onRemove={handleRemoveAnimal} />)}
+        {(world.fish || []).map((f) => <SwimmingFish3D key={f.id} fish={f} toonMap={toonMap} />)}
+        {(world.chests || []).map((ch) => <TreasureChest3D key={ch.id} chest={ch} opened={Boolean(meta.openedChests[ch.id])} toonMap={toonMap} onOpen={handleOpenChest} />)}
+        {(world.npcs || []).map((n) => <AutonomousNpcAvatar key={n.id} npc={n} blockMap={world.blocks} mode={mode} isBandPlaying={isBandPlaying} toonMap={toonMap} onSelectNpc={setSelectedNpcDialog} onRemoveNpc={handleRemoveNpc} />)}
 
-        <SevenFloorCityRTMasterScene
-          activeZoneId={activeZone?.id}
-          onSelectZone={(z) => {
-            if (z.isPassageDoor) {
-              setIsPassageDoorForcedOpen(true);
-              handleWalkTo(-1.2, 0.5);
-            } else {
-              handleWalkTo(z.pos[0], z.pos[2]);
-              setModalZone(z);
-            }
-          }}
-          onSitOnBench={handleSitOnBench}
-          onToggleDroneView={handleToggleDroneCityView}
-          onSelectNpcForChat={handleSelectNpcForChat}
-          activeNpcChatIdx={activeNpcChatIdx}
-          showRoomSigns={showRoomSigns}
-          timeOfDay={timeOfDay}
-          playerIdxRef={playerIdxRef}
-          isElevatorModalOpen={Boolean(modalZone?.isElevator)}
-          isPassageDoorForcedOpen={isPassageDoorForcedOpen}
-          remotePeers={remotePeers}
-          onSelectRemotePeer={(peer) => setSelectedRemotePeer(peer)}
-          holyLightEvent={holyLightEvent}
-        />
-
-        <PlayerController7F
-          waypoints={waypoints}
-          playerIdxRef={playerIdxRef}
-          seatedInfo={seatedInfo}
+        <PlayerRig
+          blockMap={world.blocks}
+          propsList={world.props || []}
+          worldRadius={worldRadius}
+          walkTarget={walkTarget}
+          clearWalkTarget={() => setWalkTarget(null)}
+          joyVecRef={joyVecRef}
+          jumpReqRef={jumpReqRef}
+          playerPosRef={playerPosRef}
+          playerRotRef={playerRotRef}
           playerName={playerName}
-          playerOffice={playerOffice}
           avatarConfig={avatarConfig}
-          emote={emote}
-          myChatBubble={myChatBubble}
           controlsRef={controlsRef}
-          cameraViewMode={cameraViewMode}
-          onPositionUpdate={handlePositionUpdate}
+          soundMuted={soundMuted}
+          toonMap={toonMap}
+          onSwimChange={setIsSwimming}
+          onInsideChapelChange={setIsInsideChapel}
+          onSyncPos={handleSyncPos}
         />
 
-        <ContactShadows position={[0, 0.01, 0]} opacity={0.35} scale={16} blur={2.2} far={4} />
-        <OrbitControls
-          ref={controlsRef}
-          enableRotate={true}
-          enablePan={true}
-          enableZoom={true}
-          screenSpacePanning={true}
-          enableDamping={true}
-          dampingFactor={0.07}
-          minDistance={2.8}
-          maxDistance={105}
-          maxPolarAngle={Math.PI / 2.02}
-        />
+        {remotePeers.map((peer) => <ChibiAvatar key={peer.clientId} position={[peer.x || 0, peer.y || 0.5, peer.z || 0]} avatarConfig={peer.avatar || DEFAULT_AVATAR} toonMap={toonMap} />)}
+        <OrbitControls ref={controlsRef} target={[2, 1.4, 5]} enableRotate={true} enablePan={true} enableZoom={true} enableDamping={true} dampingFactor={0.08} minDistance={2.5} maxDistance={52} maxPolarAngle={Math.PI / 2.05} />
       </Canvas>
 
-      {/* 5. 다른 실제 접속 성도(Remote Peer) 클릭 시 열리는 상호 호환 모달 */}
-      {selectedRemotePeer && (
-        <div
-          className="fixed inset-0 z-50 bg-black/65 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in"
-          onClick={() => setSelectedRemotePeer(null)}
-        >
-          <div
-            style={{ backgroundColor: '#111827', color: '#FFFFFF' }}
-            className="w-full max-w-sm border border-emerald-500/40 rounded-3xl p-5 shadow-2xl space-y-3.5 text-left"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between border-b border-white/10 pb-3">
-              <div>
-                <span className="text-[10px] font-bold text-emerald-400 block">7층 하늘정원 성도 교제</span>
-                <h3 className="text-base font-black text-white">
-                  {selectedRemotePeer.name} ({selectedRemotePeer.office || '성도'})
-                </h3>
+      {/* 5~9. 제작대 · 퀘스트 · 바이옴 · NPC · 층 이동 모달 */}
+      {showCraftModal && (
+        <div className="fixed inset-0 z-50 bg-black/65 backdrop-blur-xs flex items-center justify-center p-4" onClick={() => setShowCraftModal(false)}>
+          <div className="w-full max-w-md bg-[#111827] border border-amber-400/40 text-white rounded-3xl p-5 space-y-3 shadow-2xl max-h-[84vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
+              <div><span className="text-[10.5px] font-bold text-amber-400 block">좋은나무 빌리지 제작대</span><h3 className="text-base font-black">🔨 재료 조합 & 아이템 제작</h3></div>
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={() => setCreativeMode((v) => !v)} className="px-2 py-1 rounded-lg bg-white/10 text-[10.5px] font-bold text-emerald-300 cursor-pointer">{creativeMode ? '자유모드 ON' : '채집모드 ON'}</button>
+                <button type="button" onClick={() => setShowCraftModal(false)} className="text-xs text-zinc-400 cursor-pointer">✕</button>
               </div>
-              <button onClick={() => setSelectedRemotePeer(null)} className="text-xs font-bold text-zinc-400 cursor-pointer">
-                ✕ 닫기
-              </button>
             </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={() => {
-                  triggerSocialAction('wave', `${selectedRemotePeer.name}님 반갑습니다! 하늘정원 전망이 정말 멋지네요 👋🌿`);
-                  setSelectedRemotePeer(null);
-                }}
-                className="p-2.5 rounded-xl bg-white/10 hover:bg-emerald-600/40 text-xs font-bold text-white cursor-pointer"
-              >
-                👋 반갑게 인사하기
-              </button>
-              <button
-                onClick={() => {
-                  triggerSocialAction('pray', `${selectedRemotePeer.name}님과 함께 김포 한강신도시 복음화를 위해 기도합니다 🙏`);
-                  setSelectedRemotePeer(null);
-                }}
-                className="p-2.5 rounded-xl bg-white/10 hover:bg-indigo-600/40 text-xs font-bold text-white cursor-pointer"
-              >
-                🙏 함께 중보기도
-              </button>
-              <button
-                onClick={() => {
-                  triggerSocialAction('praise', `${selectedRemotePeer.name}님과 함께 할렐루야 주님을 찬양합니다 🙌✨`);
-                  setSelectedRemotePeer(null);
-                }}
-                className="p-2.5 rounded-xl bg-white/10 hover:bg-amber-600/40 text-xs font-bold text-white cursor-pointer"
-              >
-                🙌 함께 찬양만세
-              </button>
-              <button
-                onClick={() => {
-                  triggerSocialAction('dance', `${selectedRemotePeer.name}님과 함께 루프탑에서 기쁨의 워십댄스! 💃🎶`);
-                  setSelectedRemotePeer(null);
-                }}
-                className="p-2.5 rounded-xl bg-white/10 hover:bg-pink-600/40 text-xs font-bold text-white cursor-pointer"
-              >
-                💃 함께 춤추기
-              </button>
+            <div className="flex flex-wrap gap-1.5 p-2.5 rounded-2xl bg-white/5 border border-white/10">
+              {Object.entries(MATERIAL_META).map(([k, m]) => (
+                <span key={k} className="px-2 py-1 rounded-lg bg-slate-900 text-[11px] font-bold">{m.icon} {m.label} <b className="text-amber-300">{meta.materials[k] || 0}</b></span>
+              ))}
             </div>
-
-            {canPlayerBless && (
-              <button
-                onClick={() => {
-                  triggerHolyBenediction7F(
-                    `${playerName} 목사님`,
-                    selectedRemotePeer.name,
-                    [selectedRemotePeer.x || 0, 0, selectedRemotePeer.z || 0]
-                  );
-                  setSelectedRemotePeer(null);
-                }}
-                style={{ backgroundColor: '#F59E0B', color: '#030712' }}
-                className="w-full py-3 rounded-2xl font-black text-xs cursor-pointer shadow-lg"
-              >
-                ✨ [{selectedRemotePeer.name}] 성도에게 축도(홀리라이트) 내리기
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* 6. 목사님 & 성도 NPC 1:1 대화 및 축도 모달 */}
-      {selectedChatNpc && (
-        <div
-          className="fixed inset-0 z-50 bg-black/65 backdrop-blur-xs flex items-end sm:items-center justify-center p-3 sm:p-4 animate-fade-in"
-          onClick={() => setSelectedChatNpc(null)}
-        >
-          <div
-            style={{ backgroundColor: '#111827', color: '#FFFFFF' }}
-            className="w-full max-w-md border border-emerald-500/40 rounded-3xl p-5 shadow-2xl space-y-3.5 text-left"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between border-b border-white/10 pb-3">
-              <div className="flex items-center gap-2.5">
-                <div
-                  style={{ backgroundColor: selectedChatNpc.shirt || '#10B981' }}
-                  className="w-9 h-9 rounded-2xl flex items-center justify-center text-base font-black text-white shadow-md"
-                >
-                  {selectedChatNpc.name.slice(0, 1)}
-                </div>
-                <div>
-                  <span style={{ color: '#34D399' }} className="text-[10.5px] font-bold block">
-                    {selectedChatNpc.role || '7층 루프탑 하늘정원'}
-                  </span>
-                  <h3 style={{ color: '#FFFFFF' }} className="text-sm sm:text-base font-black">
-                    {selectedChatNpc.name}
-                  </h3>
-                </div>
-              </div>
-              <button
-                onClick={() => setSelectedChatNpc(null)}
-                style={{ color: '#9CA3AF' }}
-                className="text-xs font-bold cursor-pointer px-2 py-1"
-              >
-                ✕ 닫기
-              </button>
-            </div>
-
-            <div
-              style={{ backgroundColor: 'rgba(16, 185, 129, 0.12)', borderColor: 'rgba(16, 185, 129, 0.35)' }}
-              className="p-3.5 rounded-2xl border text-xs sm:text-[13px] leading-relaxed font-medium text-emerald-100"
-            >
-              "{chatReplyText}"
-            </div>
-
-            {selectedChatNpc.canBless && (
-              <button
-                onClick={() => {
-                  const pastorName = selectedChatNpc.name;
-                  setSelectedChatNpc(null);
-                  triggerHolyBenediction7F(pastorName, playerName, playerIdxRef.current);
-                }}
-                style={{ backgroundColor: '#F59E0B', color: '#030712' }}
-                className="w-full py-3 rounded-2xl font-black text-xs cursor-pointer shadow-lg animate-pulse"
-              >
-                ✨ [{selectedChatNpc.name}]께 하늘정원 축도(홀리라이트) 받기 🙏
-              </button>
-            )}
-
-            <div className="pt-2 border-t border-white/10 flex flex-wrap gap-1.5">
-              <button
-                onClick={() => {
-                  setSelectedChatNpc(null);
-                  handleToggleDroneCityView();
-                }}
-                style={{ backgroundColor: '#0284C7', color: '#FFFFFF' }}
-                className="flex-1 py-2.5 px-3 rounded-xl font-black text-xs cursor-pointer"
-              >
-                🦅 마스터플랜 드론 조감도로 보기
-              </button>
-              <button
-                onClick={() => {
-                  handleSitOnBench({ x: -1.4, z: -1.65, rotY: 0, rowLabel: '7F 하늘정원 파고라 벤치석' });
-                  setSelectedChatNpc(null);
-                }}
-                style={{ backgroundColor: '#10B981', color: '#030712' }}
-                className="flex-1 py-2.5 px-3 rounded-xl font-black text-xs cursor-pointer"
-              >
-                🌿 파고라 벤치에 앉기
-              </button>
+            <div className="space-y-1.5 overflow-y-auto pr-1 flex-1 hide-scrollbar">
+              {PROP_CATALOG.map((item) => {
+                const entries = Object.entries(item.recipe || {});
+                const ok = entries.every(([m, n]) => (meta.materials[m] || 0) >= n);
+                return (
+                  <div key={item.id} className="p-2.5 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between gap-2">
+                    <div>
+                      <div className="text-xs font-black">{item.icon} {item.label} <span className="text-emerald-400 text-[10.5px]">(보유 {meta.props[item.id] || 0})</span></div>
+                      <div className="text-[10.5px] text-zinc-400">{entries.map(([m, n]) => `${MATERIAL_META[m]?.icon || ''}${MATERIAL_META[m]?.label || m}×${n}`).join(' + ')}</div>
+                    </div>
+                    <button type="button" onClick={() => handleCraftItem(item)} disabled={!ok} className={`px-3 py-1.5 rounded-xl text-[11px] font-black cursor-pointer ${ok ? 'bg-amber-500 text-stone-950' : 'bg-white/10 text-zinc-500'}`}>제작</button>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
       )}
 
-      {/* 7. 구역 상세 안내 & 전 층(1F~7F) 이동 엘리베이터 모달 */}
-      {modalZone && (
-        <div
-          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4"
-          onClick={() => setModalZone(null)}
-        >
-          <div
-            style={{ backgroundColor: '#111827', color: '#FFFFFF' }}
-            className="w-full max-w-md border border-white/20 rounded-3xl p-5 shadow-2xl space-y-4 text-left"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between border-b border-white/10 pb-3">
-              <span style={{ backgroundColor: '#10B981', color: '#030712' }} className="px-2.5 py-1 rounded-full font-black text-xs">
-                {modalZone.badge}
-              </span>
-              <button onClick={() => setModalZone(null)} style={{ color: '#9CA3AF' }} className="text-xs font-bold cursor-pointer">
-                ✕ 닫기
-              </button>
+      {showQuestModal && (
+        <div className="fixed inset-0 z-50 bg-black/65 backdrop-blur-xs flex items-center justify-center p-4" onClick={() => setShowQuestModal(false)}>
+          <div className="w-full max-w-md bg-[#111827] border border-amber-400/40 text-white rounded-3xl p-5 space-y-3 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
+              <div><span className="text-[10.5px] font-bold text-amber-400 block">좋은나무 빌리지 성장</span><h3 className="text-base font-black">마을 Lv.{villageLevel} · ❤️ {meta.hearts}</h3></div>
+              <button type="button" onClick={() => setShowQuestModal(false)} className="text-xs text-zinc-400 cursor-pointer">✕ 닫기</button>
             </div>
+            <div className="space-y-2">
+              {VILLAGE_QUESTS.map((q) => {
+                const done = Boolean(meta.quests[q.id]);
+                return (
+                  <div key={q.id} className={`p-3 rounded-2xl border flex items-center justify-between gap-2 ${done ? 'bg-emerald-950/50 border-emerald-500/40' : 'bg-white/5 border-white/10'}`}>
+                    <div><div className={`text-xs font-bold ${done ? 'text-emerald-300 line-through' : 'text-white'}`}>{q.title}</div><div className="text-[11px] text-zinc-400">{q.desc}</div></div>
+                    <span className={`px-2.5 py-1 rounded-xl text-[11px] font-black shrink-0 ${done ? 'bg-emerald-500 text-stone-950' : 'bg-amber-500/20 text-amber-300'}`}>{done ? '완료 ✓' : `❤️+${q.reward}`}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
-            <h3 style={{ color: '#FFFFFF' }} className="text-base sm:text-lg font-black">{modalZone.title}</h3>
-            <p style={{ color: '#D1D5DB' }} className="text-xs leading-relaxed break-keep">{modalZone.desc}</p>
+      {showBiomeModal && (
+        <div className="fixed inset-0 z-50 bg-black/65 backdrop-blur-xs flex items-center justify-center p-4" onClick={() => setShowBiomeModal(false)}>
+          <div className="w-full max-w-sm bg-[#111827] border border-emerald-400/40 text-white rounded-3xl p-5 space-y-3 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
+              <span className="text-sm font-black">🌍 바이옴 탐험</span>
+              <button type="button" onClick={() => setShowBiomeModal(false)} className="text-xs text-zinc-400 cursor-pointer">✕ 닫기</button>
+            </div>
+            {[
+              { id: 'meadow', label: '🌿 초원 고원 & 비밀 동굴 마을', desc: '동굴 터널 · 지하 광맥 · 물레방아 · 7종 동물' },
+              { id: 'desert', label: '🏜️ 사막 오아시스 마을', desc: '사막여우 · 황금 모래언덕 · 지하 광맥' },
+              { id: 'snow', label: '❄️ 설원 얼음호수 마을', desc: '펭귄 · 북극곰 · 하얀 설원 예배당' }
+            ].map((b) => (
+              <button key={b.id} type="button" onClick={() => handleSwitchBiome(b.id)} className={`w-full p-3 rounded-2xl border text-left cursor-pointer ${world.biome === b.id ? 'bg-emerald-500/20 border-emerald-400' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}>
+                <div className="text-xs font-black">{b.label}</div>
+                <div className="text-[11px] text-zinc-400">{b.desc}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
-            {modalZone.isElevator && onChangeFloor && (
-              <div className="space-y-1.5 pt-1">
-                <span style={{ color: '#34D399' }} className="text-xs font-bold block">🛗 스테인리스 자동문이 열렸습니다. 이동하실 층을 선택하세요:</span>
-                {[
-                  { fl: '1F', label: '1F 메인 로비 & 필로티 주차장' },
-                  { fl: '2F', label: '2F 좋은나무 북카페 · 담임목사 목양실 · 사무실' },
-                  { fl: '3F', label: '3F 대예배당 (본당)' },
-                  { fl: '4F', label: '4F 영유아 예배실 (온돌 마루 자모실)' },
-                  { fl: '5F', label: '5F 소예배·찬양홀 · 조리실 · 댄스실' },
-                  { fl: '6F', label: '6F 다음세대 교육관 · 새가족반' },
-                  { fl: '7F', label: '7F 루프탑 하늘정원 · 도시 전망대 (현재 층)' }
-                ].map((item) => (
-                  <button
-                    key={item.fl}
-                    onClick={() => {
-                      setModalZone(null);
-                      onChangeFloor(item.fl);
-                    }}
-                    style={{ backgroundColor: 'rgba(255,255,255,0.1)', color: '#FFFFFF' }}
-                    className="w-full p-3 rounded-xl hover:bg-emerald-600 text-left text-xs font-black flex justify-between cursor-pointer transition-colors"
-                  >
-                    <span>{item.label}</span>
-                    <span>탑승 이동 ➔</span>
-                  </button>
-                ))}
-              </div>
-            )}
+      {selectedNpcDialog && (
+        <div className="fixed inset-0 z-50 bg-black/55 backdrop-blur-xs flex items-end sm:items-center justify-center p-4" onClick={() => setSelectedNpcDialog(null)}>
+          <div className="w-full max-w-sm bg-[#111827] border border-amber-400/40 text-white rounded-3xl p-5 space-y-3 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
+              <div><span className="text-[10.5px] font-bold text-amber-400 block">{selectedNpcDialog.role}</span><h3 className="text-base font-black">{selectedNpcDialog.icon} {selectedNpcDialog.label}</h3></div>
+              <button type="button" onClick={() => setSelectedNpcDialog(null)} className="text-xs text-zinc-400 cursor-pointer">✕ 닫기</button>
+            </div>
+            <p className="p-3 rounded-2xl bg-amber-500/10 border border-amber-400/30 text-xs leading-relaxed text-amber-100">"{selectedNpcDialog.msg}"</p>
+          </div>
+        </div>
+      )}
+
+      {showFloorModal && onChangeFloor && (
+        <div className="fixed inset-0 z-50 bg-black/65 backdrop-blur-xs flex items-center justify-center p-4" onClick={() => setShowFloorModal(false)}>
+          <div className="w-full max-w-xs bg-[#111827] border border-white/20 text-white rounded-3xl p-5 space-y-2 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between pb-2 border-b border-white/10">
+              <span className="text-sm font-black">좋은나무교회 층 이동</span>
+              <button type="button" onClick={() => setShowFloorModal(false)} className="text-xs text-zinc-400 cursor-pointer">✕ 닫기</button>
+            </div>
+            {[
+              { fl: '1F', label: '1F 메인 로비' }, { fl: '2F', label: '2F 북카페 · 목양실 · 사무실' },
+              { fl: '3F', label: '3F 대예배당 본당' }, { fl: '4F', label: '4F 영유아 예배실' },
+              { fl: '5F', label: '5F 소예배 · 찬양홀' }, { fl: '6F', label: '6F 다음세대 교육관' },
+              { fl: '7F', label: '7F 좋은나무 빌리지 (현재)' }
+            ].map((item) => (
+              <button key={item.fl} type="button" onClick={() => { setShowFloorModal(false); onChangeFloor(item.fl); }} className="w-full p-2.5 rounded-xl bg-white/10 hover:bg-emerald-600 text-left text-xs font-black flex justify-between cursor-pointer">
+                <span>{item.label}</span><span>이동 ➔</span>
+              </button>
+            ))}
           </div>
         </div>
       )}
