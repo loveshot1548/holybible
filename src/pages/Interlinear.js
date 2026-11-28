@@ -1,5 +1,5 @@
 // src/pages/Interlinear.js
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
@@ -19,6 +19,7 @@ import { tokenizeGrammarCode } from '../lib/biblicalGrammarWiki';
 import GrammarWikiModal from '../lib/GrammarWikiModal';
 import { supabase } from '../lib/supabase';
 import { ensureKrv4TxtLoaded, splitPericopeAndVerse } from '../pages/Bible';
+import fallbackBibleJson from '../ko_ko.json';
 
 // =====================================================================
 // 성경 66권 정경 마스터 데이터 (구약 39권 / 신약 27권, 1,189장)
@@ -89,7 +90,7 @@ export const BIBLE_66_BOOKS = [
   { ko: '요한이서', en: '2 John', abbr: '요이', isOT: false, maxChap: 1, section: '서신서', era: 'A.D. 85-95년경 (진리 안의 사랑)', empire: '로마 제국' },
   { ko: '요한삼서', en: '3 John', abbr: '요삼', isOT: false, maxChap: 1, section: '서신서', era: 'A.D. 85-95년경 (진리를 영접하는 환대)', empire: '로마 제국' },
   { ko: '유다서', en: 'Jude', abbr: '유', isOT: false, maxChap: 1, section: '서신서', era: 'A.D. 65-80년경 (믿음의 도를 위한 싸움)', empire: '로마 제국' },
-  { ko: '요한계시록', en: 'Revelation', abbr: '계', isOT: false, maxChap: 22, section: '서신서', era: 'A.D. 95년경 (어린양의 최종 승리)', empire: '로마 제국' }
+  { ko: '요한계시록', en: 'Revelation', abbr: '계', isOT: false, maxChap: 22, section: '예언서', era: 'A.D. 95년경 (어린양의 최종 승리)', empire: '로마 제국' }
 ];
 
 export const BOOK_SECTION_LOOKUP = {};
@@ -280,7 +281,6 @@ export const decodeExhaustiveMorphology = (rawCode) => {
   }
   const code = rawCode.trim();
 
-  // 1. 헬라어 Robinson 형태론 코드 (예: V-AAI-3S, N-GSM, T-NSM, PREP, CONJ)
   if (code.includes('-') || ['CONJ', 'PREP', 'ADV', 'PRT', 'INJ', 'COND'].includes(code)) {
     const simpleMap = {
       CONJ: '접속사',
@@ -348,7 +348,6 @@ export const decodeExhaustiveMorphology = (rawCode) => {
     }
   }
 
-  // 2. 히브리어 ETCBC 점(.) 표기 형태론 (예: verb.qal.perf.p3.m.sg, subs.m.sg.c)
   if (code.includes('.')) {
     const parts = code.split('.');
     const mainType = parts[0];
@@ -383,7 +382,6 @@ export const decodeExhaustiveMorphology = (rawCode) => {
     }
   }
 
-  // 3. 히브리어 OSHM 코드 지원 (예: HVqp3ms, HNcmsa)
   if (/^H[A-Z]/.test(code)) {
     const core = code.split('/').pop().replace(/^H/, '');
     if (core.startsWith('V')) {
@@ -465,7 +463,7 @@ export const getTheologicalGrammarInsight = (grammarRaw, isOT) => {
   return null;
 };
 
-export const applyContextualCaseEnding = (baseKor, caseType, isOT, rawGrammar) => {
+export const applyContextualCaseEnding = (baseKor, caseType, isOT) => {
   if (!baseKor || baseKor === '원어 어휘') return baseKor;
   const word = baseKor.trim();
 
@@ -489,7 +487,6 @@ export const parseUnabridgedAcademicLexicon = (rawDesc, masterEntry, isOT) => {
   const etymMatch = desc.match(/\[어원 및 파생\]\s*([^\[]+)/);
   const meaningMatch = desc.match(/\[원어 의미\]\s*([^\[]+)/);
   const usageMatch = desc.match(/\[주요 번역\]\s*([^\[]+)/);
-
   const rootFromMaster = masterEntry?.root || masterEntry?.original || '';
 
   return {
@@ -529,8 +526,6 @@ export const renderParagraphBlocks = (rawContent, textColorClass = '') => {
     </p>
   ));
 };
-// ==================== PART 1 끝 (아래에 PART 2 이어붙이기) ====================
-// ==================== PART 2 시작 ====================
 
 export default function Interlinear({
   isDarkMode,
@@ -540,7 +535,6 @@ export default function Interlinear({
   bibles,
   getArr
 }) {
-  // iOS 야간 다크모드 자동 감지 + 앱 테마 100% 호환
   const [systemDark, setSystemDark] = useState(() => {
     if (typeof window === 'undefined' || !window.matchMedia) return false;
     return window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -717,26 +711,81 @@ export default function Interlinear({
   const [currentTargumPeshitta, setCurrentTargumPeshitta] = useState(null);
   const [currentHebrewSyntax, setCurrentHebrewSyntax] = useState(null);
 
-  // 7. 현재 도서 메타데이터 & 개역개정 4판 본문
+  // 7. 현재 도서 메타데이터 & 개역개정 4판 본문 (66권 전체 키 정규화 + 장/절 수 100% 보정)
   const currentBookMeta = BIBLE_66_BOOKS[selectedBookIndex] || BIBLE_66_BOOKS[0];
   const isOT = currentBookMeta.isOT;
 
+  const bookMatchKeys = useMemo(() => {
+    const en = currentBookMeta.en || '';
+    const noSpace = en.replace(/\s+/g, '');
+    const roman = en
+      .replace(/^1\s+/, 'I ')
+      .replace(/^2\s+/, 'II ')
+      .replace(/^3\s+/, 'III ');
+    const aliases = [currentBookMeta.ko, en, noSpace, roman, currentBookMeta.abbr];
+    if (en === 'Psalms') aliases.push('Psalm');
+    if (en === 'Song of Solomon') aliases.push('Song of Songs', 'Song');
+    if (currentBookMeta.ko === '예레미야애가') aliases.push('애가');
+    return aliases.map((k) => String(k || '').trim().toLowerCase()).filter(Boolean);
+  }, [currentBookMeta]);
+
   const safeGetArr = getArr || ((a) => (Array.isArray(a) ? a : []));
   const currentBookData = useMemo(() => {
-    const list = safeGetArr(bibles);
-    return list.find((b) => b?.name === currentBookMeta.en || b?.name === currentBookMeta.ko) || {};
-  }, [bibles, currentBookMeta, safeGetArr]);
+    const propList = safeGetArr(bibles);
+    const sourceList = propList.length > 0 ? propList : (Array.isArray(fallbackBibleJson) ? fallbackBibleJson : []);
+    return (
+      sourceList.find((b) => {
+        const nm = String(b?.name || '').trim().toLowerCase();
+        const ab = String(b?.abbrev || '').trim().toLowerCase();
+        return bookMatchKeys.includes(nm) || bookMatchKeys.includes(ab);
+      }) ||
+      sourceList[selectedBookIndex] ||
+      {}
+    );
+  }, [bibles, bookMatchKeys, selectedBookIndex, safeGetArr]);
 
   const krv4CurrentBookChaps = useMemo(() => {
-    return krv4TxtDb?.[currentBookMeta.en] || krv4TxtDb?.[currentBookMeta.ko] || null;
-  }, [krv4TxtDb, currentBookMeta]);
+    if (!krv4TxtDb || typeof krv4TxtDb !== 'object') return null;
+    for (const k of [currentBookMeta.en, currentBookMeta.ko, currentBookMeta.en.replace(/\s+/g, ''), currentBookMeta.abbr]) {
+      if (krv4TxtDb[k]) return krv4TxtDb[k];
+    }
+    const foundKey = Object.keys(krv4TxtDb).find((k) => bookMatchKeys.includes(k.trim().toLowerCase()));
+    return foundKey ? krv4TxtDb[foundKey] : null;
+  }, [krv4TxtDb, currentBookMeta, bookMatchKeys]);
 
-  const chaptersCount = krv4CurrentBookChaps?.length || currentBookData?.chapters?.length || currentBookMeta.maxChap;
+  const chaptersCount = currentBookMeta.maxChap;
+
   const versesCount = useMemo(() => {
     const krv4Chap = krv4CurrentBookChaps?.[chapter - 1];
-    if (Array.isArray(krv4Chap) && krv4Chap.length > 0) return krv4Chap.filter(Boolean).length;
-    return currentBookData?.chapters?.[chapter - 1]?.length || 35;
-  }, [krv4CurrentBookChaps, chapter, currentBookData]);
+    const krv4Len = Array.isArray(krv4Chap) ? krv4Chap.length : 0;
+    const jsonLen = Array.isArray(currentBookData?.chapters?.[chapter - 1])
+      ? currentBookData.chapters[chapter - 1].length
+      : 0;
+
+    let maxFromDict = 0;
+    const prefixKo = `${currentBookMeta.ko}-${chapter}-`;
+    const prefixEn = `${currentBookMeta.en}-${chapter}-`;
+    [easyBibleDb, webBibleDb].forEach((db) => {
+      if (!db) return;
+      Object.keys(db).forEach((k) => {
+        if (k.startsWith(prefixKo) || k.startsWith(prefixEn)) {
+          const vNum = parseInt(k.split('-').pop(), 10);
+          if (!Number.isNaN(vNum) && vNum > maxFromDict) maxFromDict = vNum;
+        }
+      });
+    });
+
+    const resolved = Math.max(krv4Len, jsonLen, maxFromDict);
+    return resolved >= 2 ? resolved : 30;
+  }, [krv4CurrentBookChaps, currentBookData, chapter, currentBookMeta, easyBibleDb, webBibleDb]);
+
+  useEffect(() => {
+    if (chapter > chaptersCount) setChapter(1);
+  }, [chapter, chaptersCount]);
+
+  useEffect(() => {
+    if (verse > versesCount) setVerse(1);
+  }, [verse, versesCount]);
 
   const getKrvVerseObjByNum = useCallback(
     (vNum) => {
@@ -1120,7 +1169,6 @@ export default function Interlinear({
           return;
         }
 
-        // 모든 후보 Strong's ID(0-패딩 포함)로 사전 조회 정확도 100% 확보
         const allCandidates = Array.from(
           new Set(wordsData.flatMap((w) => getStrongsCandidates(w.strongs_id)))
         );
@@ -1141,6 +1189,11 @@ export default function Interlinear({
 
         if (!isMounted) return;
 
+        let savedCustomNotes = {};
+        try {
+          savedCustomNotes = JSON.parse(localStorage.getItem('custom_lexicon_notes') || '{}');
+        } catch (_) {}
+
         const enrichedWords = wordsData.map((w) => {
           const sId = (w.strongs_id || '').trim().toUpperCase();
           const masterEntry = lookupStrongsMaster(cachedMasterStrongs, sId);
@@ -1159,12 +1212,12 @@ export default function Interlinear({
             else lemmaMeaning = '원어 어휘';
           }
 
-          const contextualKorean = applyContextualCaseEnding(lemmaMeaning, morphInfo.caseType, isOT, w.grammar);
+          const contextualKorean = applyContextualCaseEnding(lemmaMeaning, morphInfo.caseType, isOT);
           const finalPron = masterEntry.pron || (w.pronunciation ? `[${w.pronunciation.replace(/[[\]]/g, '')}]` : '');
           const cleanEng = (masterEntry.eng || w.gloss || w.korean_trans || 'n/a').replace(/[[\]]/g, '').toLowerCase();
           const rawDescriptionText = dbDict.description || masterEntry.desc || w.dictionary_info || '';
           const unabridgedLexicon = parseUnabridgedAcademicLexicon(rawDescriptionText, masterEntry, isOT);
-          const userCustomNote = customNotesMap[sId] || null;
+          const userCustomNote = savedCustomNotes[sId] || null;
 
           return {
             id: w.id || w.word_order,
@@ -1210,7 +1263,7 @@ export default function Interlinear({
     return () => {
       isMounted = false;
     };
-  }, [currentBookMeta, chapter, verse, isOT, dictLoaded, customNotesMap]);
+  }, [currentBookMeta, chapter, verse, isOT, dictLoaded]);
 
   const handleSelectWord = useCallback(
     async (word, openModalImmediately = true) => {
@@ -1297,6 +1350,13 @@ export default function Interlinear({
     };
     setCustomNotesMap(updatedMap);
     localStorage.setItem('custom_lexicon_notes', JSON.stringify(updatedMap));
+    setWords((prev) =>
+      prev.map((w) =>
+        w.strongs === sId
+          ? { ...w, korContextual: customInputTrans.trim() || w.korContextual, userCustomNote: updatedMap[sId] }
+          : w
+      )
+    );
     showToast(`${selectedWordDetail.lemma} (${sId}) 연구 메모가 저장되었습니다.`);
   }, [selectedWordDetail, customNotesMap, customInputTrans, customInputMemo, currentBookMeta.ko, chapter, verse, showToast]);
 
@@ -1343,9 +1403,6 @@ export default function Interlinear({
     [showToast]
   );
 
-  // =====================================================================
-  // 다크/라이트 100% 호환 컴팩트 스타일 토큰 (AI스러움 배제)
-  // =====================================================================
   const pageBg = isDark ? 'bg-[#0F1115]' : 'bg-[#F5F6F8]';
   const surfaceBg = isDark ? 'bg-[#171A21]' : 'bg-white';
   const subBg = isDark ? 'bg-[#20242E]' : 'bg-[#F1F3F6]';
@@ -1362,7 +1419,6 @@ export default function Interlinear({
       style={{ colorScheme: isDark ? 'dark' : 'light' }}
       className={`flex-1 flex flex-col w-full max-w-full h-full ${pageBg} ${textMain} relative overflow-hidden font-sans select-none`}
     >
-      {/* 토스트 알림 */}
       {toastMsg && (
         <div className="fixed top-14 left-1/2 -translate-x-1/2 z-[9999999] bg-[#191F28] text-white text-[12.5px] font-bold px-4 py-2 rounded-xl shadow-lg flex items-center gap-1.5 whitespace-nowrap">
           <Check className="w-4 h-4 text-[#34D399]" />
@@ -1420,7 +1476,7 @@ export default function Interlinear({
           <button
             type="button"
             onClick={handleCopyComprehensiveReport}
-            className={`h-8 px-2.5 rounded-lg text-[11.5px] font-bold bg-[#2563EB] text-white flex items-center gap-1 cursor-pointer`}
+            className="h-8 px-2.5 rounded-lg text-[11.5px] font-bold bg-[#2563EB] text-white flex items-center gap-1 cursor-pointer"
           >
             <Copy className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">리포트</span>
@@ -1428,7 +1484,7 @@ export default function Interlinear({
         </div>
       </header>
 
-      {/* 2. 컴팩트 권/장/절 네비게이션 바 (항상 상단 고정) */}
+      {/* 2. 컴팩트 권/장/절 네비게이션 바 */}
       <div className={`w-full px-3 sm:px-5 py-2 border-b ${borderClass} ${surfaceBg} shrink-0 z-20`}>
         <div className="max-w-[1380px] mx-auto flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 flex-1 min-w-0 max-w-[540px]">
@@ -1502,12 +1558,11 @@ export default function Interlinear({
         </div>
       </div>
 
-      {/* 3. 메인 능동형 워크스페이스 (PC/태블릿 2단 와이드 · 모바일 1단 콤팩트) */}
+      {/* 3. 메인 능동형 워크스페이스 */}
       <main className="flex-1 overflow-y-auto overflow-x-hidden px-2.5 sm:px-5 pt-2.5 pb-[calc(5.5rem+env(safe-area-inset-bottom))] hide-scrollbar">
         <div className="max-w-[1380px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-3 items-start">
           {/* 좌측 7컬럼: 본문 대조 + 원어 뷰어 + 1:1 어절 형태론 분해 */}
           <div className="lg:col-span-7 space-y-2.5 min-w-0">
-            {/* A. 다중 역본 & 오디오 & 3중 교차 매칭 카드 */}
             <section className={`${surfaceBg} rounded-xl border ${borderClass} p-3 space-y-2.5`}>
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <div className="flex items-center gap-2 min-w-0">
@@ -1896,7 +1951,7 @@ export default function Interlinear({
             )}
           </div>
 
-          {/* 우측 5컬럼: 10대 학술 연구 코퍼스 (PC 고정 사이드 패널 / 모바일 하단 스택) */}
+          {/* 우측 5컬럼: 10대 학술 연구 코퍼스 */}
           <aside className={`lg:col-span-5 ${surfaceBg} rounded-xl border ${borderClass} p-3 space-y-2.5 lg:sticky lg:top-2.5`}>
             <div className={`flex items-center justify-between gap-2 pb-2 border-b ${borderClass}`}>
               <div className="flex items-center gap-1.5">
@@ -1925,7 +1980,6 @@ export default function Interlinear({
               </div>
             </div>
 
-            {/* 빠른 이동 칩 */}
             <div className="flex items-center gap-1 overflow-x-auto hide-scrollbar">
               {[
                 { key: 'tsk', label: `TSK (${crossRefs.length})`, show: crossRefs.length > 0 },
@@ -1953,7 +2007,6 @@ export default function Interlinear({
             </div>
 
             <div className="space-y-2">
-              {/* 1. TSK 상호교차참조 */}
               <div id="panel-tsk" className={`rounded-xl border ${borderClass} overflow-hidden`}>
                 <button
                   type="button"
@@ -1985,7 +2038,6 @@ export default function Interlinear({
                 )}
               </div>
 
-              {/* 2. BHS 히브리어 구문론 */}
               {currentHebrewSyntax && (
                 <div id="panel-hebrewSyntax" className={`rounded-xl border ${borderClass} overflow-hidden`}>
                   <button
@@ -2017,7 +2069,6 @@ export default function Interlinear({
                 </div>
               )}
 
-              {/* 3. 70인역(LXX) */}
               {currentLxxParallel && (
                 <div id="panel-lxx" className={`rounded-xl border ${borderClass} overflow-hidden`}>
                   <button
@@ -2040,7 +2091,6 @@ export default function Interlinear({
                 </div>
               )}
 
-              {/* 4. 타르굼 & 페시타 */}
               {currentTargumPeshitta && (
                 <div id="panel-targumPeshitta" className={`rounded-xl border ${borderClass} overflow-hidden`}>
                   <button
@@ -2070,7 +2120,6 @@ export default function Interlinear({
                 </div>
               )}
 
-              {/* 5. 요세푸스 사료 */}
               {currentJosephus && (
                 <div id="panel-josephus" className={`rounded-xl border ${borderClass} overflow-hidden`}>
                   <button
@@ -2090,7 +2139,6 @@ export default function Interlinear({
                 </div>
               )}
 
-              {/* 6. 성경 역사 지리학 */}
               {currentGeoData && (
                 <div id="panel-geo" className={`rounded-xl border ${borderClass} overflow-hidden`}>
                   <div className={`px-3 py-2 flex items-center justify-between text-[12.5px] font-bold ${subBg}`}>
@@ -2119,7 +2167,6 @@ export default function Interlinear({
                 </div>
               )}
 
-              {/* 7. 학술 강해 주석 */}
               {currentCommentary && (
                 <div id="panel-commentary" className={`rounded-xl border ${borderClass} overflow-hidden`}>
                   <div className={`px-3 py-2 flex items-center justify-between gap-2 text-[12.5px] font-bold ${subBg}`}>
@@ -2151,7 +2198,6 @@ export default function Interlinear({
                 </div>
               )}
 
-              {/* 8. 매튜 헨리 묵상 강해 */}
               {currentMatthewHenry && (
                 <div id="panel-matthewHenry" className={`rounded-xl border ${borderClass} overflow-hidden`}>
                   <div className={`px-3 py-2 flex items-center justify-between gap-2 text-[12.5px] font-bold ${subBg}`}>
@@ -2183,7 +2229,6 @@ export default function Interlinear({
                 </div>
               )}
 
-              {/* 9. NET Bible 본문 비평 각주 */}
               {currentNetNote && (
                 <div id="panel-netNotes" className={`rounded-xl border ${borderClass} overflow-hidden`}>
                   <div className={`px-3 py-2 flex items-center justify-between gap-2 text-[12.5px] font-bold ${subBg}`}>
@@ -2210,7 +2255,6 @@ export default function Interlinear({
                 </div>
               )}
 
-              {/* 10. 이스톤 성경 백과사전 */}
               {currentEaston && (
                 <div id="panel-easton" className={`rounded-xl border ${borderClass} overflow-hidden`}>
                   <div className={`px-3 py-2 flex items-center justify-between gap-2 text-[12.5px] font-bold ${subBg}`}>
@@ -2305,7 +2349,7 @@ export default function Interlinear({
         </div>
       )}
 
-      {/* 원어 단어 심층 렉시콘 모달 (문법·품사·어근·어원·전권 용례) */}
+      {/* 원어 단어 심층 렉시콘 모달 */}
       {selectedWordDetail && (
         <div
           onClick={() => setSelectedWordDetail(null)}

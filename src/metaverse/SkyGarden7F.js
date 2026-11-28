@@ -1,10 +1,11 @@
-// src/metaverse/SkyGarden7F.js (Sandbox Master Edition — 물주기·채굴·터널·아날로그 조이스틱·월드확장)
+// src/metaverse/SkyGarden7F.js (PART 1 — PS4 LEGO Worlds & Skylines Edition · Instanced Studs · Multi-Part Bricks)
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { PerspectiveCamera, OrbitControls, RoundedBox, Billboard, Sky } from '@react-three/drei';
 import * as THREE from 'three';
 import { useAppStore } from '../store/useAppStore';
 import { supabase } from '../lib/supabase';
+import { SharedChibiAvatar } from '../pages/VirtualChurchLobby';
 import {
   BLOCK_CATALOG,
   PROP_CATALOG,
@@ -30,8 +31,20 @@ import {
   detectRoomAt
 } from './voxel/VoxelEngine';
 
-const STORAGE_KEY_WORLD = 'gtc_openworld_7f_sandbox_v8';
-const STORAGE_KEY_META = 'gtc_openworld_7f_meta_v8';
+const STORAGE_KEY_WORLD = 'gtc_openworld_7f_lego_v9';
+const STORAGE_KEY_META = 'gtc_openworld_7f_meta_v9';
+
+// 다양한 레고 브릭 형태(파츠) 카탈로그 — 블록 색상과 자유 조합 가능!
+const LEGO_PART_SHAPES = [
+  { id: 'brick_1x1', label: '1×1 기본', icon: '🧱', desc: '표준 1×1 레고 브릭' },
+  { id: 'brick_1x2', label: '1×2 브릭', icon: '▬', desc: '2칸 연결 레고 브릭' },
+  { id: 'brick_2x2', label: '2×2 대형', icon: '⬛', desc: '4칸 대형 기초 브릭' },
+  { id: 'brick_1x4', label: '1×4 장벽', icon: '➖', desc: '4칸 긴 벽체 브릭' },
+  { id: 'slope_roof', label: '경사 지붕', icon: '📐', desc: '레고 45° 슬로프 지붕 브릭' },
+  { id: 'arch_gate', label: '아치 문틀', icon: '🏛️', desc: '성전/다리용 레고 아치 브릭' },
+  { id: 'window_glass', label: '유리 창문', icon: '🪟', desc: '투명 창틀 레고 브릭' },
+  { id: 'neon_lamp', label: '발광 브릭', icon: '💡', desc: '야경에 빛나는 레고 램프 브릭' }
+];
 
 const DEFAULT_AVATAR = {
   gender: 'male',
@@ -43,10 +56,10 @@ const DEFAULT_AVATAR = {
 };
 
 const DEFAULT_META = {
-  hearts: 50,
+  hearts: 60,
   quests: {},
   openedChests: {},
-  materials: { wood: 14, stone: 14, dirt: 12, coal: 4, iron: 4, gold: 4, crystal: 2, glass: 8, cloth: 6, straw: 4, crop: 2 },
+  materials: { wood: 16, stone: 16, dirt: 12, coal: 6, iron: 6, gold: 6, crystal: 4, glass: 10, cloth: 6, straw: 4, crop: 2 },
   props: { hay_bale: 2, fruit_basket: 2, well: 1, campfire: 1, fence_wood: 6 }
 };
 
@@ -54,17 +67,8 @@ const NPC_META_MAP = NPC_CATALOG.reduce((acc, n) => { acc[n.id] = n; return acc;
 const FISH_META_MAP = FISH_CATALOG.reduce((acc, f) => { acc[f.id] = f; return acc; }, {});
 
 // =====================================================================
-// 만화풍 3단계 셀 셰이딩(Toon) 그라데이션 & 통합 사운드 엔진
+// 🔊 레고 딸깍(Snap) & 통합 사운드 엔진
 // =====================================================================
-function createToonGradient() {
-  const data = new Uint8Array([115, 195, 255]);
-  const tex = new THREE.DataTexture(data, 3, 1, THREE.RedFormat);
-  tex.minFilter = THREE.NearestFilter;
-  tex.magFilter = THREE.NearestFilter;
-  tex.needsUpdate = true;
-  return tex;
-}
-
 let sharedAudioCtx = null;
 function getAudioCtx() {
   if (typeof window === 'undefined') return null;
@@ -98,7 +102,7 @@ const playSfx = (type = 'place', muted = false) => {
     }
 
     if (type === 'step' || type === 'splash' || type === 'water') {
-      const dur = type === 'water' ? 0.22 : type === 'splash' ? 0.14 : 0.06;
+      const dur = type === 'water' ? 0.22 : type === 'splash' ? 0.14 : 0.05;
       const bufSize = Math.floor(ctx.sampleRate * dur);
       const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
       const ch = buf.getChannelData(0);
@@ -106,9 +110,9 @@ const playSfx = (type = 'place', muted = false) => {
       const src = ctx.createBufferSource(); src.buffer = buf;
       const filter = ctx.createBiquadFilter();
       filter.type = type === 'step' ? 'lowpass' : 'bandpass';
-      filter.frequency.setValueAtTime(type === 'water' ? 1200 : type === 'splash' ? 950 : 320, now);
+      filter.frequency.setValueAtTime(type === 'water' ? 1200 : type === 'splash' ? 950 : 380, now);
       const gain = ctx.createGain();
-      gain.gain.setValueAtTime(type === 'water' ? 0.06 : 0.035, now);
+      gain.gain.setValueAtTime(type === 'water' ? 0.06 : 0.032, now);
       gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
       src.connect(filter); filter.connect(gain); gain.connect(ctx.destination);
       src.start(now);
@@ -116,20 +120,25 @@ const playSfx = (type = 'place', muted = false) => {
     }
 
     const osc = ctx.createOscillator(), gain = ctx.createGain();
-    if (type === 'jump') {
-      osc.type = 'sine'; osc.frequency.setValueAtTime(240, now); osc.frequency.exponentialRampToValueAtTime(490, now + 0.11);
+    if (type === 'place') {
+      // 레고 브릭 특유의 경쾌한 "딸깍(Snap)" 사운드
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(560, now);
+      osc.frequency.exponentialRampToValueAtTime(190, now + 0.045);
+      gain.gain.setValueAtTime(0.065, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.055);
+    } else if (type === 'jump') {
+      osc.type = 'sine'; osc.frequency.setValueAtTime(240, now); osc.frequency.exponentialRampToValueAtTime(510, now + 0.11);
       gain.gain.setValueAtTime(0.045, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
     } else if (type === 'hit') {
-      osc.type = 'square'; osc.frequency.setValueAtTime(160, now); osc.frequency.exponentialRampToValueAtTime(90, now + 0.06);
-      gain.gain.setValueAtTime(0.045, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+      osc.type = 'square'; osc.frequency.setValueAtTime(220, now); osc.frequency.exponentialRampToValueAtTime(110, now + 0.05);
+      gain.gain.setValueAtTime(0.045, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
     } else if (type === 'door') {
-      osc.type = 'triangle'; osc.frequency.setValueAtTime(165, now); osc.frequency.exponentialRampToValueAtTime(255, now + 0.09);
-      gain.gain.setValueAtTime(0.055, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+      osc.type = 'triangle'; osc.frequency.setValueAtTime(180, now); osc.frequency.exponentialRampToValueAtTime(280, now + 0.08);
+      gain.gain.setValueAtTime(0.055, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.11);
     } else {
-      osc.type = type === 'place' ? 'triangle' : 'sawtooth';
-      osc.frequency.setValueAtTime(type === 'place' ? 210 : 195, now);
-      osc.frequency.exponentialRampToValueAtTime(type === 'place' ? 370 : 82, now + 0.07);
-      gain.gain.setValueAtTime(0.05, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+      osc.type = 'sawtooth'; osc.frequency.setValueAtTime(260, now); osc.frequency.exponentialRampToValueAtTime(90, now + 0.07);
+      gain.gain.setValueAtTime(0.05, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
     }
     osc.connect(gain); gain.connect(ctx.destination);
     osc.start(now); osc.stop(now + 0.13);
@@ -139,33 +148,14 @@ const playSfx = (type = 'place', muted = false) => {
 const playAnimalSfx = (animalType, muted = false) => {
   if (muted) return;
   try {
-    const ctx = getAudioCtx();
-    if (!ctx) return;
+    const ctx = getAudioCtx(); if (!ctx) return;
     const now = ctx.currentTime;
     const osc = ctx.createOscillator(), gain = ctx.createGain();
-    if (animalType === 'sheep') {
-      osc.type = 'sawtooth';
-      for (let i = 0; i < 6; i++) osc.frequency.setValueAtTime(i % 2 === 0 ? 310 : 275, now + i * 0.045);
-      gain.gain.setValueAtTime(0.04, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
-      osc.connect(gain); gain.connect(ctx.destination); osc.start(now); osc.stop(now + 0.34);
-    } else if (animalType === 'dog') {
-      [0, 0.14].forEach((off) => {
-        const o = ctx.createOscillator(), g = ctx.createGain();
-        o.type = 'triangle'; o.frequency.setValueAtTime(340, now + off); o.frequency.exponentialRampToValueAtTime(160, now + off + 0.1);
-        g.gain.setValueAtTime(0.06, now + off); g.gain.exponentialRampToValueAtTime(0.001, now + off + 0.11);
-        o.connect(g); g.connect(ctx.destination); o.start(now + off); o.stop(now + off + 0.12);
-      });
-    } else if (animalType === 'cat') {
-      osc.type = 'sine'; osc.frequency.setValueAtTime(580, now); osc.frequency.exponentialRampToValueAtTime(860, now + 0.12); osc.frequency.exponentialRampToValueAtTime(480, now + 0.32);
-      gain.gain.setValueAtTime(0.045, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.34);
-      osc.connect(gain); gain.connect(ctx.destination); osc.start(now); osc.stop(now + 0.35);
-    } else {
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(animalType === 'cow' || animalType === 'polar_bear' ? 120 : animalType === 'chick' ? 1400 : 380, now);
-      osc.frequency.exponentialRampToValueAtTime(animalType === 'chick' ? 1800 : 220, now + 0.18);
-      gain.gain.setValueAtTime(0.05, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
-      osc.connect(gain); gain.connect(ctx.destination); osc.start(now); osc.stop(now + 0.22);
-    }
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(animalType === 'chick' ? 1400 : animalType === 'cat' ? 680 : 320, now);
+    osc.frequency.exponentialRampToValueAtTime(animalType === 'chick' ? 1800 : 210, now + 0.16);
+    gain.gain.setValueAtTime(0.05, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+    osc.connect(gain); gain.connect(ctx.destination); osc.start(now); osc.stop(now + 0.2);
   } catch (_) {}
 };
 
@@ -186,7 +176,148 @@ function makeNameTagTex(label, color = '#38BDF8') {
 }
 
 // =====================================================================
-// 1. 360° 모바일·태블릿 아날로그 가상 조이스틱
+// 🧱 1. 전 지형·건물 자동 2×2 레고 스터드(Stud) InstancedMesh (단일 드로우콜 60FPS!)
+// =====================================================================
+function LegoWorldStuds({ blockMap }) {
+  const meshRef = useRef();
+  const dummy = useMemo(() => new THREE.Object3D(), []);
+  const tmpColor = useMemo(() => new THREE.Color(), []);
+
+  const studData = useMemo(() => {
+    const items = [];
+    const offsets = [[-0.24, -0.24], [0.24, -0.24], [-0.24, 0.24], [0.24, 0.24]];
+    Object.entries(blockMap || {}).forEach(([k, type]) => {
+      if (type === 'water' || type === 'glass') return;
+      const [x, y, z] = k.split(',').map(Number);
+      // 위쪽이 비어 있거나 투명 블록일 때만 스터드 노출 (Occlusion Culling)
+      const above = blockMap[blockKey(x, y + 1, z)];
+      if (above && above !== 'water' && above !== 'glass') return;
+      const hex = BLOCK_MAP_META[type]?.color || '#94A3B8';
+      for (let i = 0; i < 4; i++) {
+        items.push({ x: x + offsets[i][0], y: y + 0.54, z: z + offsets[i][1], color: hex });
+      }
+    });
+    return items;
+  }, [blockMap]);
+
+  useEffect(() => {
+    const inst = meshRef.current;
+    if (!inst || studData.length === 0) return;
+    for (let i = 0; i < studData.length; i++) {
+      const s = studData[i];
+      dummy.position.set(s.x, s.y, s.z);
+      dummy.rotation.set(0, 0, 0);
+      dummy.scale.set(1, 1, 1);
+      dummy.updateMatrix();
+      inst.setMatrixAt(i, dummy.matrix);
+      tmpColor.set(s.color);
+      inst.setColorAt(i, tmpColor);
+    }
+    inst.instanceMatrix.needsUpdate = true;
+    if (inst.instanceColor) inst.instanceColor.needsUpdate = true;
+  }, [studData, dummy, tmpColor]);
+
+  if (studData.length === 0) return null;
+
+  return (
+    <instancedMesh ref={meshRef} args={[null, null, studData.length]} receiveShadow>
+      <cylinderGeometry args={[0.135, 0.135, 0.08, 8]} />
+      <meshStandardMaterial roughness={0.20} metalness={0.04} />
+    </instancedMesh>
+  );
+}
+
+// =====================================================================
+// 💥 2. 브릭 조립/채굴 시 통통 튀는 레고 파편 파티클 이펙트
+// =====================================================================
+function BrickBurstParticles({ bursts }) {
+  const groupRef = useRef();
+  useFrame((_, delta) => {
+    if (!groupRef.current) return;
+    groupRef.current.children.forEach((child) => {
+      if (!child.userData.vel) return;
+      child.position.x += child.userData.vel[0] * delta;
+      child.position.y += child.userData.vel[1] * delta;
+      child.position.z += child.userData.vel[2] * delta;
+      child.userData.vel[1] -= 14 * delta;
+      child.rotation.x += delta * 6;
+      child.rotation.z += delta * 5;
+      child.scale.multiplyScalar(0.95);
+    });
+  });
+
+  return (
+    <group ref={groupRef}>
+      {bursts.flatMap((b) =>
+        b.pieces.map((p, i) => (
+          <mesh key={`${b.id}_${i}`} position={[b.x, b.y, b.z]} userData={{ vel: [...p.vel] }}>
+            <boxGeometry args={[0.16, 0.12, 0.16]} />
+            <meshStandardMaterial color={b.color} roughness={0.18} />
+          </mesh>
+        ))
+      )}
+    </group>
+  );
+}
+
+// =====================================================================
+// 🧱 3. 커스텀 레고 특수 브릭 파츠 렌더러 (경사 지붕 · 아치 · 유리창 · 1×2 · 2×2 · 1×4 · 발광 브릭)
+// =====================================================================
+function CustomLegoPart3D({ part, mode, isNight, onRemove }) {
+  const color = BLOCK_MAP_META[part.blockType]?.color || '#E11D48';
+
+  return (
+    <group
+      position={[part.x, part.y, part.z]}
+      rotation={[0, part.rot || 0, 0]}
+      onClick={(e) => {
+        if (mode !== 'break') return;
+        e.stopPropagation();
+        onRemove(part.id);
+      }}
+    >
+      {part.shape === 'slope_roof' && (
+        <group>
+          <RoundedBox args={[0.98, 0.34, 0.98]} position={[0, -0.33, 0]} radius={0.02} castShadow receiveShadow><meshStandardMaterial color={color} roughness={0.18} /></RoundedBox>
+          <RoundedBox args={[0.98, 0.34, 0.66]} position={[0, 0, -0.16]} radius={0.02} castShadow receiveShadow><meshStandardMaterial color={color} roughness={0.18} /></RoundedBox>
+          <RoundedBox args={[0.98, 0.34, 0.34]} position={[0, 0.33, -0.32]} radius={0.02} castShadow receiveShadow><meshStandardMaterial color={color} roughness={0.18} /></RoundedBox>
+          {[-0.24, 0.24].map((sx, i) => (<mesh key={i} position={[sx, 0.54, -0.32]}><cylinderGeometry args={[0.13, 0.13, 0.08, 8]} /><meshStandardMaterial color={color} roughness={0.18} /></mesh>))}
+        </group>
+      )}
+
+      {part.shape === 'arch_gate' && (
+        <group>
+          <RoundedBox args={[0.32, 1.0, 0.96]} position={[-0.84, 0, 0]} radius={0.02} castShadow><meshStandardMaterial color={color} roughness={0.18} /></RoundedBox>
+          <RoundedBox args={[0.32, 1.0, 0.96]} position={[0.84, 0, 0]} radius={0.02} castShadow><meshStandardMaterial color={color} roughness={0.18} /></RoundedBox>
+          <RoundedBox args={[2.0, 0.32, 0.96]} position={[0, 0.34, 0]} radius={0.02} castShadow><meshStandardMaterial color={color} roughness={0.18} /></RoundedBox>
+          {[-0.75, -0.25, 0.25, 0.75].map((sx, i) => (<mesh key={i} position={[sx, 0.54, 0]}><cylinderGeometry args={[0.13, 0.13, 0.08, 8]} /><meshStandardMaterial color={color} roughness={0.18} /></mesh>))}
+        </group>
+      )}
+
+      {part.shape === 'window_glass' && (
+        <group>
+          <RoundedBox args={[0.98, 0.14, 0.28]} position={[0, -0.43, 0]} radius={0.015} castShadow><meshStandardMaterial color={color} roughness={0.18} /></RoundedBox>
+          <RoundedBox args={[0.98, 0.14, 0.28]} position={[0, 0.43, 0]} radius={0.015} castShadow><meshStandardMaterial color={color} roughness={0.18} /></RoundedBox>
+          <RoundedBox args={[0.14, 0.98, 0.28]} position={[-0.42, 0, 0]} radius={0.015} castShadow><meshStandardMaterial color={color} roughness={0.18} /></RoundedBox>
+          <RoundedBox args={[0.14, 0.98, 0.28]} position={[0.42, 0, 0]} radius={0.015} castShadow><meshStandardMaterial color={color} roughness={0.18} /></RoundedBox>
+          <mesh><boxGeometry args={[0.74, 0.74, 0.08]} /><meshStandardMaterial color="#BAE6FD" transparent opacity={0.48} roughness={0.08} /></mesh>
+        </group>
+      )}
+
+      {part.shape === 'neon_lamp' && (
+        <group>
+          <RoundedBox args={[0.94, 0.94, 0.94]} radius={0.04} castShadow>
+            <meshStandardMaterial color={color} emissive={color} emissiveIntensity={isNight ? 2.2 : 0.85} roughness={0.15} />
+          </RoundedBox>
+          <pointLight position={[0, 0.8, 0]} intensity={isNight ? 4.2 : 1.0} distance={isNight ? 11 : 4} color={color} />
+        </group>
+      )}
+    </group>
+  );
+}
+
+// =====================================================================
+// 4. 360° 아날로그 조이스틱 & 카메라 브릿지
 // =====================================================================
 function AnalogJoystick({ joyVecRef }) {
   const baseRef = useRef(null);
@@ -196,9 +327,7 @@ function AnalogJoystick({ joyVecRef }) {
   const updateFromClient = (clientX, clientY) => {
     if (!baseRef.current) return;
     const rect = baseRef.current.getBoundingClientRect();
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
-    const maxR = rect.width * 0.36;
+    const cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2, maxR = rect.width * 0.36;
     let dx = clientX - cx, dy = clientY - cy;
     const dist = Math.hypot(dx, dy);
     if (dist > maxR) { dx = (dx / dist) * maxR; dy = (dy / dist) * maxR; }
@@ -206,41 +335,22 @@ function AnalogJoystick({ joyVecRef }) {
     joyVecRef.current = { x: dx / maxR, z: dy / maxR };
   };
 
-  const reset = () => {
-    activeIdRef.current = null;
-    setKnob({ x: 0, y: 0 });
-    joyVecRef.current = { x: 0, z: 0 };
-  };
+  const reset = () => { activeIdRef.current = null; setKnob({ x: 0, y: 0 }); joyVecRef.current = { x: 0, z: 0 }; };
 
   return (
     <div
       ref={baseRef}
-      onPointerDown={(e) => {
-        e.stopPropagation();
-        activeIdRef.current = e.pointerId;
-        e.currentTarget.setPointerCapture(e.pointerId);
-        updateFromClient(e.clientX, e.clientY);
-      }}
-      onPointerMove={(e) => {
-        if (activeIdRef.current !== e.pointerId) return;
-        e.stopPropagation();
-        updateFromClient(e.clientX, e.clientY);
-      }}
+      onPointerDown={(e) => { e.stopPropagation(); activeIdRef.current = e.pointerId; e.currentTarget.setPointerCapture(e.pointerId); updateFromClient(e.clientX, e.clientY); }}
+      onPointerMove={(e) => { if (activeIdRef.current !== e.pointerId) return; e.stopPropagation(); updateFromClient(e.clientX, e.clientY); }}
       onPointerUp={(e) => { if (activeIdRef.current === e.pointerId) { e.stopPropagation(); reset(); } }}
       onPointerCancel={reset}
       className="absolute bottom-20 left-4 z-20 w-24 h-24 rounded-full bg-slate-900/55 border-2 border-white/25 backdrop-blur-sm flex items-center justify-center touch-none select-none shadow-xl"
     >
-      <div
-        style={{ transform: `translate(${knob.x}px, ${knob.y}px)` }}
-        className="w-10 h-10 rounded-full bg-white/85 border-2 border-sky-400 shadow-lg pointer-events-none"
-      />
+      <div style={{ transform: `translate(${knob.x}px, ${knob.y}px)` }} className="w-10 h-10 rounded-full bg-amber-400/90 border-2 border-white shadow-lg pointer-events-none" />
     </div>
   );
 }
 
-// =====================================================================
-// 2. 카메라 프리셋(뒷통수 RPG / 와이드) & 줌 컨트롤러
-// =====================================================================
 function CameraActionBridge({ controlsRef, playerPosRef, playerRotRef, camCommandRef }) {
   const { camera } = useThree();
   useFrame(() => {
@@ -251,7 +361,7 @@ function CameraActionBridge({ controlsRef, playerPosRef, playerRotRef, camComman
     const ctrl = controlsRef.current;
     if (cmd.type === 'behind') {
       const rot = playerRotRef.current;
-      camera.position.set(px - Math.sin(rot) * 6.2, py + 4.4, pz - Math.cos(rot) * 6.2);
+      camera.position.set(px - Math.sin(rot) * 6.5, py + 4.8, pz - Math.cos(rot) * 6.5);
       ctrl.target.set(px, py + 1.0, pz);
       ctrl.update();
     } else if (cmd.type === 'wide') {
@@ -267,21 +377,22 @@ function CameraActionBridge({ controlsRef, playerPosRef, playerRotRef, camComman
   });
   return null;
 }
+// ==================== PART 1 끝 (아래에 PART 2 이어붙이기) ====================
+// ==================== PART 2 시작 ====================
 
 // =====================================================================
-// 3. 물주기 연동 6종 작물 (물 안 주면 💧 표시 & 35%에서 대기)
+// 5. 유광 ABS 레고 작물 · 레고 동물 · 레고 물고기 · 레고 보물상자
 // =====================================================================
 const STALK_OFFSETS = [
-  [-0.28, -0.28], [0, -0.28], [0.28, -0.28],
-  [-0.28, 0], [0, 0], [0.28, 0],
-  [-0.28, 0.28], [0, 0.28], [0.28, 0.28]
+  [-0.26, -0.26], [0, -0.26], [0.26, -0.26],
+  [-0.26, 0], [0, 0], [0.26, 0],
+  [-0.26, 0.26], [0, 0.26], [0.26, 0.26]
 ];
 
-function GrowingCrop3D({ crop, nowTs, mode, toonMap, onWaterCrop, onHarvest, onRemove }) {
+function GrowingCrop3D({ crop, nowTs, mode, onWaterCrop, onHarvest, onRemove }) {
   const meta = CROP_MAP_META[crop.type] || CROP_CATALOG[0];
   const elapsed = (nowTs - (crop.plantedAt || 0)) / 1000;
   const rawProgress = Math.min(1, elapsed / meta.growSec);
-  // 물을 주지 않으면 35% 이상 자라지 않음!
   const progress = crop.watered ? rawProgress : Math.min(0.35, rawProgress);
   const isRipe = crop.watered && progress >= 1;
   const scaleY = 0.24 + progress * 0.76;
@@ -289,9 +400,7 @@ function GrowingCrop3D({ crop, nowTs, mode, toonMap, onWaterCrop, onHarvest, onR
 
   useFrame(({ clock }) => {
     if (swayRef.current) {
-      const t = clock.elapsedTime;
-      swayRef.current.rotation.z = Math.sin(t * 2.3 + crop.x * 0.7 + crop.z * 0.5) * 0.085;
-      swayRef.current.rotation.x = Math.cos(t * 1.8 + crop.z * 0.6) * 0.05;
+      swayRef.current.rotation.z = Math.sin(clock.elapsedTime * 2.2 + crop.x * 0.7) * 0.06;
     }
   });
 
@@ -310,11 +419,9 @@ function GrowingCrop3D({ crop, nowTs, mode, toonMap, onWaterCrop, onHarvest, onR
         {(crop.type === 'rice' || crop.type === 'wheat') && (
           <group>
             {STALK_OFFSETS.map(([ox, oz], i) => (
-              <group key={i} position={[ox, 0, oz]} rotation={[(i % 3 - 1) * 0.09, i * 0.7, ((i % 2) - 0.5) * 0.14]}>
-                <mesh position={[0, 0.34, 0]} castShadow><cylinderGeometry args={[0.016, 0.024, 0.68, 5]} /><meshToonMaterial color={isRipe ? meta.color : meta.stem} gradientMap={toonMap} /></mesh>
-                {progress > 0.45 && (
-                  <mesh position={[0.055, 0.64, 0]} rotation={[0, 0, -0.72]} castShadow><capsuleGeometry args={[0.032, 0.15, 4, 6]} /><meshToonMaterial color={meta.color} gradientMap={toonMap} /></mesh>
-                )}
+              <group key={i} position={[ox, 0, oz]}>
+                <mesh position={[0, 0.32, 0]} castShadow><cylinderGeometry args={[0.024, 0.028, 0.64, 6]} /><meshStandardMaterial color={isRipe ? meta.color : meta.stem} roughness={0.18} /></mesh>
+                {progress > 0.45 && <RoundedBox args={[0.09, 0.16, 0.09]} position={[0.03, 0.64, 0]} radius={0.015} castShadow><meshStandardMaterial color={meta.color} roughness={0.18} /></RoundedBox>}
               </group>
             ))}
           </group>
@@ -323,10 +430,9 @@ function GrowingCrop3D({ crop, nowTs, mode, toonMap, onWaterCrop, onHarvest, onR
         {crop.type === 'corn' && (
           <group>
             {[[-0.18, -0.14], [0.18, 0.14], [-0.14, 0.18], [0.16, -0.16]].map(([ox, oz], i) => (
-              <group key={i} position={[ox, 0, oz]} rotation={[0, i * 1.4, 0]}>
-                <mesh position={[0, 0.48, 0]} castShadow><cylinderGeometry args={[0.028, 0.042, 0.96, 6]} /><meshToonMaterial color={meta.stem} gradientMap={toonMap} /></mesh>
-                <mesh position={[0.10, 0.34, 0]} rotation={[0, 0, -0.85]}><coneGeometry args={[0.055, 0.28, 4]} /><meshToonMaterial color="#3F8C36" gradientMap={toonMap} /></mesh>
-                {progress > 0.5 && <mesh position={[0.06, 0.56, 0.04]} rotation={[0.25, 0, -0.35]} castShadow><capsuleGeometry args={[0.048, 0.14, 5, 6]} /><meshToonMaterial color={meta.color} gradientMap={toonMap} /></mesh>}
+              <group key={i} position={[ox, 0, oz]}>
+                <mesh position={[0, 0.45, 0]} castShadow><cylinderGeometry args={[0.038, 0.045, 0.90, 6]} /><meshStandardMaterial color={meta.stem} roughness={0.18} /></mesh>
+                {progress > 0.5 && <mesh position={[0.06, 0.56, 0.04]} castShadow><cylinderGeometry args={[0.055, 0.055, 0.18, 8]} /><meshStandardMaterial color={meta.color} roughness={0.16} /></mesh>}
               </group>
             ))}
           </group>
@@ -334,23 +440,22 @@ function GrowingCrop3D({ crop, nowTs, mode, toonMap, onWaterCrop, onHarvest, onR
 
         {crop.type === 'strawberry' && (
           <group>
-            {[[-0.18, -0.15], [0.18, -0.14], [0, 0.17], [-0.15, 0.15], [0.15, 0.13]].map(([ox, oz], i) => (
-              <mesh key={i} position={[ox, 0.13, oz]} castShadow><dodecahedronGeometry args={[0.15, 0]} /><meshToonMaterial color={i % 2 === 0 ? '#3F8C36' : '#2E6E27'} gradientMap={toonMap} /></mesh>
+            {[[-0.18, -0.15], [0.18, -0.14], [0, 0.17]].map(([ox, oz], i) => (
+              <RoundedBox key={i} args={[0.24, 0.14, 0.24]} position={[ox, 0.10, oz]} radius={0.02} castShadow><meshStandardMaterial color="#16A34A" roughness={0.18} /></RoundedBox>
             ))}
-            {progress > 0.55 && [[-0.22, 0.13, 0.06], [0.21, 0.14, -0.07], [0.02, 0.16, 0.22]].map(([bx, by, bz], i) => (
-              <mesh key={i} position={[bx, by, bz]} rotation={[Math.PI, 0, 0]} castShadow><coneGeometry args={[0.055, 0.11, 6]} /><meshToonMaterial color={meta.color} gradientMap={toonMap} /></mesh>
+            {progress > 0.55 && [[-0.20, 0.20, 0.06], [0.20, 0.20, -0.06], [0, 0.22, 0.20]].map(([bx, by, bz], i) => (
+              <mesh key={i} position={[bx, by, bz]} castShadow><cylinderGeometry args={[0.06, 0.06, 0.09, 8]} /><meshStandardMaterial color={meta.color} roughness={0.16} /></mesh>
             ))}
           </group>
         )}
 
         {crop.type === 'pumpkin' && (
           <group>
-            <mesh position={[-0.26, 0.07, 0.22]} rotation={[-Math.PI / 2, 0, 0]}><circleGeometry args={[0.20, 8]} /><meshToonMaterial color="#3D7A2F" gradientMap={toonMap} /></mesh>
-            <mesh position={[0.26, 0.07, -0.20]} rotation={[-Math.PI / 2, 0, 0]}><circleGeometry args={[0.18, 8]} /><meshToonMaterial color="#2E6322" gradientMap={toonMap} /></mesh>
+            <RoundedBox args={[0.42, 0.06, 0.42]} position={[0, 0.04, 0]} radius={0.015}><meshStandardMaterial color="#15803D" roughness={0.18} /></RoundedBox>
             {progress > 0.4 && (
               <group position={[0, 0.24, 0]}>
-                {[0, 1, 2, 3, 4].map((ri) => (<mesh key={ri} rotation={[0, (ri / 5) * Math.PI, 0]} scale={[1.18, 0.84, 0.68]} castShadow><sphereGeometry args={[0.24, 8, 8]} /><meshToonMaterial color={meta.color} gradientMap={toonMap} /></mesh>))}
-                <mesh position={[0, 0.23, 0]}><cylinderGeometry args={[0.028, 0.048, 0.13, 6]} /><meshToonMaterial color="#3D5A20" gradientMap={toonMap} /></mesh>
+                <RoundedBox args={[0.44, 0.36, 0.44]} radius={0.05} castShadow><meshStandardMaterial color={meta.color} roughness={0.18} /></RoundedBox>
+                <mesh position={[0, 0.23, 0]}><cylinderGeometry args={[0.06, 0.06, 0.10, 8]} /><meshStandardMaterial color="#166534" roughness={0.18} /></mesh>
               </group>
             )}
           </group>
@@ -360,14 +465,11 @@ function GrowingCrop3D({ crop, nowTs, mode, toonMap, onWaterCrop, onHarvest, onR
           <group>
             {[[-0.16, -0.10], [0.16, 0.10]].map(([ox, oz], i) => (
               <group key={i} position={[ox, 0, oz]}>
-                <mesh position={[0, 0.42, 0]} castShadow><cylinderGeometry args={[0.028, 0.04, 0.84, 6]} /><meshToonMaterial color={meta.stem} gradientMap={toonMap} /></mesh>
+                <mesh position={[0, 0.42, 0]} castShadow><cylinderGeometry args={[0.036, 0.04, 0.84, 6]} /><meshStandardMaterial color={meta.stem} roughness={0.18} /></mesh>
                 {progress > 0.5 && (
-                  <group position={[0, 0.84, 0.05]} rotation={[0.28, 0, 0]}>
-                    <mesh rotation={[Math.PI / 2, 0, 0]}><cylinderGeometry args={[0.11, 0.11, 0.05, 8]} /><meshToonMaterial color="#4A2B14" gradientMap={toonMap} /></mesh>
-                    {[0, 1, 2, 3, 4, 5, 6, 7].map((pi) => {
-                      const a = (pi / 8) * Math.PI * 2;
-                      return <mesh key={pi} position={[Math.cos(a) * 0.15, Math.sin(a) * 0.15, 0]} rotation={[0, 0, a - Math.PI / 2]}><coneGeometry args={[0.042, 0.12, 4]} /><meshToonMaterial color={meta.color} gradientMap={toonMap} /></mesh>;
-                    })}
+                  <group position={[0, 0.84, 0.05]} rotation={[0.25, 0, 0]}>
+                    <mesh rotation={[Math.PI / 2, 0, 0]}><cylinderGeometry args={[0.14, 0.14, 0.07, 8]} /><meshStandardMaterial color={meta.color} roughness={0.16} /></mesh>
+                    <mesh position={[0, 0, 0.04]} rotation={[Math.PI / 2, 0, 0]}><cylinderGeometry args={[0.08, 0.08, 0.04, 8]} /><meshStandardMaterial color="#4A2B14" roughness={0.2} /></mesh>
                   </group>
                 )}
               </group>
@@ -376,30 +478,15 @@ function GrowingCrop3D({ crop, nowTs, mode, toonMap, onWaterCrop, onHarvest, onR
         )}
       </group>
 
-      {/* 물 필요 표시 (파란 물방울) / 수확 가능 표시 (황금 다이아) */}
-      {!crop.watered && (
-        <mesh position={[0, 0.85, 0]}>
-          <coneGeometry args={[0.075, 0.16, 6]} />
-          <meshBasicMaterial color="#38BDF8" />
-        </mesh>
-      )}
-      {isRipe && (
-        <mesh position={[0, 1.14, 0]}>
-          <octahedronGeometry args={[0.09, 0]} />
-          <meshBasicMaterial color="#FDE047" />
-        </mesh>
-      )}
+      {!crop.watered && <mesh position={[0, 0.85, 0]}><coneGeometry args={[0.075, 0.16, 6]} /><meshBasicMaterial color="#38BDF8" /></mesh>}
+      {isRipe && <mesh position={[0, 1.14, 0]}><octahedronGeometry args={[0.09, 0]} /><meshBasicMaterial color="#FDE047" /></mesh>}
     </group>
   );
 }
 
-// =====================================================================
-// 4. 10종 동물 · 5종 물고기 · 보물상자
-// =====================================================================
-function RoamingAnimal3D({ animal, blockMap, mode, toonMap, onPet, onRemove }) {
+function RoamingAnimal3D({ animal, blockMap, mode, onPet, onRemove }) {
   const meta = ANIMAL_MAP_META[animal.type] || ANIMAL_CATALOG[0];
-  const groupRef = useRef();
-  const tailRef = useRef();
+  const groupRef = useRef(), tailRef = useRef();
   const stateRef = useRef({ x: animal.x, z: animal.z, dirX: 0, dirZ: 0, timer: Math.random() * 2 });
 
   useFrame(({ clock }, delta) => {
@@ -420,10 +507,9 @@ function RoamingAnimal3D({ animal, blockMap, mode, toonMap, onPet, onRemove }) {
     if (groupRef.current) {
       const surf = getSurfaceInfo(blockMap, st.x, st.z);
       const moving = st.dirX !== 0 || st.dirZ !== 0;
-      const hop = moving ? Math.abs(Math.sin(clock.elapsedTime * 7.5)) * (animal.type === 'rabbit' ? 0.24 : 0.10) : 0;
+      const hop = moving ? Math.abs(Math.sin(clock.elapsedTime * 7.5)) * (animal.type === 'rabbit' ? 0.22 : 0.09) : 0;
       groupRef.current.position.set(st.x, surf.y + hop, st.z);
       if (moving) groupRef.current.rotation.y = Math.atan2(st.dirX, st.dirZ);
-      if (animal.type === 'penguin') groupRef.current.rotation.z = moving ? Math.sin(clock.elapsedTime * 8) * 0.14 : 0;
     }
     if (tailRef.current) tailRef.current.rotation.y = Math.sin(clock.elapsedTime * 10) * 0.4;
   });
@@ -435,47 +521,36 @@ function RoamingAnimal3D({ animal, blockMap, mode, toonMap, onPet, onRemove }) {
     <group ref={groupRef} position={[animal.x, 0.5, animal.z]} scale={[sc, sc, sc]} onClick={(e) => { e.stopPropagation(); if (mode === 'break') onRemove(animal.id); else onPet(animal, meta); }}>
       {t === 'penguin' ? (
         <group>
-          <mesh position={[0, 0.42, 0]} castShadow><capsuleGeometry args={[0.24, 0.34, 8, 12]} /><meshToonMaterial color={meta.bodyColor} gradientMap={toonMap} /></mesh>
-          <mesh position={[0, 0.38, 0.15]} scale={[0.78, 0.85, 0.5]}><sphereGeometry args={[0.22, 10, 10]} /><meshToonMaterial color={meta.accent} gradientMap={toonMap} /></mesh>
-          <mesh position={[0, 0.64, 0.26]} rotation={[Math.PI / 2, 0, 0]}><coneGeometry args={[0.06, 0.14, 6]} /><meshToonMaterial color="#EA580C" gradientMap={toonMap} /></mesh>
+          <RoundedBox args={[0.42, 0.58, 0.36]} position={[0, 0.32, 0]} radius={0.03} castShadow><meshStandardMaterial color={meta.bodyColor} roughness={0.18} /></RoundedBox>
+          <RoundedBox args={[0.30, 0.42, 0.06]} position={[0, 0.28, 0.17]} radius={0.02}><meshStandardMaterial color={meta.accent} roughness={0.18} /></RoundedBox>
+          <RoundedBox args={[0.14, 0.08, 0.14]} position={[0, 0.48, 0.22]} radius={0.01}><meshStandardMaterial color="#EA580C" roughness={0.18} /></RoundedBox>
         </group>
       ) : t === 'chick' ? (
         <group>
-          <mesh position={[0, 0.28, 0]} castShadow><sphereGeometry args={[0.24, 10, 10]} /><meshToonMaterial color={meta.bodyColor} gradientMap={toonMap} /></mesh>
-          <mesh position={[0, 0.52, 0.08]} castShadow><sphereGeometry args={[0.16, 10, 10]} /><meshToonMaterial color={meta.bodyColor} gradientMap={toonMap} /></mesh>
-          <mesh position={[0, 0.50, 0.24]} rotation={[Math.PI / 2, 0, 0]}><coneGeometry args={[0.045, 0.10, 5]} /><meshToonMaterial color="#EA580C" gradientMap={toonMap} /></mesh>
+          <RoundedBox args={[0.34, 0.30, 0.34]} position={[0, 0.22, 0]} radius={0.03} castShadow><meshStandardMaterial color={meta.bodyColor} roughness={0.18} /></RoundedBox>
+          <RoundedBox args={[0.24, 0.22, 0.24]} position={[0, 0.44, 0.08]} radius={0.02} castShadow><meshStandardMaterial color={meta.bodyColor} roughness={0.18} /></RoundedBox>
+          <RoundedBox args={[0.10, 0.06, 0.10]} position={[0, 0.44, 0.22]} radius={0.01}><meshStandardMaterial color="#EA580C" roughness={0.18} /></RoundedBox>
         </group>
       ) : (
         <group>
-          {t === 'sheep' ? (
-            <group>
-              <mesh position={[0, 0.38, 0]} castShadow><sphereGeometry args={[0.34, 10, 10]} /><meshToonMaterial color={meta.bodyColor} gradientMap={toonMap} /></mesh>
-              <mesh position={[0, 0.42, -0.18]}><sphereGeometry args={[0.28, 10, 10]} /><meshToonMaterial color={meta.bodyColor} gradientMap={toonMap} /></mesh>
-              <mesh position={[0, 0.42, 0.16]}><sphereGeometry args={[0.26, 10, 10]} /><meshToonMaterial color={meta.bodyColor} gradientMap={toonMap} /></mesh>
-            </group>
-          ) : (
-            <RoundedBox args={[0.50, 0.40, 0.72]} position={[0, 0.36, 0]} radius={0.14} castShadow><meshToonMaterial color={meta.bodyColor} gradientMap={toonMap} /></RoundedBox>
-          )}
-          <RoundedBox args={[0.35, 0.33, 0.36]} position={[0, 0.52, 0.38]} radius={0.10} castShadow><meshToonMaterial color={meta.headColor} gradientMap={toonMap} /></RoundedBox>
-          <mesh position={[-0.10, 0.56, 0.56]}><sphereGeometry args={[0.03, 6, 6]} /><meshBasicMaterial color="#18181B" /></mesh>
-          <mesh position={[0.10, 0.56, 0.56]}><sphereGeometry args={[0.03, 6, 6]} /><meshBasicMaterial color="#18181B" /></mesh>
-          {t === 'dog' && (<mesh ref={tailRef} position={[0, 0.48, -0.38]} rotation={[0.6, 0, 0]}><capsuleGeometry args={[0.045, 0.20, 4, 6]} /><meshToonMaterial color={meta.accent} gradientMap={toonMap} /></mesh>)}
-          {(t === 'cat' || t === 'fox') && (
+          {/* 레고 브릭 동물 몸통 + 등 위 스터드 2개 */}
+          <RoundedBox args={[0.50, 0.38, 0.72]} position={[0, 0.38, 0]} radius={0.03} castShadow><meshStandardMaterial color={meta.bodyColor} roughness={0.18} /></RoundedBox>
+          {[-0.16, 0.16].map((sz, i) => (<mesh key={i} position={[0, 0.60, sz]}><cylinderGeometry args={[0.10, 0.10, 0.06, 8]} /><meshStandardMaterial color={meta.bodyColor} roughness={0.18} /></mesh>))}
+          {/* 레고 브릭 머리 */}
+          <RoundedBox args={[0.36, 0.34, 0.34]} position={[0, 0.54, 0.38]} radius={0.03} castShadow><meshStandardMaterial color={meta.headColor} roughness={0.18} /></RoundedBox>
+          <mesh position={[-0.10, 0.58, 0.56]}><sphereGeometry args={[0.028, 6, 6]} /><meshBasicMaterial color="#18181B" /></mesh>
+          <mesh position={[0.10, 0.58, 0.56]}><sphereGeometry args={[0.028, 6, 6]} /><meshBasicMaterial color="#18181B" /></mesh>
+          {t === 'dog' && <RoundedBox ref={tailRef} args={[0.08, 0.22, 0.08]} position={[0, 0.50, -0.38]} rotation={[0.5, 0, 0]} radius={0.015}><meshStandardMaterial color={meta.accent} roughness={0.18} /></RoundedBox>}
+          {(t === 'cat' || t === 'fox' || t === 'rabbit') && (
             <>
-              <mesh position={[-0.12, 0.74, 0.38]}><coneGeometry args={[0.08, t === 'fox' ? 0.24 : 0.18, 4]} /><meshToonMaterial color={meta.headColor} gradientMap={toonMap} /></mesh>
-              <mesh position={[0.12, 0.74, 0.38]}><coneGeometry args={[0.08, t === 'fox' ? 0.24 : 0.18, 4]} /><meshToonMaterial color={meta.headColor} gradientMap={toonMap} /></mesh>
+              <RoundedBox args={[0.09, t === 'rabbit' ? 0.28 : 0.16, 0.09]} position={[-0.12, 0.78, 0.38]} radius={0.015}><meshStandardMaterial color={meta.headColor} roughness={0.18} /></RoundedBox>
+              <RoundedBox args={[0.09, t === 'rabbit' ? 0.28 : 0.16, 0.09]} position={[0.12, 0.78, 0.38]} radius={0.015}><meshStandardMaterial color={meta.headColor} roughness={0.18} /></RoundedBox>
             </>
           )}
-          {t === 'rabbit' && (
-            <>
-              <mesh position={[-0.09, 0.80, 0.36]}><capsuleGeometry args={[0.045, 0.24, 4, 6]} /><meshToonMaterial color={meta.bodyColor} gradientMap={toonMap} /></mesh>
-              <mesh position={[0.09, 0.80, 0.36]}><capsuleGeometry args={[0.045, 0.24, 4, 6]} /><meshToonMaterial color={meta.bodyColor} gradientMap={toonMap} /></mesh>
-            </>
-          )}
-          {t === 'cow' && (<RoundedBox args={[0.52, 0.22, 0.26]} position={[0, 0.42, -0.05]} radius={0.05}><meshToonMaterial color="#27272A" gradientMap={toonMap} /></RoundedBox>)}
-          {t === 'pig' && (<RoundedBox args={[0.17, 0.11, 0.09]} position={[0, 0.48, 0.58]} radius={0.03}><meshToonMaterial color={meta.accent} gradientMap={toonMap} /></RoundedBox>)}
+          {t === 'cow' && <RoundedBox args={[0.52, 0.22, 0.26]} position={[0, 0.42, -0.05]} radius={0.02}><meshStandardMaterial color="#18181B" roughness={0.18} /></RoundedBox>}
+          {t === 'pig' && <RoundedBox args={[0.18, 0.12, 0.09]} position={[0, 0.48, 0.58]} radius={0.015}><meshStandardMaterial color={meta.accent} roughness={0.18} /></RoundedBox>}
           {[[-0.16, 0.22], [0.16, 0.22], [-0.16, -0.22], [0.16, -0.22]].map(([lx, lz], i) => (
-            <mesh key={i} position={[lx, 0.12, lz]}><cylinderGeometry args={[0.055, 0.05, 0.24, 6]} /><meshToonMaterial color={meta.headColor} gradientMap={toonMap} /></mesh>
+            <RoundedBox key={i} args={[0.12, 0.22, 0.12]} position={[lx, 0.11, lz]} radius={0.015} castShadow><meshStandardMaterial color={meta.headColor} roughness={0.2} /></RoundedBox>
           ))}
         </group>
       )}
@@ -483,7 +558,7 @@ function RoamingAnimal3D({ animal, blockMap, mode, toonMap, onPet, onRemove }) {
   );
 }
 
-function SwimmingFish3D({ fish, toonMap }) {
+function SwimmingFish3D({ fish }) {
   const meta = FISH_META_MAP[fish.type] || FISH_CATALOG[0];
   const groupRef = useRef(), tailRef = useRef(), stRef = useRef({ z: fish.z, dir: 1 });
   useFrame(({ clock }, delta) => {
@@ -501,29 +576,28 @@ function SwimmingFish3D({ fish, toonMap }) {
   const s = meta.size || 0.9;
   return (
     <group ref={groupRef} position={[fish.x, 0.18, fish.z]} scale={[s, s, s]}>
-      <mesh scale={[0.55, 0.72, 1.35]}><sphereGeometry args={[0.16, 8, 8]} /><meshToonMaterial color={meta.body} gradientMap={toonMap} /></mesh>
-      <mesh position={[0, 0, 0.02]} scale={[0.58, 0.74, 0.35]}><sphereGeometry args={[0.16, 8, 8]} /><meshToonMaterial color={meta.stripe} gradientMap={toonMap} /></mesh>
-      <mesh ref={tailRef} position={[0, 0, -0.22]} rotation={[Math.PI / 2, 0, 0]}><coneGeometry args={[0.11, 0.18, 4]} /><meshToonMaterial color={meta.tail} gradientMap={toonMap} /></mesh>
+      <RoundedBox args={[0.16, 0.20, 0.36]} radius={0.03}><meshStandardMaterial color={meta.body} roughness={0.18} /></RoundedBox>
+      <RoundedBox ref={tailRef} args={[0.06, 0.18, 0.16]} position={[0, 0, -0.22]} radius={0.02}><meshStandardMaterial color={meta.tail} roughness={0.18} /></RoundedBox>
     </group>
   );
 }
 
-function TreasureChest3D({ chest, opened, toonMap, onOpen }) {
+function TreasureChest3D({ chest, opened, onOpen }) {
   const glowRef = useRef();
   useFrame(({ clock }) => { if (glowRef.current && !opened) { glowRef.current.position.y = 0.85 + Math.sin(clock.elapsedTime * 3.5) * 0.12; glowRef.current.rotation.y = clock.elapsedTime * 2; } });
   return (
     <group position={[chest.x, chest.y - 0.5, chest.z]} onClick={(e) => { e.stopPropagation(); if (!opened) onOpen(chest); }}>
-      <RoundedBox args={[0.78, 0.48, 0.56]} position={[0, 0.24, 0]} radius={0.04} castShadow><meshToonMaterial color={opened ? '#6B3410' : '#9A4B16'} gradientMap={toonMap} /></RoundedBox>
-      <RoundedBox args={[0.82, 0.12, 0.60]} position={[0, opened ? 0.58 : 0.48, opened ? -0.18 : 0]} rotation={[opened ? -0.8 : 0, 0, 0]} radius={0.03}><meshToonMaterial color="#D9A026" gradientMap={toonMap} /></RoundedBox>
+      <RoundedBox args={[0.78, 0.48, 0.56]} position={[0, 0.24, 0]} radius={0.025} castShadow><meshStandardMaterial color={opened ? '#6B3410' : '#9A4B16'} roughness={0.2} /></RoundedBox>
+      <RoundedBox args={[0.82, 0.12, 0.60]} position={[0, opened ? 0.58 : 0.48, opened ? -0.18 : 0]} rotation={[opened ? -0.8 : 0, 0, 0]} radius={0.02}><meshStandardMaterial color="#FACC15" metalness={0.5} roughness={0.18} /></RoundedBox>
       {!opened && (<mesh ref={glowRef} position={[0, 0.85, 0]}><octahedronGeometry args={[0.15, 0]} /><meshBasicMaterial color="#FDE047" /></mesh>)}
     </group>
   );
 }
 
 // =====================================================================
-// 5. 33종 아이템 렌더러 (볏짚더미 · 과일바구니 · 돌우물 · 모닥불 · 수레 · 꽃 4종 포함)
+// 6. 33종 유광 ABS 레고 아이템 렌더러
 // =====================================================================
-function WorldProp3D({ prop, propsList, mode, isNight, toonMap, onToggleDoor, onRemoveProp }) {
+function WorldProp3D({ prop, propsList, mode, isNight, onToggleDoor, onRemoveProp }) {
   const flameRef = useRef();
   const isFence = prop.type === 'fence_wood' || prop.type === 'fence_log' || prop.type === 'fence_stone';
   const conn = useMemo(() => (isFence ? getFenceConnections(prop, propsList) : null), [isFence, prop, propsList]);
@@ -531,17 +605,20 @@ function WorldProp3D({ prop, propsList, mode, isNight, toonMap, onToggleDoor, on
 
   useFrame(({ clock }) => {
     if (flameRef.current) {
-      const s = 0.9 + Math.sin(clock.elapsedTime * 11 + prop.x) * 0.18;
-      flameRef.current.scale.set(s, 1 + Math.cos(clock.elapsedTime * 9) * 0.2, s);
+      const s = 0.9 + Math.sin(clock.elapsedTime * 11 + prop.x) * 0.16;
+      flameRef.current.scale.set(s, 1 + Math.cos(clock.elapsedTime * 9) * 0.18, s);
     }
   });
 
   const renderFenceRail = (dx, dz, isStone, isLog) => {
-    const rotY = dx !== 0 ? 0 : Math.PI / 2;
-    const px = dx * 0.26, pz = dz * 0.26;
-    if (isStone) return <group key={`${dx}_${dz}`} position={[px, 0, pz]} rotation={[0, rotY, 0]}><RoundedBox args={[0.52, 0.50, 0.16]} position={[0, 0.25, 0]} radius={0.02}><meshToonMaterial color="#A8A196" gradientMap={toonMap} /></RoundedBox><RoundedBox args={[0.54, 0.08, 0.20]} position={[0, 0.52, 0]} radius={0.02}><meshToonMaterial color="#736C61" gradientMap={toonMap} /></RoundedBox></group>;
-    if (isLog) return <group key={`${dx}_${dz}`} position={[px, 0, pz]} rotation={[0, rotY, 0]}><mesh position={[0, 0.60, 0]} rotation={[0, 0, Math.PI / 2]}><cylinderGeometry args={[0.055, 0.055, 0.54, 6]} /><meshToonMaterial color="#8C5832" gradientMap={toonMap} /></mesh><mesh position={[0, 0.30, 0]} rotation={[0, 0, Math.PI / 2]}><cylinderGeometry args={[0.055, 0.055, 0.54, 6]} /><meshToonMaterial color="#8C5832" gradientMap={toonMap} /></mesh></group>;
-    return <group key={`${dx}_${dz}`} position={[px, 0, pz]} rotation={[0, rotY, 0]}><RoundedBox args={[0.52, 0.11, 0.075]} position={[0, 0.65, 0]} radius={0.02}><meshToonMaterial color="#A8703E" gradientMap={toonMap} /></RoundedBox><RoundedBox args={[0.52, 0.11, 0.075]} position={[0, 0.33, 0]} radius={0.02}><meshToonMaterial color="#A8703E" gradientMap={toonMap} /></RoundedBox></group>;
+    const rotY = dx !== 0 ? 0 : Math.PI / 2, px = dx * 0.26, pz = dz * 0.26;
+    if (isStone) return <RoundedBox key={`${dx}_${dz}`} args={[0.52, 0.54, 0.18]} position={[px, 0.27, pz]} rotation={[0, rotY, 0]} radius={0.02}><meshStandardMaterial color="#94A3B8" roughness={0.22} /></RoundedBox>;
+    return (
+      <group key={`${dx}_${dz}`} position={[px, 0, pz]} rotation={[0, rotY, 0]}>
+        <RoundedBox args={[0.52, 0.11, 0.08]} position={[0, 0.64, 0]} radius={0.015}><meshStandardMaterial color={isLog ? '#78350F' : '#B45309'} roughness={0.2} /></RoundedBox>
+        <RoundedBox args={[0.52, 0.11, 0.08]} position={[0, 0.32, 0]} radius={0.015}><meshStandardMaterial color={isLog ? '#78350F' : '#B45309'} roughness={0.2} /></RoundedBox>
+      </group>
+    );
   };
 
   return (
@@ -550,41 +627,31 @@ function WorldProp3D({ prop, propsList, mode, isNight, toonMap, onToggleDoor, on
       rotation={[0, isFence && hasAnyConn ? 0 : (prop.rot || 0), 0]}
       onClick={(e) => { e.stopPropagation(); if (mode === 'break') onRemoveProp(prop.id); else if (prop.type === 'door') onToggleDoor(prop.id); }}
     >
-      {/* 신규 농사·마을 소품 6종 */}
       {prop.type === 'hay_bale' && (
         <group>
-          <mesh position={[0, 0.34, 0]} rotation={[0, 0, Math.PI / 2]} castShadow><cylinderGeometry args={[0.34, 0.34, 0.78, 12]} /><meshToonMaterial color="#D4A838" gradientMap={toonMap} /></mesh>
-          <mesh position={[-0.18, 0.34, 0]} rotation={[0, Math.PI / 2, 0]}><torusGeometry args={[0.345, 0.02, 6, 14]} /><meshToonMaterial color="#991B1B" gradientMap={toonMap} /></mesh>
-          <mesh position={[0.18, 0.34, 0]} rotation={[0, Math.PI / 2, 0]}><torusGeometry args={[0.345, 0.02, 6, 14]} /><meshToonMaterial color="#991B1B" gradientMap={toonMap} /></mesh>
+          <RoundedBox args={[0.82, 0.62, 0.64]} position={[0, 0.31, 0]} radius={0.025} castShadow><meshStandardMaterial color="#EAB308" roughness={0.2} /></RoundedBox>
+          {[-0.22, 0.22].map((sx, i) => (<mesh key={i} position={[sx, 0.65, 0]}><cylinderGeometry args={[0.12, 0.12, 0.06, 8]} /><meshStandardMaterial color="#EAB308" roughness={0.2} /></mesh>))}
         </group>
       )}
       {prop.type === 'fruit_basket' && (
         <group>
-          <mesh position={[0, 0.18, 0]} castShadow><cylinderGeometry args={[0.32, 0.24, 0.34, 12]} /><meshToonMaterial color="#A8703E" gradientMap={toonMap} /></mesh>
-          <mesh position={[-0.10, 0.36, 0.06]}><sphereGeometry args={[0.10, 8, 8]} /><meshToonMaterial color="#E11D48" gradientMap={toonMap} /></mesh>
-          <mesh position={[0.11, 0.36, 0.04]}><sphereGeometry args={[0.11, 8, 8]} /><meshToonMaterial color="#EA580C" gradientMap={toonMap} /></mesh>
-          <mesh position={[0, 0.38, -0.09]}><sphereGeometry args={[0.10, 8, 8]} /><meshToonMaterial color="#4ADE80" gradientMap={toonMap} /></mesh>
-          <mesh position={[0, 0.44, 0.02]}><sphereGeometry args={[0.09, 8, 8]} /><meshToonMaterial color="#FACC15" gradientMap={toonMap} /></mesh>
+          <RoundedBox args={[0.62, 0.34, 0.62]} position={[0, 0.17, 0]} radius={0.02} castShadow><meshStandardMaterial color="#B45309" roughness={0.2} /></RoundedBox>
+          {[[-0.12, '#E11D48'], [0.12, '#F97316'], [0, '#22C55E']].map(([ox, col], i) => (<mesh key={i} position={[ox, 0.38, i === 2 ? -0.10 : 0.08]}><cylinderGeometry args={[0.11, 0.11, 0.10, 8]} /><meshStandardMaterial color={col} roughness={0.16} /></mesh>))}
         </group>
       )}
       {prop.type === 'well' && (
         <group>
-          <mesh position={[0, 0.32, 0]} castShadow><cylinderGeometry args={[0.48, 0.52, 0.64, 12]} /><meshToonMaterial color="#8C8881" gradientMap={toonMap} /></mesh>
-          <mesh position={[0, 0.64, 0]} rotation={[-Math.PI / 2, 0, 0]}><circleGeometry args={[0.38, 12]} /><meshBasicMaterial color="#198EA8" /></mesh>
-          <mesh position={[-0.40, 0.95, 0]}><cylinderGeometry args={[0.05, 0.05, 1.25, 6]} /><meshToonMaterial color="#6B3F1D" gradientMap={toonMap} /></mesh>
-          <mesh position={[0.40, 0.95, 0]}><cylinderGeometry args={[0.05, 0.05, 1.25, 6]} /><meshToonMaterial color="#6B3F1D" gradientMap={toonMap} /></mesh>
-          <mesh position={[0, 1.68, 0]} rotation={[0, Math.PI / 4, 0]} castShadow><coneGeometry args={[0.76, 0.52, 4]} /><meshToonMaterial color="#B0392A" gradientMap={toonMap} /></mesh>
+          <mesh position={[0, 0.32, 0]} castShadow><cylinderGeometry args={[0.48, 0.52, 0.64, 12]} /><meshStandardMaterial color="#94A3B8" roughness={0.2} /></mesh>
+          <mesh position={[0, 0.65, 0]} rotation={[-Math.PI / 2, 0, 0]}><circleGeometry args={[0.38, 12]} /><meshBasicMaterial color="#38BDF8" /></mesh>
+          <RoundedBox args={[0.12, 1.25, 0.12]} position={[-0.40, 0.95, 0]} radius={0.015}><meshStandardMaterial color="#78350F" roughness={0.2} /></RoundedBox>
+          <RoundedBox args={[0.12, 1.25, 0.12]} position={[0.40, 0.95, 0]} radius={0.015}><meshStandardMaterial color="#78350F" roughness={0.2} /></RoundedBox>
+          <mesh position={[0, 1.68, 0]} rotation={[0, Math.PI / 4, 0]} castShadow><coneGeometry args={[0.78, 0.54, 4]} /><meshStandardMaterial color="#DC2626" roughness={0.18} /></mesh>
         </group>
       )}
       {prop.type === 'campfire' && (
         <group>
-          {[0, 1, 2, 3, 4, 5].map((i) => {
-            const a = (i / 6) * Math.PI * 2;
-            return <mesh key={i} position={[Math.cos(a) * 0.34, 0.08, Math.sin(a) * 0.34]}><dodecahedronGeometry args={[0.10, 0]} /><meshToonMaterial color="#736C61" gradientMap={toonMap} /></mesh>;
-          })}
-          <mesh position={[0, 0.12, 0]} rotation={[0.2, 0.5, Math.PI / 2]}><cylinderGeometry args={[0.06, 0.06, 0.56, 6]} /><meshToonMaterial color="#5C3619" gradientMap={toonMap} /></mesh>
-          <mesh position={[0, 0.12, 0]} rotation={[-0.2, -0.5, Math.PI / 2]}><cylinderGeometry args={[0.06, 0.06, 0.56, 6]} /><meshToonMaterial color="#5C3619" gradientMap={toonMap} /></mesh>
-          <group ref={flameRef} position={[0, 0.32, 0]}>
+          {[0, 1, 2, 3, 4, 5].map((i) => { const a = (i / 6) * Math.PI * 2; return <RoundedBox key={i} args={[0.18, 0.14, 0.18]} position={[Math.cos(a) * 0.34, 0.07, Math.sin(a) * 0.34]} radius={0.02}><meshStandardMaterial color="#64748B" roughness={0.2} /></RoundedBox>; })}
+          <group ref={flameRef} position={[0, 0.30, 0]}>
             <mesh><coneGeometry args={[0.18, 0.44, 6]} /><meshBasicMaterial color="#F97316" /></mesh>
             <mesh position={[0, -0.05, 0]}><coneGeometry args={[0.10, 0.28, 6]} /><meshBasicMaterial color="#FEF08A" /></mesh>
           </group>
@@ -593,75 +660,60 @@ function WorldProp3D({ prop, propsList, mode, isNight, toonMap, onToggleDoor, on
       )}
       {prop.type === 'cart' && (
         <group>
-          <RoundedBox args={[0.88, 0.28, 1.15]} position={[0, 0.42, 0]} radius={0.03} castShadow><meshToonMaterial color="#8C5832" gradientMap={toonMap} /></RoundedBox>
-          <mesh position={[-0.48, 0.24, 0]} rotation={[0, 0, Math.PI / 2]}><cylinderGeometry args={[0.24, 0.24, 0.06, 12]} /><meshToonMaterial color="#4A2B14" gradientMap={toonMap} /></mesh>
-          <mesh position={[0.48, 0.24, 0]} rotation={[0, 0, Math.PI / 2]}><cylinderGeometry args={[0.24, 0.24, 0.06, 12]} /><meshToonMaterial color="#4A2B14" gradientMap={toonMap} /></mesh>
-          <mesh position={[0, 0.58, 0]}><sphereGeometry args={[0.24, 8, 8]} /><meshToonMaterial color="#D4A838" gradientMap={toonMap} /></mesh>
+          <RoundedBox args={[0.88, 0.28, 1.15]} position={[0, 0.42, 0]} radius={0.025} castShadow><meshStandardMaterial color="#92400E" roughness={0.2} /></RoundedBox>
+          <mesh position={[-0.48, 0.24, 0]} rotation={[0, 0, Math.PI / 2]}><cylinderGeometry args={[0.24, 0.24, 0.08, 12]} /><meshStandardMaterial color="#18181B" roughness={0.25} /></mesh>
+          <mesh position={[0.48, 0.24, 0]} rotation={[0, 0, Math.PI / 2]}><cylinderGeometry args={[0.24, 0.24, 0.08, 12]} /><meshStandardMaterial color="#18181B" roughness={0.25} /></mesh>
         </group>
       )}
-      {prop.type === 'bucket' && (
-        <group>
-          <mesh position={[0, 0.18, 0]} castShadow><cylinderGeometry args={[0.18, 0.14, 0.34, 10]} /><meshToonMaterial color="#8C5832" gradientMap={toonMap} /></mesh>
-          <mesh position={[0, 0.34, 0]} rotation={[-Math.PI / 2, 0, 0]}><circleGeometry args={[0.16, 10]} /><meshBasicMaterial color="#38BDF8" /></mesh>
-        </group>
-      )}
-
-      {/* 꽃밭 4종 */}
+      {prop.type === 'bucket' && (<mesh position={[0, 0.18, 0]} castShadow><cylinderGeometry args={[0.18, 0.14, 0.34, 10]} /><meshStandardMaterial color="#0284C7" roughness={0.18} /></mesh>)}
       {(prop.type === 'flower_tulip' || prop.type === 'flower_lavender' || prop.type === 'flower_daisy' || prop.type === 'flower_rose') && (
         <group>
-          {[[-0.18, -0.14], [0.16, -0.10], [0, 0.16], [-0.12, 0.14]].map(([fx, fz], i) => (
+          {[[-0.18, -0.14], [0.16, -0.10], [0, 0.16]].map(([fx, fz], i) => (
             <group key={i} position={[fx, 0, fz]}>
-              <mesh position={[0, 0.18, 0]}><cylinderGeometry args={[0.018, 0.022, 0.36, 5]} /><meshToonMaterial color="#3F8C36" gradientMap={toonMap} /></mesh>
-              <mesh position={[0, 0.38, 0]}>
-                {prop.type === 'flower_lavender' ? <capsuleGeometry args={[0.04, 0.14, 4, 6]} /> : <sphereGeometry args={[0.08, 6, 6]} />}
-                <meshToonMaterial color={prop.type === 'flower_tulip' ? '#E11D48' : prop.type === 'flower_lavender' ? '#A855F7' : prop.type === 'flower_daisy' ? '#FFFFFF' : '#BE123C'} gradientMap={toonMap} />
-              </mesh>
+              <mesh position={[0, 0.16, 0]}><cylinderGeometry args={[0.028, 0.028, 0.32, 6]} /><meshStandardMaterial color="#16A34A" roughness={0.18} /></mesh>
+              <mesh position={[0, 0.34, 0]}><cylinderGeometry args={[0.09, 0.09, 0.07, 8]} /><meshStandardMaterial color={prop.type === 'flower_tulip' ? '#E11D48' : prop.type === 'flower_lavender' ? '#A855F7' : prop.type === 'flower_daisy' ? '#FFFFFF' : '#BE123C'} roughness={0.16} /></mesh>
             </group>
           ))}
         </group>
       )}
-
-      {/* 울타리 & 기존 소품 */}
       {isFence && (
         <group>
-          {prop.type === 'fence_stone' ? <RoundedBox args={[0.26, 0.80, 0.26]} position={[0, 0.40, 0]} radius={0.03}><meshToonMaterial color="#8F887B" gradientMap={toonMap} /></RoundedBox>
-            : prop.type === 'fence_log' ? <mesh position={[0, 0.44, 0]}><cylinderGeometry args={[0.095, 0.105, 0.88, 8]} /><meshToonMaterial color="#6B3F1D" gradientMap={toonMap} /></mesh>
-            : <group><RoundedBox args={[0.16, 0.84, 0.16]} position={[0, 0.42, 0]} radius={0.02}><meshToonMaterial color="#7D4D28" gradientMap={toonMap} /></RoundedBox><RoundedBox args={[0.20, 0.08, 0.20]} position={[0, 0.86, 0]} radius={0.02}><meshToonMaterial color="#5C3619" gradientMap={toonMap} /></RoundedBox></group>}
+          <RoundedBox args={[0.22, 0.82, 0.22]} position={[0, 0.41, 0]} radius={0.02}><meshStandardMaterial color={prop.type === 'fence_stone' ? '#64748B' : '#78350F'} roughness={0.2} /></RoundedBox>
           {hasAnyConn ? (<>{conn.e && renderFenceRail(1, 0, prop.type === 'fence_stone', prop.type === 'fence_log')}{conn.w && renderFenceRail(-1, 0, prop.type === 'fence_stone', prop.type === 'fence_log')}{conn.s && renderFenceRail(0, 1, prop.type === 'fence_stone', prop.type === 'fence_log')}{conn.n && renderFenceRail(0, -1, prop.type === 'fence_stone', prop.type === 'fence_log')}</>)
             : (<>{renderFenceRail(1, 0, prop.type === 'fence_stone', prop.type === 'fence_log')}{renderFenceRail(-1, 0, prop.type === 'fence_stone', prop.type === 'fence_log')}</>)}
         </group>
       )}
       {prop.type === 'door' && (
         <group position={[0, 0, -0.45]} rotation={[0, prop.open ? 1.4 : 0, 0]}>
-          <RoundedBox args={[0.14, 1.94, 0.90]} position={[0, 0.97, 0.45]} radius={0.02} castShadow><meshToonMaterial color="#784622" gradientMap={toonMap} /></RoundedBox>
-          <mesh position={[0.09, 0.92, 0.74]}><sphereGeometry args={[0.055, 8, 8]} /><meshToonMaterial color="#EAB308" gradientMap={toonMap} /></mesh>
+          <RoundedBox args={[0.14, 1.94, 0.90]} position={[0, 0.97, 0.45]} radius={0.02} castShadow><meshStandardMaterial color="#78350F" roughness={0.2} /></RoundedBox>
+          <mesh position={[0.09, 0.92, 0.74]}><cylinderGeometry args={[0.055, 0.055, 0.06, 8]} rotation={[0, 0, Math.PI / 2]} /><meshStandardMaterial color="#FACC15" roughness={0.18} /></mesh>
         </group>
       )}
-      {prop.type === 'cross' && (<group><RoundedBox args={[0.16, 1.75, 0.16]} position={[0, 0.875, 0]} radius={0.02}><meshToonMaterial color="#EAB308" gradientMap={toonMap} /></RoundedBox><RoundedBox args={[0.96, 0.16, 0.16]} position={[0, 1.24, 0]} radius={0.02}><meshToonMaterial color="#EAB308" gradientMap={toonMap} /></RoundedBox></group>)}
-      {prop.type === 'pulpit' && (<group><RoundedBox args={[0.70, 0.82, 0.42]} position={[0, 0.48, 0]} radius={0.02}><meshToonMaterial color="#B07443" gradientMap={toonMap} /></RoundedBox><RoundedBox args={[0.92, 0.08, 0.58]} position={[0, 0.92, 0]} rotation={[0.12, 0, 0]} radius={0.02}><meshToonMaterial color="#7D4D28" gradientMap={toonMap} /></RoundedBox></group>)}
-      {prop.type === 'offering' && (<RoundedBox args={[0.48, 0.88, 0.44]} position={[0, 0.44, 0]} radius={0.02}><meshToonMaterial color="#B07443" gradientMap={toonMap} /></RoundedBox>)}
-      {prop.type === 'pew' && (<group><RoundedBox args={[1.85, 0.08, 0.48]} position={[0, 0.38, 0]} radius={0.02}><meshToonMaterial color="#B07443" gradientMap={toonMap} /></RoundedBox><RoundedBox args={[1.80, 0.06, 0.42]} position={[0, 0.43, 0]} radius={0.02}><meshToonMaterial color="#991B1B" gradientMap={toonMap} /></RoundedBox><RoundedBox args={[1.85, 0.46, 0.07]} position={[0, 0.64, -0.22]} rotation={[-0.1, 0, 0]} radius={0.02}><meshToonMaterial color="#B07443" gradientMap={toonMap} /></RoundedBox></group>)}
-      {prop.type === 'piano' && (<group><RoundedBox args={[1.15, 0.42, 1.25]} position={[0, 0.68, 0]} radius={0.10}><meshToonMaterial color="#27272A" gradientMap={toonMap} /></RoundedBox><RoundedBox args={[1.05, 0.06, 0.24]} position={[0, 0.58, 0.64]} radius={0.01}><meshToonMaterial color="#EFEFEF" gradientMap={toonMap} /></RoundedBox></group>)}
-      {prop.type === 'drum' && (<group><mesh position={[0, 0.30, 0]} rotation={[Math.PI / 2, 0, 0]}><cylinderGeometry args={[0.28, 0.28, 0.38, 12]} /><meshToonMaterial color="#991B1B" gradientMap={toonMap} /></mesh><mesh position={[0, 0.92, 0]}><cylinderGeometry args={[0.20, 0.20, 0.015, 12]} /><meshToonMaterial color="#D9A026" gradientMap={toonMap} /></mesh></group>)}
-      {(prop.type === 'guitar_ac' || prop.type === 'guitar_el' || prop.type === 'cello') && (<RoundedBox args={[0.30, 0.52, 0.12]} position={[0, 0.40, 0]} radius={0.08}><meshToonMaterial color={prop.type === 'guitar_el' ? '#1D4ED8' : '#C27A3E'} gradientMap={toonMap} /></RoundedBox>)}
-      {prop.type === 'synth' && (<RoundedBox args={[1.15, 0.12, 0.38]} position={[0, 0.72, 0]} radius={0.02}><meshToonMaterial color="#1E293B" gradientMap={toonMap} /></RoundedBox>)}
-      {prop.type === 'speaker' && (<RoundedBox args={[0.48, 0.84, 0.42]} position={[0, 0.42, 0]} radius={0.03}><meshToonMaterial color="#27272A" gradientMap={toonMap} /></RoundedBox>)}
-      {prop.type === 'mic' && (<mesh position={[0, 0.58, 0]}><cylinderGeometry args={[0.015, 0.015, 1.12, 6]} /><meshToonMaterial color="#475569" gradientMap={toonMap} /></mesh>)}
-      {prop.type === 'torch' && (<group><mesh position={[0, 0.56, 0]}><cylinderGeometry args={[0.055, 0.075, 1.12, 8]} /><meshToonMaterial color="#4A2B14" gradientMap={toonMap} /></mesh><RoundedBox args={[0.28, 0.32, 0.28]} position={[0, 1.18, 0]} radius={0.05}><meshStandardMaterial color="#FEF08A" emissive="#F59E0B" emissiveIntensity={isNight ? 2.2 : 0.9} /></RoundedBox><pointLight position={[0, 1.32, 0]} intensity={isNight ? 3.8 : 0.8} distance={isNight ? 11 : 4.5} color="#FDBA74" /></group>)}
-      {prop.type === 'flower' && (<group><RoundedBox args={[0.42, 0.34, 0.42]} position={[0, 0.17, 0]} radius={0.05}><meshToonMaterial color="#A85224" gradientMap={toonMap} /></RoundedBox><mesh position={[0, 0.44, 0]}><dodecahedronGeometry args={[0.24, 0]} /><meshToonMaterial color="#3F8C36" gradientMap={toonMap} /></mesh></group>)}
-      {prop.type === 'table' && (<RoundedBox args={[0.94, 0.09, 0.94]} position={[0, 0.72, 0]} radius={0.03}><meshToonMaterial color="#C68E53" gradientMap={toonMap} /></RoundedBox>)}
-      {prop.type === 'chair' && (<RoundedBox args={[0.46, 0.06, 0.46]} position={[0, 0.38, 0]} radius={0.02}><meshToonMaterial color="#C68E53" gradientMap={toonMap} /></RoundedBox>)}
-      {prop.type === 'bed' && (<RoundedBox args={[0.92, 0.32, 1.55]} position={[0, 0.20, 0]} radius={0.04}><meshToonMaterial color="#B91C1C" gradientMap={toonMap} /></RoundedBox>)}
-      {prop.type === 'window' && (<RoundedBox args={[0.92, 0.96, 0.12]} position={[0, 0.48, 0]} radius={0.02}><meshToonMaterial color="#6B3410" gradientMap={toonMap} /></RoundedBox>)}
-      {prop.type === 'mirror' && (<RoundedBox args={[0.64, 1.48, 0.08]} position={[0, 0.74, 0]} radius={0.02}><meshToonMaterial color="#B07443" gradientMap={toonMap} /></RoundedBox>)}
+      {prop.type === 'cross' && (<group><RoundedBox args={[0.18, 1.75, 0.16]} position={[0, 0.875, 0]} radius={0.02} castShadow><meshStandardMaterial color="#FACC15" metalness={0.45} roughness={0.18} /></RoundedBox><RoundedBox args={[0.96, 0.18, 0.16]} position={[0, 1.24, 0]} radius={0.02} castShadow><meshStandardMaterial color="#FACC15" metalness={0.45} roughness={0.18} /></RoundedBox></group>)}
+      {prop.type === 'pulpit' && (<group><RoundedBox args={[0.70, 0.82, 0.42]} position={[0, 0.48, 0]} radius={0.02}><meshStandardMaterial color="#B45309" roughness={0.2} /></RoundedBox><RoundedBox args={[0.92, 0.08, 0.58]} position={[0, 0.92, 0]} rotation={[0.12, 0, 0]} radius={0.015}><meshStandardMaterial color="#78350F" roughness={0.2} /></RoundedBox></group>)}
+      {prop.type === 'offering' && (<RoundedBox args={[0.48, 0.88, 0.44]} position={[0, 0.44, 0]} radius={0.02}><meshStandardMaterial color="#B45309" roughness={0.2} /></RoundedBox>)}
+      {prop.type === 'pew' && (<group><RoundedBox args={[1.85, 0.10, 0.48]} position={[0, 0.36, 0]} radius={0.02}><meshStandardMaterial color="#B45309" roughness={0.2} /></RoundedBox><RoundedBox args={[1.80, 0.05, 0.40]} position={[0, 0.43, 0]} radius={0.015}><meshStandardMaterial color="#991B1B" roughness={0.2} /></RoundedBox><RoundedBox args={[1.85, 0.46, 0.09]} position={[0, 0.64, -0.22]} radius={0.02}><meshStandardMaterial color="#92400E" roughness={0.2} /></RoundedBox></group>)}
+      {prop.type === 'piano' && (<group><RoundedBox args={[1.15, 0.42, 1.25]} position={[0, 0.68, 0]} radius={0.04}><meshStandardMaterial color="#18181B" roughness={0.16} /></RoundedBox><RoundedBox args={[1.05, 0.06, 0.24]} position={[0, 0.58, 0.64]} radius={0.01}><meshStandardMaterial color="#FFFFFF" roughness={0.16} /></RoundedBox></group>)}
+      {prop.type === 'drum' && (<group><mesh position={[0, 0.30, 0]} rotation={[Math.PI / 2, 0, 0]}><cylinderGeometry args={[0.28, 0.28, 0.38, 12]} /><meshStandardMaterial color="#DC2626" roughness={0.18} /></mesh><mesh position={[0, 0.92, 0]}><cylinderGeometry args={[0.20, 0.20, 0.02, 12]} /><meshStandardMaterial color="#FACC15" roughness={0.18} /></mesh></group>)}
+      {(prop.type === 'guitar_ac' || prop.type === 'guitar_el' || prop.type === 'cello') && (<RoundedBox args={[0.30, 0.52, 0.12]} position={[0, 0.40, 0]} radius={0.03}><meshStandardMaterial color={prop.type === 'guitar_el' ? '#2563EB' : '#D97706'} roughness={0.18} /></RoundedBox>)}
+      {prop.type === 'synth' && (<RoundedBox args={[1.15, 0.12, 0.38]} position={[0, 0.72, 0]} radius={0.02}><meshStandardMaterial color="#18181B" roughness={0.18} /></RoundedBox>)}
+      {prop.type === 'speaker' && (<RoundedBox args={[0.48, 0.84, 0.42]} position={[0, 0.42, 0]} radius={0.02}><meshStandardMaterial color="#18181B" roughness={0.2} /></RoundedBox>)}
+      {prop.type === 'mic' && (<mesh position={[0, 0.58, 0]}><cylinderGeometry args={[0.02, 0.02, 1.12, 6]} /><meshStandardMaterial color="#475569" roughness={0.2} /></mesh>)}
+      {prop.type === 'torch' && (<group><mesh position={[0, 0.56, 0]}><cylinderGeometry args={[0.06, 0.075, 1.12, 8]} /><meshStandardMaterial color="#4A2B14" roughness={0.2} /></mesh><RoundedBox args={[0.28, 0.32, 0.28]} position={[0, 1.18, 0]} radius={0.02}><meshStandardMaterial color="#FEF08A" emissive="#F59E0B" emissiveIntensity={isNight ? 2.2 : 0.9} /></RoundedBox><pointLight position={[0, 1.32, 0]} intensity={isNight ? 3.8 : 0.8} distance={isNight ? 11 : 4.5} color="#FDBA74" /></group>)}
+      {prop.type === 'flower' && (<group><RoundedBox args={[0.42, 0.34, 0.42]} position={[0, 0.17, 0]} radius={0.02}><meshStandardMaterial color="#B91C1C" roughness={0.18} /></RoundedBox><RoundedBox args={[0.36, 0.24, 0.36]} position={[0, 0.44, 0]} radius={0.02}><meshStandardMaterial color="#16A34A" roughness={0.18} /></RoundedBox></group>)}
+      {prop.type === 'table' && (<RoundedBox args={[0.94, 0.10, 0.94]} position={[0, 0.72, 0]} radius={0.02}><meshStandardMaterial color="#D97706" roughness={0.18} /></RoundedBox>)}
+      {prop.type === 'chair' && (<RoundedBox args={[0.46, 0.08, 0.46]} position={[0, 0.38, 0]} radius={0.015}><meshStandardMaterial color="#D97706" roughness={0.18} /></RoundedBox>)}
+      {prop.type === 'bed' && (<RoundedBox args={[0.92, 0.32, 1.55]} position={[0, 0.20, 0]} radius={0.02}><meshStandardMaterial color="#DC2626" roughness={0.18} /></RoundedBox>)}
+      {prop.type === 'window' && (<RoundedBox args={[0.92, 0.96, 0.14]} position={[0, 0.48, 0]} radius={0.02}><meshStandardMaterial color="#78350F" roughness={0.2} /></RoundedBox>)}
+      {prop.type === 'mirror' && (<RoundedBox args={[0.64, 1.48, 0.08]} position={[0, 0.74, 0]} radius={0.02}><meshStandardMaterial color="#B45309" roughness={0.2} /></RoundedBox>)}
     </group>
   );
 }
 
 // =====================================================================
-// 6. 강변 물레방아 · 뭉게구름 · 야경 달 · 복셀 메시 · 치비 아바타 · Ref 기반 PlayerRig
+// 7. 레고 물레방아 · 레고 다리 · 레고 구름 · 유광 복셀 메시 · 레고 미니피겨 NPC & PlayerRig
 // =====================================================================
-function AmbientWorldDetails({ biome, isNight, toonMap }) {
+function AmbientWorldDetails({ biome, isNight }) {
   const cloudsRef = useRef(), wheelRef = useRef();
   const stars = useMemo(() => Array.from({ length: 80 }).map((_, i) => {
     const a = (i * 137.5) % 360, r = 42 + (i % 15) * 2;
@@ -679,27 +731,30 @@ function AmbientWorldDetails({ biome, isNight, toonMap }) {
         <group>
           <mesh position={[-18, 22, -26]}><sphereGeometry args={[2.8, 16, 16]} /><meshBasicMaterial color="#FEF3C7" /></mesh>
           <pointLight position={[-16, 20, -24]} intensity={1.1} distance={80} color="#CBD5E1" />
-          {stars.map(([sx, sy, sz], i) => (<mesh key={i} position={[sx, sy, sz]}><sphereGeometry args={[0.12, 4, 4]} /><meshBasicMaterial color="#FFFFFF" /></mesh>))}
+          {stars.map(([sx, sy, sz], i) => (<mesh key={i} position={[sx, sy, sz]}><boxGeometry args={[0.18, 0.18, 0.18]} /><meshBasicMaterial color="#FFFFFF" /></mesh>))}
         </group>
       )}
+      {/* 레고 브릭 구름 */}
       <group ref={cloudsRef}>
         {[[-10, 15, -8, 1.15], [8, 16.5, -12, 1.35], [14, 15.5, 6, 1.05]].map(([cx, cy, cz, s], i) => (
           <group key={i} position={[cx, cy, cz]} scale={[s, s, s]}>
-            <mesh><sphereGeometry args={[1.1, 10, 8]} /><meshToonMaterial color={isNight ? '#334155' : '#F1F5F9'} transparent opacity={0.86} gradientMap={toonMap} /></mesh>
-            <mesh position={[1.0, -0.1, 0.2]}><sphereGeometry args={[0.85, 10, 8]} /><meshToonMaterial color={isNight ? '#334155' : '#F1F5F9'} transparent opacity={0.86} gradientMap={toonMap} /></mesh>
+            <RoundedBox args={[2.2, 0.7, 1.4]} radius={0.06}><meshStandardMaterial color={isNight ? '#334155' : '#FFFFFF'} roughness={0.22} /></RoundedBox>
+            <RoundedBox args={[1.4, 0.6, 1.1]} position={[0.4, 0.5, 0]} radius={0.06}><meshStandardMaterial color={isNight ? '#334155' : '#FFFFFF'} roughness={0.22} /></RoundedBox>
           </group>
         ))}
       </group>
       {biome === 'meadow' && (
         <group>
+          {/* 레고 브릭 다리 */}
           <group position={[0, 0.56, 1.5]}>
-            {Array.from({ length: 13 }).map((_, i) => (<RoundedBox key={i} args={[0.42, 0.08, 2.05]} position={[-3 + i * 0.5, 0, 0]} radius={0.02} castShadow receiveShadow><meshToonMaterial color={i % 2 === 0 ? '#A8703E' : '#8C5832'} gradientMap={toonMap} /></RoundedBox>))}
+            {Array.from({ length: 13 }).map((_, i) => (<RoundedBox key={i} args={[0.44, 0.12, 2.08]} position={[-3 + i * 0.5, 0, 0]} radius={0.02} castShadow receiveShadow><meshStandardMaterial color={i % 2 === 0 ? '#B45309' : '#92400E'} roughness={0.2} /></RoundedBox>))}
           </group>
+          {/* 레고 회전 물레방아 */}
           <group position={[-2.2, 1.35, -3.5]}>
-            <mesh position={[-0.4, -0.4, 0]}><boxGeometry args={[0.25, 1.6, 0.25]} /><meshToonMaterial color="#5C3619" gradientMap={toonMap} /></mesh>
+            <RoundedBox args={[0.28, 1.65, 0.28]} position={[-0.4, -0.4, 0]} radius={0.02}><meshStandardMaterial color="#78350F" roughness={0.2} /></RoundedBox>
             <group ref={wheelRef}>
-              <mesh rotation={[0, Math.PI / 2, 0]}><torusGeometry args={[1.15, 0.10, 6, 14]} /><meshToonMaterial color="#7D4D28" gradientMap={toonMap} /></mesh>
-              {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (<group key={i} rotation={[(i / 8) * Math.PI * 2, 0, 0]}><mesh><boxGeometry args={[0.10, 2.25, 0.10]} /><meshToonMaterial color="#6B3F1D" gradientMap={toonMap} /></mesh><mesh position={[0, 1.18, 0]}><boxGeometry args={[0.38, 0.16, 0.24]} /><meshToonMaterial color="#A8703E" gradientMap={toonMap} /></mesh></group>))}
+              <mesh rotation={[0, Math.PI / 2, 0]}><torusGeometry args={[1.15, 0.11, 6, 14]} /><meshStandardMaterial color="#92400E" roughness={0.2} /></mesh>
+              {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (<group key={i} rotation={[(i / 8) * Math.PI * 2, 0, 0]}><RoundedBox args={[0.12, 2.25, 0.12]} radius={0.015}><meshStandardMaterial color="#78350F" roughness={0.2} /></RoundedBox><RoundedBox args={[0.40, 0.18, 0.26]} position={[0, 1.18, 0]} radius={0.015}><meshStandardMaterial color="#D97706" roughness={0.18} /></RoundedBox></group>))}
             </group>
           </group>
         </group>
@@ -709,8 +764,8 @@ function AmbientWorldDetails({ biome, isNight, toonMap }) {
 }
 
 function VoxelWorldMesh({
-  blockMap, mode, isInsideChapel, selectedBlock, selectedProp, selectedCrop, selectedAnimal, selectedNpcType, propRot,
-  onAddBlock, onMineBlock, onAddProp, onPlantCrop, onWaterSoil, onAddAnimal, onAddNpc, onWalkTo
+  blockMap, mode, isInsideChapel, selectedBlock, selectedPartShape, selectedProp, selectedCrop, selectedAnimal, selectedNpcType, propRot,
+  onAddLegoStructure, onMineBlock, onAddProp, onPlantCrop, onWaterSoil, onAddAnimal, onAddNpc, onWalkTo
 }) {
   const [hoverTarget, setHoverTarget] = useState(null);
   const textures = useMemo(() => createBlockTextures(), []);
@@ -748,7 +803,7 @@ function VoxelWorldMesh({
               const c = computeHitCoords(e);
               if (!c) return;
               if (mode === 'walk') onWalkTo(e.point.x, e.point.z);
-              else if (mode === 'build') onAddBlock(c.outX, c.outY, c.outZ, selectedBlock);
+              else if (mode === 'build') onAddLegoStructure(c.outX, c.outY, c.outZ, selectedBlock, selectedPartShape, propRot);
               else if (mode === 'prop') onAddProp(c.outX, c.outY, c.outZ, selectedProp, propRot);
               else if (mode === 'farm') onPlantCrop(c.outX, c.outY, c.outZ, selectedCrop);
               else if (mode === 'water') onWaterSoil(c.inX, c.inY, c.inZ);
@@ -757,11 +812,12 @@ function VoxelWorldMesh({
               else if (mode === 'break') onMineBlock(c.inX, c.inY, c.inZ);
             }}
           >
+            {/* 유광 ABS 플라스틱 브릭 재질 (roughness 0.22로 레고 특유의 광택 구현!) */}
             <meshStandardMaterial
               map={textures[type]}
               color={meta.transparent ? meta.color : '#FFFFFF'}
-              roughness={meta.roughness ?? 0.92}
-              metalness={0}
+              roughness={meta.transparent ? 0.08 : 0.22}
+              metalness={0.04}
               transparent={Boolean(meta.transparent) || isRoofFade}
               opacity={isRoofFade ? 0.22 : (meta.opacity ?? 1)}
               emissive={meta.emissive || '#000000'}
@@ -772,50 +828,15 @@ function VoxelWorldMesh({
       })}
       {mode !== 'walk' && hoverTarget && (
         <mesh position={hoverTarget}>
-          <boxGeometry args={[1.03, 1.03, 1.03]} />
-          <meshBasicMaterial color={mode === 'break' ? '#FB7185' : mode === 'water' ? '#38BDF8' : '#34D399'} wireframe transparent opacity={0.95} />
+          <boxGeometry args={[1.04, 1.04, 1.04]} />
+          <meshBasicMaterial color={mode === 'break' ? '#FB7185' : mode === 'water' ? '#38BDF8' : '#FACC15'} wireframe transparent opacity={0.95} />
         </mesh>
       )}
     </group>
   );
 }
 
-function ChibiAvatar({ position, rotationY = 0, walking = false, swimming = false, playingBand = false, avatarConfig, nameTagTex, toonMap, scale = 1, onClick }) {
-  const rootRef = useRef(), leftLegRef = useRef(), rightLegRef = useRef(), leftArmRef = useRef(), rightArmRef = useRef();
-  useFrame(({ clock }) => {
-    const t = clock.elapsedTime;
-    if (swimming) {
-      if (rootRef.current) { rootRef.current.rotation.x = THREE.MathUtils.lerp(rootRef.current.rotation.x, Math.PI / 2.3, 0.15); rootRef.current.position.y = 0.25 + Math.sin(t * 4) * 0.05; }
-      const stroke = Math.sin(t * 8) * 0.9;
-      if (leftArmRef.current && rightArmRef.current) { leftArmRef.current.rotation.x = -2.2 + stroke; rightArmRef.current.rotation.x = -2.2 - stroke; }
-    } else {
-      if (rootRef.current) { rootRef.current.rotation.x = THREE.MathUtils.lerp(rootRef.current.rotation.x, 0, 0.18); rootRef.current.position.y = walking ? Math.abs(Math.sin(t * 10)) * 0.06 : playingBand ? Math.abs(Math.sin(t * 7)) * 0.08 : Math.sin(t * 2.5) * 0.015; }
-      const sw = walking ? Math.sin(t * 10) * 0.55 : 0;
-      if (leftLegRef.current && rightLegRef.current) { leftLegRef.current.rotation.x = sw; rightLegRef.current.rotation.x = -sw; }
-      if (leftArmRef.current && rightArmRef.current) { leftArmRef.current.rotation.x = playingBand ? -1.0 + Math.sin(t * 12) * 0.35 : -sw * 0.8; rightArmRef.current.rotation.x = playingBand ? -1.0 - Math.sin(t * 12) * 0.35 : sw * 0.8; }
-    }
-  });
-  return (
-    <group position={position} rotation={[0, rotationY, 0]} scale={[scale, scale, scale]} onClick={onClick}>
-      <group ref={rootRef}>
-        <group ref={leftLegRef} position={[-0.09, 0.22, 0]}><mesh position={[0, -0.09, 0]} castShadow><capsuleGeometry args={[0.055, 0.12, 6, 10]} /><meshToonMaterial color={avatarConfig.pantsColor} gradientMap={toonMap} /></mesh></group>
-        <group ref={rightLegRef} position={[0.09, 0.22, 0]}><mesh position={[0, -0.09, 0]} castShadow><capsuleGeometry args={[0.055, 0.12, 6, 10]} /><meshToonMaterial color={avatarConfig.pantsColor} gradientMap={toonMap} /></mesh></group>
-        <mesh position={[0, 0.42, 0]} castShadow><capsuleGeometry args={[0.15, 0.18, 8, 12]} /><meshToonMaterial color={avatarConfig.shirtColor} gradientMap={toonMap} /></mesh>
-        <group ref={leftArmRef} position={[-0.20, 0.50, 0]}><mesh position={[0, -0.10, 0]}><capsuleGeometry args={[0.045, 0.14, 6, 10]} /><meshToonMaterial color={avatarConfig.shirtColor} gradientMap={toonMap} /></mesh></group>
-        <group ref={rightArmRef} position={[0.20, 0.50, 0]}><mesh position={[0, -0.10, 0]}><capsuleGeometry args={[0.045, 0.14, 6, 10]} /><meshToonMaterial color={avatarConfig.shirtColor} gradientMap={toonMap} /></mesh></group>
-        <group position={[0, 0.78, 0]}>
-          <mesh castShadow><sphereGeometry args={[0.22, 14, 14]} /><meshToonMaterial color="#FFE4C4" gradientMap={toonMap} /></mesh>
-          <mesh position={[0, 0.06, -0.02]} scale={[1.06, 0.92, 1.06]}><sphereGeometry args={[0.225, 14, 14]} /><meshToonMaterial color={avatarConfig.hairColor} gradientMap={toonMap} /></mesh>
-          <mesh position={[-0.075, -0.01, 0.205]}><sphereGeometry args={[0.025, 6, 6]} /><meshBasicMaterial color="#18181B" /></mesh>
-          <mesh position={[0.075, -0.01, 0.205]}><sphereGeometry args={[0.025, 6, 6]} /><meshBasicMaterial color="#18181B" /></mesh>
-        </group>
-      </group>
-      {nameTagTex && <Billboard position={[0, 1.34, 0]}><mesh><planeGeometry args={[1.35, 0.31]} /><meshBasicMaterial map={nameTagTex} transparent depthTest={false} /></mesh></Billboard>}
-    </group>
-  );
-}
-
-function AutonomousNpcAvatar({ npc, blockMap, mode, isBandPlaying, toonMap, onSelectNpc, onRemoveNpc }) {
+function AutonomousNpcAvatar({ npc, blockMap, mode, isBandPlaying, onSelectNpc, onRemoveNpc }) {
   const meta = NPC_META_MAP[npc.type] || NPC_CATALOG[0];
   const nameTagTex = useMemo(() => makeNameTagTex(meta.label, '#F59E0B'), [meta.label]);
   const npcGroupRef = useRef();
@@ -840,14 +861,22 @@ function AutonomousNpcAvatar({ npc, blockMap, mode, isBandPlaying, toonMap, onSe
   });
 
   return (
-    <group ref={npcGroupRef} position={[npc.x, npc.y, npc.z]} rotation={[0, npc.rot || 0, 0]}>
-      <ChibiAvatar position={[0, 0, 0]} walking={walking} playingBand={Boolean(isBandPlaying && meta.isBand)} scale={meta.isKid ? 0.78 : 1} avatarConfig={{ shirtColor: meta.shirt, pantsColor: meta.pants, hairColor: meta.hair }} nameTagTex={nameTagTex} toonMap={toonMap} onClick={(e) => { e.stopPropagation(); if (mode === 'break') onRemoveNpc(npc.id); else onSelectNpc(meta); }} />
+    <group ref={npcGroupRef} position={[npc.x, npc.y, npc.z]} rotation={[0, npc.rot || 0, 0]} scale={meta.isKid ? [0.78, 0.78, 0.78] : [1, 1, 1]}>
+      <SharedChibiAvatar
+        position={[0, 0, 0]}
+        isWalking={walking}
+        emote={isBandPlaying && meta.isBand ? 'dance' : null}
+        shirtColor={meta.shirt}
+        pantsColor={meta.pants}
+        hairColor={meta.hair}
+        nameTagTexture={nameTagTex}
+        onClick={(e) => { e.stopPropagation(); if (mode === 'break') onRemoveNpc(npc.id); else onSelectNpc(meta); }}
+      />
     </group>
   );
 }
 
-// 모바일 최적화 Ref 직접 이동 PlayerRig (매 프레임 setState 병목 제거!)
-function PlayerRig({ blockMap, propsList, worldRadius, walkTarget, clearWalkTarget, joyVecRef, jumpReqRef, playerPosRef, playerRotRef, playerName, avatarConfig, controlsRef, soundMuted, toonMap, onSwimChange, onInsideChapelChange, onSyncPos }) {
+function PlayerRig({ blockMap, propsList, worldRadius, walkTarget, clearWalkTarget, joyVecRef, jumpReqRef, playerPosRef, playerRotRef, playerName, avatarConfig, controlsRef, soundMuted, onSwimChange, onInsideChapelChange, onSyncPos }) {
   const playerGroupRef = useRef();
   const keysRef = useRef({});
   const vyRef = useRef(0);
@@ -946,19 +975,29 @@ function PlayerRig({ blockMap, propsList, worldRadius, walkTarget, clearWalkTarg
 
   return (
     <group ref={playerGroupRef} position={[2, 0.5, 5]} rotation={[0, Math.PI, 0]}>
-      <ChibiAvatar position={[0, 0, 0]} walking={walkingState} swimming={swimming} avatarConfig={avatarConfig} nameTagTex={nameTagTex} toonMap={toonMap} />
+      <SharedChibiAvatar
+        position={[0, 0, 0]}
+        rotationY={0}
+        isWalking={walkingState}
+        gender={avatarConfig.gender}
+        hairStyle={avatarConfig.hairStyle}
+        isSkirt={Boolean(avatarConfig.isSkirt)}
+        shirtColor={avatarConfig.shirtColor}
+        pantsColor={avatarConfig.pantsColor}
+        hairColor={avatarConfig.hairColor}
+        nameTagTexture={nameTagTex}
+      />
     </group>
   );
 }
 
 // =====================================================================
-// 7. 메인 7층 오픈월드 빌더즈 (Sandbox Master Edition)
+// 8. 메인 7층 레고 브릭월드 (SkyGarden7F)
 // =====================================================================
 export default function SkyGarden7F({ setActiveScreen, onChangeFloor, onExitHome }) {
   const authUser = useAppStore((s) => s.authUser);
   const playerName = authUser?.name || localStorage.getItem('login_user_name') || '정신동';
   const isMobile = useMemo(() => (typeof window !== 'undefined' ? window.innerWidth < 768 : false), []);
-  const toonMap = useMemo(() => createToonGradient(), []);
 
   const clientIdRef = useRef(`ow7f_${playerName}_${Math.random().toString(36).slice(2, 8)}`);
   const controlsRef = useRef();
@@ -979,7 +1018,7 @@ export default function SkyGarden7F({ setActiveScreen, onChangeFloor, onExitHome
 
   const [world, setWorld] = useState(() => {
     try { const saved = localStorage.getItem(STORAGE_KEY_WORLD); if (saved) return JSON.parse(saved); } catch (_) {}
-    return generateBiomeWorld('meadow', 18);
+    return { ...generateBiomeWorld('meadow', 18), customParts: [] };
   });
 
   const [meta, setMeta] = useState(() => {
@@ -987,6 +1026,7 @@ export default function SkyGarden7F({ setActiveScreen, onChangeFloor, onExitHome
     return DEFAULT_META;
   });
 
+  const [bursts, setBursts] = useState([]);
   const [nowTs, setNowTs] = useState(() => Date.now());
   useEffect(() => { const t = setInterval(() => setNowTs(Date.now()), 1000); return () => clearInterval(t); }, []);
 
@@ -995,6 +1035,7 @@ export default function SkyGarden7F({ setActiveScreen, onChangeFloor, onExitHome
   const [camPreset, setCamPreset] = useState('behind');
   const [mode, setMode] = useState('walk');
   const [blockCat, setBlockCat] = useState('전체');
+  const [selectedPartShape, setSelectedPartShape] = useState('brick_1x1');
   const [selectedBlock, setSelectedBlock] = useState('ivory_wall');
   const [selectedProp, setSelectedProp] = useState('hay_bale');
   const [selectedCrop, setSelectedCrop] = useState('rice');
@@ -1021,6 +1062,15 @@ export default function SkyGarden7F({ setActiveScreen, onChangeFloor, onExitHome
   const showToast = useCallback((msg) => {
     setToastMsg(msg);
     setTimeout(() => setToastMsg((prev) => (prev === msg ? '' : prev)), 2800);
+  }, []);
+
+  const spawnBrickBurst = useCallback((x, y, z, color = '#FACC15') => {
+    const id = `bst_${Date.now()}_${Math.random()}`;
+    const pieces = Array.from({ length: 6 }).map(() => ({
+      vel: [(Math.random() - 0.5) * 4.5, 2.5 + Math.random() * 3.2, (Math.random() - 0.5) * 4.5]
+    }));
+    setBursts((prev) => [...prev.slice(-6), { id, x, y, z, color, pieces }]);
+    setTimeout(() => setBursts((prev) => prev.filter((b) => b.id !== id)), 520);
   }, []);
 
   const updateWorld = useCallback((updater, broadcast = true) => {
@@ -1059,7 +1109,7 @@ export default function SkyGarden7F({ setActiveScreen, onChangeFloor, onExitHome
     if (isBandPlaying) { clearInterval(bandTimerRef.current); setIsBandPlaying(false); return; }
     setIsBandPlaying(true);
     completeQuest('q_band');
-    showToast('🎵 좋은나무 찬양악단 합주가 시작되었습니다!');
+    showToast('🎵 좋은나무 레고 찬양악단 합주가 시작되었습니다!');
     let step = 0;
     const chords = [[261.63, 329.63, 392.0, 523.25], [220.0, 261.63, 329.63, 440.0], [174.61, 220.0, 261.63, 349.23], [196.0, 246.94, 293.66, 392.0]];
     const playStep = () => {
@@ -1082,22 +1132,52 @@ export default function SkyGarden7F({ setActiveScreen, onChangeFloor, onExitHome
 
   useEffect(() => () => clearInterval(bandTimerRef.current), []);
 
-  // 월드 확장 핸들러
   const handleExpandWorld = () => {
     const nextR = worldRadius < 24 ? 24 : worldRadius < 30 ? 30 : 30;
-    if (nextR === worldRadius) return showToast('이미 최대 크기(61×61)로 확장된 월드입니다!');
+    if (nextR === worldRadius) return showToast('이미 최대 크기(61×61)로 확장된 레고 월드입니다!');
     updateWorld((prev) => expandWorldTerrain(prev, nextR), true);
     playSfx('fanfare', soundMuted);
-    showToast(`🗺️ 월드가 ${nextR * 2 + 1}×${nextR * 2 + 1} 크기로 확장되었습니다!`);
+    showToast(`🗺️ 레고 월드가 ${nextR * 2 + 1}×${nextR * 2 + 1} 크기로 확장되었습니다!`);
   };
 
-  // 블록 설치 & 채굴(HP 내구도 시스템 + 지하 -4 지원)
-  const handleAddBlock = useCallback((x, y, z, type) => {
+  // ★ 다중 형태 레고 브릭 조립 엔진 (1×1 · 1×2 · 2×2 · 1×4 · 경사지붕 · 아치 · 유리창 · 발광브릭)
+  const handleAddLegoStructure = useCallback((x, y, z, blockType, partShape, rot) => {
     if (Math.abs(x) > worldRadius || Math.abs(z) > worldRadius || y < -4 || y > 16) return;
-    if (isCellOccupied(world.blocks, world.props, x, y, z, playerPosRef.current)) return showToast('이미 블록·가구 또는 캐릭터가 있는 위치입니다.');
-    updateWorld((prev) => ({ ...prev, blocks: { ...prev.blocks, [blockKey(x, y, z)]: type } }));
+    const color = BLOCK_MAP_META[blockType]?.color || '#FACC15';
+
+    // 특수 조형 브릭 파츠
+    if (['slope_roof', 'arch_gate', 'window_glass', 'neon_lamp'].includes(partShape)) {
+      const newPart = { id: `lpt_${Date.now()}_${Math.random().toString(36).slice(2, 5)}`, shape: partShape, blockType, x, y, z, rot };
+      updateWorld((prev) => ({ ...prev, customParts: [...(prev.customParts || []), newPart] }));
+      playSfx('place', soundMuted);
+      spawnBrickBurst(x, y + 0.3, z, color);
+      return;
+    }
+
+    // 멀티셀 레고 브릭 (1x1, 1x2, 2x2, 1x4)
+    const dirX = Math.round(Math.cos(rot)), dirZ = Math.round(Math.sin(rot));
+    const cells = [];
+    if (partShape === 'brick_1x1') cells.push([x, y, z]);
+    else if (partShape === 'brick_1x2') cells.push([x, y, z], [x + dirX, y, z + dirZ]);
+    else if (partShape === 'brick_1x4') { for (let i = 0; i < 4; i++) cells.push([x + dirX * i, y, z + dirZ * i]); }
+    else if (partShape === 'brick_2x2') cells.push([x, y, z], [x + 1, y, z], [x, y, z + 1], [x + 1, y, z + 1]);
+
+    const validCells = cells.filter(([cx, cy, cz]) => Math.abs(cx) <= worldRadius && Math.abs(cz) <= worldRadius && !isCellOccupied(world.blocks, world.props, cx, cy, cz, playerPosRef.current));
+    if (validCells.length === 0) return showToast('이미 브릭이나 캐릭터가 있는 위치입니다.');
+
+    updateWorld((prev) => {
+      const nb = { ...prev.blocks };
+      validCells.forEach(([cx, cy, cz]) => { nb[blockKey(cx, cy, cz)] = blockType; });
+      return { ...prev, blocks: nb };
+    });
     playSfx('place', soundMuted);
-  }, [world.blocks, world.props, worldRadius, updateWorld, showToast, soundMuted]);
+    spawnBrickBurst(x, y + 0.3, z, color);
+  }, [world.blocks, world.props, worldRadius, updateWorld, showToast, soundMuted, spawnBrickBurst]);
+
+  const handleRemoveCustomPart = useCallback((id) => {
+    updateWorld((prev) => ({ ...prev, customParts: (prev.customParts || []).filter((p) => p.id !== id) }));
+    playSfx('break', soundMuted);
+  }, [updateWorld, soundMuted]);
 
   const handleMineBlock = useCallback((x, y, z) => {
     if (y <= -5) return showToast('단단한 지하 암반은 부술 수 없습니다!');
@@ -1112,61 +1192,42 @@ export default function SkyGarden7F({ setActiveScreen, onChangeFloor, onExitHome
     if (curHp > 0) {
       blockHpRef.current[k] = curHp;
       playSfx('hit', soundMuted);
-      showToast(`⛏️ [${bMeta?.label}] 채굴 중... (남은 타격 ${curHp})`);
+      showToast(`⛏️ [${bMeta?.label}] 분해 중... (남은 타격 ${curHp})`);
       return;
     }
 
     delete blockHpRef.current[k];
     updateWorld((prev) => { const nb = { ...prev.blocks }; delete nb[k]; return { ...prev, blocks: nb }; });
     playSfx('break', soundMuted);
+    spawnBrickBurst(x, y + 0.2, z, bMeta?.color || '#94A3B8');
     const dropKey = bMeta?.drop;
     if (dropKey) {
       updateMeta((prev) => ({ ...prev, materials: { ...prev.materials, [dropKey]: (prev.materials[dropKey] || 0) + 1 } }));
-      if (oldType.startsWith('ore_')) {
-        showToast(`💎 [${bMeta.label}] 채굴 성공! ${MATERIAL_META[dropKey]?.icon} +1`);
-        completeQuest('q_mine');
-      }
+      if (oldType.startsWith('ore_')) { showToast(`💎 [${bMeta.label}] 채굴 성공! ${MATERIAL_META[dropKey]?.icon} +1`); completeQuest('q_mine'); }
     }
-  }, [world.blocks, updateWorld, updateMeta, showToast, soundMuted, completeQuest]);
+  }, [world.blocks, updateWorld, updateMeta, showToast, soundMuted, completeQuest, spawnBrickBurst]);
 
-  // 물주기 (작물 또는 텃밭흙 클릭 시 젖은 흙으로 변경 & 성장 가속)
   const handleWaterCrop = useCallback((crop) => {
-    updateWorld((prev) => ({
-      ...prev,
-      blocks: { ...prev.blocks, [blockKey(crop.x, crop.y - 1, crop.z)]: 'wet_soil' },
-      crops: prev.crops.map((c) => (c.id === crop.id ? { ...c, watered: true, plantedAt: Date.now() - 4000 } : c))
-    }));
-    playSfx('water', soundMuted);
-    showToast('💧 양동이로 시원하게 물을 주었습니다! 작물이 쑥쑥 자랍니다.');
-    completeQuest('q_water');
+    updateWorld((prev) => ({ ...prev, blocks: { ...prev.blocks, [blockKey(crop.x, crop.y - 1, crop.z)]: 'wet_soil' }, crops: prev.crops.map((c) => (c.id === crop.id ? { ...c, watered: true, plantedAt: Date.now() - 4000 } : c)) }));
+    playSfx('water', soundMuted); showToast('💧 물을 주었습니다! 레고 작물이 쑥쑥 자랍니다.'); completeQuest('q_water');
   }, [updateWorld, soundMuted, showToast, completeQuest]);
 
   const handleWaterSoil = useCallback((x, y, z) => {
     const t = world.blocks[blockKey(x, y, z)];
     if (t === 'farm_soil' || t === 'dirt' || t === 'grass') {
-      updateWorld((prev) => ({
-        ...prev,
-        blocks: { ...prev.blocks, [blockKey(x, y, z)]: 'wet_soil' },
-        crops: prev.crops.map((c) => (c.x === x && c.z === z ? { ...c, watered: true } : c))
-      }));
-      playSfx('water', soundMuted);
-      completeQuest('q_water');
+      updateWorld((prev) => ({ ...prev, blocks: { ...prev.blocks, [blockKey(x, y, z)]: 'wet_soil' }, crops: prev.crops.map((c) => (c.x === x && c.z === z ? { ...c, watered: true } : c)) }));
+      playSfx('water', soundMuted); completeQuest('q_water');
     }
   }, [world.blocks, updateWorld, soundMuted, completeQuest]);
 
   const handlePlantCrop = useCallback((x, y, z, cropType) => {
     if (Math.abs(x) > worldRadius || Math.abs(z) > worldRadius) return;
     const below = world.blocks[blockKey(x, y - 1, z)];
-    if (below !== 'farm_soil' && below !== 'wet_soil' && below !== 'grass' && below !== 'dirt') return showToast('잔디나 텃밭 위에 심어주세요!');
+    if (below !== 'farm_soil' && below !== 'wet_soil' && below !== 'grass' && below !== 'dirt') return showToast('잔디나 텃밭 브릭 위에 심어주세요!');
     if (world.crops.some((c) => c.x === x && c.z === z)) return showToast('이미 작물이 심어져 있습니다.');
     const isAlreadyWet = below === 'wet_soil';
-    updateWorld((prev) => ({
-      ...prev,
-      blocks: { ...prev.blocks, [blockKey(x, y - 1, z)]: isAlreadyWet ? 'wet_soil' : 'farm_soil' },
-      crops: [...prev.crops, { id: `cp_${Date.now()}`, type: cropType, x, y, z, plantedAt: Date.now(), watered: isAlreadyWet }]
-    }));
+    updateWorld((prev) => ({ ...prev, blocks: { ...prev.blocks, [blockKey(x, y - 1, z)]: isAlreadyWet ? 'wet_soil' : 'farm_soil' }, crops: [...prev.crops, { id: `cp_${Date.now()}`, type: cropType, x, y, z, plantedAt: Date.now(), watered: isAlreadyWet }] }));
     playSfx('place', soundMuted);
-    if (!isAlreadyWet) showToast('🌱 씨앗을 심었습니다! 🪣 물주기 모드로 물을 주세요.');
   }, [world.blocks, world.crops, worldRadius, updateWorld, showToast, soundMuted]);
 
   const handleHarvestCrop = useCallback((crop) => {
@@ -1175,22 +1236,16 @@ export default function SkyGarden7F({ setActiveScreen, onChangeFloor, onExitHome
     updateMeta((prev) => {
       const nextProps = { ...prev.props };
       if (cMeta.bonusProp) nextProps[cMeta.bonusProp] = (nextProps[cMeta.bonusProp] || 0) + 1;
-      return {
-        ...prev,
-        hearts: prev.hearts + cMeta.heartReward,
-        materials: { ...prev.materials, [cMeta.harvestMat]: (prev.materials[cMeta.harvestMat] || 0) + 2 },
-        props: nextProps
-      };
+      return { ...prev, hearts: prev.hearts + cMeta.heartReward, materials: { ...prev.materials, [cMeta.harvestMat]: (prev.materials[cMeta.harvestMat] || 0) + 2 }, props: nextProps };
     });
     playSfx('harvest', soundMuted);
-    const bonusText = cMeta.bonusProp === 'hay_bale' ? ' + 🌾 볏짚더미 획득!' : cMeta.bonusProp === 'fruit_basket' ? ' + 🧺 과일바구니 획득!' : '';
-    showToast(`${cMeta.icon} [${cMeta.label}] 수확! ❤️+${cMeta.heartReward}${bonusText}`);
+    showToast(`${cMeta.icon} [${cMeta.label}] 수확! ❤️+${cMeta.heartReward}`);
     completeQuest('q_harvest');
   }, [updateWorld, updateMeta, showToast, soundMuted, completeQuest]);
 
   const handleAddProp = useCallback((x, y, z, type, rot) => {
     if (Math.abs(x) > worldRadius || Math.abs(z) > worldRadius || y < -4 || y > 16) return;
-    if (isCellOccupied(world.blocks, world.props, x, y, z, playerPosRef.current)) return showToast('다른 블록이나 가구와 겹칩니다.');
+    if (isCellOccupied(world.blocks, world.props, x, y, z, playerPosRef.current)) return showToast('다른 브릭이나 가구와 겹칩니다.');
     if (!creativeMode) {
       const owned = meta.props[type] || 0;
       if (owned <= 0) return showToast('보유한 아이템이 없습니다! 🔨 제작대에서 만들어 주세요.');
@@ -1245,10 +1300,10 @@ export default function SkyGarden7F({ setActiveScreen, onChangeFloor, onExitHome
   };
 
   const handleSwitchBiome = (biomeId) => {
-    updateWorld(generateBiomeWorld(biomeId, worldRadius), true);
+    updateWorld({ ...generateBiomeWorld(biomeId, worldRadius), customParts: [] }, true);
     setShowBiomeModal(false);
     playSfx('fanfare', soundMuted);
-    showToast(`🌍 [${biomeId === 'meadow' ? '초원 고원' : biomeId === 'desert' ? '사막 오아시스' : '설원 마을'}] 이동!`);
+    showToast(`🌍 [${biomeId === 'meadow' ? '레고 초원 마을' : biomeId === 'desert' ? '레고 사막 오아시스' : '레고 설원 마을'}] 이동!`);
   };
 
   useEffect(() => {
@@ -1276,12 +1331,12 @@ export default function SkyGarden7F({ setActiveScreen, onChangeFloor, onExitHome
   const filteredBlocks = blockCat === '전체' ? BLOCK_CATALOG : BLOCK_CATALOG.filter((b) => b.cat === blockCat);
   const villageLevel = Math.floor(meta.hearts / 50) + 1;
   const isNight = timeOfDay === 'night';
-  const bgHex = isNight ? '#0B1324' : timeOfDay === 'sunset' ? '#D48C5E' : world.biome === 'snow' ? '#B5D2E8' : world.biome === 'desert' ? '#D9C088' : '#78B8DC';
+  const bgHex = isNight ? '#0B1324' : timeOfDay === 'sunset' ? '#D48C5E' : world.biome === 'snow' ? '#B5D2E8' : world.biome === 'desert' ? '#D9C088' : '#7BC4EC';
 
   return (
     <div translate="no" style={{ backgroundColor: bgHex }} className="notranslate w-full h-full relative overflow-hidden select-none font-sans">
       {toastMsg && (
-        <div className="fixed top-14 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-2xl bg-slate-900/95 border border-emerald-400/60 text-emerald-200 text-xs font-black shadow-2xl pointer-events-none whitespace-nowrap">
+        <div className="fixed top-14 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-2xl bg-slate-900/95 border border-amber-400/60 text-amber-200 text-xs font-black shadow-2xl pointer-events-none whitespace-nowrap">
           {toastMsg}
         </div>
       )}
@@ -1289,7 +1344,7 @@ export default function SkyGarden7F({ setActiveScreen, onChangeFloor, onExitHome
       {/* 1. 슬림 상단 HUD */}
       <header onPointerDown={stopUiEvent} onTouchStart={stopUiEvent} className="absolute top-2.5 left-2.5 right-2.5 z-20 flex items-center justify-between gap-1.5 pointer-events-none">
         <div className="flex items-center gap-1 pointer-events-auto">
-          <button type="button" onClick={() => (onExitHome ? onExitHome() : setActiveScreen && setActiveScreen('home'))} className="h-8 px-2.5 rounded-xl bg-slate-900/90 border border-white/15 text-white text-xs font-black cursor-pointer">◀ 7F</button>
+          <button type="button" onClick={() => (onExitHome ? onExitHome() : setActiveScreen && setActiveScreen('home'))} className="h-8 px-2.5 rounded-xl bg-slate-900/90 border border-white/15 text-white text-xs font-black cursor-pointer">◀ 7F LEGO</button>
           <button type="button" onClick={() => setShowQuestModal(true)} className="h-8 px-2.5 rounded-xl bg-amber-500 text-stone-950 text-[11px] font-black shadow-md cursor-pointer">Lv.{villageLevel} · ❤️{meta.hearts}</button>
           <button type="button" onClick={toggleBandPlay} className={`h-8 px-2 rounded-xl text-[11px] font-black cursor-pointer border ${isBandPlaying ? 'bg-pink-500 border-pink-300 text-white animate-pulse' : 'bg-slate-900/90 border-white/15 text-pink-300'}`}>🎵</button>
           <button type="button" onClick={() => setSoundMuted((m) => !m)} className="h-8 px-2 rounded-xl bg-slate-900/90 border border-white/15 text-white text-[11px] cursor-pointer">{soundMuted ? '🔇' : '🔊'}</button>
@@ -1312,35 +1367,43 @@ export default function SkyGarden7F({ setActiveScreen, onChangeFloor, onExitHome
         <button type="button" onClick={() => { camCommandRef.current = { type: 'zoom', factor: 1.28 }; }} className="w-9 h-9 rounded-xl bg-slate-900/85 border border-white/20 text-white font-black text-base shadow-lg cursor-pointer">－</button>
       </div>
 
-      {/* 2. 하단 8단 모드 독 (🪣 물주기 모드 추가!) */}
-      <div onPointerDown={stopUiEvent} onPointerMove={stopUiEvent} onTouchStart={stopUiEvent} onTouchMove={stopUiEvent} onWheel={stopUiEvent} className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 w-[96vw] max-w-[660px] flex flex-col gap-1.5 pointer-events-auto">
+      {/* 2. 하단 8단 레고 브릭 조립 독 */}
+      <div onPointerDown={stopUiEvent} onPointerMove={stopUiEvent} onTouchStart={stopUiEvent} onTouchMove={stopUiEvent} onWheel={stopUiEvent} className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 w-[96vw] max-w-[680px] flex flex-col gap-1.5 pointer-events-auto">
         <div className="flex items-center justify-center gap-1 flex-wrap">
           <div className="p-1 rounded-2xl bg-slate-950/92 border border-white/15 backdrop-blur-md flex items-center gap-0.5 overflow-x-auto hide-scrollbar touch-pan-x shadow-xl">
             {[
-              { id: 'walk', label: '🚶 이동' }, { id: 'water', label: '🪣 물주기' }, { id: 'farm', label: '🌾 농사' },
-              { id: 'build', label: '🧱 블록' }, { id: 'prop', label: '🪑 아이템' }, { id: 'animal', label: '🐑 동물' },
-              { id: 'npc', label: '👥 NPC' }, { id: 'break', label: '⛏️ 채굴' }
+              { id: 'walk', label: '🚶 이동' }, { id: 'build', label: '🧱 레고조립' }, { id: 'prop', label: '🪑 아이템' },
+              { id: 'farm', label: '🌾 농사' }, { id: 'water', label: '🪣 물주기' }, { id: 'animal', label: '🐑 동물' },
+              { id: 'npc', label: '👥 피겨' }, { id: 'break', label: '⛏️ 분해' }
             ].map((m) => (
-              <button key={m.id} type="button" onClick={() => setMode(m.id)} className={`px-2.5 py-1.5 rounded-xl text-[11px] font-black whitespace-nowrap cursor-pointer shrink-0 ${mode === m.id ? (m.id === 'break' ? 'bg-rose-500 text-white' : m.id === 'water' || m.id === 'walk' ? 'bg-sky-500 text-white' : 'bg-emerald-500 text-stone-950') : 'text-slate-300'}`}>
+              <button key={m.id} type="button" onClick={() => setMode(m.id)} className={`px-2.5 py-1.5 rounded-xl text-[11px] font-black whitespace-nowrap cursor-pointer shrink-0 ${mode === m.id ? (m.id === 'break' ? 'bg-rose-500 text-white' : m.id === 'build' ? 'bg-amber-400 text-stone-950' : m.id === 'water' || m.id === 'walk' ? 'bg-sky-500 text-white' : 'bg-emerald-500 text-stone-950') : 'text-slate-300'}`}>
                 {m.label}
               </button>
             ))}
           </div>
-          {(mode === 'prop' || mode === 'npc') && (
+          {(mode === 'build' || mode === 'prop' || mode === 'npc') && (
             <button type="button" onClick={() => setPropRot((r) => (r + Math.PI / 2) % (Math.PI * 2))} className="px-2.5 py-2 rounded-xl bg-amber-500 text-stone-950 text-[11px] font-black shadow-lg cursor-pointer">🔄 {Math.round((propRot * 180) / Math.PI)}°</button>
           )}
         </div>
 
+        {/* 레고 브릭 파츠 형태 + 색상/재질 듀얼 선택기 */}
         {mode === 'build' && (
-          <div className="p-1.5 rounded-2xl bg-slate-950/94 border border-emerald-400/40 backdrop-blur-md space-y-1.5 shadow-2xl">
+          <div className="p-2 rounded-2xl bg-slate-950/94 border border-amber-400/45 backdrop-blur-md space-y-1.5 shadow-2xl">
+            <div className="flex items-center gap-1 overflow-x-auto hide-scrollbar touch-pan-x">
+              {LEGO_PART_SHAPES.map((sp) => (
+                <button key={sp.id} type="button" onClick={() => setSelectedPartShape(sp.id)} className={`px-2.5 py-1 rounded-xl text-[11px] font-black whitespace-nowrap cursor-pointer border shrink-0 ${selectedPartShape === sp.id ? 'bg-amber-400 border-white text-stone-950' : 'bg-white/10 border-white/10 text-slate-200'}`}>
+                  {sp.icon} {sp.label}
+                </button>
+              ))}
+            </div>
             <div className="flex items-center gap-1 overflow-x-auto hide-scrollbar touch-pan-x">
               {['전체', '지형', '광석', '벽체', '바닥', '특수'].map((cat) => (
-                <button key={cat} type="button" onClick={() => setBlockCat(cat)} className={`px-2.5 py-0.5 rounded-lg text-[10.5px] font-bold cursor-pointer shrink-0 ${blockCat === cat ? 'bg-emerald-500/30 text-emerald-300 border border-emerald-400/50' : 'text-slate-400'}`}>{cat}</button>
+                <button key={cat} type="button" onClick={() => setBlockCat(cat)} className={`px-2 py-0.5 rounded-lg text-[10px] font-bold cursor-pointer shrink-0 ${blockCat === cat ? 'bg-emerald-500/30 text-emerald-300 border border-emerald-400/50' : 'text-slate-400'}`}>{cat}</button>
               ))}
             </div>
             <div className="flex items-center gap-1 overflow-x-auto hide-scrollbar touch-pan-x">
               {filteredBlocks.map((item) => (
-                <button key={item.id} type="button" onClick={() => setSelectedBlock(item.id)} className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold whitespace-nowrap cursor-pointer border shrink-0 ${selectedBlock === item.id ? 'bg-emerald-500 border-emerald-300 text-stone-950 font-black' : 'bg-white/10 border-white/10 text-white'}`}>
+                <button key={item.id} type="button" onClick={() => setSelectedBlock(item.id)} className={`px-2.5 py-1 rounded-xl text-[11px] font-bold whitespace-nowrap cursor-pointer border shrink-0 ${selectedBlock === item.id ? 'bg-emerald-500 border-emerald-300 text-stone-950 font-black' : 'bg-white/10 border-white/10 text-white'}`}>
                   {item.icon} {item.label}
                 </button>
               ))}
@@ -1349,41 +1412,33 @@ export default function SkyGarden7F({ setActiveScreen, onChangeFloor, onExitHome
         )}
 
         {mode === 'prop' && (
-          <div className="p-1.5 rounded-2xl bg-slate-950/94 border border-emerald-400/40 backdrop-blur-md flex items-center gap-1 overflow-x-auto hide-scrollbar touch-pan-x shadow-2xl">
+          <div className="p-1.5 rounded-2xl bg-slate-950/94 border border-emerald-400/40 flex items-center gap-1 overflow-x-auto hide-scrollbar touch-pan-x shadow-2xl">
             {PROP_CATALOG.map((item) => (
-              <button key={item.id} type="button" onClick={() => setSelectedProp(item.id)} className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold whitespace-nowrap cursor-pointer border shrink-0 ${selectedProp === item.id ? 'bg-emerald-500 border-emerald-300 text-stone-950 font-black' : 'bg-white/10 border-white/10 text-white'}`}>
-                {item.icon} {item.label}
-              </button>
+              <button key={item.id} type="button" onClick={() => setSelectedProp(item.id)} className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold whitespace-nowrap cursor-pointer border shrink-0 ${selectedProp === item.id ? 'bg-emerald-500 border-emerald-300 text-stone-950 font-black' : 'bg-white/10 border-white/10 text-white'}`}>{item.icon} {item.label}</button>
             ))}
           </div>
         )}
 
         {mode === 'farm' && (
-          <div className="p-1.5 rounded-2xl bg-slate-950/94 border border-lime-400/40 backdrop-blur-md flex items-center gap-1 overflow-x-auto hide-scrollbar touch-pan-x shadow-2xl">
+          <div className="p-1.5 rounded-2xl bg-slate-950/94 border border-lime-400/40 flex items-center gap-1 overflow-x-auto hide-scrollbar touch-pan-x shadow-2xl">
             {CROP_CATALOG.map((item) => (
-              <button key={item.id} type="button" onClick={() => setSelectedCrop(item.id)} className={`px-3 py-1.5 rounded-xl text-[11px] font-bold whitespace-nowrap cursor-pointer border shrink-0 ${selectedCrop === item.id ? 'bg-lime-400 border-lime-200 text-stone-950 font-black' : 'bg-white/10 border-white/10 text-white'}`}>
-                {item.icon} {item.label}
-              </button>
+              <button key={item.id} type="button" onClick={() => setSelectedCrop(item.id)} className={`px-3 py-1.5 rounded-xl text-[11px] font-bold whitespace-nowrap cursor-pointer border shrink-0 ${selectedCrop === item.id ? 'bg-lime-400 border-lime-200 text-stone-950 font-black' : 'bg-white/10 border-white/10 text-white'}`}>{item.icon} {item.label}</button>
             ))}
           </div>
         )}
 
         {mode === 'animal' && (
-          <div className="p-1.5 rounded-2xl bg-slate-950/94 border border-amber-400/40 backdrop-blur-md flex items-center gap-1 overflow-x-auto hide-scrollbar touch-pan-x shadow-2xl">
+          <div className="p-1.5 rounded-2xl bg-slate-950/94 border border-amber-400/40 flex items-center gap-1 overflow-x-auto hide-scrollbar touch-pan-x shadow-2xl">
             {ANIMAL_CATALOG.map((item) => (
-              <button key={item.id} type="button" onClick={() => setSelectedAnimal(item.id)} className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold whitespace-nowrap cursor-pointer border shrink-0 ${selectedAnimal === item.id ? 'bg-amber-400 border-amber-200 text-stone-950 font-black' : 'bg-white/10 border-white/10 text-white'}`}>
-                {item.icon} {item.label}
-              </button>
+              <button key={item.id} type="button" onClick={() => setSelectedAnimal(item.id)} className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold whitespace-nowrap cursor-pointer border shrink-0 ${selectedAnimal === item.id ? 'bg-amber-400 border-amber-200 text-stone-950 font-black' : 'bg-white/10 border-white/10 text-white'}`}>{item.icon} {item.label}</button>
             ))}
           </div>
         )}
 
         {mode === 'npc' && (
-          <div className="p-1.5 rounded-2xl bg-slate-950/94 border border-amber-400/40 backdrop-blur-md flex items-center gap-1 overflow-x-auto hide-scrollbar touch-pan-x shadow-2xl">
+          <div className="p-1.5 rounded-2xl bg-slate-950/94 border border-amber-400/40 flex items-center gap-1 overflow-x-auto hide-scrollbar touch-pan-x shadow-2xl">
             {NPC_CATALOG.map((item) => (
-              <button key={item.id} type="button" onClick={() => setSelectedNpcType(item.id)} className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold whitespace-nowrap cursor-pointer border shrink-0 ${selectedNpcType === item.id ? 'bg-amber-500 border-amber-300 text-stone-950 font-black' : 'bg-white/10 border-white/10 text-white'}`}>
-                {item.icon} {item.label}
-              </button>
+              <button key={item.id} type="button" onClick={() => setSelectedNpcType(item.id)} className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold whitespace-nowrap cursor-pointer border shrink-0 ${selectedNpcType === item.id ? 'bg-amber-500 border-amber-300 text-stone-950 font-black' : 'bg-white/10 border-white/10 text-white'}`}>{item.icon} {item.label}</button>
             ))}
           </div>
         )}
@@ -1393,42 +1448,43 @@ export default function SkyGarden7F({ setActiveScreen, onChangeFloor, onExitHome
       {mode === 'walk' && (
         <>
           <AnalogJoystick joyVecRef={joyVecRef} />
-          <button type="button" onPointerDown={(e) => { e.stopPropagation(); jumpReqRef.current = true; }} className="absolute bottom-20 right-4 z-20 px-4 py-3 rounded-2xl bg-sky-500/90 border border-white/30 text-white font-black text-xs shadow-xl cursor-pointer active:scale-95">
+          <button type="button" onPointerDown={(e) => { e.stopPropagation(); jumpReqRef.current = true; }} className="absolute bottom-20 right-4 z-20 px-4 py-3 rounded-2xl bg-amber-400 border border-white/40 text-stone-950 font-black text-xs shadow-xl cursor-pointer active:scale-95">
             ⬆️ 점프
           </button>
         </>
       )}
 
-      {/* 4. 메인 3D 캔버스 */}
+      {/* 4. 메인 3D 레고 월드 캔버스 */}
       <Canvas
         shadows
         dpr={isMobile ? [1, 1.25] : [1, 1.75]}
-        gl={{ antialias: !isMobile, powerPreference: 'high-performance', toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: isNight ? 0.72 : 0.88 }}
+        gl={{ antialias: !isMobile, powerPreference: 'high-performance', toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: isNight ? 0.78 : 1.05 }}
       >
         <color attach="background" args={[bgHex]} />
-        <fog attach="fog" args={[bgHex, 28, 86]} />
+        <fog attach="fog" args={[bgHex, 30, 88]} />
         {!isNight && <Sky sunPosition={timeOfDay === 'sunset' ? [-20, 4, 15] : [-15, 22, 18]} inclination={0.48} azimuth={0.25} />}
 
         <PerspectiveCamera makeDefault position={[2, 4.9, 11.2]} fov={46} near={0.1} far={180} />
         <CameraActionBridge controlsRef={controlsRef} playerPosRef={playerPosRef} playerRotRef={playerRotRef} camCommandRef={camCommandRef} />
 
-        <ambientLight intensity={isNight ? 0.26 : 0.62} color={isNight ? '#64748B' : '#F6F1E7'} />
-        <hemisphereLight args={[isNight ? '#1E293B' : '#CBD5E1', '#634C36', isNight ? 0.22 : 0.44]} />
-        <directionalLight position={[-14, 24, 16]} intensity={isNight ? 0.2 : 0.92} color={timeOfDay === 'sunset' ? '#F59E0B' : '#FFF4E0'} castShadow shadow-mapSize={isMobile ? [1024, 1024] : [2048, 2048]} shadow-camera-left={-26} shadow-camera-right={26} shadow-camera-top={26} shadow-camera-bottom={-26} shadow-bias={-0.0006} />
+        <ambientLight intensity={isNight ? 0.28 : 0.88} color={isNight ? '#64748B' : '#FFFFFF'} />
+        <hemisphereLight args={[isNight ? '#1E293B' : '#FFFDF7', '#94A3B8', isNight ? 0.25 : 0.65]} />
+        <directionalLight position={[-14, 24, 16]} intensity={isNight ? 0.25 : 1.32} color={timeOfDay === 'sunset' ? '#F59E0B' : '#FFF8EB'} castShadow shadow-mapSize={isMobile ? [1024, 1024] : [2048, 2048]} shadow-camera-left={-26} shadow-camera-right={26} shadow-camera-top={26} shadow-camera-bottom={-26} shadow-bias={-0.0006} />
 
-        <AmbientWorldDetails biome={world.biome} isNight={isNight} toonMap={toonMap} />
+        <AmbientWorldDetails biome={world.biome} isNight={isNight} />
 
         <VoxelWorldMesh
           blockMap={world.blocks}
           mode={mode}
           isInsideChapel={isInsideChapel}
           selectedBlock={selectedBlock}
+          selectedPartShape={selectedPartShape}
           selectedProp={selectedProp}
           selectedCrop={selectedCrop}
           selectedAnimal={selectedAnimal}
           selectedNpcType={selectedNpcType}
           propRot={propRot}
-          onAddBlock={handleAddBlock}
+          onAddLegoStructure={handleAddLegoStructure}
           onMineBlock={handleMineBlock}
           onAddProp={handleAddProp}
           onPlantCrop={handlePlantCrop}
@@ -1438,12 +1494,17 @@ export default function SkyGarden7F({ setActiveScreen, onChangeFloor, onExitHome
           onWalkTo={(x, z) => setWalkTarget([x, z])}
         />
 
-        {(world.props || []).map((p) => <WorldProp3D key={p.id} prop={p} propsList={world.props || []} mode={mode} isNight={isNight} toonMap={toonMap} onToggleDoor={handleToggleDoor} onRemoveProp={handleRemoveProp} />)}
-        {(world.crops || []).map((c) => <GrowingCrop3D key={c.id} crop={c} nowTs={nowTs} mode={mode} toonMap={toonMap} onWaterCrop={handleWaterCrop} onHarvest={handleHarvestCrop} onRemove={handleRemoveCrop} />)}
-        {(world.animals || []).map((a) => <RoamingAnimal3D key={a.id} animal={a} blockMap={world.blocks} mode={mode} toonMap={toonMap} onPet={handlePetAnimal} onRemove={handleRemoveAnimal} />)}
-        {(world.fish || []).map((f) => <SwimmingFish3D key={f.id} fish={f} toonMap={toonMap} />)}
-        {(world.chests || []).map((ch) => <TreasureChest3D key={ch.id} chest={ch} opened={Boolean(meta.openedChests[ch.id])} toonMap={toonMap} onOpen={handleOpenChest} />)}
-        {(world.npcs || []).map((n) => <AutonomousNpcAvatar key={n.id} npc={n} blockMap={world.blocks} mode={mode} isBandPlaying={isBandPlaying} toonMap={toonMap} onSelectNpc={setSelectedNpcDialog} onRemoveNpc={handleRemoveNpc} />)}
+        {/* ★ 전 지형·건물 자동 2×2 레고 스터드(단일 드로우콜) + 커스텀 레고 파츠 + 파편 파티클 */}
+        <LegoWorldStuds blockMap={world.blocks} />
+        {(world.customParts || []).map((pt) => <CustomLegoPart3D key={pt.id} part={pt} mode={mode} isNight={isNight} onRemove={handleRemoveCustomPart} />)}
+        <BrickBurstParticles bursts={bursts} />
+
+        {(world.props || []).map((p) => <WorldProp3D key={p.id} prop={p} propsList={world.props || []} mode={mode} isNight={isNight} onToggleDoor={handleToggleDoor} onRemoveProp={handleRemoveProp} />)}
+        {(world.crops || []).map((c) => <GrowingCrop3D key={c.id} crop={c} nowTs={nowTs} mode={mode} onWaterCrop={handleWaterCrop} onHarvest={handleHarvestCrop} onRemove={handleRemoveCrop} />)}
+        {(world.animals || []).map((a) => <RoamingAnimal3D key={a.id} animal={a} blockMap={world.blocks} mode={mode} onPet={handlePetAnimal} onRemove={handleRemoveAnimal} />)}
+        {(world.fish || []).map((f) => <SwimmingFish3D key={f.id} fish={f} />)}
+        {(world.chests || []).map((ch) => <TreasureChest3D key={ch.id} chest={ch} opened={Boolean(meta.openedChests[ch.id])} onOpen={handleOpenChest} />)}
+        {(world.npcs || []).map((n) => <AutonomousNpcAvatar key={n.id} npc={n} blockMap={world.blocks} mode={mode} isBandPlaying={isBandPlaying} onSelectNpc={setSelectedNpcDialog} onRemoveNpc={handleRemoveNpc} />)}
 
         <PlayerRig
           blockMap={world.blocks}
@@ -1459,22 +1520,23 @@ export default function SkyGarden7F({ setActiveScreen, onChangeFloor, onExitHome
           avatarConfig={avatarConfig}
           controlsRef={controlsRef}
           soundMuted={soundMuted}
-          toonMap={toonMap}
           onSwimChange={setIsSwimming}
           onInsideChapelChange={setIsInsideChapel}
           onSyncPos={handleSyncPos}
         />
 
-        {remotePeers.map((peer) => <ChibiAvatar key={peer.clientId} position={[peer.x || 0, peer.y || 0.5, peer.z || 0]} avatarConfig={peer.avatar || DEFAULT_AVATAR} toonMap={toonMap} />)}
+        {remotePeers.map((peer) => (
+          <SharedChibiAvatar key={peer.clientId} position={[peer.x || 0, peer.y || 0.5, peer.z || 0]} shirtColor={peer.avatar?.shirtColor || '#38BDF8'} pantsColor={peer.avatar?.pantsColor || '#1E293B'} hairColor={peer.avatar?.hairColor || '#27272A'} />
+        ))}
         <OrbitControls ref={controlsRef} target={[2, 1.4, 5]} enableRotate={true} enablePan={true} enableZoom={true} enableDamping={true} dampingFactor={0.08} minDistance={2.5} maxDistance={52} maxPolarAngle={Math.PI / 2.05} />
       </Canvas>
 
       {/* 5~9. 제작대 · 퀘스트 · 바이옴 · NPC · 층 이동 모달 */}
       {showCraftModal && (
-        <div className="fixed inset-0 z-50 bg-black/65 backdrop-blur-xs flex items-center justify-center p-4" onClick={() => setShowCraftModal(false)}>
+        <div className="fixed inset-0 z-50 bg-black/65 flex items-center justify-center p-4" onClick={() => setShowCraftModal(false)}>
           <div className="w-full max-w-md bg-[#111827] border border-amber-400/40 text-white rounded-3xl p-5 space-y-3 shadow-2xl max-h-[84vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
-              <div><span className="text-[10.5px] font-bold text-amber-400 block">좋은나무 빌리지 제작대</span><h3 className="text-base font-black">🔨 재료 조합 & 아이템 제작</h3></div>
+              <div><span className="text-[10.5px] font-bold text-amber-400 block">LEGO 빌리지 제작대</span><h3 className="text-base font-black">🔨 재료 조합 & 아이템 제작</h3></div>
               <div className="flex items-center gap-2">
                 <button type="button" onClick={() => setCreativeMode((v) => !v)} className="px-2 py-1 rounded-lg bg-white/10 text-[10.5px] font-bold text-emerald-300 cursor-pointer">{creativeMode ? '자유모드 ON' : '채집모드 ON'}</button>
                 <button type="button" onClick={() => setShowCraftModal(false)} className="text-xs text-zinc-400 cursor-pointer">✕</button>
@@ -1505,10 +1567,10 @@ export default function SkyGarden7F({ setActiveScreen, onChangeFloor, onExitHome
       )}
 
       {showQuestModal && (
-        <div className="fixed inset-0 z-50 bg-black/65 backdrop-blur-xs flex items-center justify-center p-4" onClick={() => setShowQuestModal(false)}>
+        <div className="fixed inset-0 z-50 bg-black/65 flex items-center justify-center p-4" onClick={() => setShowQuestModal(false)}>
           <div className="w-full max-w-md bg-[#111827] border border-amber-400/40 text-white rounded-3xl p-5 space-y-3 shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
-              <div><span className="text-[10.5px] font-bold text-amber-400 block">좋은나무 빌리지 성장</span><h3 className="text-base font-black">마을 Lv.{villageLevel} · ❤️ {meta.hearts}</h3></div>
+              <div><span className="text-[10.5px] font-bold text-amber-400 block">LEGO 좋은나무 빌리지 성장</span><h3 className="text-base font-black">마을 Lv.{villageLevel} · ❤️ {meta.hearts}</h3></div>
               <button type="button" onClick={() => setShowQuestModal(false)} className="text-xs text-zinc-400 cursor-pointer">✕ 닫기</button>
             </div>
             <div className="space-y-2">
@@ -1527,20 +1589,16 @@ export default function SkyGarden7F({ setActiveScreen, onChangeFloor, onExitHome
       )}
 
       {showBiomeModal && (
-        <div className="fixed inset-0 z-50 bg-black/65 backdrop-blur-xs flex items-center justify-center p-4" onClick={() => setShowBiomeModal(false)}>
+        <div className="fixed inset-0 z-50 bg-black/65 flex items-center justify-center p-4" onClick={() => setShowBiomeModal(false)}>
           <div className="w-full max-w-sm bg-[#111827] border border-emerald-400/40 text-white rounded-3xl p-5 space-y-3 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
-              <span className="text-sm font-black">🌍 바이옴 탐험</span>
-              <button type="button" onClick={() => setShowBiomeModal(false)} className="text-xs text-zinc-400 cursor-pointer">✕ 닫기</button>
-            </div>
+            <div className="flex items-center justify-between border-b border-white/10 pb-2.5"><span className="text-sm font-black">🌍 레고 바이옴 탐험</span><button type="button" onClick={() => setShowBiomeModal(false)} className="text-xs text-zinc-400 cursor-pointer">✕ 닫기</button></div>
             {[
-              { id: 'meadow', label: '🌿 초원 고원 & 비밀 동굴 마을', desc: '동굴 터널 · 지하 광맥 · 물레방아 · 7종 동물' },
-              { id: 'desert', label: '🏜️ 사막 오아시스 마을', desc: '사막여우 · 황금 모래언덕 · 지하 광맥' },
-              { id: 'snow', label: '❄️ 설원 얼음호수 마을', desc: '펭귄 · 북극곰 · 하얀 설원 예배당' }
+              { id: 'meadow', label: '🌿 레고 초원 고원 & 비밀 동굴', desc: '동굴 터널 · 지하 광맥 · 물레방아 · 7종 동물' },
+              { id: 'desert', label: '🏜️ 레고 사막 오아시스', desc: '사막여우 · 황금 모래언덕 · 지하 광맥' },
+              { id: 'snow', label: '❄️ 레고 설원 얼음호수', desc: '펭귄 · 북극곰 · 하얀 설원 예배당' }
             ].map((b) => (
               <button key={b.id} type="button" onClick={() => handleSwitchBiome(b.id)} className={`w-full p-3 rounded-2xl border text-left cursor-pointer ${world.biome === b.id ? 'bg-emerald-500/20 border-emerald-400' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}>
-                <div className="text-xs font-black">{b.label}</div>
-                <div className="text-[11px] text-zinc-400">{b.desc}</div>
+                <div className="text-xs font-black">{b.label}</div><div className="text-[11px] text-zinc-400">{b.desc}</div>
               </button>
             ))}
           </div>
@@ -1548,7 +1606,7 @@ export default function SkyGarden7F({ setActiveScreen, onChangeFloor, onExitHome
       )}
 
       {selectedNpcDialog && (
-        <div className="fixed inset-0 z-50 bg-black/55 backdrop-blur-xs flex items-end sm:items-center justify-center p-4" onClick={() => setSelectedNpcDialog(null)}>
+        <div className="fixed inset-0 z-50 bg-black/55 flex items-end sm:items-center justify-center p-4" onClick={() => setSelectedNpcDialog(null)}>
           <div className="w-full max-w-sm bg-[#111827] border border-amber-400/40 text-white rounded-3xl p-5 space-y-3 shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
               <div><span className="text-[10.5px] font-bold text-amber-400 block">{selectedNpcDialog.role}</span><h3 className="text-base font-black">{selectedNpcDialog.icon} {selectedNpcDialog.label}</h3></div>
@@ -1560,17 +1618,14 @@ export default function SkyGarden7F({ setActiveScreen, onChangeFloor, onExitHome
       )}
 
       {showFloorModal && onChangeFloor && (
-        <div className="fixed inset-0 z-50 bg-black/65 backdrop-blur-xs flex items-center justify-center p-4" onClick={() => setShowFloorModal(false)}>
+        <div className="fixed inset-0 z-50 bg-black/65 flex items-center justify-center p-4" onClick={() => setShowFloorModal(false)}>
           <div className="w-full max-w-xs bg-[#111827] border border-white/20 text-white rounded-3xl p-5 space-y-2 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between pb-2 border-b border-white/10">
-              <span className="text-sm font-black">좋은나무교회 층 이동</span>
-              <button type="button" onClick={() => setShowFloorModal(false)} className="text-xs text-zinc-400 cursor-pointer">✕ 닫기</button>
-            </div>
+            <div className="flex items-center justify-between pb-2 border-b border-white/10"><span className="text-sm font-black">좋은나무교회 층 이동</span><button type="button" onClick={() => setShowFloorModal(false)} className="text-xs text-zinc-400 cursor-pointer">✕ 닫기</button></div>
             {[
-              { fl: '1F', label: '1F 메인 로비' }, { fl: '2F', label: '2F 북카페 · 목양실 · 사무실' },
-              { fl: '3F', label: '3F 대예배당 본당' }, { fl: '4F', label: '4F 영유아 예배실' },
+              { fl: '1F', label: '1F LEGO 메인 로비' }, { fl: '2F', label: '2F 북카페 · 목양실 · 사무실' },
+              { fl: '3F', label: '3F LEGO 대예배당 본당' }, { fl: '4F', label: '4F 영유아 예배실' },
               { fl: '5F', label: '5F 소예배 · 찬양홀' }, { fl: '6F', label: '6F 다음세대 교육관' },
-              { fl: '7F', label: '7F 좋은나무 빌리지 (현재)' }
+              { fl: '7F', label: '7F LEGO 좋은나무 브릭월드 (현재)' }
             ].map((item) => (
               <button key={item.fl} type="button" onClick={() => { setShowFloorModal(false); onChangeFloor(item.fl); }} className="w-full p-2.5 rounded-xl bg-white/10 hover:bg-emerald-600 text-left text-xs font-black flex justify-between cursor-pointer">
                 <span>{item.label}</span><span>이동 ➔</span>

@@ -1,4 +1,4 @@
-// src/pages/BibleKnowledgeGalaxy.js (PART 1 — 원본 100% 보존 + OpenBible OSIS 완벽 파싱)
+// src/pages/BibleKnowledgeGalaxy.js (PART 1 — 아크 고정·신구약 정밀 매핑·OpenBible 100% 분석·링/헥사곤 파싱)
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   ChevronLeft,
@@ -13,11 +13,9 @@ import {
   BookOpen,
   Sparkles,
   Scale,
-  Compass,
   Camera,
   RotateCcw,
-  Check,
-  Layers
+  Check
 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { getCrossReferences } from '../lib/tskHelper';
@@ -52,7 +50,7 @@ function drawHexagonPath(ctx, cx, cy, radius) {
 }
 
 // =====================================================================
-// TRACKTOR Segundo Cérebro 6대 다크 테마 + 라이트 아카데믹 테마(luz) (100% 보존)
+// TRACKTOR Segundo Cérebro 7대 테마 (100% 보존)
 // =====================================================================
 const GALAXY_THEMES = {
   oceano: {
@@ -107,7 +105,7 @@ const GALAXY_THEMES = {
 };
 
 // =====================================================================
-// 성경 66권 정경 + OpenBible OSIS 약어 100% 매핑 (총 1,189장)
+// 성경 66권 정경 + OpenBible OSIS 약어 100% 매핑 (총 1,189장: 구약 929 / 신약 260)
 // =====================================================================
 export const BIBLE_66_CANON = [
   { ko: '창세기', en: 'Genesis', osis: 'Gen', abbr: '창', chaps: 50, isOT: true, sector: '모세오경' },
@@ -189,12 +187,23 @@ const CANON_SECTORS = [
   { id: 'prophecy_nt', name: '요한계시록', enSub: 'APOCALYPSE', color: '#F43F5E', angleStart: 348, angleEnd: 360, hexQ: -1, hexR: -1, books: ['요한계시록'] }
 ];
 
+const SECTOR_COLOR_BY_NAME = CANON_SECTORS.reduce((acc, s) => {
+  acc[s.name] = s.color;
+  if (s.id === 'prophecy_nt') acc['예언서'] = s.color;
+  return acc;
+}, {});
+
 // =====================================================================
-// 성경 DB 인덱싱 및 장·절 유효성 검증 (한글/영문/약어/OSIS 100% 매핑)
+// 성경 DB 인덱싱 & 66권 전방위 키 정규화 (한글/영문/약어/OSIS/공백제거)
 // =====================================================================
 const BIBLE_BOOK_LOOKUP = {};
 if (Array.isArray(bibleData)) {
-  bibleData.forEach((b) => { if (b?.name) BIBLE_BOOK_LOOKUP[b.name] = b; });
+  bibleData.forEach((b) => {
+    if (!b?.name) return;
+    BIBLE_BOOK_LOOKUP[b.name] = b;
+    BIBLE_BOOK_LOOKUP[b.name.toLowerCase()] = b;
+    BIBLE_BOOK_LOOKUP[b.name.replace(/\s+/g, '').toLowerCase()] = b;
+  });
 }
 
 let accChaps = 0;
@@ -209,7 +218,11 @@ const CANON_BOOKS_WITH_OFFSET = BIBLE_66_CANON.map((b, idx) => {
   KO_TO_EN_BOOK[b.ko] = b.en;
   EN_TO_KO_BOOK[b.en] = b.ko;
   ABBR_TO_KO_BOOK[b.abbr] = b.ko;
-  const rawBookObj = BIBLE_BOOK_LOOKUP[b.en] || BIBLE_BOOK_LOOKUP[b.ko];
+  const rawBookObj =
+    BIBLE_BOOK_LOOKUP[b.en] ||
+    BIBLE_BOOK_LOOKUP[b.en.toLowerCase()] ||
+    BIBLE_BOOK_LOOKUP[b.en.replace(/\s+/g, '').toLowerCase()] ||
+    BIBLE_BOOK_LOOKUP[b.ko];
 
   for (let c = 1; c <= b.chaps; c++) {
     const chapArr = rawBookObj?.chapters?.[c - 1];
@@ -219,19 +232,25 @@ const CANON_BOOKS_WITH_OFFSET = BIBLE_66_CANON.map((b, idx) => {
     });
   }
   accChaps += b.chaps;
-  const item = { ...b, bookIdx: idx, startGlobalChap, endGlobalChap: accChaps - 1 };
-  [b.ko, b.en, b.abbr, b.osis, b.osis.toLowerCase(), b.en.toLowerCase(), b.en.replace(/\s+/g, ''), b.en.replace(/\s+/g, '').toLowerCase()].forEach((k) => {
-    BOOK_OFFSET_MAP[k] = item;
-  });
+  const item = { ...b, bookIdx: idx, startGlobalChap, endGlobalChap: accChaps - 1, sectorColor: SECTOR_COLOR_BY_NAME[b.sector] || '#38BDF8' };
+  const keys = [
+    b.ko, b.en, b.abbr, b.osis, b.osis.toLowerCase(),
+    b.en.toLowerCase(), b.en.replace(/\s+/g, ''), b.en.replace(/\s+/g, '').toLowerCase()
+  ];
+  if (b.en === 'Psalms') keys.push('Psalm', 'psalm', 'Psa', 'psa');
+  if (b.en === 'Song of Solomon') keys.push('Song of Songs', 'Sos', 'sos', 'Sng', 'sng');
+  if (b.ko === '예레미야애가') keys.push('애가');
+  keys.forEach((k) => { BOOK_OFFSET_MAP[k] = item; });
   return item;
 });
-const TOTAL_BIBLE_CHAPTERS = accChaps;
+const TOTAL_BIBLE_CHAPTERS = accChaps; // 1,189장 (구약 0~928, 신약 929~1188)
 
 const SORTED_KO_BOOK_NAMES = Object.keys(KO_TO_EN_BOOK).sort((a, b) => b.length - a.length);
 const SORTED_ABBR_KEYS = Object.keys(ABBR_TO_KO_BOOK).sort((a, b) => b.length - a.length);
 
 const getGlobalChapIndex = (bookName, chapNum = 1) => {
-  const b = BOOK_OFFSET_MAP[bookName] || BOOK_OFFSET_MAP[String(bookName || '').trim().toLowerCase()];
+  const raw = String(bookName || '').trim();
+  const b = BOOK_OFFSET_MAP[raw] || BOOK_OFFSET_MAP[raw.toLowerCase()] || BOOK_OFFSET_MAP[raw.replace(/\s+/g, '').toLowerCase()];
   if (!b) return -1;
   const clampedChap = Math.max(1, Math.min(b.chaps, Number(chapNum) || 1));
   return b.startGlobalChap + (clampedChap - 1);
@@ -242,6 +261,15 @@ const clampValidVerse = (bookName, chapNum, verseNum) => {
   if (gIdx < 0) return 1;
   const maxV = GLOBAL_CHAP_LOOKUP[gIdx]?.maxVerses || 30;
   return Math.max(1, Math.min(maxV, Number(verseNum) || 1));
+};
+
+const getTestamentLinkType = (fromBookKo, toBookKo) => {
+  const fOT = Boolean(BOOK_OFFSET_MAP[fromBookKo]?.isOT);
+  const tOT = Boolean(BOOK_OFFSET_MAP[toBookKo]?.isOT);
+  if (fOT && !tOT) return 'ot_nt';
+  if (!fOT && tOT) return 'ot_nt';
+  if (fOT && tOT) return 'ot_ot';
+  return 'nt_nt';
 };
 
 // =====================================================================
@@ -404,6 +432,7 @@ const BASE_INTERACTIVE_ARCS = (() => {
     const catMeta = CATEGORY_META[cat] || CATEGORY_META.theme;
     arcs.push({
       id: `landmark_arc_${arcs.length + 1}`, start: s, end: e, span: e - s, category: cat, badgeLabel: catMeta.label,
+      testamentLink: getTestamentLinkType(fBook, tBook),
       fromBook: fBook, fromChap: fChap, fromVerse: fVerse, toBook: tBook, toChap: tChap, toVerse: tVerse,
       title: title || `${fBook} ${fChap}:${fVerse} ➔ ${tBook} ${tChap}:${tVerse}`,
       desc: `${fBook} ${fChap}:${fVerse}의 구약 말씀과 ${tBook} ${tChap}:${tVerse}의 신약 말씀이 정경적·구속사적으로 정확히 조응하는 핵심 교차참조입니다.`,
@@ -471,21 +500,30 @@ export function extractBibleRefInfo(rawStr) {
   return null;
 }
 
-// 4대 역본 통합 추출기 (count 기본값 200으로 시편 119편까지 전체 절 누락 없이 로드)
+// 4대 역본 통합 추출기 (개역4판 + ko_ko.json 병합으로 절 누락 0%)
 function getScripturePreview(bookKo, chapter = 1, verse = 1, count = 200, krv4Db = null, easyDb = {}, webDb = {}) {
   try {
     const enName = KO_TO_EN_BOOK[bookKo] || bookKo;
-    const krv4Chap = krv4Db?.[enName]?.[Math.max(0, chapter - 1)] || krv4Db?.[bookKo]?.[Math.max(0, chapter - 1)];
-    const bookObj = BIBLE_BOOK_LOOKUP[enName] || BIBLE_BOOK_LOOKUP[bookKo];
-    const chapArr = krv4Chap || bookObj?.chapters?.[Math.max(0, chapter - 1)];
-    if (!Array.isArray(chapArr) || chapArr.length === 0) return null;
+    const noSpaceEn = enName.replace(/\s+/g, '');
+    const chIdx = Math.max(0, chapter - 1);
+    const krv4Chap = krv4Db?.[enName]?.[chIdx] || krv4Db?.[bookKo]?.[chIdx] || krv4Db?.[noSpaceEn]?.[chIdx];
+    const bookObj = BIBLE_BOOK_LOOKUP[enName] || BIBLE_BOOK_LOOKUP[enName.toLowerCase()] || BIBLE_BOOK_LOOKUP[noSpaceEn.toLowerCase()] || BIBLE_BOOK_LOOKUP[bookKo];
+    const jsonChap = bookObj?.chapters?.[chIdx];
 
-    const targetIdx = Math.max(0, Math.min(chapArr.length - 1, (verse || 1) - 1));
-    return chapArr.slice(targetIdx, targetIdx + count).map((txt, idx) => {
-      const vNum = targetIdx + idx + 1;
-      const decoded = String(txt || '').replace(/&#x27;/g, "'").replace(/&quot;/g, '"').trim();
+    const maxLen = Math.max(Array.isArray(krv4Chap) ? krv4Chap.length : 0, Array.isArray(jsonChap) ? jsonChap.length : 0);
+    if (maxLen === 0) return null;
+
+    const merged = [];
+    for (let i = 0; i < maxLen; i++) {
+      const val = (Array.isArray(krv4Chap) && krv4Chap[i]) || (Array.isArray(jsonChap) && jsonChap[i]) || '';
+      if (val) merged.push({ vNum: i + 1, raw: val });
+    }
+
+    const startIdx = Math.max(0, Math.min(merged.length - 1, (verse || 1) - 1));
+    return merged.slice(startIdx, startIdx + count).map(({ vNum, raw }) => {
+      const decoded = String(raw || '').replace(/&#x27;/g, "'").replace(/&quot;/g, '"').trim();
       const { pureText, pericope } = splitPericopeAndVerse(decoded);
-      const easyText = easyDb?.[`${bookKo}-${chapter}-${vNum}`] || '';
+      const easyText = easyDb?.[`${bookKo}-${chapter}-${vNum}`] || easyDb?.[`${enName}-${chapter}-${vNum}`] || '';
       const webText = webDb?.[`${bookKo}-${chapter}-${vNum}`] || webDb?.[`${enName}-${chapter}-${vNum}`] || '';
       return { vNum, pericope, text: pureText || decoded, easyText, webText };
     });
@@ -495,10 +533,10 @@ function getScripturePreview(bookKo, chapter = 1, verse = 1, count = 200, krv4Db
 function calcResponsiveFitZoom(width, height, mode) {
   if (!width || !height) return 0.7;
   if (mode === 'arc') return 1.0;
-  const minDim = Math.min(width, height * 0.88);
-  if (mode === '3d') return Math.max(0.36, Math.min(0.9, (minDim / 940) * 0.94));
-  if (mode === 'hex') return Math.max(0.34, Math.min(0.86, (minDim / 1040) * 0.94));
-  return Math.max(0.32, Math.min(0.84, (minDim / 1120) * 0.94));
+  const minDim = Math.min(width, height * 0.86);
+  if (mode === '3d') return Math.max(0.38, Math.min(0.92, (minDim / 940) * 0.94));
+  if (mode === 'hex') return Math.max(0.34, Math.min(0.88, (minDim / 1040) * 0.94));
+  return Math.max(0.32, Math.min(0.86, (minDim / 1120) * 0.94));
 }
 // ==================== PART 1 끝 (아래에 PART 2 이어붙이기) ====================
 // ==================== PART 2 시작 ====================
@@ -539,6 +577,8 @@ export default function BibleKnowledgeGalaxy({
   const [webBibleDb, setWebBibleDb] = useState({});
   const [liveInterlinearMap, setLiveInterlinearMap] = useState({});
 
+  // 아크 필터: 신구약 연결 방향 + 카테고리 + 출발/도착 66권·장
+  const [arcTestamentFilter, setArcTestamentFilter] = useState('all'); // 'all' | 'ot_nt' | 'ot_ot' | 'nt_nt'
   const [arcCategoryFilter, setArcCategoryFilter] = useState('all');
   const [arcFromBookFilter, setArcFromBookFilter] = useState('ALL');
   const [arcFromChapFilter, setArcFromChapFilter] = useState('ALL');
@@ -622,14 +662,12 @@ export default function BibleKnowledgeGalaxy({
     return () => clearInterval(t);
   }, [viewMode]);
 
-  // 4대 역본 비동기 로드
   useEffect(() => {
     ensureKrv4TxtLoaded().then((db) => { if (db) setKrv4Db(db); });
     fetch('/data/easy_bible.json').then((r) => (r.ok ? r.json() : {})).then((d) => setEasyBibleDb(d || {})).catch(() => {});
     fetch('/data/web_bible.json').then((r) => (r.ok ? r.json() : {})).then((d) => setWebBibleDb(d || {})).catch(() => {});
   }, []);
 
-  // 1:1 대조 팝업 오픈 시 해당 절로 자동 스크롤
   useEffect(() => {
     if (!readerModalData) return;
     const timer = setTimeout(() => {
@@ -665,7 +703,7 @@ export default function BibleKnowledgeGalaxy({
     fetchVerseInterlinear(selectedArc.toBook, selectedArc.toChap, selectedArc.toVerse);
   }, [selectedArc, fetchVerseInterlinear]);
 
-  // OpenBible 튜플 100% 정밀 파싱 (OSIS · 영문 · 한글 모두 지원)
+  // OpenBible 튜플 100% 정밀 파싱 (항상 정경 순서 좌->우 정렬 + 신구약 연결 유형 태깅)
   const normalizeOpenBibleTuple = useCallback((arr, idPrefix, idx, lxxDb) => {
     if (!Array.isArray(arr) || arr.length < 6) return null;
     const [rawFBk, rawFCh, rawFVs, rawTBk, rawTCh, rawTVs, , , rawVotes, rawCat] = arr;
@@ -698,6 +736,7 @@ export default function BibleKnowledgeGalaxy({
       span: eG - sG,
       votes,
       category: cat,
+      testamentLink: getTestamentLinkType(fBk, tBk),
       badgeLabel: `${catMeta.label} ★${votes}`,
       fromBook: fBk,
       fromChap: fCh,
@@ -751,7 +790,6 @@ export default function BibleKnowledgeGalaxy({
     return () => window.removeEventListener('storage', onStorageChange);
   }, [triggerRealtimeSync]);
 
-  // 장별 OpenBible 샤드 로드
   useEffect(() => {
     const targetBookKo = scrubbedBookKo || (arcFromBookFilter !== 'ALL' ? arcFromBookFilter : null);
     if (!targetBookKo) { setOpenBibleShardArcs([]); return; }
@@ -777,7 +815,6 @@ export default function BibleKnowledgeGalaxy({
       .finally(() => setIsShardLoading(false));
   }, [arcFromBookFilter, arcFromChapFilter, scrubbedBookKo, lxxQuotesDb, normalizeOpenBibleTuple]);
 
-  // TSK 보조 교차참조 로드
   useEffect(() => {
     if (!selectedArc?.fromBook || typeof getCrossReferences !== 'function') return;
     let isMounted = true;
@@ -804,7 +841,7 @@ export default function BibleKnowledgeGalaxy({
             return {
               id: `tsk_live_${fB}_${fC}_${fV}_${tB}_${tC}_${tV}_${idx}`,
               start: Math.min(s, e), end: Math.max(s, e), span: Math.abs(e - s),
-              category: resolvedCat, badgeLabel: `TSK · ${catMeta.label}`,
+              category: resolvedCat, testamentLink: getTestamentLinkType(fB, tB), badgeLabel: `TSK · ${catMeta.label}`,
               fromBook: fB, fromChap: fC, fromVerse: fV, toBook: tB, toChap: tC, toVerse: tV,
               title: `[TSK 교차참조] ${fB} ${fC}:${fV} ➔ ${tB} ${tC}:${tV}`,
               desc: `TSK 원천 데이터 상호참조 구절(${r.label || `${tB} ${tC}:${tV}`})입니다.`,
@@ -836,9 +873,8 @@ export default function BibleKnowledgeGalaxy({
     return merged;
   }, [dailyData, syncTick]);
 
-  // 전체 아크 통합 엔진 (원본 100% 보존)
   const allFullArcs = useMemo(() => {
-    const dynamicArcs = [...customUserArcs, ...dynamicTskArcs];
+    const dynamicArcs = [...customUserArcs.map((a) => ({ ...a, testamentLink: a.testamentLink || getTestamentLinkType(a.fromBook, a.toBook) })), ...dynamicTskArcs];
     const seenKeys = new Set();
 
     const pushUniqueArc = (arcObj) => {
@@ -846,7 +882,7 @@ export default function BibleKnowledgeGalaxy({
       const key = `${arcObj.start}:${arcObj.fromVerse}-${arcObj.end}:${arcObj.toVerse}_${arcObj.category}`;
       if (seenKeys.has(key)) return;
       seenKeys.add(key);
-      dynamicArcs.push(arcObj);
+      dynamicArcs.push({ ...arcObj, testamentLink: arcObj.testamentLink || getTestamentLinkType(arcObj.fromBook, arcObj.toBook) });
     };
 
     const registerUserNoteArc = (idPrefix, labelBadge, titleText, bodyText, refCandidates) => {
@@ -876,11 +912,13 @@ export default function BibleKnowledgeGalaxy({
       const endIdx = getGlobalChapIndex(targetBook, targetChap);
       if (endIdx < 0 || startIdx === endIdx) return;
       const isSwap = startIdx > endIdx;
+      const fBk = isSwap ? targetBook : primary.bookKo;
+      const tBk = isSwap ? primary.bookKo : targetBook;
       pushUniqueArc({
         id: idPrefix, start: Math.min(startIdx, endIdx), end: Math.max(startIdx, endIdx), span: Math.abs(endIdx - startIdx),
-        category: 'user_sync', badgeLabel: labelBadge,
-        fromBook: isSwap ? targetBook : primary.bookKo, fromChap: isSwap ? targetChap : primary.chapter, fromVerse: isSwap ? targetVerse : primary.verse,
-        toBook: isSwap ? primary.bookKo : targetBook, toChap: isSwap ? primary.chapter : targetChap, toVerse: isSwap ? primary.verse : targetVerse,
+        category: 'user_sync', testamentLink: getTestamentLinkType(fBk, tBk), badgeLabel: labelBadge,
+        fromBook: fBk, fromChap: isSwap ? targetChap : primary.chapter, fromVerse: isSwap ? targetVerse : primary.verse,
+        toBook: tBk, toChap: isSwap ? primary.chapter : targetChap, toVerse: isSwap ? primary.verse : targetVerse,
         title: titleText, desc: String(bodyText || '내가 기록한 말씀 묵상에서 추출된 교차참조 아크입니다.').replace(/<[^>]*>?/gm, '').slice(0, 150), isLandmark: true
       });
     };
@@ -909,11 +947,12 @@ export default function BibleKnowledgeGalaxy({
       const start = getGlobalChapIndex(otInfo.bookKo, otInfo.chapter), end = getGlobalChapIndex(ntBook, ntChap);
       if (start < 0 || end < 0 || start === end) return;
       const isSwap = start > end;
+      const fBk = isSwap ? ntBook : otInfo.bookKo, tBk = isSwap ? otInfo.bookKo : ntBook;
       pushUniqueArc({
         id: `lxx_arc_${idx}`, start: Math.min(start, end), end: Math.max(start, end), span: Math.abs(end - start),
-        category: 'quote', badgeLabel: '직접 인용 (LXX)',
-        fromBook: isSwap ? ntBook : otInfo.bookKo, fromChap: isSwap ? ntChap : otInfo.chapter, fromVerse: isSwap ? ntVerse : otInfo.verse,
-        toBook: isSwap ? otInfo.bookKo : ntBook, toChap: isSwap ? otInfo.chapter : ntChap, toVerse: isSwap ? otInfo.verse : ntVerse,
+        category: 'quote', testamentLink: getTestamentLinkType(fBk, tBk), badgeLabel: '직접 인용 (LXX)',
+        fromBook: fBk, fromChap: isSwap ? ntChap : otInfo.chapter, fromVerse: isSwap ? ntVerse : otInfo.verse,
+        toBook: tBk, toChap: isSwap ? otInfo.chapter : ntChap, toVerse: isSwap ? otInfo.verse : ntVerse,
         title: `[70인역 직접 인용] ${item.theme || `${otInfo.bookKo} ${otInfo.chapter}:${otInfo.verse} ➔ ${ntBook} ${ntChap}:${ntVerse}`}`,
         desc: item.differenceAnalysis || `${otInfo.bookKo} ${otInfo.chapter}:${otInfo.verse} 말씀이 ${ntBook} ${ntChap}:${ntVerse}에서 직접 인용되었습니다.`,
         isLandmark: true
@@ -929,6 +968,7 @@ export default function BibleKnowledgeGalaxy({
   const activeFilteredArcs = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
     return allFullArcs.filter((arc) => {
+      if (arcTestamentFilter !== 'all' && arc.testamentLink !== arcTestamentFilter) return false;
       if (arcCategoryFilter !== 'all' && arc.category !== arcCategoryFilter) return false;
       if (arcFromBookFilter !== 'ALL') {
         if (arc.fromBook !== arcFromBookFilter && arc.toBook !== arcFromBookFilter) return false;
@@ -942,9 +982,9 @@ export default function BibleKnowledgeGalaxy({
       if (!q) return true;
       return arc.title?.toLowerCase().includes(q) || arc.desc?.toLowerCase().includes(q) || arc.fromBook?.toLowerCase().includes(q) || arc.toBook?.toLowerCase().includes(q);
     });
-  }, [allFullArcs, arcCategoryFilter, arcFromBookFilter, arcFromChapFilter, arcToBookFilter, scrubbedBookKo, searchQuery]);
+  }, [allFullArcs, arcTestamentFilter, arcCategoryFilter, arcFromBookFilter, arcFromChapFilter, arcToBookFilter, scrubbedBookKo, searchQuery]);
 
-  // 5영역 전방위 딥서치 (원본 100% 보존)
+  // 5영역 전방위 딥서치
   const deepSearchResults = useMemo(() => {
     const q = searchQuery.trim();
     if (!q) return [];
@@ -1010,13 +1050,19 @@ export default function BibleKnowledgeGalaxy({
 
   useEffect(() => { applyResponsiveCameraReset(viewMode); }, [viewMode, applyResponsiveCameraReset]);
 
-  // 은하계 네트워크 빌더 (강해/QT/노트 외곽 링 100% 보존)
+  // 은하계 네트워크 빌더 (66권별 실제 아크 수·통독률·강해/QT 정밀 파싱)
   const galaxyData = useMemo(() => {
     const nodes = [], links = [], BOOK_NODE_MAP = {}, BOOK_SECTOR_MAP = {};
     const bookReadCounts = {};
     Object.keys(readVerses || {}).forEach((k) => { if (readVerses[k]) { const [enBk, ch] = k.split('-'); bookReadCounts[`${enBk}-${ch}`] = true; } });
 
-    nodes.push({ id: 'core', label: '예수 그리스도 (LOGOS CORE)', level: 0, radius: 0, angle: 0, xHex: 0, yHex: 0, x3d: 0, y3d: 0, z3d: 0, size: 21, color: '#00F5D4', type: 'core', desc: '성경 66권(1,189장)과 신구약 구속사 아크, 4대 역본·원어·설교·QT가 수렴하는 중심 코어입니다.' });
+    const arcCountByBook = {};
+    allFullArcs.forEach((a) => {
+      if (a.fromBook) arcCountByBook[a.fromBook] = (arcCountByBook[a.fromBook] || 0) + 1;
+      if (a.toBook) arcCountByBook[a.toBook] = (arcCountByBook[a.toBook] || 0) + 1;
+    });
+
+    nodes.push({ id: 'core', label: '예수 그리스도 (LOGOS CORE)', level: 0, radius: 0, angle: 0, xHex: 0, yHex: 0, x3d: 0, y3d: 0, z3d: 0, size: 21, color: '#00F5D4', type: 'core', desc: `성경 66권(1,189장)과 ${allFullArcs.length.toLocaleString()}건의 교차참조 아크가 수렴하는 중심 코어입니다.` });
 
     let globalBookIdx = 0;
     const goldenRatio = (1 + Math.sqrt(5)) / 2;
@@ -1036,15 +1082,16 @@ export default function BibleKnowledgeGalaxy({
         BOOK_NODE_MAP[bookName] = bookNodeId; BOOK_SECTOR_MAP[bookName] = sec;
 
         const enBook = KO_TO_EN_BOOK[bookName] || bookName;
-        const totalChaps = (BIBLE_BOOK_LOOKUP[enBook] || BIBLE_BOOK_LOOKUP[bookName])?.chapters?.length || 1;
+        const totalChaps = BOOK_OFFSET_MAP[bookName]?.chaps || 1;
         let readChaps = 0;
         for (let c = 1; c <= totalChaps; c++) if (bookReadCounts[`${enBook}-${c}`]) readChaps++;
+        const arcCount = arcCountByBook[bookName] || 0;
 
         const subAngle = (bIdx / Math.max(1, sec.books.length)) * Math.PI * 2, subRingR = 52 + (bIdx % 2) * 34;
         const i = globalBookIdx + 0.5, phi = Math.acos(1 - (2 * i) / 66), theta = (2 * Math.PI * i) / goldenRatio;
         globalBookIdx++;
 
-        nodes.push({ id: bookNodeId, label: bookName, bookName, enBookName: enBook, totalChaps, readChaps, spokeDots: Math.min(14, Math.max(4, Math.ceil(totalChaps / 8))), level: 2, radius: 235 + (bIdx % 2) * 28, angle: bookAngle, xHex: secHexX + Math.cos(subAngle) * subRingR, yHex: secHexY + Math.sin(subAngle) * subRingR, x3d: 225 * Math.sin(phi) * Math.cos(theta), y3d: 225 * Math.cos(phi), z3d: 225 * Math.sin(phi) * Math.sin(theta), size: 9.5, color: sec.color, type: 'book', sector: sec.name, sectorId: sec.id, desc: `${sec.name} • 총 ${totalChaps}장 중 ${readChaps}장 통독 완료` });
+        nodes.push({ id: bookNodeId, label: bookName, bookName, enBookName: enBook, totalChaps, readChaps, arcCount, spokeDots: Math.min(14, Math.max(4, Math.ceil(totalChaps / 8))), level: 2, radius: 235 + (bIdx % 2) * 28, angle: bookAngle, xHex: secHexX + Math.cos(subAngle) * subRingR, yHex: secHexY + Math.sin(subAngle) * subRingR, x3d: 225 * Math.sin(phi) * Math.cos(theta), y3d: 225 * Math.cos(phi), z3d: 225 * Math.sin(phi) * Math.sin(theta), size: 9.5 + Math.min(3.5, arcCount / 40), color: sec.color, type: 'book', sector: sec.name, sectorId: sec.id, desc: `${sec.name} • 총 ${totalChaps}장 (통독 ${readChaps}장) · 교차참조 아크 ${arcCount}건` });
         links.push({ source: secNodeId, target: bookNodeId, color: sec.color, alpha: 0.28 });
       });
     });
@@ -1129,7 +1176,7 @@ export default function BibleKnowledgeGalaxy({
     });
 
     return { nodes, links };
-  }, [rawSermons, mergedDailyRecords, readVerses, customGalaxyNodes]);
+  }, [rawSermons, mergedDailyRecords, readVerses, customGalaxyNodes, allFullArcs]);
 
   const connectedNodeIds = useMemo(() => {
     const set = new Set(), activeTarget = selectedNode || hoveredNode;
@@ -1157,15 +1204,16 @@ export default function BibleKnowledgeGalaxy({
 
   const getArcGeometry = useCallback((width, height) => {
     const isMobile = width < 640;
-    const padX = Math.max(16, Math.round(width * (isMobile ? 0.045 : 0.055)));
+    const padX = Math.max(14, Math.round(width * (isMobile ? 0.04 : 0.05)));
     const usableW = Math.max(120, width - padX * 2);
-    const topSafeMargin = isMobile ? 48 : 80;
-    const bottomSafeMargin = isMobile ? 245 : 185;
-    const baselineY = Math.max(topSafeMargin + 95, Math.min(height - bottomSafeMargin, height * (isMobile ? 0.44 : 0.58)));
-    const verticalScale = Math.max(0.38, Math.min(1.0, Math.max(75, baselineY - topSafeMargin) / Math.max(1, usableW / 2)));
+    const topSafeMargin = isMobile ? 36 : 64;
+    const bottomSafeMargin = isMobile ? 250 : 210;
+    const baselineY = Math.max(topSafeMargin + 90, Math.min(height - bottomSafeMargin, height * (isMobile ? 0.42 : 0.56)));
+    const verticalScale = Math.max(0.36, Math.min(1.0, Math.max(70, baselineY - topSafeMargin) / Math.max(1, usableW / 2)));
     return { padX, usableW, baselineY, verticalScale };
   }, []);
 
+  // 아크 배경 버퍼 (명확한 구약/신약 경계 분할 + 8대 섹터 컬러 바 + 주요 책 눈금)
   const bakeArcDiagramBuffer = useCallback(
     (width, height, rawDpr) => {
       if (!width || !height || width < 20 || height < 20) return;
@@ -1178,17 +1226,11 @@ export default function BibleKnowledgeGalaxy({
 
       const { padX, usableW, baselineY, verticalScale } = getArcGeometry(width, height);
       const chapToX = (g) => padX + (g / (TOTAL_BIBLE_CHAPTERS - 1)) * usableW;
-      const hasBookFilter = arcFromBookFilter !== 'ALL' || arcToBookFilter !== 'ALL';
-      const baseAlpha = hasBookFilter ? 0.44 : 0.22;
+      const hasBookFilter = arcFromBookFilter !== 'ALL' || arcToBookFilter !== 'ALL' || arcTestamentFilter !== 'all';
+      const baseAlpha = hasBookFilter ? 0.42 : 0.22;
 
       const buckets = { violet: [], indigo: [], sky: [], teal: [], rose: [] };
-      allFullArcs.forEach((th) => {
-        if (arcCategoryFilter !== 'all' && th.category !== arcCategoryFilter) return;
-        if (hasBookFilter) {
-          const matchA = arcFromBookFilter === 'ALL' || th.fromBook === arcFromBookFilter || th.toBook === arcFromBookFilter;
-          const matchB = arcToBookFilter === 'ALL' || th.toBook === arcToBookFilter || th.fromBook === arcToBookFilter;
-          if (!matchA || !matchB) return;
-        }
+      activeFilteredArcs.forEach((th) => {
         if (th.category === 'user_sync') { buckets.rose.push(th); return; }
         const spanRatio = th.span / TOTAL_BIBLE_CHAPTERS;
         if (spanRatio > 0.62) buckets.violet.push(th);
@@ -1214,42 +1256,87 @@ export default function BibleKnowledgeGalaxy({
         oCtx.strokeStyle = color; oCtx.lineWidth = lw; oCtx.stroke();
       });
 
-      oCtx.beginPath(); oCtx.moveTo(padX, baselineY); oCtx.lineTo(padX + usableW, baselineY);
-      oCtx.strokeStyle = isLightTheme ? 'rgba(15, 23, 42, 0.65)' : 'rgba(226, 241, 255, 0.78)'; oCtx.lineWidth = 1.2; oCtx.stroke();
-
+      // 8대 섹터 컬러 기준선 바
       CANON_BOOKS_WITH_OFFSET.forEach((bk) => {
-        const bx = chapToX(bk.startGlobalChap);
-        oCtx.beginPath(); oCtx.moveTo(bx, baselineY + 1); oCtx.lineTo(bx, baselineY + (bk.chaps >= 24 ? 9 : 5));
-        oCtx.strokeStyle = bk.isOT ? 'rgba(148, 163, 184, 0.7)' : 'rgba(251, 191, 36, 0.85)'; oCtx.lineWidth = bk.chaps >= 24 ? 1.1 : 0.65; oCtx.stroke();
+        const x1 = chapToX(bk.startGlobalChap);
+        const x2 = chapToX(bk.endGlobalChap + 1);
+        oCtx.fillStyle = bk.sectorColor;
+        oCtx.globalAlpha = 0.72;
+        oCtx.fillRect(x1, baselineY, Math.max(1, x2 - x1 - 0.5), 4);
+      });
+      oCtx.globalAlpha = 1;
+
+      // 구약 | 신약 명확한 수직 경계선 (929장 지점)
+      const otEndX = chapToX(929);
+      oCtx.beginPath();
+      oCtx.setLineDash([4, 3]);
+      oCtx.moveTo(otEndX, Math.max(14, baselineY - 40));
+      oCtx.lineTo(otEndX, baselineY + 38);
+      oCtx.strokeStyle = '#FACC15';
+      oCtx.lineWidth = 1.4;
+      oCtx.stroke();
+      oCtx.setLineDash([]);
+
+      // 주요 성경 책 눈금 라벨 (터치/탐색 기준점)
+      const majorAbbrs = new Set(width < 520 ? ['창', '시', '사', '마', '롬', '계'] : ['창', '출', '삼상', '시', '사', '렘', '마', '행', '롬', '계']);
+      oCtx.font = 'bold 9.5px sans-serif';
+      oCtx.textAlign = 'center';
+      CANON_BOOKS_WITH_OFFSET.forEach((bk) => {
+        if (!majorAbbrs.has(bk.abbr)) return;
+        const midX = chapToX((bk.startGlobalChap + bk.endGlobalChap) / 2);
+        oCtx.fillStyle = bk.isOT ? (isLightTheme ? '#475569' : '#94A3B8') : '#FBBF24';
+        oCtx.fillText(bk.abbr, midX, baselineY + 15);
       });
 
-      const otEndX = chapToX(929), barY = baselineY + 13;
-      oCtx.beginPath(); oCtx.moveTo(padX, barY); oCtx.lineTo(otEndX - 3, barY); oCtx.strokeStyle = '#94A3B8'; oCtx.lineWidth = 3; oCtx.stroke();
-      oCtx.font = 'bold 11px sans-serif'; oCtx.fillStyle = isLightTheme ? '#334155' : '#E2E8F0'; oCtx.textAlign = 'center';
-      oCtx.fillText(width < 520 ? '구약 (39권 · 929장)' : '구약 (39권 · 929장 — OpenBible 정경 교차참조)', (padX + otEndX) / 2, barY + 16);
-      oCtx.beginPath(); oCtx.moveTo(otEndX + 3, barY); oCtx.lineTo(padX + usableW, barY); oCtx.strokeStyle = '#D97706'; oCtx.lineWidth = 3; oCtx.stroke();
-      oCtx.fillStyle = '#FBBF24'; oCtx.fillText('신약 (27권)', (otEndX + padX + usableW) / 2, barY + 16);
+      // 구약 / 신약 하단 구분 바
+      const barY = baselineY + 23;
+      oCtx.fillStyle = isLightTheme ? 'rgba(15, 23, 42, 0.08)' : 'rgba(148, 163, 184, 0.14)';
+      drawSafeRoundRect(oCtx, padX, barY, otEndX - padX - 3, 18, 5);
+      oCtx.fill();
+      oCtx.fillStyle = isLightTheme ? '#334155' : '#E2E8F0';
+      oCtx.font = 'bold 10.5px sans-serif';
+      oCtx.fillText(width < 520 ? '구약 (39권 · 929장)' : '구약 성경 (39권 · 929장 — 예언 · 모형)', (padX + otEndX) / 2, barY + 12.5);
 
-      arcBgBufferRef.current = { canvas: offscreen, width, height, padX, usableW, baselineY, verticalScale, filterKey: `${arcCategoryFilter}_${arcFromBookFilter}_${arcFromChapFilter}_${arcToBookFilter}_${allFullArcs.length}_${isLightTheme}` };
+      oCtx.fillStyle = 'rgba(245, 158, 11, 0.18)';
+      drawSafeRoundRect(oCtx, otEndX + 3, barY, padX + usableW - otEndX - 3, 18, 5);
+      oCtx.fill();
+      oCtx.fillStyle = '#FBBF24';
+      oCtx.fillText('신약 (27권)', (otEndX + padX + usableW) / 2, barY + 12.5);
+
+      arcBgBufferRef.current = {
+        canvas: offscreen, width, height, padX, usableW, baselineY, verticalScale,
+        filterKey: `${arcTestamentFilter}_${arcCategoryFilter}_${arcFromBookFilter}_${arcFromChapFilter}_${arcToBookFilter}_${activeFilteredArcs.length}_${isLightTheme}`
+      };
     },
-    [allFullArcs, arcCategoryFilter, arcFromBookFilter, arcFromChapFilter, arcToBookFilter, getArcGeometry, isLightTheme]
+    [activeFilteredArcs, arcTestamentFilter, arcCategoryFilter, arcFromBookFilter, arcFromChapFilter, arcToBookFilter, getArcGeometry, isLightTheme]
   );
 
+  // 아크 선택 또는 하단 기준선 책 선택 판별
   const findClosestArcAtScreenPos = useCallback((clientX, clientY) => {
     const canvas = canvasRef.current, buf = arcBgBufferRef.current;
     if (!canvas || !buf) return null;
     const rect = canvas.getBoundingClientRect(), zoom = cameraRef.current.zoom;
     const wx = (clientX - rect.left - (buf.width / 2 + cameraRef.current.x)) / zoom + buf.width / 2;
     const wy = (clientY - rect.top - (buf.height / 2 + cameraRef.current.y)) / zoom + buf.height / 2;
+
+    // 하단 기준선(구약/신약 바) 클릭 시 해당 위치의 성경 책 필터 바로 선택!
+    if (wy >= buf.baselineY - 6 && wy <= buf.baselineY + 46) {
+      const ratio = Math.max(0, Math.min(1, (wx - buf.padX) / buf.usableW));
+      const gChap = Math.round(ratio * (TOTAL_BIBLE_CHAPTERS - 1));
+      const chapMeta = GLOBAL_CHAP_LOOKUP[gChap];
+      if (chapMeta) return { isBaselineBookHit: true, bookKo: chapMeta.bookKo };
+      return null;
+    }
+
     if (wy > buf.baselineY + 18) return null;
 
     const chapToX = (g) => buf.padX + (g / (TOTAL_BIBLE_CHAPTERS - 1)) * buf.usableW;
-    let bestArc = null, minDistance = 20 / Math.sqrt(zoom);
+    let bestArc = null, minDistance = 24 / Math.sqrt(zoom);
     for (let i = 0; i < activeFilteredArcs.length; i++) {
       const arc = activeFilteredArcs[i], x1 = chapToX(arc.start), x2 = chapToX(arc.end), cx = (x1 + x2) / 2, rx = Math.abs(x2 - x1) / 2, ry = rx * buf.verticalScale;
       if (rx < 2 || ry < 2) continue;
       const dx = wx - cx, dy = buf.baselineY - wy;
-      if (dy < -10 || Math.abs(dx) > rx + 18) continue;
+      if (dy < -10 || Math.abs(dx) > rx + 22) continue;
       const theta = Math.atan2(dy / ry, dx / rx);
       if (theta < -0.05 || theta > Math.PI + 0.05) continue;
       const dist = Math.hypot(wx - (cx + rx * Math.cos(theta)), wy - (buf.baselineY - ry * Math.sin(theta)));
@@ -1261,12 +1348,12 @@ export default function BibleKnowledgeGalaxy({
   const renderStateRef = useRef({});
   renderStateRef.current = {
     viewMode, galaxyData, rotationSpeed, orbitSpacing, nodeScale, showOuterLabels, theme, isLightTheme,
-    searchQuery, orbitFilter, selectedNode, hoveredNode, connectedNodeIds,
-    arcCategoryFilter, arcFromBookFilter, arcFromChapFilter, arcToBookFilter,
-    allFullArcs, activeFilteredArcs, selectedArc, hoveredArc, scrubbedBookKo, bakeArcDiagramBuffer
+    orbitFilter, selectedNode, hoveredNode, connectedNodeIds,
+    arcTestamentFilter, arcCategoryFilter, arcFromBookFilter, arcFromChapFilter, arcToBookFilter,
+    activeFilteredArcs, selectedArc, hoveredArc, bakeArcDiagramBuffer
   };
 
-  // 메인 60FPS 캔버스 렌더러 (크리스탈 글로우 링 · 반투명 유리 헥사곤 · 이중 발광 코어 고도화!)
+  // 메인 60FPS 캔버스 렌더러
   useEffect(() => {
     if (viewMode === 'list') return;
     const canvas = canvasRef.current; if (!canvas) return;
@@ -1291,7 +1378,7 @@ export default function BibleKnowledgeGalaxy({
       }
 
       if (st.viewMode === 'arc') {
-        const expectedKey = `${st.arcCategoryFilter}_${st.arcFromBookFilter}_${st.arcFromChapFilter}_${st.arcToBookFilter}_${st.allFullArcs.length}_${st.isLightTheme}`;
+        const expectedKey = `${st.arcTestamentFilter}_${st.arcCategoryFilter}_${st.arcFromBookFilter}_${st.arcFromChapFilter}_${st.arcToBookFilter}_${st.activeFilteredArcs.length}_${st.isLightTheme}`;
         if (!arcBgBufferRef.current || arcBgBufferRef.current.width !== width || arcBgBufferRef.current.height !== height || arcBgBufferRef.current.filterKey !== expectedKey) {
           st.bakeArcDiagramBuffer(width, height, dpr);
         }
@@ -1299,6 +1386,7 @@ export default function BibleKnowledgeGalaxy({
         if (buf?.canvas) {
           ctx.save();
           const zoom = cameraRef.current.zoom;
+          if (zoom <= 1.05) { cameraRef.current.x = 0; cameraRef.current.y = 0; }
           ctx.translate(width / 2 + cameraRef.current.x, height / 2 + cameraRef.current.y);
           ctx.scale(zoom, zoom); ctx.translate(-width / 2, -height / 2);
           ctx.drawImage(buf.canvas, 0, 0, width, height);
@@ -1306,7 +1394,7 @@ export default function BibleKnowledgeGalaxy({
           const { padX, usableW, baselineY, verticalScale } = buf;
           const chapToX = (g) => padX + (g / (TOTAL_BIBLE_CHAPTERS - 1)) * usableW;
 
-          if (st.hoveredArc && st.hoveredArc.id !== st.selectedArc?.id) {
+          if (st.hoveredArc && !st.hoveredArc.isBaselineBookHit && st.hoveredArc.id !== st.selectedArc?.id) {
             const hx1 = chapToX(st.hoveredArc.start), hx2 = chapToX(st.hoveredArc.end);
             ctx.beginPath(); ctx.ellipse((hx1 + hx2) / 2, baselineY, Math.abs(hx2 - hx1) / 2, (Math.abs(hx2 - hx1) / 2) * verticalScale, 0, Math.PI, 0, false);
             ctx.strokeStyle = '#38BDF8'; ctx.lineWidth = 2.2 / Math.sqrt(zoom); ctx.stroke();
@@ -1381,7 +1469,6 @@ export default function BibleKnowledgeGalaxy({
           if (node.type === 'core') { posMap.set(node.id, { x: 0, y: 0, zDepth: 0, perspScale: 1, ...node }); return; }
           if (node.type === 'sector') {
             const hx = node.xHex * st.orbitSpacing, hy = node.yHex * st.orbitSpacing, hexR = (node.hexRadius || 150) * st.orbitSpacing;
-            // 크리스탈 반투명 그라데이션 헥사곤 + 이중 베벨 라인
             const hGrad = ctx.createRadialGradient(hx, hy, hexR * 0.12, hx, hy, hexR);
             hGrad.addColorStop(0, `${node.color}2B`);
             hGrad.addColorStop(0.7, `${node.color}0E`);
@@ -1450,7 +1537,6 @@ export default function BibleKnowledgeGalaxy({
         ctx.stroke(); ctx.globalAlpha = 1;
       });
 
-      // 크리스탈 방사형 발광 아우라 + 유리 링 + 중심 코어 (단순 원색 탈피!)
       Array.from(posMap.values()).sort((a, b) => b.zDepth - a.zDepth).forEach((node) => {
         if (st.viewMode === 'hex' && node.type === 'sector') return;
         const matchesFilter = st.orbitFilter === 'all' || node.type === st.orbitFilter || node.type === 'core';
@@ -1463,7 +1549,6 @@ export default function BibleKnowledgeGalaxy({
         const rSize = (node.size || 8) * st.nodeScale * node.perspScale * (isSel ? 1.42 : 1.0);
         ctx.globalAlpha = alpha;
 
-        // 방사형 글로우 아우라
         const auraR = rSize * (node.type === 'core' ? 2.6 : isSel ? 2.4 : 1.9);
         const auraGrad = ctx.createRadialGradient(node.x, node.y, rSize * 0.15, node.x, node.y, auraR);
         auraGrad.addColorStop(0, `${node.color}88`);
@@ -1472,7 +1557,6 @@ export default function BibleKnowledgeGalaxy({
         ctx.beginPath(); ctx.arc(node.x, node.y, auraR, 0, Math.PI * 2);
         ctx.fillStyle = auraGrad; ctx.fill();
 
-        // 유리 질감 외곽 링
         ctx.beginPath(); ctx.arc(node.x, node.y, rSize, 0, Math.PI * 2);
         ctx.fillStyle = st.isLightTheme ? 'rgba(255,255,255,0.88)' : 'rgba(8, 16, 28, 0.88)';
         ctx.fill();
@@ -1480,7 +1564,6 @@ export default function BibleKnowledgeGalaxy({
         ctx.strokeStyle = isSel ? '#FFFFFF' : node.color;
         ctx.stroke();
 
-        // 밝은 중심 코어
         ctx.beginPath(); ctx.arc(node.x, node.y, rSize * 0.48, 0, Math.PI * 2);
         ctx.fillStyle = isSel ? '#FFFFFF' : node.color;
         ctx.fill();
@@ -1527,52 +1610,120 @@ export default function BibleKnowledgeGalaxy({
   }, [viewMode]);
 
   const handleArcPointerAction = useCallback((clientX, clientY, isClick = false) => {
-    if (!isClick && Date.now() - lastTouchScrubTimeRef.current < 50) return;
+    if (!isClick && Date.now() - lastTouchScrubTimeRef.current < 45) return;
     lastTouchScrubTimeRef.current = Date.now();
-    const hitArc = findClosestArcAtScreenPos(clientX, clientY);
-    if (hitArc) { if (isClick) { setIsAutoTourPlaying(false); setSelectedArc(hitArc); } else setHoveredArc(hitArc); }
-    else if (!isClick) setHoveredArc(null);
-  }, [findClosestArcAtScreenPos]);
+    const hit = findClosestArcAtScreenPos(clientX, clientY);
+    if (!hit) { if (!isClick) setHoveredArc(null); return; }
+
+    if (hit.isBaselineBookHit) {
+      if (isClick) {
+        setArcFromBookFilter(hit.bookKo);
+        setArcFromChapFilter('ALL');
+        setScrubbedBookKo(null);
+        showToast(`[${hit.bookKo}] 아크 필터가 적용되었습니다.`);
+      }
+      return;
+    }
+
+    if (isClick) {
+      setIsAutoTourPlaying(false);
+      setSelectedArc(hit);
+    } else {
+      setHoveredArc(hit);
+    }
+  }, [findClosestArcAtScreenPos, showToast]);
 
   useEffect(() => {
     const canvas = canvasRef.current; if (!canvas || viewMode === 'list') return;
-    const handleWheel = (e) => { if (e.cancelable) e.preventDefault(); targetCameraRef.current = null; cameraRef.current.zoom = Math.min(4.0, Math.max(0.28, cameraRef.current.zoom * (e.deltaY < 0 ? 1.12 : 0.89))); };
+    const handleWheel = (e) => {
+      if (e.cancelable) e.preventDefault();
+      targetCameraRef.current = null;
+      const minZ = viewMode === 'arc' ? 1.0 : 0.28;
+      const nextZ = Math.min(4.0, Math.max(minZ, cameraRef.current.zoom * (e.deltaY < 0 ? 1.12 : 0.89)));
+      cameraRef.current.zoom = nextZ;
+      if (viewMode === 'arc' && nextZ <= 1.05) { cameraRef.current.x = 0; cameraRef.current.y = 0; }
+    };
     canvas.addEventListener('wheel', handleWheel, { passive: false });
     return () => canvas.removeEventListener('wheel', handleWheel);
   }, [viewMode]);
 
+  // 아크 모드 기본 배율(zoom <= 1.05)에서는 좌우 흔들림 완전 차단 & 정밀 스크러빙!
   const handleTouchStart = (e) => {
     targetCameraRef.current = null;
-    if (e.touches.length === 2) { pinchDistRef.current = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); isDraggingRef.current = false; }
-    else if (e.touches.length === 1) { isDraggingRef.current = true; dragMovedRef.current = false; dragStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }; }
+    if (e.touches.length === 2) {
+      pinchDistRef.current = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+      isDraggingRef.current = false;
+    } else if (e.touches.length === 1) {
+      isDraggingRef.current = true;
+      dragMovedRef.current = false;
+      dragStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }
   };
 
   const handleTouchMove = (e) => {
     if (e.touches.length === 2 && pinchDistRef.current) {
       const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-      cameraRef.current.zoom = Math.min(4.0, Math.max(0.28, cameraRef.current.zoom * (dist / pinchDistRef.current)));
+      const minZ = viewMode === 'arc' ? 1.0 : 0.28;
+      cameraRef.current.zoom = Math.min(4.0, Math.max(minZ, cameraRef.current.zoom * (dist / pinchDistRef.current)));
+      if (viewMode === 'arc' && cameraRef.current.zoom <= 1.05) { cameraRef.current.x = 0; cameraRef.current.y = 0; }
       pinchDistRef.current = dist; dragMovedRef.current = true;
     } else if (e.touches.length === 1 && isDraggingRef.current) {
       const dx = e.touches[0].clientX - dragStartRef.current.x, dy = e.touches[0].clientY - dragStartRef.current.y;
       if (Math.hypot(dx, dy) > 6) dragMovedRef.current = true;
-      if (viewMode === '3d') { planetRotRef.current.yaw += dx * 0.007; planetRotRef.current.pitch = Math.max(-Math.PI / 2.1, Math.min(Math.PI / 2.1, planetRotRef.current.pitch + dy * 0.007)); }
-      else { cameraRef.current.x += dx; cameraRef.current.y += dy; }
+
+      if (viewMode === 'arc' && cameraRef.current.zoom <= 1.05) {
+        // 패닝 대신 손가락 위치의 아크를 정밀 추적!
+        handleArcPointerAction(e.touches[0].clientX, e.touches[0].clientY, true);
+        dragStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        return;
+      }
+
+      if (viewMode === '3d') {
+        planetRotRef.current.yaw += dx * 0.007;
+        planetRotRef.current.pitch = Math.max(-Math.PI / 2.1, Math.min(Math.PI / 2.1, planetRotRef.current.pitch + dy * 0.007));
+      } else {
+        cameraRef.current.x += dx;
+        cameraRef.current.y += dy;
+      }
       dragStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
     }
   };
 
   const handleTouchEnd = (e) => {
     pinchDistRef.current = null; isDraggingRef.current = false;
-    if (!dragMovedRef.current && e.changedTouches?.length === 1 && viewMode === 'arc') handleArcPointerAction(e.changedTouches[0].clientX, e.changedTouches[0].clientY, true);
+    if (!dragMovedRef.current && e.changedTouches?.length === 1 && viewMode === 'arc') {
+      handleArcPointerAction(e.changedTouches[0].clientX, e.changedTouches[0].clientY, true);
+    }
   };
 
-  const handleMouseDown = (e) => { targetCameraRef.current = null; isDraggingRef.current = true; dragMovedRef.current = false; dragStartRef.current = { x: e.clientX, y: e.clientY }; };
+  const handleMouseDown = (e) => {
+    targetCameraRef.current = null;
+    isDraggingRef.current = true;
+    dragMovedRef.current = false;
+    dragStartRef.current = { x: e.clientX, y: e.clientY };
+  };
+
   const handleMouseMove = (e) => {
-    if (!isDraggingRef.current) { if (viewMode === 'arc') handleArcPointerAction(e.clientX, e.clientY, false); return; }
+    if (!isDraggingRef.current) {
+      if (viewMode === 'arc') handleArcPointerAction(e.clientX, e.clientY, false);
+      return;
+    }
     const dx = e.clientX - dragStartRef.current.x, dy = e.clientY - dragStartRef.current.y;
     if (Math.hypot(dx, dy) > 5) dragMovedRef.current = true;
-    if (viewMode === '3d') { planetRotRef.current.yaw += dx * 0.0065; planetRotRef.current.pitch = Math.max(-Math.PI / 2.1, Math.min(Math.PI / 2.1, planetRotRef.current.pitch + dy * 0.0065)); }
-    else { cameraRef.current.x += dx; cameraRef.current.y += dy; }
+
+    if (viewMode === 'arc' && cameraRef.current.zoom <= 1.05) {
+      handleArcPointerAction(e.clientX, e.clientY, true);
+      dragStartRef.current = { x: e.clientX, y: e.clientY };
+      return;
+    }
+
+    if (viewMode === '3d') {
+      planetRotRef.current.yaw += dx * 0.0065;
+      planetRotRef.current.pitch = Math.max(-Math.PI / 2.1, Math.min(Math.PI / 2.1, planetRotRef.current.pitch + dy * 0.0065));
+    } else {
+      cameraRef.current.x += dx;
+      cameraRef.current.y += dy;
+    }
     dragStartRef.current = { x: e.clientX, y: e.clientY };
   };
 
@@ -1643,7 +1794,8 @@ export default function BibleKnowledgeGalaxy({
 
       const newArc = {
         id: `user_arc_${Date.now()}`, start: Math.min(start, end), end: Math.max(start, end), span: Math.abs(end - start),
-        category: 'user_sync', badgeLabel: '나의 교차참조', fromBook: fBook, fromChap: fChap, fromVerse: fVerse, toBook: tBook, toChap: tChap, toVerse: tVerse,
+        category: 'user_sync', testamentLink: getTestamentLinkType(fBook, tBook), badgeLabel: '나의 교차참조',
+        fromBook: fBook, fromChap: fChap, fromVerse: fVerse, toBook: tBook, toChap: tChap, toVerse: tVerse,
         title: createTitle.trim() || `${fBook} ${fChap}:${fVerse} ➔ ${tBook} ${tChap}:${tVerse}`,
         desc: createBody.trim() || '직접 말씀을 묵상하며 연결한 교차참조 아크입니다.', isLandmark: true
       };
@@ -1732,10 +1884,36 @@ export default function BibleKnowledgeGalaxy({
           </div>
         </div>
 
+        {/* 2열 서브 필터 바: 신구약 연결 필터 + 주제 필터 */}
         <div className="flex items-center gap-1.5 overflow-x-auto hide-scrollbar py-0.5">
           {viewMode === 'arc' ? (
             <>
-              {[{ id: 'all', label: `전체 (${allFullArcs.length.toLocaleString()})` }, { id: 'quote', label: '직접 인용' }, { id: 'prophecy', label: '예언·성취' }, { id: 'typology', label: '모형·그림자' }, { id: 'theme', label: '인물·주제' }, { id: 'user_sync', label: '나의 묵상' }].map((cat) => (
+              {[
+                { id: 'all', label: '전체연결' },
+                { id: 'ot_nt', label: '구약⇄신약' },
+                { id: 'ot_ot', label: '구약 내' },
+                { id: 'nt_nt', label: '신약 내' }
+              ].map((tf) => (
+                <button
+                  key={tf.id}
+                  type="button"
+                  onClick={() => setArcTestamentFilter(tf.id)}
+                  className={`px-2 py-1 rounded-md text-[10.5px] font-bold cursor-pointer shrink-0 whitespace-nowrap ${
+                    arcTestamentFilter === tf.id ? 'bg-[#D97706] text-white' : 'bg-white/5 opacity-75'
+                  }`}
+                >
+                  {tf.label}
+                </button>
+              ))}
+              <div className="w-[1px] h-4 bg-white/15 shrink-0 mx-0.5" />
+              {[
+                { id: 'all', label: `전체 (${activeFilteredArcs.length.toLocaleString()})` },
+                { id: 'quote', label: '직접 인용' },
+                { id: 'prophecy', label: '예언·성취' },
+                { id: 'typology', label: '모형·그림자' },
+                { id: 'theme', label: '인물·주제' },
+                { id: 'user_sync', label: '나의 묵상' }
+              ].map((cat) => (
                 <button key={cat.id} type="button" onClick={() => { setArcCategoryFilter(cat.id); setScrubbedBookKo(null); }} className={`px-2.5 py-1 rounded-full text-[11px] font-bold cursor-pointer shrink-0 whitespace-nowrap ${arcCategoryFilter === cat.id ? 'bg-[#2563EB] text-white' : 'opacity-75 border'}`} style={arcCategoryFilter !== cat.id ? { borderColor: theme.panelBorder } : undefined}>{cat.label}</button>
               ))}
               <button type="button" onClick={() => setIsAutoTourPlaying(!isAutoTourPlaying)} className="px-2.5 py-1 rounded-full text-[11px] font-bold border border-[#F59E0B]/60 text-[#FBBF24] flex items-center gap-1 cursor-pointer shrink-0 whitespace-nowrap ml-auto">
@@ -1762,7 +1940,7 @@ export default function BibleKnowledgeGalaxy({
               {galaxyData.nodes.filter((n) => n.type === 'book').map((bNode) => (
                 <button key={bNode.id} type="button" onClick={() => focusCameraOnNode(bNode)} className={`w-full px-2.5 py-1.5 rounded-lg border flex items-center justify-between text-left cursor-pointer ${selectedNode?.id === bNode.id ? 'border-[#00F5D4] bg-[#00F5D4]/15' : 'border-transparent hover:bg-white/5'}`}>
                   <span className="text-[11.5px] font-bold truncate">{bNode.bookName}</span>
-                  <span className="text-[10px] font-mono text-[#2DD4BF]">{bNode.readChaps}/{bNode.totalChaps}</span>
+                  <span className="text-[10px] font-mono text-[#2DD4BF]">{bNode.arcCount}건</span>
                 </button>
               ))}
             </div>
@@ -1773,11 +1951,26 @@ export default function BibleKnowledgeGalaxy({
         <div ref={containerRef} className="flex-1 relative w-full h-full overflow-hidden flex flex-col">
           {viewMode !== 'list' ? (
             <>
-              <canvas ref={canvasRef} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={() => { isDraggingRef.current = false; }} onClick={handleCanvasClick} className="absolute inset-0 w-full h-full cursor-crosshair active:cursor-grabbing touch-none" />
+              <canvas ref={canvasRef} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={() => { isDraggingRef.current = false; }} onClick={handleCanvasClick} className="absolute inset-0 w-full h-full cursor-crosshair touch-none" />
 
               {viewMode === 'arc' && currentDisplayArc && (
                 <div className="mt-auto relative z-20 pb-[max(8px,env(safe-area-inset-bottom))] px-2.5 sm:px-4 w-full max-w-3xl mx-auto pointer-events-auto">
                   <div className="w-full rounded-2xl border p-3 shadow-2xl space-y-2 backdrop-blur-xl" style={{ backgroundColor: theme.panelBg, borderColor: theme.panelBorder }}>
+                    {/* 모바일/태블릿에서도 바로 조작하는 66권·장 퀵 점프 바 */}
+                    <div className="flex lg:hidden items-center gap-1.5 text-[11px]">
+                      <select value={arcFromBookFilter} onChange={(e) => { setArcFromBookFilter(e.target.value); setArcFromChapFilter('ALL'); }} className="flex-1 p-1.5 rounded-lg border bg-slate-900 text-white" style={{ borderColor: theme.panelBorder }}>
+                        <option value="ALL">성경 66권 선택</option>
+                        {BIBLE_66_CANON.map((b) => <option key={b.ko} value={b.ko}>{b.ko}</option>)}
+                      </select>
+                      <select value={arcFromChapFilter} disabled={arcFromBookFilter === 'ALL'} onChange={(e) => setArcFromChapFilter(e.target.value)} className="w-20 p-1.5 rounded-lg border bg-slate-900 text-white disabled:opacity-40" style={{ borderColor: theme.panelBorder }}>
+                        <option value="ALL">전체장</option>
+                        {arcFromBookFilter !== 'ALL' && Array.from({ length: BOOK_OFFSET_MAP[arcFromBookFilter]?.chaps || 1 }, (_, i) => i + 1).map((c) => <option key={c} value={c}>{c}장</option>)}
+                      </select>
+                      {(arcFromBookFilter !== 'ALL' || arcToBookFilter !== 'ALL') && (
+                        <button type="button" onClick={() => { setArcFromBookFilter('ALL'); setArcFromChapFilter('ALL'); setArcToBookFilter('ALL'); }} className="px-2 py-1.5 rounded-lg bg-rose-500/20 text-rose-300 font-bold shrink-0 cursor-pointer">초기화</button>
+                      )}
+                    </div>
+
                     <div className="flex items-center justify-between gap-2 pb-1.5 border-b" style={{ borderColor: theme.panelBorder }}>
                       <span className="px-2 py-0.5 rounded bg-[#D97706] text-white text-[10px] font-bold shrink-0">{currentDisplayArc.badgeLabel}</span>
                       <span className="text-[12px] font-bold truncate">{currentDisplayArc.title}</span>
@@ -1823,7 +2016,6 @@ export default function BibleKnowledgeGalaxy({
                 </div>
               )}
 
-              {/* 링 / 헥사곤 / HUD / 3D 노드 클릭 시 하단 인스펙터 카드 */}
               {viewMode !== 'arc' && selectedNode && (
                 <div className="mt-auto relative z-20 pb-[max(10px,env(safe-area-inset-bottom))] px-3 w-full max-w-lg mx-auto pointer-events-auto">
                   <div className="rounded-2xl border p-3.5 shadow-2xl backdrop-blur-xl space-y-2 text-left" style={{ backgroundColor: theme.panelBg, borderColor: selectedNode.color || theme.panelBorder }}>
@@ -1838,7 +2030,7 @@ export default function BibleKnowledgeGalaxy({
                     <div className="flex flex-wrap gap-1.5 pt-1">
                       {selectedNode.bookName && (
                         <>
-                          <button type="button" onClick={() => { setArcFromBookFilter(selectedNode.bookName); setArcFromChapFilter(selectedNode.chapter ? String(selectedNode.chapter) : 'ALL'); setViewMode('arc'); }} className="px-3 py-1.5 rounded-lg bg-[#2563EB] text-white text-[11.5px] font-bold cursor-pointer">이 말씀 아크 보기</button>
+                          <button type="button" onClick={() => { setArcFromBookFilter(selectedNode.bookName); setArcFromChapFilter(selectedNode.chapter ? String(selectedNode.chapter) : 'ALL'); setViewMode('arc'); }} className="px-3 py-1.5 rounded-lg bg-[#2563EB] text-white text-[11.5px] font-bold cursor-pointer">이 말씀 아크 보기 ({selectedNode.arcCount || 0})</button>
                           <button type="button" onClick={() => handleJumpToBibleChapter(selectedNode.bookName, selectedNode.chapter || 1, selectedNode.verse || 1)} className="px-3 py-1.5 rounded-lg bg-[#0D9488] text-white text-[11.5px] font-bold flex items-center gap-1 cursor-pointer"><BookOpen className="w-3.5 h-3.5" /> 성경 열기</button>
                         </>
                       )}
@@ -1857,8 +2049,8 @@ export default function BibleKnowledgeGalaxy({
                 if (booksInSec.length === 0) return null;
                 return (
                   <div key={sec.id} className="p-3.5 rounded-xl border space-y-2" style={{ backgroundColor: theme.panelBg, borderColor: theme.panelBorder }}>
-                    <div className="flex items-center justify-between border-b pb-1.5" style={{ borderColor: theme.panelBorder }}><span className="font-bold text-[13.5px]">{sec.name}</span><span className="text-[11px] font-mono opacity-60">{booksInSec.length}권</span></div>
-                    <div className="flex flex-wrap gap-1.5">{booksInSec.map((b) => (<button key={b.id} type="button" onClick={() => handleJumpToBibleChapter(b.bookName, 1, 1)} className="px-2.5 py-1 rounded-lg border text-[12px] font-bold cursor-pointer hover:border-[#2563EB]" style={{ borderColor: theme.panelBorder }}>{b.bookName}</button>))}</div>
+                    <div className="flex items-center justify-between border-b pb-1.5" style={{ borderColor: theme.panelBorder }}><span className="font-bold text-[13.5px]" style={{ color: sec.color }}>{sec.name}</span><span className="text-[11px] font-mono opacity-60">{booksInSec.length}권</span></div>
+                    <div className="flex flex-wrap gap-1.5">{booksInSec.map((b) => (<button key={b.id} type="button" onClick={() => { setArcFromBookFilter(b.bookName); setArcFromChapFilter('ALL'); setViewMode('arc'); }} className="px-2.5 py-1 rounded-lg border text-[12px] font-bold cursor-pointer hover:border-[#2563EB]" style={{ borderColor: theme.panelBorder }}>{b.bookName} <span className="text-[10px] opacity-60">({b.arcCount})</span></button>))}</div>
                   </div>
                 );
               })}
@@ -1871,7 +2063,7 @@ export default function BibleKnowledgeGalaxy({
           <div className="p-3 rounded-xl border space-y-2" style={{ borderColor: theme.panelBorder }}>
             <div className="flex items-center justify-between text-[11px] font-bold">
               <span className="text-[#FBBF24]">66권 · 장별 핀셋 필터 ({activeFilteredArcs.length.toLocaleString()})</span>
-              {(arcFromBookFilter !== 'ALL' || arcToBookFilter !== 'ALL') && <button type="button" onClick={() => { setArcFromBookFilter('ALL'); setArcFromChapFilter('ALL'); setArcToBookFilter('ALL'); }} className="text-rose-400 cursor-pointer">초기화</button>}
+              {(arcFromBookFilter !== 'ALL' || arcToBookFilter !== 'ALL' || arcTestamentFilter !== 'all') && <button type="button" onClick={() => { setArcFromBookFilter('ALL'); setArcFromChapFilter('ALL'); setArcToBookFilter('ALL'); setArcTestamentFilter('all'); }} className="text-rose-400 cursor-pointer">초기화</button>}
             </div>
             <div className="grid grid-cols-3 gap-1.5 text-[11.5px]">
               <select value={arcFromBookFilter} onChange={(e) => { setArcFromBookFilter(e.target.value); setArcFromChapFilter('ALL'); }} className="p-1.5 rounded-lg border bg-slate-900 text-white outline-none" style={{ borderColor: theme.panelBorder }}><option value="ALL">출발 66권</option>{BIBLE_66_CANON.map((b) => <option key={b.ko} value={b.ko}>{b.ko}</option>)}</select>
